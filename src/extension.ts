@@ -15,37 +15,42 @@ export function activate(context: vscode.ExtensionContext) {
     let disposable = vscode.commands.registerCommand('extension.jest.startJest', () => {
         vscode.window.showInformationMessage('Hello World!');
     })
+    // commands.registerCommand('eslint.showOutputChannel', () => { client.outputChannel.show(); }),
+    let channel = vscode.window.createOutputChannel("Jest")
 
     // if (shouldStartOnActivate()) {
         console.log("Starting")
-        extensionInstance = new JestExt()
+        extensionInstance = new JestExt(channel, )
         extensionInstance.startProcess()
     // }
-
+    
     context.subscriptions.push(disposable)
 }
 
 class JestExt  {
     private jestProcess: JestRunner;
-    private hasRunFirstFullTestRun: boolean;
+    private channel: vscode.OutputChannel;
+
+    public constructor(outputChannel: vscode.OutputChannel) {
+        this.channel = outputChannel
+    }
 
     startProcess() {
-        this.jestProcess = new JestRunner({});
+        this.jestProcess = new JestRunner();
 
         this.jestProcess.on('debuggerComplete', () => {
             console.log("Closed")
         }).on('executableJSON', (data: any) => {
             console.log("JSON  ] " + JSON.stringify(data))
 
-        }).on('executableOutput', (output: String) => {
+        }).on('executableOutput', (output: string) => {
             console.log("Output] " + output)
-            if (!this.hasRunFirstFullTestRun && output.includes("Watch Usage")){
-                this.hasRunFirstFullTestRun = true
-                this.jestProcess.triggerFullTestSuite()
+            
+            if (!output.includes("Watch Usage")){
+                this.channel.appendLine(output)
             }
-
         }).on('executableStdErr', (error: Buffer) => {
-            console.log("Err   ] " + error.toString())
+            this.channel.appendLine(error.toString())
         }).on('nonTerminalError', (error: string) => {
             console.log("Err?  ] " + error.toString())
         }).on('exception', result => {
@@ -53,6 +58,14 @@ class JestExt  {
         }).on('terminalError', (error: string) => {
             console.log("\nException raised: " + error);
         });
+    }
+
+    recievedResults(results: any) {
+        if(results.success) {
+            console.log("Passed")
+        } else {
+            console.log("Failed")
+        }
     }
 }
 
