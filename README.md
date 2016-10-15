@@ -1,6 +1,8 @@
 # vscode-jest
 
-This is a WIP, this README represents what I want, not what it is yet.
+This is a WIP, this README represents what I want, not what it is yet. 
+
+It is kind of blocked on https://github.com/facebook/jest/issues/1900 for the moment
 
 ## The Aim
 
