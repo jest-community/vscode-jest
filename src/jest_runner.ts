@@ -12,7 +12,7 @@ export class JestRunner extends EventEmitter {
     constructor() {
         super();
 
-        var runtimeArgs = ['.', '--json', '--useStderr', '--watch', '--coverage', 'true ', '--colors', 'false', "--verbose"];
+        var runtimeArgs = ['.', '--json', '--useStderr', '--watch', '--colors', 'false', "--verbose"];
         var runtimeExecutable: string;
 
         runtimeExecutable = "node_modules/.bin/jest"
@@ -49,20 +49,12 @@ export class JestRunner extends EventEmitter {
             this.emit('terminalError', "Process failed: " + error.message);
         });
 
-        this.debugprocess.on('disconnect', () => {
-           console.log("DDD")
-        });
-
-        this.debugprocess.on('message', () => {
-           console.log("MMM")
-        });
-
         this.debugprocess.on('close', () => {
            console.log("Jest Closed")
         });
     }
 
-    // This doens't work...
+    // This doesn't work yet...
     public triggerFullTestSuite() {
         this.debugprocess.stdin.write("o")
     }
