@@ -52,4 +52,10 @@ suite("File Parsing", () => {
         await parser.run(__dirname + "/../../test/fixtures/dangerjs/travis-ci.jstest.js")
         assert.equal(parser.itBlocks.length, 7)
     })
+
+    test("For a metaphysics test file", async () => {
+        let parser = new Parser()
+        await parser.run(__dirname + "/../../test/fixtures/metaphysics/partner_show.js")
+        assert.equal(parser.itBlocks.length, 8)
+    })
 });
