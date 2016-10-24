@@ -6,33 +6,53 @@ import * as childProcess from 'child_process';
 import {basename, dirname} from 'path';
 import * as path from 'path';
 import {JestRunner} from './jest_runner'
+import {TestFileParser, ItBlock} from './test_file_parser'
+import * as decorations from './decorations'
 
 var extensionInstance: JestExt;
 
 export function activate(context: vscode.ExtensionContext) {
-    console.log('Hello world, "vscode-jest" is now active!')
-
-    let disposable = vscode.commands.registerCommand('extension.jest.startJest', () => {
-        vscode.window.showInformationMessage('Hello World!');
-    })
-    // commands.registerCommand('eslint.showOutputChannel', () => { client.outputChannel.show(); }),
     let channel = vscode.window.createOutputChannel("Jest")
 
-    // if (shouldStartOnActivate()) {
-        console.log("Starting")
-        extensionInstance = new JestExt(channel, )
-        extensionInstance.startProcess()
-    // }
-    
-    context.subscriptions.push(disposable)
+    console.log("Starting")
+    extensionInstance = new JestExt(channel, context.subscriptions)
+    extensionInstance.startProcess()
+
+    // Setup the file change watchers
+	var activeEditor = vscode.window.activeTextEditor;
+	if (activeEditor) {
+		extensionInstance.triggerUpdateDecorations(activeEditor);
+	}
+
+	vscode.window.onDidChangeActiveTextEditor(editor => {
+		activeEditor = editor;
+		if (editor) {
+			extensionInstance.triggerUpdateDecorations(activeEditor);	
+		}
+	}, null, context.subscriptions);
+	
+	vscode.workspace.onDidChangeTextDocument(event => {
+		if (activeEditor && event.document === activeEditor.document) {
+			extensionInstance.triggerUpdateDecorations(activeEditor);
+		}
+	}, null, context.subscriptions);
 }
 
 class JestExt  {
-    private jestProcess: JestRunner;
-    private channel: vscode.OutputChannel;
+    private jestProcess: JestRunner
+    private parser: TestFileParser
+    private channel: vscode.OutputChannel
+    private workspaceDisposal: { dispose(): any }[]
+    private perFileDisposals: { dispose(): any }[]
 
-    public constructor(outputChannel: vscode.OutputChannel) {
+    private passingItStyle: vscode.TextEditorDecorationType
+    private failingItStyle: vscode.TextEditorDecorationType
+
+    public constructor(outputChannel: vscode.OutputChannel, disposal:  { dispose(): any }[]) {
         this.channel = outputChannel
+        this.workspaceDisposal = disposal
+        this.perFileDisposals = []
+        this.parser = new TestFileParser() 
     }
 
     startProcess() {
@@ -41,7 +61,8 @@ class JestExt  {
         this.jestProcess.on('debuggerComplete', () => {
             console.log("Closed")
         }).on('executableJSON', (data: any) => {
-            console.log("JSON  ] " + JSON.stringify(data))
+            console.log("JSON  ] ", data)
+            this.updateWithData(data)
 
         }).on('executableOutput', (output: string) => {
             console.log("Output] " + output)
@@ -49,6 +70,7 @@ class JestExt  {
             if (!output.includes("Watch Usage")){
                 this.channel.appendLine(output)
             }
+
         }).on('executableStdErr', (error: Buffer) => {
             this.channel.appendLine(error.toString())
         }).on('nonTerminalError', (error: string) => {
@@ -58,6 +80,47 @@ class JestExt  {
         }).on('terminalError', (error: string) => {
             console.log("\nException raised: " + error);
         });
+
+        this.setupDecorators()
+    }
+
+    async triggerUpdateDecorations(editor: vscode.TextEditor) {
+        try {
+            await this.parser.run(editor.document.uri.fsPath)
+            let decorators = this.generateDecoratorsForJustIt(this.parser.itBlocks, editor)
+            editor.setDecorations(this.passingItStyle,decorators)
+        } catch(e) {
+            return;
+        }
+    }
+
+    setupDecorators() {
+        this.passingItStyle = decorations.passingItName()
+        this.failingItStyle = decorations.failingItName();
+    }
+
+    updateWithData(data: any) {
+    }
+
+    generateDecoratorsForJustIt(blocks: ItBlock[], editor: vscode.TextEditor): vscode.DecorationOptions[] {
+        return blocks.map((it)=> {
+            return {
+                // VS Code is 1 based, babylon is 0 based
+                range: new vscode.Range(it.start.line - 1, it.start.column, it.start.line - 1, it.start.column + 2),
+                hoverMessage: it.name,
+            }
+        })
+    }
+
+
+    generateDecoratorsForWholeItBlocks(blocks: ItBlock[], editor: vscode.TextEditor): vscode.DecorationOptions[] {
+        return blocks.map((it)=> {
+            return {
+                // VS Code is 1 based, babylon is 0 based
+                range: new vscode.Range(it.start.line - 1, it.start.column, it.end.line - 1, it.end.column),
+                hoverMessage: it.name,
+            }
+        })
     }
 
     recievedResults(results: any) {
@@ -67,6 +130,13 @@ class JestExt  {
             console.log("Failed")
         }
     }
+
+    deactivate() {
+
+    }
 }
 
-export function deactivate() {}
+export function deactivate() {
+    extensionInstance.deactivate()
+
+}
