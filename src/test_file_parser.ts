@@ -26,7 +26,7 @@ export class ItBlock {
     }
 }
 
-export default class TestFileParser {
+export class TestFileParser {
 
     itBlocks: ItBlock[]
 

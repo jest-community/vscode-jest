@@ -28,9 +28,9 @@ export class JestRunner extends EventEmitter {
         this.debugprocess = childProcess.spawn(runtimeExecutable, runtimeArgs, {cwd: processCwd, env: processEnv});
 
         this.debugprocess.stdout.on('data', (data: Buffer) => {
-            let stringValue = data.toString()
-            // verify last char too?
-            if (stringValue.charAt(0) == "{") {
+            // Convert to JSON and strip any trailing newlines
+            let stringValue = data.toString().replace(/\n$/, "")
+            if (stringValue.substr(0, 1) === "{" && stringValue.substr(-1, 1) === "}") {
                 this.emit('executableJSON', JSON.parse(stringValue));
             } else {
                 this.emit('executableOutput', stringValue);

@@ -2,16 +2,12 @@
 
 This is a WIP, this README represents what I want, not what it is yet. 
 
-It is kind of blocked on https://github.com/facebook/jest/issues/1900 for the moment
-
 ## The Aim
 
 A comprehensive experience when using Jest with a project. 
 
 * Useful Feedback
 * Session based test watching
-
----
 
 ### Feedback
 
@@ -25,4 +21,9 @@ A comprehensive experience when using Jest with a project.
 ### Session based watching
 
 * Opening a project with Jest should start to run the tests by default, you should be able to opt out
+* Should be able to declare what the command to run jest should look like
 * Closing a project, should close the tests
+
+## Keep your eye on
+
+If we need more metadata, then look at - https://github.com/facebook/jest/issues/1900
