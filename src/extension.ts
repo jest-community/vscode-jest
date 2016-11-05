@@ -44,6 +44,7 @@ class JestExt  {
     private channel: vscode.OutputChannel
     private workspaceDisposal: { dispose(): any }[]
     private perFileDisposals: { dispose(): any }[]
+    private statusBarItem: vscode.StatusBarItem;
 
     private passingItStyle: vscode.TextEditorDecorationType
     private failingItStyle: vscode.TextEditorDecorationType
@@ -53,6 +54,7 @@ class JestExt  {
         this.workspaceDisposal = disposal
         this.perFileDisposals = []
         this.parser = new TestFileParser() 
+        this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left)
     }
 
     startProcess() {
@@ -82,6 +84,7 @@ class JestExt  {
         });
 
         this.setupDecorators()
+        this.setupStatusBar()
     }
 
     async triggerUpdateDecorations(editor: vscode.TextEditor) {
@@ -94,12 +97,22 @@ class JestExt  {
         }
     }
 
+    setupStatusBar() { 
+        this.statusBarItem.text = "Jest: Running"
+        this.statusBarItem.show()
+    }
+
     setupDecorators() {
         this.passingItStyle = decorations.passingItName()
         this.failingItStyle = decorations.failingItName();
     }
 
     updateWithData(data: any) {
+        if (data.success) {
+            this.statusBarItem.text = "Jest: Passed"
+        } else {
+            this.statusBarItem.text = "Jest: Failed"
+        }
     }
 
     generateDecoratorsForJustIt(blocks: ItBlock[], editor: vscode.TextEditor): vscode.DecorationOptions[] {

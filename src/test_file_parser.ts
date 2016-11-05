@@ -1,11 +1,7 @@
 'use strict'
 
 import fs = require('fs');
-
-import {basename, dirname} from 'path';
 import * as path from 'path';
-
-// var esprima = require('esprima');
 import * as babylon from 'babylon'
 
 interface Location {
