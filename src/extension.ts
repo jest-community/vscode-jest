@@ -11,6 +11,27 @@ import * as decorations from './decorations'
 
 var extensionInstance: JestExt;
 
+interface JestFileResults {
+    name: string
+    summary: string
+    message: string
+    status: "failed" | "passed"
+    startTime:number
+    endTime:number
+}
+
+interface JestTotalResults {
+    success:boolean
+    startTime:number
+    numTotalTests:number
+    numTotalTestSuites:number
+    numRuntimeErrorTestSuites:number
+    numPassedTests:number
+    numFailedTests:number
+    numPendingTests:number
+    testResults: JestFileResults[]
+}
+
 export function activate(context: vscode.ExtensionContext) {
     let channel = vscode.window.createOutputChannel("Jest")
 
@@ -41,9 +62,18 @@ export function activate(context: vscode.ExtensionContext) {
 class JestExt  {
     private jestProcess: JestRunner
     private parser: TestFileParser
+    
+    // So you can read what's going on
     private channel: vscode.OutputChannel
+    
+    // Memory management
     private workspaceDisposal: { dispose(): any }[]
     private perFileDisposals: { dispose(): any }[]
+    
+    // The bottom status bar
+    private statusBarItem: vscode.StatusBarItem;
+    // The ability to show fails in the problems section
+    private failDiagnostics: vscode.DiagnosticCollection;
 
     private passingItStyle: vscode.TextEditorDecorationType
     private failingItStyle: vscode.TextEditorDecorationType
@@ -53,6 +83,8 @@ class JestExt  {
         this.workspaceDisposal = disposal
         this.perFileDisposals = []
         this.parser = new TestFileParser() 
+        this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left)
+        this.failDiagnostics = vscode.languages.createDiagnosticCollection("Jest")
     }
 
     startProcess() {
@@ -82,6 +114,7 @@ class JestExt  {
         });
 
         this.setupDecorators()
+        this.setupStatusBar()
     }
 
     async triggerUpdateDecorations(editor: vscode.TextEditor) {
@@ -94,12 +127,35 @@ class JestExt  {
         }
     }
 
+    setupStatusBar() { 
+        this.statusBarItem.text = "Jest: Running"
+        this.statusBarItem.show()
+    }
+
     setupDecorators() {
         this.passingItStyle = decorations.passingItName()
         this.failingItStyle = decorations.failingItName();
     }
 
-    updateWithData(data: any) {
+    updateWithData(data: JestTotalResults) {
+        if (data.success) {
+            this.statusBarItem.text = "Jest: Passed"
+        } else {
+            this.statusBarItem.text = "Jest: Failed"
+            this.statusBarItem.color = "red"
+
+            this.failDiagnostics.clear()
+            const fails = data.testResults.filter((file) => file.status === "failed")
+            fails.forEach( (failed) => {
+                const daig = new vscode.Diagnostic(
+                    new vscode.Range(0, 0, 0, 0),
+                    failed.message,
+                    vscode.DiagnosticSeverity.Error
+                )
+                const uri = vscode.Uri.file(failed.name)
+                this.failDiagnostics.set(uri, [daig])
+            })
+        }
     }
 
     generateDecoratorsForJustIt(blocks: ItBlock[], editor: vscode.TextEditor): vscode.DecorationOptions[] {
