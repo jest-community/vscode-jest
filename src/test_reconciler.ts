@@ -41,7 +41,6 @@ export class TestReconciler {
 
   stateForTest(file:vscode.Uri, name:string): TestReconcilationState {
     const results = this.fileStatuses[file.fsPath]
-    console.log("file state:", results)
     if (!results) return TestReconcilationState.Unknown
     return results.state 
   }

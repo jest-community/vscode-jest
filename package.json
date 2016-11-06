@@ -2,7 +2,7 @@
   "name": "vscode-jest",
   "displayName": "vscode-jest",
   "description": "Improve your Jest testing workflow in VS Code.",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "publisher": "Orta",
   "engines": {
     "vscode": "^1.5.0"
