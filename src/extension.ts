@@ -6,6 +6,7 @@ import * as childProcess from 'child_process';
 import {basename, dirname} from 'path';
 import * as path from 'path';
 import {JestRunner} from './jest_runner'
+import {TestReconciler, TestReconcilationState} from './test_reconciler'
 import {TestFileParser, ItBlock} from './test_file_parser'
 import * as decorations from './decorations'
 
@@ -20,7 +21,7 @@ interface JestFileResults {
     endTime:number
 }
 
-interface JestTotalResults {
+export interface JestTotalResults {
     success:boolean
     startTime:number
     numTotalTests:number
@@ -38,6 +39,10 @@ export function activate(context: vscode.ExtensionContext) {
     console.log("Starting")
     extensionInstance = new JestExt(channel, context.subscriptions)
     extensionInstance.startProcess()
+    
+    vscode.commands.registerCommand("io.orta.show-jest-output", ()=> {
+        channel.show()
+    })
 
     // Setup the file change watchers
 	var activeEditor = vscode.window.activeTextEditor;
@@ -52,16 +57,25 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	}, null, context.subscriptions);
 	
+    vscode.workspace.onDidSaveTextDocument(document => {
+        if (document) {
+            extensionInstance.triggerUpdateDecorations(vscode.window.activeTextEditor)
+        }
+    })
+
 	vscode.workspace.onDidChangeTextDocument(event => {
 		if (activeEditor && event.document === activeEditor.document) {
 			extensionInstance.triggerUpdateDecorations(activeEditor);
+            
 		}
 	}, null, context.subscriptions);
+    
 }
 
 class JestExt  {
     private jestProcess: JestRunner
     private parser: TestFileParser
+    private reconciler: TestReconciler
     
     // So you can read what's going on
     private channel: vscode.OutputChannel
@@ -77,6 +91,9 @@ class JestExt  {
 
     private passingItStyle: vscode.TextEditorDecorationType
     private failingItStyle: vscode.TextEditorDecorationType
+    private unknownItStyle: vscode.TextEditorDecorationType
+
+    private clearOnNextInput: boolean
 
     public constructor(outputChannel: vscode.OutputChannel, disposal:  { dispose(): any }[]) {
         this.channel = outputChannel
@@ -85,6 +102,8 @@ class JestExt  {
         this.parser = new TestFileParser() 
         this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left)
         this.failDiagnostics = vscode.languages.createDiagnosticCollection("Jest")
+        this.clearOnNextInput = true
+        this.reconciler = new TestReconciler()
     }
 
     startProcess() {
@@ -92,18 +111,23 @@ class JestExt  {
 
         this.jestProcess.on('debuggerComplete', () => {
             console.log("Closed")
+
         }).on('executableJSON', (data: any) => {
-            console.log("JSON  ] ", data)
+            console.log("JSON data from Jest recieved: ", data)
             this.updateWithData(data)
+            this.triggerUpdateDecorations(vscode.window.activeTextEditor)
+            this.clearOnNextInput = true
 
         }).on('executableOutput', (output: string) => {
-            console.log("Output] " + output)
-            
             if (!output.includes("Watch Usage")){
                 this.channel.appendLine(output)
             }
 
         }).on('executableStdErr', (error: Buffer) => {
+            if (this.clearOnNextInput){
+                this.clearOnNextInput = false
+                this.channel.clear()
+            }
             this.channel.appendLine(error.toString())
         }).on('nonTerminalError', (error: string) => {
             console.log("Err?  ] " + error.toString())
@@ -120,26 +144,55 @@ class JestExt  {
     async triggerUpdateDecorations(editor: vscode.TextEditor) {
         try {
             await this.parser.run(editor.document.uri.fsPath)
-            let decorators = this.generateDecoratorsForJustIt(this.parser.itBlocks, editor)
-            editor.setDecorations(this.passingItStyle,decorators)
+            const itBlocks = this.parser.itBlocks
+            const successes: ItBlock[] = []
+            const fails: ItBlock[] = []
+            const unknowns: ItBlock[] = [] 
+
+            itBlocks.forEach(it => {
+                switch(this.reconciler.stateForTest(editor.document.uri, it.name)) {
+                    case TestReconcilationState.KnownSuccess: 
+                        successes.push(it); break
+                    case TestReconcilationState.KnownFail: 
+                        fails.push(it); break
+                    case TestReconcilationState.Unknown: 
+                        unknowns.push(it); break
+                }
+            });
+
+            const styleMap = [ 
+                { data: successes, style: this.passingItStyle }, 
+                { data: fails, style: this.failingItStyle }, 
+                { data: unknowns, style: this.unknownItStyle }
+            ]
+            styleMap.forEach(style => {
+                let decorators = this.generateDecoratorsForJustIt(style.data, editor)
+                editor.setDecorations(style.style, decorators)                
+            })
+
         } catch(e) {
-            return;
+            console.log(`Error Parsing :${editor.document.uri.fsPath} for VS Code Jest.`, e)
         }
     }
 
     setupStatusBar() { 
         this.statusBarItem.text = "Jest: Running"
         this.statusBarItem.show()
+        this.statusBarItem.command = "io.orta.show-jest-output"
     }
 
     setupDecorators() {
         this.passingItStyle = decorations.passingItName()
-        this.failingItStyle = decorations.failingItName();
+        this.failingItStyle = decorations.failingItName()
+        this.unknownItStyle = decorations.notRanItName()
     }
 
     updateWithData(data: JestTotalResults) {
+        this.reconciler.updateFileWithJestStatus(data)
         if (data.success) {
             this.statusBarItem.text = "Jest: Passed"
+            this.statusBarItem.color = "white"
+
         } else {
             this.statusBarItem.text = "Jest: Failed"
             this.statusBarItem.color = "red"
@@ -179,20 +232,11 @@ class JestExt  {
         })
     }
 
-    recievedResults(results: any) {
-        if(results.success) {
-            console.log("Passed")
-        } else {
-            console.log("Failed")
-        }
-    }
-
     deactivate() {
-
+        this.jestProcess.closeProcess()
     }
 }
 
 export function deactivate() {
     extensionInstance.deactivate()
-
 }

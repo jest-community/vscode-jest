@@ -12,13 +12,13 @@ export class JestRunner extends EventEmitter {
     constructor() {
         super();
 
-        var runtimeArgs = ['.', '--json', '--useStderr', '--watch', '--colors', 'false', "--verbose"];
+        var runtimeArgs = ['--json', '--useStderr', '--watch', '--colors', 'false', "--verbose"];
         var runtimeExecutable: string;
 
         runtimeExecutable = "node_modules/.bin/jest"
         
         var processCwd = workspace.rootPath
-        var processEnv = {};
+        var processEnv = {}
 
         //use process environment
         for( var env in process.env) {
@@ -54,8 +54,11 @@ export class JestRunner extends EventEmitter {
         });
     }
 
-    // This doesn't work yet...
+    public closeProcess() {
+        this.debugprocess.kill()
+    }
+
     public triggerFullTestSuite() {
-        this.debugprocess.stdin.write("o")
+        this.debugprocess.stdin.write("a")
     }
 }
