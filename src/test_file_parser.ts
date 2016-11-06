@@ -29,13 +29,14 @@ export class TestFileParser {
     async run(file: string): Promise<any> {
         let data = await this.generateAST(file)
         this.itBlocks = []
-        this.findItBlocksInBody(data["program"])
+        this.findItBlocksInBody(data["program"], file)
         return data
     }
 
-    foundItNode(node){
+    foundItNode(node: any, file: string){
         let it = new ItBlock()
         it.updateWithNode(node)
+        it.file = file
         this.itBlocks.push(it)
     }
 
@@ -57,18 +58,18 @@ export class TestFileParser {
         node.expression.callee.name === "describe"
     }
 
-    findItBlocksInBody(root) {
+    findItBlocksInBody(root: any, file: string) {
         for (var node in root.body) {
             if (root.body.hasOwnProperty(node)) {
                 var element = root.body[node];
                 if (this.isADescribe(element)){
                     if (element.expression.arguments.length == 2) {
                         let newBody = element.expression.arguments[1].body
-                        this.findItBlocksInBody(newBody);
+                        this.findItBlocksInBody(newBody, file);
                     }
                 }
                 if (this.isAnIt(element)) {
-                    this.foundItNode(element)
+                    this.foundItNode(element, file)
                 }        
             }
         }

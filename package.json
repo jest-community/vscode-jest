@@ -1,11 +1,23 @@
 {
   "name": "vscode-jest",
-  "displayName": "vscode-jest",
-  "description": "Improve your Jest testing workflow in VS Code.",
-  "version": "0.0.2",
+  "displayName": "Jest",
+  "description": "Use Facebook's Jest With Pleasure.",
+  "version": "0.0.6",
   "publisher": "Orta",
   "engines": {
     "vscode": "^1.5.0"
+  },
+  "author": {
+    "name": "Orta Therox",
+    "url": "http://orta.io"
+  },
+  "repository": {
+    "type": "github",
+    "url": "https://github.com/orta/vscode-jest"
+  },
+  "galleryBanner": {
+    "theme": "light",
+    "color": "#ca461a"
   },
   "categories": [
     "Other"
