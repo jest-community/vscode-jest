@@ -1,8 +1,8 @@
 {
   "name": "vscode-jest",
   "displayName": "Jest",
-  "description": "Use Jest With Pleasure.",
-  "version": "0.0.5",
+  "description": "Use Facebook's Jest With Pleasure.",
+  "version": "0.0.6",
   "publisher": "Orta",
   "engines": {
     "vscode": "^1.5.0"
