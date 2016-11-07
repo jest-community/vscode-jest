@@ -120,7 +120,7 @@ class JestExt  {
         }).on('executableStdErr', (error: Buffer) => {
             if (this.clearOnNextInput){
                 this.clearOnNextInput = false;
-                this.channel.clear();
+                this.testsHaveStartedRunning();
             }
             this.channel.appendLine(error.toString());
         }).on('nonTerminalError', (error: string) => {
@@ -170,9 +170,9 @@ class JestExt  {
     }
 
     setupStatusBar() { 
-        this.statusBarItem.text = "Jest: Running";
         this.statusBarItem.show();
         this.statusBarItem.command = "io.orta.show-jest-output";
+        this.testsHaveStartedRunning();
     }
 
     setupDecorators() {
@@ -181,15 +181,18 @@ class JestExt  {
         this.unknownItStyle = decorations.notRanItName();
     }
 
+    testsHaveStartedRunning() {
+        this.channel.clear();
+        this.statusBarItem.text = "Jest: $(sync)";
+    }
+
     updateWithData(data: JestTotalResults) {
         this.reconciler.updateFileWithJestStatus(data);
         if (data.success) {
-            this.statusBarItem.text = "Jest: Passed";
-            this.statusBarItem.color = "white";
+            this.statusBarItem.text = "Jest: $(check)";
 
         } else {
-            this.statusBarItem.text = "Jest: Failed";
-            this.statusBarItem.color = "red";
+            this.statusBarItem.text = "Jest: $(alert)";
 
             this.failDiagnostics.clear();
             const fails = data.testResults.filter((file) => file.status === "failed");

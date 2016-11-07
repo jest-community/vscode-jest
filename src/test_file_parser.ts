@@ -26,10 +26,14 @@ export class TestFileParser {
     itBlocks: ItBlock[];
 
     async run(file: string): Promise<any> {
-        let data = await this.generateAST(file);
-        this.itBlocks = [];
-        this.findItBlocksInBody(data["program"], file);
-        return data;
+        try {
+            let data = await this.generateAST(file);
+            this.itBlocks = [];
+            this.findItBlocksInBody(data["program"], file);
+            return data;
+        } catch (error) {
+            return {};
+        }
     }
 
     foundItNode(node: any, file: string){
