@@ -1,10 +1,8 @@
 'use strict';
 
-import {basename, dirname} from 'path';
-import * as net from 'net';
 import * as childProcess from 'child_process';
 import {EventEmitter} from 'events';
-import {window, workspace} from 'vscode'
+import {workspace} from 'vscode';
 
 export class JestRunner extends EventEmitter {
     private debugprocess: childProcess.ChildProcess;
@@ -15,10 +13,10 @@ export class JestRunner extends EventEmitter {
         var runtimeArgs = ['--json', '--useStderr', '--watch', '--colors', 'false', "--verbose"];
         var runtimeExecutable: string;
 
-        runtimeExecutable = "node_modules/.bin/jest"
+        runtimeExecutable = "node_modules/.bin/jest";
         
-        var processCwd = workspace.rootPath
-        var processEnv = {}
+        var processCwd = workspace.rootPath;
+        var processEnv = {};
 
         //use process environment
         for( var env in process.env) {
@@ -29,7 +27,7 @@ export class JestRunner extends EventEmitter {
 
         this.debugprocess.stdout.on('data', (data: Buffer) => {
             // Convert to JSON and strip any trailing newlines
-            let stringValue = data.toString().replace(/\n$/, "")
+            let stringValue = data.toString().replace(/\n$/, "");
             if (stringValue.substr(0, 1) === "{" && stringValue.substr(-1, 1) === "}") {
                 this.emit('executableJSON', JSON.parse(stringValue));
             } else {
@@ -50,15 +48,15 @@ export class JestRunner extends EventEmitter {
         });
 
         this.debugprocess.on('close', () => {
-           console.log("Jest Closed")
+           console.log("Jest Closed");
         });
     }
 
     public closeProcess() {
-        this.debugprocess.kill()
+        this.debugprocess.kill();
     }
 
     public triggerFullTestSuite() {
-        this.debugprocess.stdin.write("a")
+        this.debugprocess.stdin.write("a");
     }
 }

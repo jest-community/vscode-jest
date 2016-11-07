@@ -1,43 +1,42 @@
-'use strict'
+'use strict';
 
 import fs = require('fs');
-import * as path from 'path';
-import * as babylon from 'babylon'
+import * as babylon from 'babylon';
 
 interface Location {
-    line: number
-    column: number
+    line: number;
+    column: number;
 }
 
 export class ItBlock {
-    name: string
-    file: string
-    start: Location
-    end: Location
+    name: string;
+    file: string;
+    start: Location;
+    end: Location;
 
     updateWithNode(node: any){
-        this.start = node.loc.start
-        this.end = node.loc.end
-        this.name = node.expression.arguments[0].value
+        this.start = node.loc.start;
+        this.end = node.loc.end;
+        this.name = node.expression.arguments[0].value;
     }
 }
 
 export class TestFileParser {
 
-    itBlocks: ItBlock[]
+    itBlocks: ItBlock[];
 
     async run(file: string): Promise<any> {
-        let data = await this.generateAST(file)
-        this.itBlocks = []
-        this.findItBlocksInBody(data["program"], file)
-        return data
+        let data = await this.generateAST(file);
+        this.itBlocks = [];
+        this.findItBlocksInBody(data["program"], file);
+        return data;
     }
 
     foundItNode(node: any, file: string){
-        let it = new ItBlock()
-        it.updateWithNode(node)
-        it.file = file
-        this.itBlocks.push(it)
+        let it = new ItBlock();
+        it.updateWithNode(node);
+        it.file = file;
+        this.itBlocks.push(it);
     }
 
     isAnIt(node) {
@@ -49,13 +48,13 @@ export class TestFileParser {
         (
             node.expression.callee.name === "it" ||
             node.expression.callee.name === "test"
-        ) 
+        ); 
     }
 
      isADescribe(node) {
         return node.type === "ExpressionStatement" &&
         node.expression.type === "CallExpression" &&
-        node.expression.callee.name === "describe"
+        node.expression.callee.name === "describe";
     }
 
     findItBlocksInBody(root: any, file: string) {
@@ -63,13 +62,13 @@ export class TestFileParser {
             if (root.body.hasOwnProperty(node)) {
                 var element = root.body[node];
                 if (this.isADescribe(element)){
-                    if (element.expression.arguments.length == 2) {
-                        let newBody = element.expression.arguments[1].body
+                    if (element.expression.arguments.length === 2) {
+                        let newBody = element.expression.arguments[1].body;
                         this.findItBlocksInBody(newBody, file);
                     }
                 }
                 if (this.isAnIt(element)) {
-                    this.foundItNode(element, file)
+                    this.foundItNode(element, file);
                 }        
             }
         }
@@ -77,12 +76,12 @@ export class TestFileParser {
 
     generateAST(file: string): Promise<babylon.Node> {
         return new Promise((resolve, reject) =>{
-            var parentDir = path.resolve(process.cwd(), '..');
-
             fs.readFile(file, "utf8", (err, data) => {
-                if (err) { return reject(err.message) }
-                resolve(babylon.parse(data, { sourceType:"module", plugins: ["jsx", "flow"] }))
-            })  
-        })
+                if (err) { return reject(err.message); }
+                resolve(
+                    babylon.parse(data, { sourceType:"module", plugins: ["jsx", "flow"] })
+                );
+            });  
+        });
     }
 }

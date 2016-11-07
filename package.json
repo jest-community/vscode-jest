@@ -12,7 +12,7 @@
     "url": "http://orta.io"
   },
   "repository": {
-    "type": "github",
+    "type": "git",
     "url": "https://github.com/orta/vscode-jest"
   },
   "galleryBanner": {
