@@ -22,6 +22,7 @@ export interface JestAssertionResults {
     name: string;
     title: string;
     status: "failed" | "passed";
+    failureMessages: string[];
 }
 
 export interface JestTotalResults {
@@ -202,15 +203,18 @@ class JestExt  {
             this.statusBarItem.text = "Jest: $(alert)";
 
             this.failDiagnostics.clear();
-            const fails = data.testResults.filter((file) => file.status === "failed");
-            fails.forEach( (failed) => {
-                const daig = new vscode.Diagnostic(
-                    new vscode.Range(0, 0, 0, 0),
-                    failed.message,
-                    vscode.DiagnosticSeverity.Error
-                );
-                const uri = vscode.Uri.file(failed.name);
-                this.failDiagnostics.set(uri, [daig]);
+            
+            const fails = this.reconciler.failedStatuses();
+            fails.forEach( (fail) => {
+                fail.assertions.forEach((assertion) =>  { 
+                    const daig = new vscode.Diagnostic(
+                        new vscode.Range(assertion.line || 0, 0, 0, 0),
+                        assertion.terseMessage,
+                        vscode.DiagnosticSeverity.Error
+                    );
+                    const uri = vscode.Uri.file(fail.file);
+                    this.failDiagnostics.set(uri, [daig]);
+                });
             });
         }
     }
@@ -220,17 +224,6 @@ class JestExt  {
             return {
                 // VS Code is 1 based, babylon is 0 based
                 range: new vscode.Range(it.start.line - 1, it.start.column, it.start.line - 1, it.start.column + 2),
-                hoverMessage: it.name,
-            };
-        });
-    }
-
-
-    generateDecoratorsForWholeItBlocks(blocks: ItBlock[], editor: vscode.TextEditor): vscode.DecorationOptions[] {
-        return blocks.map((it)=> {
-            return {
-                // VS Code is 1 based, babylon is 0 based
-                range: new vscode.Range(it.start.line - 1, it.start.column, it.end.line - 1, it.end.column),
                 hoverMessage: it.name,
             };
         });

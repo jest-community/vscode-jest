@@ -3,28 +3,44 @@ import * as vscode from 'vscode';
 import { TestReconciler, TestReconcilationState } from '../src/test_reconciler';
 import * as fs from "fs";
 
-const reconcilerWithFile = (file: vscode.Uri): TestReconciler => {
-      const parser = new TestReconciler();
-      const exampleJSON = fs.readFileSync(__dirname + "/../../test/fixtures/failing_jest_json.js");
-      const json = JSON.parse(exampleJSON.toString());
-      parser.updateFileWithJestStatus(json);
-return parser;
+const reconcilerWithFile = (file: string): TestReconciler => {
+  const parser = new TestReconciler();
+  const exampleJSON = fs.readFileSync(__dirname + "/../../test/fixtures/failing_jsons/" + file);
+  const json = JSON.parse(exampleJSON.toString());
+  parser.updateFileWithJestStatus(json);
+  return parser;
 };
 
 suite("Test Reconciler", () => {
     let parser: TestReconciler;
-    const filePath = "/Users/orta/dev/projects/danger/danger-js/source/ci_source/_tests/_travis.test.js";
-    const file = vscode.Uri.file(filePath);
+    const dangerFilePath = "/Users/orta/dev/projects/danger/danger-js/source/ci_source/_tests/_travis.test.js";
+    const dangerFile = vscode.Uri.file(dangerFilePath);
 
-    test("passes a passing method", () => {
-      parser = reconcilerWithFile(file);
-      const status = parser.stateForTestAssertion(file, "does not validate without josh");
-      assert.equal(status.status, TestReconcilationState.KnownSuccess);
+    const metapFilePath = "/Users/orta/dev/projects/danger/danger-js/source/ci_source/_tests/_travis.test.js";
+    const metapFile = vscode.Uri.file(metapFilePath);
+
+    suite("for a simple project", () => {
+      test("passes a passing method", () => {
+        parser = reconcilerWithFile("failing_jest_json.json");
+        const status = parser.stateForTestAssertion(dangerFile, "does not validate without josh");
+        assert.equal(status.status, TestReconcilationState.KnownSuccess);
+        assert.equal(status.line, null);
+      });
+
+      test("fails a failing method in the same file", () => {
+        parser = reconcilerWithFile("failing_jest_json.json");
+        const status = parser.stateForTestAssertion(dangerFile, "validates when all Travis environment vars are set and Josh K says so");
+        assert.equal(status.status, TestReconcilationState.KnownFail);
+        assert.equal(status.line, 12);
+        assert.equal(status.terseMessage, "Expected value to be falsy, instead received true");
+        assert.equal(status.shortMessage, `Error: expect(received).toBeFalsy()
+
+Expected value to be falsy, instead received
+  true`);
+      });
     });
 
-    test("fails a failing method in the same file", () => {
-      parser = reconcilerWithFile(file);
-      const status = parser.stateForTestAssertion(file, "does not validate without josh");
-      assert.equal(status.status, TestReconcilationState.KnownSuccess);
+    suite("for a non-trivial failing json", () => {
     });
+
 });

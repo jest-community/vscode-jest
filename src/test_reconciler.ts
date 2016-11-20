@@ -1,6 +1,7 @@
 'use strict';
 
 import * as vscode from 'vscode';
+import { basename } from 'path';
 import { JestTotalResults, JestAssertionResults } from './extension';
 
 export enum TestReconcilationState {
@@ -21,32 +22,57 @@ export interface TestAssertionStatus {
   status: TestReconcilationState;
   message: string;
   shortMessage: string;
+  terseMessage: string;
+  line: number | null;
 }
 
 export class TestReconciler {
-  private fileStatuses:any;
+  private fileStatuses: any;
+  private fails: TestFileAssertionStatus[];
 
   constructor() {
     this.fileStatuses = {}; 
+    this.fails = [];
   }
 
   updateFileWithJestStatus(results: JestTotalResults) {
     results.testResults.forEach(file => {
-       this.fileStatuses[file.name] = {
+      const status = this.statusToReconcilationState(file.status);
+      const fileStatus: TestFileAssertionStatus = {
          file: file.name,
-         status: this.statusToReconcilationState(file.status),
-         assertions: this.mapAssertions(file.assertionResults)
+         status,
+         message: file.message,
+         assertions: this.mapAssertions(file.name, file.assertionResults),
        };
+       this.fileStatuses[file.name] = fileStatus; 
+       if (status === TestReconcilationState.KnownFail) {
+         this.fails.push(fileStatus);
+       }
     });
   }
 
-  private mapAssertions(assertions: JestAssertionResults[]) : TestAssertionStatus[] {
+  failedStatuses(): TestFileAssertionStatus[] {
+    return this.fails;
+  }
+
+  private mapAssertions(filename:string, assertions: JestAssertionResults[]) : TestAssertionStatus[] {
     return assertions.map((assertion) => {
+      let message = assertion.failureMessages[0];
+      let short = null;
+      let terse = null;
+      let line = null;
+      if (message) {
+        short = message.split("   at", 1)[0].trim();
+        terse = short.split("\n").splice(2).join("").replace("  ", " ");
+        line = parseInt(message.split(basename(filename), 2)[1].split(":")[1]);
+      }
       return {
         status: this.statusToReconcilationState(assertion.status),
         title: assertion.title,
-        message: "",
-        shortMessage: "",
+        message: message,
+        shortMessage: short,
+        terseMessage: terse,
+        line: line
       };
     });
   }
