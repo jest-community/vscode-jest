@@ -1,7 +1,7 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import {JestTotalResults} from './extension';
+import { JestTotalResults, JestAssertionResults } from './extension';
 
 export enum TestReconcilationState {
   Unknown = 1,
@@ -9,10 +9,18 @@ export enum TestReconcilationState {
   KnownSuccess = 3
 }
 
-// just file level for now, need a Jest release for per-test
-interface TestStatus {
+export interface TestFileAssertionStatus {
   file: string;
-  state: TestReconcilationState;
+  message: string;
+  status: TestReconcilationState;
+  assertions: TestAssertionStatus[];
+}
+
+export interface TestAssertionStatus {
+  title: string;
+  status: TestReconcilationState;
+  message: string;
+  shortMessage: string;
 }
 
 export class TestReconciler {
@@ -26,12 +34,24 @@ export class TestReconciler {
     results.testResults.forEach(file => {
        this.fileStatuses[file.name] = {
          file: file.name,
-         state: this.statusToReconcilationState(file.status)
+         status: this.statusToReconcilationState(file.status),
+         assertions: this.mapAssertions(file.assertionResults)
        };
     });
   }
 
-  statusToReconcilationState(status: string): TestReconcilationState {
+  private mapAssertions(assertions: JestAssertionResults[]) : TestAssertionStatus[] {
+    return assertions.map((assertion) => {
+      return {
+        status: this.statusToReconcilationState(assertion.status),
+        title: assertion.title,
+        message: "",
+        shortMessage: "",
+      };
+    });
+  }
+
+  private statusToReconcilationState(status: string): TestReconcilationState {
     switch(status){
       case "passed": return TestReconcilationState.KnownSuccess;
       case "failed": return TestReconcilationState.KnownFail;
@@ -39,9 +59,17 @@ export class TestReconciler {
     }
   }
 
-  stateForTest(file:vscode.Uri, name:string): TestReconcilationState {
-    const results = this.fileStatuses[file.fsPath];
+  stateForTestFile(file:vscode.Uri): TestReconcilationState {
+    const results: TestFileAssertionStatus = this.fileStatuses[file.fsPath];
     if (!results) { return TestReconcilationState.Unknown; }
-    return results.state; 
+    return results.status; 
+  }
+
+  stateForTestAssertion(file:vscode.Uri, name:string): TestAssertionStatus | null {
+    const results: TestFileAssertionStatus = this.fileStatuses[file.fsPath];
+    if (!results) { return null; }
+    const assertion = results.assertions.find((a) => a.title === name );
+    if (!assertion) { return null; }
+    return assertion; 
   }
 }

@@ -8,13 +8,20 @@ import * as decorations from './decorations';
 
 var extensionInstance: JestExt;
 
-interface JestFileResults {
+export interface JestFileResults {
     name: string;
     summary: string;
     message: string;
     status: "failed" | "passed";
     startTime:number;
     endTime:number;
+    assertionResults: JestAssertionResults[];
+}
+
+export interface JestAssertionResults {
+    name: string;
+    title: string;
+    status: "failed" | "passed";
 }
 
 export interface JestTotalResults {
@@ -144,7 +151,7 @@ class JestExt  {
             const unknowns: ItBlock[] = []; 
 
             itBlocks.forEach(it => {
-                switch(this.reconciler.stateForTest(editor.document.uri, it.name)) {
+                switch(this.reconciler.stateForTestFile(editor.document.uri)) {
                     case TestReconcilationState.KnownSuccess: 
                         successes.push(it); break;
                     case TestReconcilationState.KnownFail: 

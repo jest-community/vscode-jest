@@ -31,7 +31,7 @@ export class JestRunner extends EventEmitter {
             if (stringValue.substr(0, 1) === "{" && stringValue.substr(-1, 1) === "}") {
                 this.emit('executableJSON', JSON.parse(stringValue));
             } else {
-                this.emit('executableOutput', stringValue);
+                this.emit('executableOutput', stringValue.replace("[2J[H", ""));
             }
         });
 

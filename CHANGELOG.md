@@ -1,3 +1,8 @@
+### Master 
+
+* WIP on doing inline error analysis correctly - orta
+* WIP errors on jest projects before 17.x - orta
+
 ### 0.0.6
 
 * Show when the tests are running - orta
