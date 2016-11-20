@@ -152,7 +152,8 @@ class JestExt  {
             const unknowns: ItBlock[] = []; 
 
             itBlocks.forEach(it => {
-                switch(this.reconciler.stateForTestFile(editor.document.uri)) {
+                const state = this.reconciler.stateForTestAssertion(editor.document.uri, it.name);
+                switch(state.status) {
                     case TestReconcilationState.KnownSuccess: 
                         successes.push(it); break;
                     case TestReconcilationState.KnownFail: 
@@ -163,12 +164,12 @@ class JestExt  {
             });
 
             const styleMap = [ 
-                { data: successes, style: this.passingItStyle }, 
-                { data: fails, style: this.failingItStyle }, 
-                { data: unknowns, style: this.unknownItStyle }
+                { data: successes, style: this.passingItStyle, state: TestReconcilationState.KnownSuccess }, 
+                { data: fails, style: this.failingItStyle, state: TestReconcilationState.KnownFail }, 
+                { data: unknowns, style: this.unknownItStyle, state: TestReconcilationState.Unknown }
             ];
             styleMap.forEach(style => {
-                let decorators = this.generateDecoratorsForJustIt(style.data, editor);
+                let decorators = this.generateDecoratorsForJustIt(style.data, style.state);
                 editor.setDecorations(style.style, decorators);                
             });
 
