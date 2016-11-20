@@ -219,12 +219,22 @@ class JestExt  {
         }
     }
 
-    generateDecoratorsForJustIt(blocks: ItBlock[], editor: vscode.TextEditor): vscode.DecorationOptions[] {
+    generateDecoratorsForJustIt(blocks: ItBlock[], state: TestReconcilationState): vscode.DecorationOptions[] {
+        const nameForState = (name: string, state: TestReconcilationState): string => {
+            switch (state) {
+                    case TestReconcilationState.KnownSuccess: 
+                        return 'Passed';
+                    case TestReconcilationState.KnownFail: 
+                        return 'Failed';
+                    case TestReconcilationState.Unknown: 
+                        return 'Not ran';
+                }
+        };
         return blocks.map((it)=> {
             return {
                 // VS Code is 1 based, babylon is 0 based
                 range: new vscode.Range(it.start.line - 1, it.start.column, it.start.line - 1, it.start.column + 2),
-                hoverMessage: it.name,
+                hoverMessage: nameForState(it.name, state),
             };
         });
     }
