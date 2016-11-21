@@ -1,7 +1,13 @@
-### Master 
+### 1.0.0 
 
-* WIP on doing inline error analysis correctly - orta
-* WIP errors on jest projects before 17.x - orta
+#### Feature Complete, and rough polish pass
+
+* Starts Jest automatically when you're in a project with Jest installed.
+* Show individual fail / passes inline.
+* Show fails inside the problem inspector.
+* Highlights the errors next to the `expect` functions 
+
+- orta
 
 ### 0.0.6
 

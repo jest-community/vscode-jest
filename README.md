@@ -5,7 +5,7 @@ A comprehensive experience when using [Faceook's Jest](https://github.com/facebo
 * Useful IDE based Feedback
 * Session based test watching
 
-![Screenshot](images/vscode-jest.gif)
+![Screenshot](https://github.com/orta/vscode-jest/raw/master/images/vscode-jest.gif)
 
 ## Features
 
