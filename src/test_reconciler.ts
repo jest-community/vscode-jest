@@ -1,7 +1,8 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import {JestTotalResults} from './extension';
+import { basename } from 'path';
+import { JestTotalResults, JestAssertionResults } from './extension';
 
 export enum TestReconcilationState {
   Unknown = 1,
@@ -9,29 +10,85 @@ export enum TestReconcilationState {
   KnownSuccess = 3
 }
 
-// just file level for now, need a Jest release for per-test
-interface TestStatus {
+export interface TestFileAssertionStatus {
   file: string;
-  state: TestReconcilationState;
+  message: string;
+  status: TestReconcilationState;
+  assertions: TestAssertionStatus[];
+}
+
+export interface TestAssertionStatus {
+  title: string;
+  status: TestReconcilationState;
+  message: string;
+  shortMessage: string;
+  terseMessage: string;
+  line: number | null;
 }
 
 export class TestReconciler {
-  private fileStatuses:any;
+  private fileStatuses: any;
+  private fails: TestFileAssertionStatus[];
+  private passes: TestFileAssertionStatus[];
 
   constructor() {
     this.fileStatuses = {}; 
   }
 
   updateFileWithJestStatus(results: JestTotalResults) {
+    this.fails = [];
+    this.passes = [];
+    
     results.testResults.forEach(file => {
-       this.fileStatuses[file.name] = {
+      const status = this.statusToReconcilationState(file.status);
+      const fileStatus: TestFileAssertionStatus = {
          file: file.name,
-         state: this.statusToReconcilationState(file.status)
+         status,
+         message: file.message,
+         assertions: this.mapAssertions(file.name, file.assertionResults),
        };
+       this.fileStatuses[file.name] = fileStatus; 
+       if (status === TestReconcilationState.KnownFail) {
+         this.fails.push(fileStatus);
+       } else if(status === TestReconcilationState.KnownSuccess) { 
+         this.passes.push(fileStatus);
+       }
     });
   }
 
-  statusToReconcilationState(status: string): TestReconcilationState {
+  failedStatuses(): TestFileAssertionStatus[] {
+    return this.fails;
+  }
+
+
+  passedStatuses(): TestFileAssertionStatus[] {
+    return this.passes;
+  }
+
+
+  private mapAssertions(filename:string, assertions: JestAssertionResults[]) : TestAssertionStatus[] {
+    return assertions.map((assertion) => {
+      let message = assertion.failureMessages[0];
+      let short = null;
+      let terse = null;
+      let line = null;
+      if (message) {
+        short = message.split("   at", 1)[0].trim();
+        terse = short.split("\n").splice(2).join("").replace("  ", " ").replace(/\[\d\dm/g, "").replace("Received:", " Received:").replace("Difference:", " Difference:");
+        line = parseInt(message.split(basename(filename), 2)[1].split(":")[1]);
+      }
+      return {
+        status: this.statusToReconcilationState(assertion.status),
+        title: assertion.title,
+        message: message,
+        shortMessage: short,
+        terseMessage: terse,
+        line: line
+      };
+    });
+  }
+
+  private statusToReconcilationState(status: string): TestReconcilationState {
     switch(status){
       case "passed": return TestReconcilationState.KnownSuccess;
       case "failed": return TestReconcilationState.KnownFail;
@@ -39,9 +96,17 @@ export class TestReconciler {
     }
   }
 
-  stateForTest(file:vscode.Uri, name:string): TestReconcilationState {
-    const results = this.fileStatuses[file.fsPath];
+  stateForTestFile(file:vscode.Uri): TestReconcilationState {
+    const results: TestFileAssertionStatus = this.fileStatuses[file.fsPath];
     if (!results) { return TestReconcilationState.Unknown; }
-    return results.state; 
+    return results.status; 
+  }
+
+  stateForTestAssertion(file:vscode.Uri, name:string): TestAssertionStatus | null {
+    const results: TestFileAssertionStatus = this.fileStatuses[file.fsPath];
+    if (!results) { return null; }
+    const assertion = results.assertions.find((a) => a.title === name );
+    if (!assertion) { return null; }
+    return assertion; 
   }
 }

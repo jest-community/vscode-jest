@@ -8,13 +8,21 @@ import * as decorations from './decorations';
 
 var extensionInstance: JestExt;
 
-interface JestFileResults {
+export interface JestFileResults {
     name: string;
     summary: string;
     message: string;
     status: "failed" | "passed";
     startTime:number;
     endTime:number;
+    assertionResults: JestAssertionResults[];
+}
+
+export interface JestAssertionResults {
+    name: string;
+    title: string;
+    status: "failed" | "passed";
+    failureMessages: string[];
 }
 
 export interface JestTotalResults {
@@ -86,6 +94,9 @@ class JestExt  {
     private passingItStyle: vscode.TextEditorDecorationType;
     private failingItStyle: vscode.TextEditorDecorationType;
     private unknownItStyle: vscode.TextEditorDecorationType;
+    
+    // We have to keep track of our inline assert fails to remove later 
+    private failingAssertionDecorators: any[];
 
     private clearOnNextInput: boolean;
 
@@ -93,7 +104,8 @@ class JestExt  {
         this.channel = outputChannel;
         this.workspaceDisposal = disposal;
         this.perFileDisposals = [];
-        this.parser = new TestFileParser(); 
+        this.failingAssertionDecorators = [];
+        this.parser = new TestFileParser(outputChannel); 
         this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
         this.failDiagnostics = vscode.languages.createDiagnosticCollection("Jest");
         this.clearOnNextInput = true;
@@ -104,10 +116,9 @@ class JestExt  {
         this.jestProcess = new JestRunner();
 
         this.jestProcess.on('debuggerComplete', () => {
-            console.log("Closed");
+            this.channel.appendLine("Closed Jest");
 
         }).on('executableJSON', (data: any) => {
-            console.log("JSON data from Jest recieved: ", data);
             this.updateWithData(data);
             this.triggerUpdateDecorations(vscode.window.activeTextEditor);
             this.clearOnNextInput = true;
@@ -124,18 +135,24 @@ class JestExt  {
             }
             this.channel.appendLine(error.toString());
         }).on('nonTerminalError', (error: string) => {
-            console.log("Err?  ] " + error.toString());
+            this.channel.appendLine(`Recieved an erro from Jest: ${error.toString()}`);
         }).on('exception', result => {
-            console.log("\nException raised: [" + result.type + "]: " + result.message + "\n",'stderr');
+            this.channel.appendLine("\nException raised: [" + result.type + "]: " + result.message + "\n");
         }).on('terminalError', (error: string) => {
-            console.log("\nException raised: " + error);
+            this.channel.appendLine("\nException raised: " + error);
         });
 
         this.setupDecorators();
         this.setupStatusBar();
     }
 
+    private parsingTestFile = false;
     async triggerUpdateDecorations(editor: vscode.TextEditor) {
+        if (!editor.document) { return; }
+        if (editor.document.languageId === "Log") { return; }
+        if (this.parsingTestFile === true) { return; }
+        this.parsingTestFile = true;
+
         try {
             await this.parser.run(editor.document.uri.fsPath);
             const itBlocks = this.parser.itBlocks;
@@ -144,28 +161,65 @@ class JestExt  {
             const unknowns: ItBlock[] = []; 
 
             itBlocks.forEach(it => {
-                switch(this.reconciler.stateForTest(editor.document.uri, it.name)) {
-                    case TestReconcilationState.KnownSuccess: 
-                        successes.push(it); break;
-                    case TestReconcilationState.KnownFail: 
-                        fails.push(it); break;
-                    case TestReconcilationState.Unknown: 
-                        unknowns.push(it); break;
+                const state = this.reconciler.stateForTestAssertion(editor.document.uri, it.name);
+                if (state !== null) {
+                    switch(state.status) {
+                        case TestReconcilationState.KnownSuccess: 
+                            successes.push(it); break;
+                        case TestReconcilationState.KnownFail: 
+                            fails.push(it); break;
+                        case TestReconcilationState.Unknown: 
+                            unknowns.push(it); break;
+                    }
+                } else { 
+                    unknowns.push(it);
                 }
             });
 
             const styleMap = [ 
-                { data: successes, style: this.passingItStyle }, 
-                { data: fails, style: this.failingItStyle }, 
-                { data: unknowns, style: this.unknownItStyle }
+                { data: successes, style: this.passingItStyle, state: TestReconcilationState.KnownSuccess }, 
+                { data: fails, style: this.failingItStyle, state: TestReconcilationState.KnownFail }, 
+                { data: unknowns, style: this.unknownItStyle, state: TestReconcilationState.Unknown }
             ];
             styleMap.forEach(style => {
-                let decorators = this.generateDecoratorsForJustIt(style.data, editor);
+                let decorators = this.generateDecoratorsForJustIt(style.data, style.state);
                 editor.setDecorations(style.style, decorators);                
             });
 
+
+            // Handle showing the error message on the line with the expect
+            
+            // Remove old ones 
+            this.failingAssertionDecorators.forEach(element => {
+                editor.setDecorations(element, []);
+            }); 
+            this.failingAssertionDecorators = [];
+
+            // Add new ones
+            const failStatuses = this.reconciler.failedStatuses();
+            failStatuses.forEach( (fail) => {
+                // Skip fails that aren't for this file
+                if (editor.document.uri.fsPath !== fail.file) { return; }
+                
+                // Get the failed assertions
+                const asserts = fail.assertions.filter((a) => a.status === TestReconcilationState.KnownFail);
+                asserts.forEach((assertion) => {
+                    const decorator = {
+                        range: new vscode.Range(assertion.line - 1, 0, 0, 0),
+                        hoverMessage: assertion.terseMessage
+                    };
+                    const style = decorations.failingAssertionStyle(assertion.terseMessage);
+                    this.failingAssertionDecorators.push(style);
+                    editor.setDecorations(style, [decorator]);
+                });
+            });
+
+
+            this.parsingTestFile = false;
+
         } catch(e) {
-            console.log(`Error Parsing :${editor.document.uri.fsPath} for VS Code Jest.`, e);
+            this.channel.appendLine(`Error Parsing :${editor.document.uri.fsPath}. - ${e}`, );
+            this.parsingTestFile = false;
         }
     }
 
@@ -188,43 +242,49 @@ class JestExt  {
 
     updateWithData(data: JestTotalResults) {
         this.reconciler.updateFileWithJestStatus(data);
+        this.failDiagnostics.clear();
+
         if (data.success) {
             this.statusBarItem.text = "Jest: $(check)";
 
         } else {
             this.statusBarItem.text = "Jest: $(alert)";
 
-            this.failDiagnostics.clear();
-            const fails = data.testResults.filter((file) => file.status === "failed");
-            fails.forEach( (failed) => {
-                const daig = new vscode.Diagnostic(
-                    new vscode.Range(0, 0, 0, 0),
-                    failed.message,
-                    vscode.DiagnosticSeverity.Error
-                );
-                const uri = vscode.Uri.file(failed.name);
-                this.failDiagnostics.set(uri, [daig]);
+            const fails = this.reconciler.failedStatuses();
+            fails.forEach( (fail) => {
+                const uri = vscode.Uri.file(fail.file);
+                const asserts = fail.assertions.filter((a) => a.status === TestReconcilationState.KnownFail);
+                this.failDiagnostics.set(uri, asserts.map( (assertion) => {
+                    const expect = this.parser.expectAtLine(assertion.line);
+                    const start = expect ? expect.start.column : 0;
+                    const daig = new vscode.Diagnostic(
+                        new vscode.Range(assertion.line - 1, start, assertion.line - 1, start + 6),
+                        assertion.terseMessage,
+                        vscode.DiagnosticSeverity.Error
+                    );
+                    daig.source = "Jest";
+                    return daig;
+                }));
             });
         }
     }
 
-    generateDecoratorsForJustIt(blocks: ItBlock[], editor: vscode.TextEditor): vscode.DecorationOptions[] {
+    generateDecoratorsForJustIt(blocks: ItBlock[], state: TestReconcilationState): vscode.DecorationOptions[] {
+        const nameForState = (name: string, state: TestReconcilationState): string => {
+            switch (state) {
+                    case TestReconcilationState.KnownSuccess: 
+                        return 'Passed';
+                    case TestReconcilationState.KnownFail: 
+                        return 'Failed';
+                    case TestReconcilationState.Unknown: 
+                        return 'Test has not run yet, due to Jest only running tests related to changes.';
+                }
+        };
         return blocks.map((it)=> {
             return {
                 // VS Code is 1 based, babylon is 0 based
                 range: new vscode.Range(it.start.line - 1, it.start.column, it.start.line - 1, it.start.column + 2),
-                hoverMessage: it.name,
-            };
-        });
-    }
-
-
-    generateDecoratorsForWholeItBlocks(blocks: ItBlock[], editor: vscode.TextEditor): vscode.DecorationOptions[] {
-        return blocks.map((it)=> {
-            return {
-                // VS Code is 1 based, babylon is 0 based
-                range: new vscode.Range(it.start.line - 1, it.start.column, it.end.line - 1, it.end.column),
-                hoverMessage: it.name,
+                hoverMessage: nameForState(it.name, state),
             };
         });
     }
