@@ -28,24 +28,6 @@
   "main": "./out/src/extension",
   "icon": "images/vscode-jest.png",
   "contributes": {
-    "commands": [
-      {
-        "command": "extension.jest.startJest",
-        "title": "Start Watching Jest"
-      }
-    ],
-    "configuration": {
-      "jest.watchOnProjectOpen": {
-        "type": "boolean",
-        "default": true,
-        "description": "Start watching tests the moment you open a Jest project"
-      },
-      "jest.pathToJest": {
-        "type": "string",
-        "default": "node_modules/.bin/jest",
-        "description": "Path to jest binary"
-      }
-    }
   },
   "scripts": {
     "vscode:prepublish": "tsc -p ./",

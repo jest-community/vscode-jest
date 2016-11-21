@@ -1,4 +1,8 @@
-### 1.0.0 
+### 1.0.2
+
+* Removes unused commands - orta
+
+### 1.0.1
 
 #### Feature Complete, and rough polish pass
 
