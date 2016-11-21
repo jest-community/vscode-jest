@@ -217,11 +217,12 @@ class JestExt  {
             
             const fails = this.reconciler.failedStatuses();
             fails.forEach( (fail) => {
-                console.log("Fail:" + fail.file);
                 const uri = vscode.Uri.file(fail.file);
                 this.failDiagnostics.set(uri, fail.assertions.filter((a) => a.status === TestReconcilationState.KnownFail).map( (assertion) => {
+                    const expect = this.parser.expectAtLine(assertion.line);
+                    const start = expect ? expect.start.column : 0;
                     const daig = new vscode.Diagnostic(
-                        new vscode.Range(assertion.line - 1 || 0, 0, assertion.line - 1|| 0, 0),
+                        new vscode.Range(assertion.line - 1, start, assertion.line - 1, start + 6),
                         assertion.terseMessage,
                         vscode.DiagnosticSeverity.Error
                     );
@@ -230,11 +231,10 @@ class JestExt  {
                 }));
             });
         }
-                        
+
         // Need to clean up things that went from pass -> fail
         const passes = this.reconciler.passedStatuses();
         passes.forEach( (pass) => {
-            console.log("Pass:" + pass.file);
             const uri = vscode.Uri.file(pass.file);
             this.failDiagnostics.set(uri, []);
         });
