@@ -2,6 +2,7 @@
 
 import fs = require('fs');
 import * as babylon from 'babylon';
+import * as vscode from 'vscode';
 
 interface Location {
     line: number;
@@ -24,6 +25,11 @@ export class ItBlock {
 export class TestFileParser {
 
     itBlocks: ItBlock[];
+    private channel: vscode.OutputChannel;
+
+    public constructor(outputChannel: vscode.OutputChannel | null) {
+        this.channel = outputChannel;
+    }
 
     async run(file: string): Promise<any> {
         try {
@@ -32,6 +38,7 @@ export class TestFileParser {
             this.findItBlocksInBody(data["program"], file);
             return data;
         } catch (error) {
+            this.channel.appendLine(`Could not parse ${file} for it/test statements.`);
             return {};
         }
     }

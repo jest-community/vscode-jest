@@ -11,7 +11,7 @@ import { TestFileParser } from '../src/test_file_parser';
 suite("File Parsing", () => {
 
     test("For the simplest global case", async () => {
-        let parser = new TestFileParser();
+        let parser = new TestFileParser(null);
         await parser.run(__dirname + "/../../test/fixtures/global_its.js");
         assert.equal(parser.itBlocks.length, 2);
         
@@ -25,9 +25,9 @@ suite("File Parsing", () => {
         assert.notStrictEqual(secondIt.start, { line: 5, column: 0 });
         assert.notStrictEqual(secondIt.end, { line: 7, column: 0 });
     });
-
+    
     test("For its inside describes", async () => {
-        let parser = new TestFileParser();
+        let parser = new TestFileParser(null);
         await parser.run(__dirname + "/../../test/fixtures/nested_its.js");
         assert.equal(parser.itBlocks.length, 3);
         
@@ -48,13 +48,13 @@ suite("File Parsing", () => {
     });
 
     test("For a danger test file (which has flow annotations)", async () => {
-        let parser = new TestFileParser();
+        let parser = new TestFileParser(null);
         await parser.run(__dirname + "/../../test/fixtures/dangerjs/travis-ci.jstest.js");
         assert.equal(parser.itBlocks.length, 7);
     });
 
     test("For a metaphysics test file", async () => {
-        let parser = new TestFileParser();
+        let parser = new TestFileParser(null);
         await parser.run(__dirname + "/../../test/fixtures/metaphysics/partner_show.js");
         assert.equal(parser.itBlocks.length, 8);
     });

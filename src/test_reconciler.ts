@@ -29,13 +29,16 @@ export interface TestAssertionStatus {
 export class TestReconciler {
   private fileStatuses: any;
   private fails: TestFileAssertionStatus[];
+  private passes: TestFileAssertionStatus[];
 
   constructor() {
     this.fileStatuses = {}; 
-    this.fails = [];
   }
 
   updateFileWithJestStatus(results: JestTotalResults) {
+    this.fails = [];
+    this.passes = [];
+    
     results.testResults.forEach(file => {
       const status = this.statusToReconcilationState(file.status);
       const fileStatus: TestFileAssertionStatus = {
@@ -47,6 +50,8 @@ export class TestReconciler {
        this.fileStatuses[file.name] = fileStatus; 
        if (status === TestReconcilationState.KnownFail) {
          this.fails.push(fileStatus);
+       } else if(status === TestReconcilationState.KnownSuccess) { 
+         this.passes.push(fileStatus);
        }
     });
   }
@@ -54,6 +59,12 @@ export class TestReconciler {
   failedStatuses(): TestFileAssertionStatus[] {
     return this.fails;
   }
+
+
+  passedStatuses(): TestFileAssertionStatus[] {
+    return this.passes;
+  }
+
 
   private mapAssertions(filename:string, assertions: JestAssertionResults[]) : TestAssertionStatus[] {
     return assertions.map((assertion) => {
@@ -63,7 +74,7 @@ export class TestReconciler {
       let line = null;
       if (message) {
         short = message.split("   at", 1)[0].trim();
-        terse = short.split("\n").splice(2).join("").replace("  ", " ");
+        terse = short.split("\n").splice(2).join("").replace("  ", " ").replace(/\[\d\dm/g, "").replace("Received:", " Received:").replace("Difference:", " Difference:");
         line = parseInt(message.split(basename(filename), 2)[1].split(":")[1]);
       }
       return {

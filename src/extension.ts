@@ -101,7 +101,7 @@ class JestExt  {
         this.channel = outputChannel;
         this.workspaceDisposal = disposal;
         this.perFileDisposals = [];
-        this.parser = new TestFileParser(); 
+        this.parser = new TestFileParser(outputChannel); 
         this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
         this.failDiagnostics = vscode.languages.createDiagnosticCollection("Jest");
         this.clearOnNextInput = true;
@@ -112,10 +112,9 @@ class JestExt  {
         this.jestProcess = new JestRunner();
 
         this.jestProcess.on('debuggerComplete', () => {
-            console.log("Closed");
+            this.channel.appendLine("Closed Jest");
 
         }).on('executableJSON', (data: any) => {
-            console.log("JSON data from Jest recieved: ", data);
             this.updateWithData(data);
             this.triggerUpdateDecorations(vscode.window.activeTextEditor);
             this.clearOnNextInput = true;
@@ -132,18 +131,23 @@ class JestExt  {
             }
             this.channel.appendLine(error.toString());
         }).on('nonTerminalError', (error: string) => {
-            console.log("Err?  ] " + error.toString());
+            this.channel.appendLine(`Recieved an erro from Jest: ${error.toString()}`);
         }).on('exception', result => {
-            console.log("\nException raised: [" + result.type + "]: " + result.message + "\n",'stderr');
+            this.channel.appendLine("\nException raised: [" + result.type + "]: " + result.message + "\n");
         }).on('terminalError', (error: string) => {
-            console.log("\nException raised: " + error);
+            this.channel.appendLine("\nException raised: " + error);
         });
 
         this.setupDecorators();
         this.setupStatusBar();
     }
 
+    private parsingTestFile = false;
     async triggerUpdateDecorations(editor: vscode.TextEditor) {
+        if (!editor.document) { return; }
+        if (editor.document.languageId === "Log") { return; }
+        if (this.parsingTestFile === true) { return; }
+        this.parsingTestFile = true;
         try {
             await this.parser.run(editor.document.uri.fsPath);
             const itBlocks = this.parser.itBlocks;
@@ -153,13 +157,17 @@ class JestExt  {
 
             itBlocks.forEach(it => {
                 const state = this.reconciler.stateForTestAssertion(editor.document.uri, it.name);
-                switch(state.status) {
-                    case TestReconcilationState.KnownSuccess: 
-                        successes.push(it); break;
-                    case TestReconcilationState.KnownFail: 
-                        fails.push(it); break;
-                    case TestReconcilationState.Unknown: 
-                        unknowns.push(it); break;
+                if (state !== null) {
+                    switch(state.status) {
+                        case TestReconcilationState.KnownSuccess: 
+                            successes.push(it); break;
+                        case TestReconcilationState.KnownFail: 
+                            fails.push(it); break;
+                        case TestReconcilationState.Unknown: 
+                            unknowns.push(it); break;
+                    }
+                } else { 
+                    unknowns.push(it);
                 }
             });
 
@@ -172,9 +180,11 @@ class JestExt  {
                 let decorators = this.generateDecoratorsForJustIt(style.data, style.state);
                 editor.setDecorations(style.style, decorators);                
             });
+            this.parsingTestFile = false;
 
         } catch(e) {
-            console.log(`Error Parsing :${editor.document.uri.fsPath} for VS Code Jest.`, e);
+            this.channel.appendLine(`Error Parsing :${editor.document.uri.fsPath}. - ${e}`, );
+            this.parsingTestFile = false;
         }
     }
 
@@ -207,17 +217,27 @@ class JestExt  {
             
             const fails = this.reconciler.failedStatuses();
             fails.forEach( (fail) => {
-                fail.assertions.forEach((assertion) =>  { 
+                console.log("Fail:" + fail.file);
+                const uri = vscode.Uri.file(fail.file);
+                this.failDiagnostics.set(uri, fail.assertions.filter((a) => a.status === TestReconcilationState.KnownFail).map( (assertion) => {
                     const daig = new vscode.Diagnostic(
-                        new vscode.Range(assertion.line || 0, 0, 0, 0),
+                        new vscode.Range(assertion.line - 1 || 0, 0, assertion.line - 1|| 0, 0),
                         assertion.terseMessage,
                         vscode.DiagnosticSeverity.Error
                     );
-                    const uri = vscode.Uri.file(fail.file);
-                    this.failDiagnostics.set(uri, [daig]);
-                });
+                    daig.source = "Jest";
+                    return daig;
+                }));
             });
         }
+                        
+        // Need to clean up things that went from pass -> fail
+        const passes = this.reconciler.passedStatuses();
+        passes.forEach( (pass) => {
+            console.log("Pass:" + pass.file);
+            const uri = vscode.Uri.file(pass.file);
+            this.failDiagnostics.set(uri, []);
+        });
     }
 
     generateDecoratorsForJustIt(blocks: ItBlock[], state: TestReconcilationState): vscode.DecorationOptions[] {
@@ -228,7 +248,7 @@ class JestExt  {
                     case TestReconcilationState.KnownFail: 
                         return 'Failed';
                     case TestReconcilationState.Unknown: 
-                        return 'Not ran';
+                        return 'Not ran yet, due to Jest only running tests related to changes.';
                 }
         };
         return blocks.map((it)=> {

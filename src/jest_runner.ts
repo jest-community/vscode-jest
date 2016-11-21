@@ -1,6 +1,7 @@
 'use strict';
 
 import * as childProcess from 'child_process';
+import { readFile } from 'fs';
 import {EventEmitter} from 'events';
 import {workspace} from 'vscode';
 
@@ -10,13 +11,14 @@ export class JestRunner extends EventEmitter {
     constructor() {
         super();
 
-        var runtimeArgs = ['--json', '--useStderr', '--watch', '--colors', 'false', "--verbose"];
         var runtimeExecutable: string;
+        var runtimeArgs = ['--json', '--useStderr', '--watch', '--colors', 'false', "--jsonOutputFile", "/tmp/vscode-jest.json"];
 
         runtimeExecutable = "node_modules/.bin/jest";
         
         var processCwd = workspace.rootPath;
         var processEnv = {};
+        
 
         //use process environment
         for( var env in process.env) {
@@ -26,13 +28,18 @@ export class JestRunner extends EventEmitter {
         this.debugprocess = childProcess.spawn(runtimeExecutable, runtimeArgs, {cwd: processCwd, env: processEnv});
 
         this.debugprocess.stdout.on('data', (data: Buffer) => {
-            // Convert to JSON and strip any trailing newlines
-            let stringValue = data.toString().replace(/\n$/, "");
-            if (stringValue.substr(0, 1) === "{" && stringValue.substr(-1, 1) === "}") {
-                this.emit('executableJSON', JSON.parse(stringValue));
+            // Make jest save to a file, otherwise we get chunked data and it can be hard to put it back together
+            let stringValue = data.toString().replace(/\n$/, "").trim();
+            if (stringValue.startsWith("Test results written to")) {
+                readFile("/tmp/vscode-jest.json", "utf8", (err, data) => {
+                    if (err) {
+                        this.emit('terminalError', "JSON test overview file not found at /tmp/vscode-jest.json"); 
+                    }
+                    else { this.emit('executableJSON', JSON.parse(data)); }
+                });
             } else {
                 this.emit('executableOutput', stringValue.replace("[2J[H", ""));
-            }
+            };
         });
 
         this.debugprocess.stderr.on('data', (data: Buffer) => {
@@ -48,7 +55,7 @@ export class JestRunner extends EventEmitter {
         });
 
         this.debugprocess.on('close', () => {
-           console.log("Jest Closed");
+            this.emit('debuggerProcessExit');
         });
     }
 
