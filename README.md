@@ -1,4 +1,4 @@
- ## The Aim
+## The Aim
 
 A comprehensive experience when using [Faceook's Jest](https://github.com/facebook/jest) within a project. 
 
