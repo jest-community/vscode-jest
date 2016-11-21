@@ -14,6 +14,10 @@ A comprehensive experience when using [Faceook's Jest](https://github.com/facebo
 * Show fails inside the problem inspector.
 * Highlights the errors next to the `expect` functions 
 
+## How to get it?
+
+Open up VS Code, go search for the extension "Jest"
+
 ## Future Ideas
 
 * Offer feedback if you are using an old Jest?
