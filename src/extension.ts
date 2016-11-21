@@ -94,6 +94,9 @@ class JestExt  {
     private passingItStyle: vscode.TextEditorDecorationType;
     private failingItStyle: vscode.TextEditorDecorationType;
     private unknownItStyle: vscode.TextEditorDecorationType;
+    
+    // We have to keep track of our inline assert fails to remove later 
+    private failingAssertionDecorators: any[];
 
     private clearOnNextInput: boolean;
 
@@ -101,6 +104,7 @@ class JestExt  {
         this.channel = outputChannel;
         this.workspaceDisposal = disposal;
         this.perFileDisposals = [];
+        this.failingAssertionDecorators = [];
         this.parser = new TestFileParser(outputChannel); 
         this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
         this.failDiagnostics = vscode.languages.createDiagnosticCollection("Jest");
@@ -148,6 +152,7 @@ class JestExt  {
         if (editor.document.languageId === "Log") { return; }
         if (this.parsingTestFile === true) { return; }
         this.parsingTestFile = true;
+
         try {
             await this.parser.run(editor.document.uri.fsPath);
             const itBlocks = this.parser.itBlocks;
@@ -180,6 +185,36 @@ class JestExt  {
                 let decorators = this.generateDecoratorsForJustIt(style.data, style.state);
                 editor.setDecorations(style.style, decorators);                
             });
+
+
+            // Handle showing the error message on the line with the expect
+            
+            // Remove old ones 
+            this.failingAssertionDecorators.forEach(element => {
+                editor.setDecorations(element, []);
+            }); 
+            this.failingAssertionDecorators = [];
+
+            // Add new ones
+            const failStatuses = this.reconciler.failedStatuses();
+            failStatuses.forEach( (fail) => {
+                // Skip fails that aren't for this file
+                if (editor.document.uri.fsPath !== fail.file) { return; }
+                
+                // Get the failed assertions
+                const asserts = fail.assertions.filter((a) => a.status === TestReconcilationState.KnownFail);
+                asserts.forEach((assertion) => {
+                    const decorator = {
+                        range: new vscode.Range(assertion.line - 1, 0, 0, 0),
+                        hoverMessage: assertion.terseMessage
+                    };
+                    const style = decorations.failingAssertionStyle(assertion.terseMessage);
+                    this.failingAssertionDecorators.push(style);
+                    editor.setDecorations(style, [decorator]);
+                });
+            });
+
+
             this.parsingTestFile = false;
 
         } catch(e) {
@@ -207,18 +242,19 @@ class JestExt  {
 
     updateWithData(data: JestTotalResults) {
         this.reconciler.updateFileWithJestStatus(data);
+        this.failDiagnostics.clear();
+
         if (data.success) {
             this.statusBarItem.text = "Jest: $(check)";
 
         } else {
             this.statusBarItem.text = "Jest: $(alert)";
 
-            this.failDiagnostics.clear();
-            
             const fails = this.reconciler.failedStatuses();
             fails.forEach( (fail) => {
                 const uri = vscode.Uri.file(fail.file);
-                this.failDiagnostics.set(uri, fail.assertions.filter((a) => a.status === TestReconcilationState.KnownFail).map( (assertion) => {
+                const asserts = fail.assertions.filter((a) => a.status === TestReconcilationState.KnownFail);
+                this.failDiagnostics.set(uri, asserts.map( (assertion) => {
                     const expect = this.parser.expectAtLine(assertion.line);
                     const start = expect ? expect.start.column : 0;
                     const daig = new vscode.Diagnostic(
@@ -231,13 +267,6 @@ class JestExt  {
                 }));
             });
         }
-
-        // Need to clean up things that went from pass -> fail
-        const passes = this.reconciler.passedStatuses();
-        passes.forEach( (pass) => {
-            const uri = vscode.Uri.file(pass.file);
-            this.failDiagnostics.set(uri, []);
-        });
     }
 
     generateDecoratorsForJustIt(blocks: ItBlock[], state: TestReconcilationState): vscode.DecorationOptions[] {
@@ -248,7 +277,7 @@ class JestExt  {
                     case TestReconcilationState.KnownFail: 
                         return 'Failed';
                     case TestReconcilationState.Unknown: 
-                        return 'Not ran yet, due to Jest only running tests related to changes.';
+                        return 'Test has not run yet, due to Jest only running tests related to changes.';
                 }
         };
         return blocks.map((it)=> {

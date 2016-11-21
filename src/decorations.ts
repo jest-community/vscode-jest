@@ -58,3 +58,25 @@ export function notRanItName() {
         }
     });
 }
+
+
+export function failingAssertionStyle(text: string) {
+    return vscode.window.createTextEditorDecorationType({
+        isWholeLine: true,
+        overviewRulerColor: 'red',
+        overviewRulerLane: vscode.OverviewRulerLane.Left,
+        light: {
+            before: {
+                color: "#FF564B",
+            }
+        },
+        dark: {
+            before: {
+                color: "#AD322D",
+            }
+        },
+        after: {
+            contentText: " // " + text
+        }
+    });
+}
