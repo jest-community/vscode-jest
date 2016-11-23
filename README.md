@@ -1,6 +1,6 @@
- ## The Aim
+## The Aim
 
-A comprehensive experience when using [Faceook's Jest](https://github.com/facebook/jest) within a project. 
+A comprehensive experience when using [Facebook's Jest](https://github.com/facebook/jest) within a project. 
 
 * Useful IDE based Feedback
 * Session based test watching
