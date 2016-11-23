@@ -67,6 +67,7 @@ export class TestReconciler {
 
 
   private mapAssertions(filename:string, assertions: JestAssertionResults[]) : TestAssertionStatus[] {
+    if (!assertions) { return []; }
     return assertions.map((assertion) => {
       let message = assertion.failureMessages[0];
       let short = null;
