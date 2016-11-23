@@ -135,7 +135,9 @@ export class TestFileParser {
             fs.readFile(file, "utf8", (err, data) => {
                 if (err) { return reject(err.message); }
                 resolve(
-                    babylon.parse(data, { sourceType:"module", plugins: ["jsx", "flow"] })
+                    // Note, you may need to change your typings to allow this
+                    // https://github.com/DefinitelyTyped/DefinitelyTyped/pull/12879
+                    babylon.parse(data, { sourceType:"module", plugins: ["*"] })
                 );
             });  
         });
