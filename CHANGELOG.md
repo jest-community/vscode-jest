@@ -1,3 +1,7 @@
+### 1.0.4
+
+* `import type` now shouldn't cause a parser error, and should be fine in test files - orta
+
 ### 1.0.3
 
 * Uses all possible Babylon plugins when parsing a test file, should raise exceptions less - orta

@@ -34,7 +34,6 @@ export class ItBlock {
 }
 
 export class TestFileParser {
-
     itBlocks: ItBlock[];
     private channel: vscode.OutputChannel;
     expects: Expect[];
@@ -134,12 +133,13 @@ export class TestFileParser {
         return new Promise((resolve, reject) =>{
             fs.readFile(file, "utf8", (err, data) => {
                 if (err) { return reject(err.message); }
+                const safeData = data.replace(/import type/g, "//import type"); 
                 resolve(
                     // Note, you may need to change your typings to allow this
                     // https://github.com/DefinitelyTyped/DefinitelyTyped/pull/12879
-                    babylon.parse(data, { sourceType:"module", plugins: ["*"] })
+                    babylon.parse(safeData, { sourceType:"module", plugins: ["*"] })
                 );
-            });  
+            });
         });
     }
 }
