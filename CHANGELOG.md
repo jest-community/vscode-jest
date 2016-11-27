@@ -1,6 +1,10 @@
-### 1.0.4
+### 1.1.0
 
 * `import type` now shouldn't cause a parser error, and should be fine in test files - orta
+* Adds an option to disable the initial loading of the runner on a project - orta
+* You can start and stop the jest runner via the command pallette. - orta
+* You can define your own path to the Jest test runner - orta
+* Not a feature, but the code has been thoroughly commented - orta
 
 ### 1.0.3
 

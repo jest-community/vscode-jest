@@ -5,25 +5,22 @@ import { readFile } from 'fs';
 import {EventEmitter} from 'events';
 import {workspace} from 'vscode';
 
+// This class represents the running process, and
+// passes out events when it understands what data is being
+// pass sent out of the process
+
 export class JestRunner extends EventEmitter {
     private debugprocess: childProcess.ChildProcess;
 
-    constructor() {
-        super();
-
+    start() {
         var runtimeExecutable: string;
-        var runtimeArgs = ['--json', '--useStderr', '--watch', '--colors', 'false', "--jsonOutputFile", "/tmp/vscode-jest.json"];
+        var runtimeArgs = ['--json', '--u   Stderr', '--watch', '--colors', 'false', "--jsonOutputFile", "/tmp/vscode-jest.json"];
 
-        runtimeExecutable = "node_modules/.bin/jest";
+        const jestSettings = workspace.getConfiguration("jest");
+        runtimeExecutable = jestSettings["pathToJest"];
         
         var processCwd = workspace.rootPath;
-        var processEnv = {};
-        
-
-        //use process environment
-        for( var env in process.env) {
-            processEnv[env] = process.env[env];
-        }
+        var processEnv = process.env;
         
         this.debugprocess = childProcess.spawn(runtimeExecutable, runtimeArgs, {cwd: processCwd, env: processEnv});
 
@@ -61,9 +58,5 @@ export class JestRunner extends EventEmitter {
 
     public closeProcess() {
         this.debugprocess.kill();
-    }
-
-    public triggerFullTestSuite() {
-        this.debugprocess.stdin.write("a");
     }
 }

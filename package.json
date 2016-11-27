@@ -28,6 +28,25 @@
   "main": "./out/src/extension",
   "icon": "images/vscode-jest.png",
   "contributes": {
+    "configuration": {
+      "properties": {
+        "jest.autoEnable": {
+          "title": "Automatically starting Jest for this project",
+          "type": "boolean",
+          "default": true 
+        },
+        "jest.pathToJest": {
+          "title": "The path to the Jest binary",
+          "type": "string",
+          "default": "node_modules/.bin/jest",
+        },
+      },
+      "title": "The settings for the Jest VS Code runner."
+    },
+    "commands": [
+      { "command": "io.orta.jest.start", "title": "Start Jest Runner" },
+      { "command": "io.orta.jest.stop",  "title": "Stop Jest Runner" }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "tsc -p ./",
