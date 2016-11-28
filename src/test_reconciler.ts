@@ -61,11 +61,11 @@ export class TestReconciler {
   }
 
   failedStatuses(): TestFileAssertionStatus[] {
-    return this.fails;
+    return this.fails || [];
   }
 
   passedStatuses(): TestFileAssertionStatus[] {
-    return this.passes;
+    return this.passes || [];
   }
 
   // A failed test also contains the stack trace for an `expect`

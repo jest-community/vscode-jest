@@ -5,6 +5,8 @@
 * You can start and stop the jest runner via the command pallette. - orta
 * You can define your own path to the Jest test runner - orta
 * Not a feature, but the code has been thoroughly commented - orta
+* Improvements to parsing passing test files - orta
+* Only run JS parser on files that match the Jest tesRegex - orta 
 
 ### 1.0.3
 

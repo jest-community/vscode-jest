@@ -14,7 +14,7 @@ export class JestRunner extends EventEmitter {
 
     start() {
         var runtimeExecutable: string;
-        var runtimeArgs = ['--json', '--u   Stderr', '--watch', '--colors', 'false', "--jsonOutputFile", "/tmp/vscode-jest.json"];
+        var runtimeArgs = ['--json', '--useStderr', '--watch', '--colors', 'false', "--jsonOutputFile", "/tmp/vscode-jest.json"];
 
         const jestSettings = workspace.getConfiguration("jest");
         runtimeExecutable = jestSettings["pathToJest"];

@@ -1,7 +1,9 @@
 'use strict';
 
 import * as vscode from 'vscode';
+import * as path from 'path';
 import {JestRunner} from './jest_runner';
+import {JestSettings} from './jest_settings';
 import {TestReconciler, TestReconcilationState} from './test_reconciler';
 import {TestFileParser, ItBlock} from './test_file_parser';
 import * as decorations from './decorations';
@@ -45,10 +47,11 @@ export function activate(context: vscode.ExtensionContext) {
     
     // We need a singleton to represent the extension
     extensionInstance = new JestExt(channel, context.subscriptions);
-
+    extensionInstance.getSettings();
+    
     // If we should start the process by default, do so
-    const jestSettings = vscode.workspace.getConfiguration("jest");
-    if (jestSettings["autoEnable"]) {
+    const userJestSettings: any = vscode.workspace.getConfiguration("jest");
+    if (userJestSettings.autoEnable) {
         extensionInstance.startProcess();
     } else {
         channel.appendLine("Skipping initial Jest runner process start.");
@@ -97,6 +100,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 class JestExt  {
     private jestProcess: JestRunner;
+    private jestSettings: JestSettings;
     private parser: TestFileParser;
     private reconciler: TestReconciler;
     
@@ -131,6 +135,7 @@ class JestExt  {
         this.failDiagnostics = vscode.languages.createDiagnosticCollection("Jest");
         this.clearOnNextInput = true;
         this.reconciler = new TestReconciler();
+        this.jestSettings = new JestSettings();
     }
 
     startProcess() {
@@ -160,6 +165,7 @@ class JestExt  {
   
             if (this.clearOnNextInput){
                 this.clearOnNextInput = false;
+                this.parsingTestFile = false;
                 this.testsHaveStartedRunning();
             }
             this.channel.appendLine(error.toString());
@@ -175,6 +181,8 @@ class JestExt  {
         this.setupDecorators();
         // The bottom bar thing
         this.setupStatusBar();
+        // Go!
+        this.jestProcess.start();
     }
 
     stopProcess() {
@@ -182,23 +190,36 @@ class JestExt  {
         this.jestProcess.closeProcess();
     }
 
+    // Get the settings from Jest's JSON output
+    getSettings() {
+        this.jestSettings.getConfig();
+    }
+
+    wouldJestRunURI(uri: vscode.Uri): boolean {
+        const testRegex = new RegExp(this.jestSettings.settings.testRegex);
+        const root = vscode.workspace.rootPath;
+        const filePath = uri.fsPath;
+        const relative = path.relative(root, filePath);
+        return !relative.match(testRegex);
+    }
+
     private parsingTestFile = false;
     async triggerUpdateDecorations(editor: vscode.TextEditor) {
         // Lots of reasons to not show decorators,
         // Are you in settings?
         if (!editor.document) { return; }
-        // Are you in the log?
-        if (editor.document.languageId === "Log") { return; }
         // Is it already happening?
         if (this.parsingTestFile === true) { return; }
-        // OK
+        // is it in the test regex?
+        if (this.wouldJestRunURI(editor.document.uri)) { return; }
+        // OK - lets go
         this.parsingTestFile = true;
 
-        try {
+        // try {
             // This makes it cheaper later down the line
-            const successes: ItBlock[] = [];
-            const fails: ItBlock[] = [];
-            const unknowns: ItBlock[] = [];
+            let successes: ItBlock[] = [];
+            let fails: ItBlock[] = [];
+            let unknowns: ItBlock[] = [];
  
             // Parse the current JS file
             await this.parser.run(editor.document.uri.fsPath);
@@ -206,22 +227,37 @@ class JestExt  {
             const itBlocks = this.parser.itBlocks;
 
             // Loop through our it/test references, then ask the reconciler ( the thing 
-            // that reads the JSON from Jest ) whether it has passed/failed/not ran. 
-            itBlocks.forEach(it => {
-                const state = this.reconciler.stateForTestAssertion(editor.document.uri, it.name);
-                if (state !== null) {
-                    switch(state.status) {
-                        case TestReconcilationState.KnownSuccess: 
-                            successes.push(it); break;
-                        case TestReconcilationState.KnownFail: 
-                            fails.push(it); break;
-                        case TestReconcilationState.Unknown: 
-                            unknowns.push(it); break;
-                    }
-                } else { 
-                    unknowns.push(it);
-                }
-            });
+            // that reads the JSON from Jest ) whether it has passed/failed/not ran.
+            const fileState = this.reconciler.stateForTestFile(editor.document.uri);
+            switch(fileState) {
+                // If the file failed, then it can contain passes, fails and unknowns
+                case TestReconcilationState.KnownFail:
+                    itBlocks.forEach(it => { 
+                        const state = this.reconciler.stateForTestAssertion(editor.document.uri, it.name);
+                        if (state !== null) {
+                            switch(state.status) {
+                                case TestReconcilationState.KnownSuccess: 
+                                    successes.push(it); break;
+                                case TestReconcilationState.KnownFail: 
+                                    fails.push(it); break;
+                                case TestReconcilationState.Unknown: 
+                                    unknowns.push(it); break;
+                            }
+                        } else { 
+                            unknowns.push(it);
+                        }
+                    });
+                    break;
+                // Test passed, all it's must be green
+                case TestReconcilationState.KnownSuccess:
+                    successes = itBlocks; break;
+
+                // We don't know, not ran probably
+                case TestReconcilationState.Unknown:
+                    unknowns = itBlocks; break;
+            };
+
+
 
             // Create a map for the states and styles to show inline.
             // Note that this specifically is only for dots.
@@ -268,10 +304,10 @@ class JestExt  {
             });
             this.parsingTestFile = false;
 
-        } catch(e) {
-            this.channel.appendLine(`Error Parsing :${editor.document.uri.fsPath}. - ${e}`, );
-            this.parsingTestFile = false;
-        }
+        // } catch(e) {
+        //     this.channel.appendLine(`Error Parsing :${editor.document.uri.fsPath}. - ${e}`, );
+        //     this.parsingTestFile = false;
+        // }
     }
 
     setupStatusBar() { 

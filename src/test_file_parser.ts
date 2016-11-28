@@ -157,14 +157,16 @@ export class TestFileParser {
         return new Promise((resolve, reject) =>{
             fs.readFile(file, "utf8", (err, data) => {
                 if (err) { return reject(err.message); }
-                // It does not handle the flow import statements, which are 
-                // irrelevant anyway. 
-                const safeData = data.replace(/import type/g, "//import type"); 
-                // Note, you may need to change your typings to allow this
-                // https://github.com/DefinitelyTyped/DefinitelyTyped/pull/12879
-                resolve(
-                    babylon.parse(safeData, { sourceType:"module", plugins: ["*"] })
-                );
+
+                try {
+                    const plugins: babylon.PluginName[] = ['jsx' , 'flow','asyncFunctions','classConstructorCall','doExpressions'
+   ,'trailingFunctionCommas','objectRestSpread','decorators','classProperties','exportExtensions'
+   ,'exponentiationOperator','asyncGenerators','functionBind','functionSent'];
+                    const parsed = babylon.parse(data, { sourceType:"module", plugins: plugins });
+                    resolve(parsed);
+                } catch (error) {
+                    reject(error);   
+                }
             });
         });
     }
