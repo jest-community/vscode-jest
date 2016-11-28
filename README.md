@@ -24,5 +24,4 @@ This project has the expectation that you would run something like `npm run test
 
 ## Future Ideas
 
-* Offer feedback if you are using an old Jest?
-* Only run parser on files that match the Jest `testRegex`.
+* Add a statusbar button when snapshots have failed to re-run tests with update
