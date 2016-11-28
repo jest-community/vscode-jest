@@ -13,6 +13,7 @@ A comprehensive experience when using [Facebook's Jest](https://github.com/faceb
 * Show individual fail / passes inline.
 * Show fails inside the problem inspector.
 * Highlights the errors next to the `expect` functions 
+* Adds syntax highlighting to snapshot files
 
 ## How to get it?
 
