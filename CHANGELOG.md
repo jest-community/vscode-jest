@@ -1,3 +1,13 @@
+### 1.1.0
+
+* `import type` now shouldn't cause a parser error, and should be fine in test files - orta
+* Adds an option to disable the initial loading of the runner on a project - orta
+* You can start and stop the jest runner via the command pallette. - orta
+* You can define your own path to the Jest test runner - orta
+* Not a feature, but the code has been thoroughly commented - orta
+* Improvements to parsing passing test files - orta
+* Only run JS parser on files that match the Jest tesRegex - orta 
+
 ### 1.0.3
 
 * Uses all possible Babylon plugins when parsing a test file, should raise exceptions less - orta

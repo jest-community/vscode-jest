@@ -38,9 +38,12 @@ export class TestReconciler {
   updateFileWithJestStatus(results: JestTotalResults) {
     this.fails = [];
     this.passes = [];
-    
+
+    // Loop through all files inside the report from Jest
     results.testResults.forEach(file => {
+      // Did the file pass/fail?
       const status = this.statusToReconcilationState(file.status);
+      // Create our own simpler representation 
       const fileStatus: TestFileAssertionStatus = {
          file: file.name,
          status,
@@ -48,6 +51,7 @@ export class TestReconciler {
          assertions: this.mapAssertions(file.name, file.assertionResults),
        };
        this.fileStatuses[file.name] = fileStatus; 
+
        if (status === TestReconcilationState.KnownFail) {
          this.fails.push(fileStatus);
        } else if(status === TestReconcilationState.KnownSuccess) { 
@@ -57,24 +61,32 @@ export class TestReconciler {
   }
 
   failedStatuses(): TestFileAssertionStatus[] {
-    return this.fails;
+    return this.fails || [];
   }
-
 
   passedStatuses(): TestFileAssertionStatus[] {
-    return this.passes;
+    return this.passes || [];
   }
 
+  // A failed test also contains the stack trace for an `expect`
+  // we don't get this as structured data, but what we get is useful enough to make it for ourselves
 
   private mapAssertions(filename:string, assertions: JestAssertionResults[]) : TestAssertionStatus[] {
+    // Is it jest < 17? e.g. Before I added this to the JSON
     if (!assertions) { return []; }
+    
+    // Change all failing assertions into structured data 
     return assertions.map((assertion) => {
+      // Failure messages seems to always be an array of one item
       let message = assertion.failureMessages[0];
       let short = null;
       let terse = null;
       let line = null;
       if (message) {
+        // Just the first line, with little whitespace
         short = message.split("   at", 1)[0].trim();
+        // Sometimes that's not enough, tighten up the first line, remove as much whitespace as possible
+        // this will show inline, so we want to show very little 
         terse = short.split("\n").splice(2).join("").replace("  ", " ").replace(/\[\d\dm/g, "").replace("Received:", " Received:").replace("Difference:", " Difference:");
         line = parseInt(message.split(basename(filename), 2)[1].split(":")[1]);
       }

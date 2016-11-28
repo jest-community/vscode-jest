@@ -1,12 +1,16 @@
 'use strict';
 
 import * as vscode from 'vscode';
+import * as path from 'path';
 import {JestRunner} from './jest_runner';
+import {JestSettings} from './jest_settings';
 import {TestReconciler, TestReconcilationState} from './test_reconciler';
 import {TestFileParser, ItBlock} from './test_file_parser';
 import * as decorations from './decorations';
 
 var extensionInstance: JestExt;
+
+// Typing the actual JSON we get from Jest's runner
 
 export interface JestFileResults {
     name: string;
@@ -38,12 +42,32 @@ export interface JestTotalResults {
 }
 
 export function activate(context: vscode.ExtensionContext) {
+    // Create our own console
     let channel = vscode.window.createOutputChannel("Jest");
-    extensionInstance = new JestExt(channel, context.subscriptions);
-    extensionInstance.startProcess();
     
+    // We need a singleton to represent the extension
+    extensionInstance = new JestExt(channel, context.subscriptions);
+    extensionInstance.getSettings();
+    
+    // If we should start the process by default, do so
+    const userJestSettings: any = vscode.workspace.getConfiguration("jest");
+    if (userJestSettings.autoEnable) {
+        extensionInstance.startProcess();
+    } else {
+        channel.appendLine("Skipping initial Jest runner process start.");
+    }
+
+    // Register for commands   
     vscode.commands.registerCommand("io.orta.show-jest-output", ()=> {
         channel.show();
+    });
+
+    vscode.commands.registerCommand("io.orta.jest.start", ()=> {
+        extensionInstance.startProcess();
+    });
+
+    vscode.commands.registerCommand("io.orta.jest.stop", ()=> {
+        extensionInstance.stopProcess();
     });
 
     // Setup the file change watchers
@@ -76,6 +100,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 class JestExt  {
     private jestProcess: JestRunner;
+    private jestSettings: JestSettings;
     private parser: TestFileParser;
     private reconciler: TestReconciler;
     
@@ -110,11 +135,16 @@ class JestExt  {
         this.failDiagnostics = vscode.languages.createDiagnosticCollection("Jest");
         this.clearOnNextInput = true;
         this.reconciler = new TestReconciler();
+        this.jestSettings = new JestSettings();
     }
 
     startProcess() {
-        this.jestProcess = new JestRunner();
+        // The Runner is an event emitter that handles taking the Jest
+        // output and converting it into different types of data that
+        // we can handle here differently.
 
+        this.jestProcess = new JestRunner();
+        
         this.jestProcess.on('debuggerComplete', () => {
             this.channel.appendLine("Closed Jest");
 
@@ -129,8 +159,13 @@ class JestExt  {
             }
 
         }).on('executableStdErr', (error: Buffer) => {
+            // The "tests are done" message comes through stdErr
+            // We want to use this as a marker that the console should
+            // be cleared, as the next input will be from a new test run.
+  
             if (this.clearOnNextInput){
                 this.clearOnNextInput = false;
+                this.parsingTestFile = false;
                 this.testsHaveStartedRunning();
             }
             this.channel.appendLine(error.toString());
@@ -142,40 +177,90 @@ class JestExt  {
             this.channel.appendLine("\nException raised: " + error);
         });
 
+        // The theme stuff
         this.setupDecorators();
+        // The bottom bar thing
         this.setupStatusBar();
+        // Go!
+        this.jestProcess.start();
+    }
+
+    stopProcess() {
+        this.channel.appendLine("Closing Jest jest_runner.");
+        this.jestProcess.closeProcess();
+    }
+
+    // Get the settings from Jest's JSON output
+    getSettings() {
+        this.jestSettings.getConfig();
+    }
+
+    wouldJestRunURI(uri: vscode.Uri): boolean {
+        const testRegex = new RegExp(this.jestSettings.settings.testRegex);
+        const root = vscode.workspace.rootPath;
+        const filePath = uri.fsPath;
+        const relative = path.relative(root, filePath);
+        return !relative.match(testRegex);
     }
 
     private parsingTestFile = false;
     async triggerUpdateDecorations(editor: vscode.TextEditor) {
+        // Lots of reasons to not show decorators,
+        // Are you in settings?
         if (!editor.document) { return; }
-        if (editor.document.languageId === "Log") { return; }
+        // Is it already happening?
         if (this.parsingTestFile === true) { return; }
+        // is it in the test regex?
+        if (this.wouldJestRunURI(editor.document.uri)) { return; }
+        // OK - lets go
         this.parsingTestFile = true;
 
-        try {
+        // try {
+            // This makes it cheaper later down the line
+            let successes: ItBlock[] = [];
+            let fails: ItBlock[] = [];
+            let unknowns: ItBlock[] = [];
+ 
+            // Parse the current JS file
             await this.parser.run(editor.document.uri.fsPath);
+            // Use the parsers it blocks for references
             const itBlocks = this.parser.itBlocks;
-            const successes: ItBlock[] = [];
-            const fails: ItBlock[] = [];
-            const unknowns: ItBlock[] = []; 
 
-            itBlocks.forEach(it => {
-                const state = this.reconciler.stateForTestAssertion(editor.document.uri, it.name);
-                if (state !== null) {
-                    switch(state.status) {
-                        case TestReconcilationState.KnownSuccess: 
-                            successes.push(it); break;
-                        case TestReconcilationState.KnownFail: 
-                            fails.push(it); break;
-                        case TestReconcilationState.Unknown: 
-                            unknowns.push(it); break;
-                    }
-                } else { 
-                    unknowns.push(it);
-                }
-            });
+            // Loop through our it/test references, then ask the reconciler ( the thing 
+            // that reads the JSON from Jest ) whether it has passed/failed/not ran.
+            const fileState = this.reconciler.stateForTestFile(editor.document.uri);
+            switch(fileState) {
+                // If the file failed, then it can contain passes, fails and unknowns
+                case TestReconcilationState.KnownFail:
+                    itBlocks.forEach(it => { 
+                        const state = this.reconciler.stateForTestAssertion(editor.document.uri, it.name);
+                        if (state !== null) {
+                            switch(state.status) {
+                                case TestReconcilationState.KnownSuccess: 
+                                    successes.push(it); break;
+                                case TestReconcilationState.KnownFail: 
+                                    fails.push(it); break;
+                                case TestReconcilationState.Unknown: 
+                                    unknowns.push(it); break;
+                            }
+                        } else { 
+                            unknowns.push(it);
+                        }
+                    });
+                    break;
+                // Test passed, all it's must be green
+                case TestReconcilationState.KnownSuccess:
+                    successes = itBlocks; break;
 
+                // We don't know, not ran probably
+                case TestReconcilationState.Unknown:
+                    unknowns = itBlocks; break;
+            };
+
+
+
+            // Create a map for the states and styles to show inline.
+            // Note that this specifically is only for dots.
             const styleMap = [ 
                 { data: successes, style: this.passingItStyle, state: TestReconcilationState.KnownSuccess }, 
                 { data: fails, style: this.failingItStyle, state: TestReconcilationState.KnownFail }, 
@@ -185,17 +270,19 @@ class JestExt  {
                 let decorators = this.generateDecoratorsForJustIt(style.data, style.state);
                 editor.setDecorations(style.style, decorators);                
             });
-
-
-            // Handle showing the error message on the line with the expect
             
-            // Remove old ones 
+            // Now we want to handle adding the error message after the failing assertion
+            // so first we need to clear all assertions, this is a bit of a shame as it can flash
+            // however, the API for a style in this case is not built to handle different inline texts 
+            // as easily as it handles inline dots
+
+            // Remove all of the existing line decorators
             this.failingAssertionDecorators.forEach(element => {
                 editor.setDecorations(element, []);
             }); 
             this.failingAssertionDecorators = [];
 
-            // Add new ones
+            // Loop through all the failing "Statuses" (these are files)
             const failStatuses = this.reconciler.failedStatuses();
             failStatuses.forEach( (fail) => {
                 // Skip fails that aren't for this file
@@ -208,25 +295,31 @@ class JestExt  {
                         range: new vscode.Range(assertion.line - 1, 0, 0, 0),
                         hoverMessage: assertion.terseMessage
                     };
+                    // We have to make a new style for each unique message, this is
+                    // why we have to remove off of them beforehand
                     const style = decorations.failingAssertionStyle(assertion.terseMessage);
                     this.failingAssertionDecorators.push(style);
                     editor.setDecorations(style, [decorator]);
                 });
             });
-
-
             this.parsingTestFile = false;
 
-        } catch(e) {
-            this.channel.appendLine(`Error Parsing :${editor.document.uri.fsPath}. - ${e}`, );
-            this.parsingTestFile = false;
-        }
+        // } catch(e) {
+        //     this.channel.appendLine(`Error Parsing :${editor.document.uri.fsPath}. - ${e}`, );
+        //     this.parsingTestFile = false;
+        // }
     }
 
     setupStatusBar() { 
         this.statusBarItem.show();
         this.statusBarItem.command = "io.orta.show-jest-output";
-        this.testsHaveStartedRunning();
+
+        const jestSettings = vscode.workspace.getConfiguration("jest");
+        if (jestSettings["autoEnable"]) {
+            this.testsHaveStartedRunning();
+        } else {
+            this.statusBarItem.text = "Jest: ...";
+        }
     }
 
     setupDecorators() {
@@ -250,10 +343,19 @@ class JestExt  {
         } else {
             this.statusBarItem.text = "Jest: $(alert)";
 
+            // We've got JSON data back from Jest about a failing test run.
+            // We don't want to handle the decorators (inline dots/messages here)
+            // but we can handle creating "problems" for the workspace here.
+            
+            // For each failed file
             const fails = this.reconciler.failedStatuses();
             fails.forEach( (fail) => {
+                // Generate a uri, and pull out the failing it/tests
                 const uri = vscode.Uri.file(fail.file);
                 const asserts = fail.assertions.filter((a) => a.status === TestReconcilationState.KnownFail);
+
+                // Loop through each individual fail and create an diagnostic
+                // to pass back to VS Code.
                 this.failDiagnostics.set(uri, asserts.map( (assertion) => {
                     const expect = this.parser.expectAtLine(assertion.line);
                     const start = expect ? expect.start.column : 0;
@@ -268,7 +370,8 @@ class JestExt  {
             });
         }
     }
-
+    
+    // These are the dots
     generateDecoratorsForJustIt(blocks: ItBlock[], state: TestReconcilationState): vscode.DecorationOptions[] {
         const nameForState = (name: string, state: TestReconcilationState): string => {
             switch (state) {

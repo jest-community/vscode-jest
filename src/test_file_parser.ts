@@ -34,7 +34,6 @@ export class ItBlock {
 }
 
 export class TestFileParser {
-
     itBlocks: ItBlock[];
     private channel: vscode.OutputChannel;
     expects: Expect[];
@@ -44,10 +43,11 @@ export class TestFileParser {
     }
 
     async run(file: string): Promise<any> {
+        this.itBlocks = [];
+        this.expects = [];
+
         try {
             let data = await this.generateAST(file);
-            this.itBlocks = [];
-            this.expects = [];
             this.findItBlocksInBody(data["program"], file);
             return data;
         } catch (error) {
@@ -56,10 +56,18 @@ export class TestFileParser {
         }
     }
 
+    // When we want to show an inline assertion, the only bit of
+    // data to work with is the line number from the stack trace.
+    
+    // So we need to be able to go from that to the real
+    // expect data.
     expectAtLine(line: number): null | Expect {
         return this.expects.find((e) => e.start.line === line);
     }
 
+    // An `it`/`test` was found in the AST
+    // So take the AST node and create an object for us
+    // to store for later usage
     private foundItNode(node: any, file: string){
         let it = new ItBlock();
         it.updateWithNode(node);
@@ -67,13 +75,18 @@ export class TestFileParser {
         this.itBlocks.push(it);
     }
 
+    // An `expect` was found in the AST
+    // So take the AST node and create an object for us
+    // to store for later usage 
     private foundExpectNode(node: any, file: string){
-        let it = new Expect();
-        it.updateWithNode(node);
-        it.file = file;
-        this.expects.push(it);
+        let expect = new Expect();
+        expect.updateWithNode(node);
+        expect.file = file;
+        this.expects.push(expect);
     }
 
+    // When given a node in the AST, does this represent
+    // the start of an it/test block?
     private isAnIt(node) {
         return (
             node.type === "ExpressionStatement" &&
@@ -85,7 +98,9 @@ export class TestFileParser {
             node.expression.callee.name === "test"
         ); 
     }
-
+    
+    // When given a node in the AST, does this represent
+    // the start of an expect expression?
     private isAnExpect(node) {
         return (
             node.type === "ExpressionStatement" &&
@@ -100,22 +115,29 @@ export class TestFileParser {
         ); 
     }
 
+    // We know that its/expects can go inside a describe, so recurse through
+    // these when we see them. 
      private isADescribe(node) {
         return node.type === "ExpressionStatement" &&
         node.expression.type === "CallExpression" &&
         node.expression.callee.name === "describe";
     }
 
+    // A recursive AST parser
     findItBlocksInBody(root: any, file: string) {
+        // Look through the node's children
         for (var node in root.body) {
             if (root.body.hasOwnProperty(node)) {
+                // Pull out the node
                 var element = root.body[node];
+                // if it's a describe dig deeper
                 if (this.isADescribe(element)){
                     if (element.expression.arguments.length === 2) {
                         let newBody = element.expression.arguments[1].body;
                         this.findItBlocksInBody(newBody, file);
                     }
                 }
+                // if it's an it/test dig deeper
                 if (this.isAnIt(element)) {
                     this.foundItNode(element, file);
                       if (element.expression.arguments.length === 2) {
@@ -123,6 +145,7 @@ export class TestFileParser {
                         this.findItBlocksInBody(newBody, file);
                     }
                 }
+                // if it's an expect store it
                 if (this.isAnExpect(element)){
                     this.foundExpectNode(element, file);
                 }
@@ -134,12 +157,17 @@ export class TestFileParser {
         return new Promise((resolve, reject) =>{
             fs.readFile(file, "utf8", (err, data) => {
                 if (err) { return reject(err.message); }
-                resolve(
-                    // Note, you may need to change your typings to allow this
-                    // https://github.com/DefinitelyTyped/DefinitelyTyped/pull/12879
-                    babylon.parse(data, { sourceType:"module", plugins: ["*"] })
-                );
-            });  
+
+                try {
+                    const plugins: babylon.PluginName[] = ['jsx' , 'flow','asyncFunctions','classConstructorCall','doExpressions'
+   ,'trailingFunctionCommas','objectRestSpread','decorators','classProperties','exportExtensions'
+   ,'exponentiationOperator','asyncGenerators','functionBind','functionSent'];
+                    const parsed = babylon.parse(data, { sourceType:"module", plugins: plugins });
+                    resolve(parsed);
+                } catch (error) {
+                    reject(error);   
+                }
+            });
         });
     }
 }

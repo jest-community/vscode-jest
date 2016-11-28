@@ -58,4 +58,10 @@ suite("File Parsing", () => {
         await parser.run(__dirname + "/../../test/fixtures/metaphysics/partner_show.js");
         assert.equal(parser.itBlocks.length, 8);
     });
+
+    test("For a danger flow test file ", async () => {
+        let parser = new TestFileParser(null);
+        await parser.run(__dirname + "/../../test/fixtures/dangerjs/github.jstest.js");
+        assert.equal(parser.itBlocks.length, 2);
+    });
 });
