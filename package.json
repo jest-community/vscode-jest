@@ -2,7 +2,7 @@
   "name": "vscode-jest",
   "displayName": "Jest",
   "description": "Use Facebook's Jest With Pleasure.",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "publisher": "Orta",
   "engines": {
     "vscode": "^1.5.0"
@@ -28,12 +28,27 @@
   "main": "./out/src/extension",
   "icon": "images/vscode-jest.png",
   "contributes": {
+    "languages": [
+      {
+        "id": "jest-snapshot",
+        "extensions": [
+          ".js.snap"
+        ]
+      }
+    ],
+    "grammars": [
+      {
+        "language": "jest-snapshot",
+        "scopeName": "source.jest.snap",
+        "path": "./syntaxes/jest-snapshot.tmLanguage"
+      }
+    ],
     "configuration": {
       "properties": {
         "jest.autoEnable": {
           "title": "Automatically starting Jest for this project",
           "type": "boolean",
-          "default": true 
+          "default": true
         },
         "jest.pathToJest": {
           "title": "The path to the Jest binary",
@@ -44,8 +59,14 @@
       "title": "The settings for the Jest VS Code runner."
     },
     "commands": [
-      { "command": "io.orta.jest.start", "title": "Start Jest Runner" },
-      { "command": "io.orta.jest.stop",  "title": "Stop Jest Runner" }
+      {
+        "command": "io.orta.jest.start",
+        "title": "Start Jest Runner"
+      },
+      {
+        "command": "io.orta.jest.stop",
+        "title": "Stop Jest Runner"
+      }
     ]
   },
   "scripts": {
