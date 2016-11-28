@@ -1,7 +1,7 @@
 'use strict';
 
 import * as childProcess from 'child_process';
-import { readFile } from 'fs';
+import {readFile} from 'fs';
 import {EventEmitter} from 'events';
 import {workspace} from 'vscode';
 
