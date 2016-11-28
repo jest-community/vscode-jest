@@ -1,3 +1,7 @@
+### 1.2.0
+
+* Adds syntax highlights for the JSX in `.js.snap` files - orta 
+
 ### 1.1.0
 
 * `import type` now shouldn't cause a parser error, and should be fine in test files - orta
