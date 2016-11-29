@@ -6,7 +6,6 @@ import {platform} from 'os';
  * 
  * @returns {string}
  */
-
 export function pathToJest(): string {
   const jestSettings: any = workspace.getConfiguration("jest");
   const path: string = jestSettings.pathToJest;

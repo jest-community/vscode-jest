@@ -23,6 +23,8 @@ Open up VS Code, go search for the extension "Jest"
 
 This project has the expectation that you would run something like `npm run test` which _just_ looks like `jest` in the `package.json`. So, please keep your configuration inside the `package.json` as opposed to using command line arguments.
 
+Also, you will need to use Jest 17+.
+
 ## Future Ideas
 
 * Add a statusbar button when snapshots have failed to re-run tests with update
