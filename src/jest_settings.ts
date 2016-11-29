@@ -32,13 +32,12 @@ export class JestSettings extends EventEmitter {
     }
 
     getConfig(completed: any) {
-        // It'll want to run tests, we don't want that, so tell it to run tests
-        // in a non-existant folder.
-
-
+        // A command could look like `npm test --` which doesn't work
         const runtimeExecutable = pathToJest();
         const [command, ...initialArgs] = runtimeExecutable.split(" ");
 
+        // It'll want to run tests, we don't want that, so tell it to run tests
+        // in a non-existant folder.
         const folderThatDoesntExist = "aaskdjfbsjdhbfdhjsfjh";
         var runtimeArgs = [...initialArgs, '--debug', folderThatDoesntExist];
 
