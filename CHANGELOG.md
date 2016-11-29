@@ -1,3 +1,7 @@
+### 1.3.2
+
+* Adds an error message if you're not using Jest 17 - orta
+
 ### 1.3.0 - 1.3.1
 
 * Windows support - orta
