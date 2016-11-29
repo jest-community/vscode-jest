@@ -3,6 +3,7 @@
 import * as childProcess from 'child_process';
 import {EventEmitter} from 'events';
 import {workspace} from 'vscode';
+import {pathToJest} from './helpers';
 
 // This class represents the the configuration of Jest's process
 // we want to start with the defaults then override whatever they output
@@ -19,7 +20,6 @@ interface JestConfigRepresentation {
 
 export class JestSettings extends EventEmitter {
     private debugprocess: childProcess.ChildProcess;
-
     settings: JestConfigRepresentation;
     
     constructor() {
@@ -31,14 +31,11 @@ export class JestSettings extends EventEmitter {
     }
 
     getConfig() {
-        var runtimeExecutable: string;
         // It'll want to run tests, we don't want that, so tell it to run tests
         // in a non-existant folder.
         const folderThatDoesntExist = "aaskdjfbsjdhbfdhjsfjh";
         var runtimeArgs = ['--debug', folderThatDoesntExist];
-
-        const jestSettings = workspace.getConfiguration("jest");
-        runtimeExecutable = jestSettings["pathToJest"];
+        const runtimeExecutable = pathToJest();
 
         this.debugprocess = childProcess.spawn(runtimeExecutable, runtimeArgs, {cwd: workspace.rootPath, env: process.env});
 
