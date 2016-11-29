@@ -1,3 +1,7 @@
+### 1.4.0
+
+* When a Snapshot test has failed, it offers the chance to update your snapshots - orta
+
 ### 1.3.2
 
 * Adds an error message if you're not using Jest 17 - orta
