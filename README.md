@@ -12,8 +12,9 @@ A comprehensive experience when using [Facebook's Jest](https://github.com/faceb
 * Starts Jest automatically when you're in a project with Jest installed.
 * Show individual fail / passes inline.
 * Show fails inside the problem inspector.
-* Highlights the errors next to the `expect` functions 
-* Adds syntax highlighting to snapshot files
+* Highlights the errors next to the `expect` functions.
+* Adds syntax highlighting to snapshot files.
+* A one button update for failed snapshots.
 
 ## How to get it?
 

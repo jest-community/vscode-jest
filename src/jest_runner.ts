@@ -17,7 +17,7 @@ export class JestRunner extends EventEmitter {
     start() {
         const runtimeExecutable = pathToJest();
         const tempJSON = tmpdir() + "/vscode-jest_runner.json";
-        const runtimeArgs = ['--json', '--useStderr', '--watch', '--colors', 'false', "--jsonOutputFile", tempJSON];
+        const runtimeArgs = ['--json', '--useStderr', '--watch', "--jsonOutputFile", tempJSON];
         
         this.debugprocess = childProcess.spawn(runtimeExecutable, runtimeArgs,  {cwd: workspace.rootPath, env: process.env});
 
@@ -50,6 +50,14 @@ export class JestRunner extends EventEmitter {
 
         this.debugprocess.on('close', () => {
             this.emit('debuggerProcessExit');
+        });
+    }
+
+    public runJestWithUpdateForSnapshots(completion: any) {
+        const runtimeExecutable = pathToJest();
+        const updateSnapshotProcess = childProcess.spawn(runtimeExecutable, ["--updateSnapshot"],  {cwd: workspace.rootPath, env: process.env});
+        updateSnapshotProcess.on('close', () => {
+            completion();
         });
     }
 

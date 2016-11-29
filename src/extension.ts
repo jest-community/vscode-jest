@@ -157,7 +157,6 @@ class JestExt  {
             if (!output.includes("Watch Usage")){
                 this.channel.appendLine(output);
             }
-
         }).on('executableStdErr', (error: Buffer) => {
             // The "tests are done" message comes through stdErr
             // We want to use this as a marker that the console should
@@ -168,9 +167,17 @@ class JestExt  {
                 this.parsingTestFile = false;
                 this.testsHaveStartedRunning();
             }
-            this.channel.appendLine(error.toString());
+            const message = error.toString();
+            // thanks Qix, http://stackoverflow.com/questions/25245716/remove-all-ansi-colors-styles-from-strings
+            const noANSI = message.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
+
+            if (noANSI.includes("snapshot test failed")) {
+                this.detectedSnapshotErrors();
+            }
+
+            this.channel.appendLine(noANSI);
         }).on('nonTerminalError', (error: string) => {
-            this.channel.appendLine(`Recieved an erro from Jest: ${error.toString()}`);
+            this.channel.appendLine(`Recieved an error from Jest Runner: ${error.toString()}`);
         }).on('exception', result => {
             this.channel.appendLine("\nException raised: [" + result.type + "]: " + result.message + "\n");
         }).on('terminalError', (error: string) => {
@@ -207,11 +214,23 @@ class JestExt  {
         return !relative.match(testRegex);
     }
 
+    detectedSnapshotErrors() {
+        vscode.window.showInformationMessage("Would you like to update your Snapshots?", { title: "Replace them"}).then((response) => {
+            // No response == cancel
+            if (response) {
+                this.jestProcess.runJestWithUpdateForSnapshots(() => {
+                    vscode.window.showInformationMessage("Updated Snapshots. It will show in your next test run.", { title: "Thanks"});
+                });
+            }
+        });
+    }
+
     private parsingTestFile = false;
     async triggerUpdateDecorations(editor: vscode.TextEditor) {
         // Lots of reasons to not show decorators,
-        // Are you in settings?
+        // Are you at the empty screen?
         if (!editor) { return; }
+        // Are you in settings?
         if (!editor.document) { return; }
         // Is it already happening?
         if (this.parsingTestFile === true) { return; }
@@ -220,99 +239,93 @@ class JestExt  {
         // OK - lets go
         this.parsingTestFile = true;
 
-        // try {
-            // This makes it cheaper later down the line
-            let successes: ItBlock[] = [];
-            let fails: ItBlock[] = [];
-            let unknowns: ItBlock[] = [];
- 
-            // Parse the current JS file
-            await this.parser.run(editor.document.uri.fsPath);
-            // Use the parsers it blocks for references
-            const itBlocks = this.parser.itBlocks;
+        // This makes it cheaper later down the line
+        let successes: ItBlock[] = [];
+        let fails: ItBlock[] = [];
+        let unknowns: ItBlock[] = [];
 
-            // Loop through our it/test references, then ask the reconciler ( the thing 
-            // that reads the JSON from Jest ) whether it has passed/failed/not ran.
-            const fileState = this.reconciler.stateForTestFile(editor.document.uri);
-            switch(fileState) {
-                // If the file failed, then it can contain passes, fails and unknowns
-                case TestReconcilationState.KnownFail:
-                    itBlocks.forEach(it => { 
-                        const state = this.reconciler.stateForTestAssertion(editor.document.uri, it.name);
-                        if (state !== null) {
-                            switch(state.status) {
-                                case TestReconcilationState.KnownSuccess: 
-                                    successes.push(it); break;
-                                case TestReconcilationState.KnownFail: 
-                                    fails.push(it); break;
-                                case TestReconcilationState.Unknown: 
-                                    unknowns.push(it); break;
-                            }
-                        } else { 
-                            unknowns.push(it);
+        // Parse the current JS file
+        await this.parser.run(editor.document.uri.fsPath);
+        // Use the parsers it blocks for references
+        const itBlocks = this.parser.itBlocks;
+
+        // Loop through our it/test references, then ask the reconciler ( the thing 
+        // that reads the JSON from Jest ) whether it has passed/failed/not ran.
+        const fileState = this.reconciler.stateForTestFile(editor.document.uri);
+        switch(fileState) {
+            // If the file failed, then it can contain passes, fails and unknowns
+            case TestReconcilationState.KnownFail:
+                itBlocks.forEach(it => { 
+                    const state = this.reconciler.stateForTestAssertion(editor.document.uri, it.name);
+                    if (state !== null) {
+                        switch(state.status) {
+                            case TestReconcilationState.KnownSuccess: 
+                                successes.push(it); break;
+                            case TestReconcilationState.KnownFail: 
+                                fails.push(it); break;
+                            case TestReconcilationState.Unknown: 
+                                unknowns.push(it); break;
                         }
-                    });
-                    break;
-                // Test passed, all it's must be green
-                case TestReconcilationState.KnownSuccess:
-                    successes = itBlocks; break;
-
-                // We don't know, not ran probably
-                case TestReconcilationState.Unknown:
-                    unknowns = itBlocks; break;
-            };
-
-
-
-            // Create a map for the states and styles to show inline.
-            // Note that this specifically is only for dots.
-            const styleMap = [ 
-                { data: successes, style: this.passingItStyle, state: TestReconcilationState.KnownSuccess }, 
-                { data: fails, style: this.failingItStyle, state: TestReconcilationState.KnownFail }, 
-                { data: unknowns, style: this.unknownItStyle, state: TestReconcilationState.Unknown }
-            ];
-            styleMap.forEach(style => {
-                let decorators = this.generateDecoratorsForJustIt(style.data, style.state);
-                editor.setDecorations(style.style, decorators);                
-            });
-            
-            // Now we want to handle adding the error message after the failing assertion
-            // so first we need to clear all assertions, this is a bit of a shame as it can flash
-            // however, the API for a style in this case is not built to handle different inline texts 
-            // as easily as it handles inline dots
-
-            // Remove all of the existing line decorators
-            this.failingAssertionDecorators.forEach(element => {
-                editor.setDecorations(element, []);
-            }); 
-            this.failingAssertionDecorators = [];
-
-            // Loop through all the failing "Statuses" (these are files)
-            const failStatuses = this.reconciler.failedStatuses();
-            failStatuses.forEach( (fail) => {
-                // Skip fails that aren't for this file
-                if (editor.document.uri.fsPath !== fail.file) { return; }
-                
-                // Get the failed assertions
-                const asserts = fail.assertions.filter((a) => a.status === TestReconcilationState.KnownFail);
-                asserts.forEach((assertion) => {
-                    const decorator = {
-                        range: new vscode.Range(assertion.line - 1, 0, 0, 0),
-                        hoverMessage: assertion.terseMessage
-                    };
-                    // We have to make a new style for each unique message, this is
-                    // why we have to remove off of them beforehand
-                    const style = decorations.failingAssertionStyle(assertion.terseMessage);
-                    this.failingAssertionDecorators.push(style);
-                    editor.setDecorations(style, [decorator]);
+                    } else { 
+                        unknowns.push(it);
+                    }
                 });
-            });
-            this.parsingTestFile = false;
+                break;
+            // Test passed, all it's must be green
+            case TestReconcilationState.KnownSuccess:
+                successes = itBlocks; break;
 
-        // } catch(e) {
-        //     this.channel.appendLine(`Error Parsing :${editor.document.uri.fsPath}. - ${e}`, );
-        //     this.parsingTestFile = false;
-        // }
+            // We don't know, not ran probably
+            case TestReconcilationState.Unknown:
+                unknowns = itBlocks; break;
+        };
+
+
+
+        // Create a map for the states and styles to show inline.
+        // Note that this specifically is only for dots.
+        const styleMap = [ 
+            { data: successes, style: this.passingItStyle, state: TestReconcilationState.KnownSuccess }, 
+            { data: fails, style: this.failingItStyle, state: TestReconcilationState.KnownFail }, 
+            { data: unknowns, style: this.unknownItStyle, state: TestReconcilationState.Unknown }
+        ];
+        styleMap.forEach(style => {
+            let decorators = this.generateDecoratorsForJustIt(style.data, style.state);
+            editor.setDecorations(style.style, decorators);                
+        });
+        
+        // Now we want to handle adding the error message after the failing assertion
+        // so first we need to clear all assertions, this is a bit of a shame as it can flash
+        // however, the API for a style in this case is not built to handle different inline texts 
+        // as easily as it handles inline dots
+
+        // Remove all of the existing line decorators
+        this.failingAssertionDecorators.forEach(element => {
+            editor.setDecorations(element, []);
+        }); 
+        this.failingAssertionDecorators = [];
+
+        // Loop through all the failing "Statuses" (these are files)
+        const failStatuses = this.reconciler.failedStatuses();
+        failStatuses.forEach( (fail) => {
+            // Skip fails that aren't for this file
+            if (editor.document.uri.fsPath !== fail.file) { return; }
+            
+            // Get the failed assertions
+            const asserts = fail.assertions.filter((a) => a.status === TestReconcilationState.KnownFail);
+            asserts.forEach((assertion) => {
+                const decorator = {
+                    range: new vscode.Range(assertion.line - 1, 0, 0, 0),
+                    hoverMessage: assertion.terseMessage
+                };
+                // We have to make a new style for each unique message, this is
+                // why we have to remove off of them beforehand
+                const style = decorations.failingAssertionStyle(assertion.terseMessage);
+                this.failingAssertionDecorators.push(style);
+                editor.setDecorations(style, [decorator]);
+            });
+        });
+        this.parsingTestFile = false;
     }
 
     setupStatusBar() { 
