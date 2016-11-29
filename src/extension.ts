@@ -192,7 +192,11 @@ class JestExt  {
 
     // Get the settings from Jest's JSON output
     getSettings() {
-        this.jestSettings.getConfig();
+        this.jestSettings.getConfig(() => {
+            if (this.jestSettings.jestVersionMajor < 17) {
+                vscode.window.showErrorMessage("This extension requires Jest 17+", { title: "Sigh, I'll go update my Jest"});
+            }
+        });
     }
 
     wouldJestRunURI(uri: vscode.Uri): boolean {
