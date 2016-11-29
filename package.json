@@ -23,7 +23,8 @@
     "Other"
   ],
   "activationEvents": [
-    "workspaceContains:node_modules/.bin/jest"
+    "workspaceContains:node_modules/.bin/jest",
+    "workspaceContains:node_modules/react-scripts/node_modules/.bin/jest"
   ],
   "main": "./out/src/extension",
   "icon": "images/vscode-jest.png",
