@@ -2,8 +2,10 @@
 
 import * as childProcess from 'child_process';
 import {readFile} from 'fs';
+import {tmpdir} from 'os';
 import {EventEmitter} from 'events';
 import {workspace} from 'vscode';
+import {pathToJest} from './helpers';
 
 // This class represents the running process, and
 // passes out events when it understands what data is being
@@ -13,24 +15,19 @@ export class JestRunner extends EventEmitter {
     private debugprocess: childProcess.ChildProcess;
 
     start() {
-        var runtimeExecutable: string;
-        var runtimeArgs = ['--json', '--useStderr', '--watch', '--colors', 'false', "--jsonOutputFile", "/tmp/vscode-jest.json"];
-
-        const jestSettings = workspace.getConfiguration("jest");
-        runtimeExecutable = jestSettings["pathToJest"];
+        const runtimeExecutable = pathToJest();
+        const tempJSON = tmpdir() + "/vscode-jest_runner.json";
+        const runtimeArgs = ['--json', '--useStderr', '--watch', '--colors', 'false', "--jsonOutputFile", tempJSON];
         
-        var processCwd = workspace.rootPath;
-        var processEnv = process.env;
-        
-        this.debugprocess = childProcess.spawn(runtimeExecutable, runtimeArgs, {cwd: processCwd, env: processEnv});
+        this.debugprocess = childProcess.spawn(runtimeExecutable, runtimeArgs,  {cwd: workspace.rootPath, env: process.env});
 
         this.debugprocess.stdout.on('data', (data: Buffer) => {
             // Make jest save to a file, otherwise we get chunked data and it can be hard to put it back together
             let stringValue = data.toString().replace(/\n$/, "").trim();
             if (stringValue.startsWith("Test results written to")) {
-                readFile("/tmp/vscode-jest.json", "utf8", (err, data) => {
+                readFile(tempJSON, "utf8", (err, data) => {
                     if (err) {
-                        this.emit('terminalError', "JSON test overview file not found at /tmp/vscode-jest.json"); 
+                        this.emit('terminalError', `JSON test overview file not found at ${tempJSON}`); 
                     }
                     else { this.emit('executableJSON', JSON.parse(data)); }
                 });

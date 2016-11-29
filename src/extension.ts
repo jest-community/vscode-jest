@@ -207,6 +207,7 @@ class JestExt  {
     async triggerUpdateDecorations(editor: vscode.TextEditor) {
         // Lots of reasons to not show decorators,
         // Are you in settings?
+        if (!editor) { return; }
         if (!editor.document) { return; }
         // Is it already happening?
         if (this.parsingTestFile === true) { return; }

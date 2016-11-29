@@ -1,3 +1,7 @@
+### 1.3.0 - 1.3.1
+
+* Windows support - orta
+
 ### 1.2.0
 
 * Adds syntax highlights for the JSX in `.js.snap` files - orta 
