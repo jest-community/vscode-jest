@@ -17,10 +17,6 @@ var extensionInstance: JestExt;
 
 // Typing the actual JSON we get from Jest's runner
 
-// TODO: These need to be in lib
-
-
-
 export function activate(context: vscode.ExtensionContext) {
     // To make us VS Code agnostic outside of this file
     const jestPath = pathToJest();
@@ -45,12 +41,12 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("io.orta.show-jest-output", ()=> {
         channel.show();
     });
-
-    vscode.commands.registerCommand("io.orta.jest.start", ()=> {
+    vscode.commands.registerTextEditorCommand("io.orta.jest.start", ()=> {
+        vscode.window.showInformationMessage("Started Jest");
         extensionInstance.startProcess();
     });
 
-    vscode.commands.registerCommand("io.orta.jest.stop", ()=> {
+    vscode.commands.registerTextEditorCommand("io.orta.jest.stop", ()=> {
         extensionInstance.stopProcess();
     });
 
