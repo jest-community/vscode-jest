@@ -1,11 +1,11 @@
 'use strict';
 
-import {ChildProcess} from 'child_process';
-import {readFile} from 'fs';
-import {tmpdir} from 'os';
-import {EventEmitter} from 'events';
-import {ProjectWorkspace} from './project_workspace';
-import {jestChildProcessWithArgs} from './jest_process';
+import { ChildProcess } from 'child_process';
+import { readFile } from 'fs';
+import { tmpdir } from 'os';
+import { EventEmitter } from 'events';
+import { ProjectWorkspace } from './project_workspace';
+import { jestChildProcessWithArgs } from './jest_process';
 
 // This class represents the running process, and
 // passes out events when it understands what data is being
@@ -14,13 +14,13 @@ import {jestChildProcessWithArgs} from './jest_process';
 export class JestRunner extends EventEmitter {
     private debugprocess: ChildProcess;
     private workspace: ProjectWorkspace;
-    
+
     constructor(workspace: ProjectWorkspace) {
-      super();
-      this.workspace = workspace;
+        super();
+        this.workspace = workspace;
     }
 
-    start() {
+    start = () => {
         const tempJSON = tmpdir() + "/vscode-jest_runner.json";
         const args = ['--json', '--useStderr', '--watch', "--jsonOutputFile", tempJSON];
         this.debugprocess = jestChildProcessWithArgs(this.workspace, args);
@@ -31,7 +31,7 @@ export class JestRunner extends EventEmitter {
             if (stringValue.startsWith("Test results written to")) {
                 readFile(tempJSON, "utf8", (err, data) => {
                     if (err) {
-                        this.emit('terminalError', `JSON test overview file not found at ${tempJSON}`); 
+                        this.emit('terminalError', `JSON test overview file not found at ${tempJSON}`);
                     }
                     else { this.emit('executableJSON', JSON.parse(data)); }
                 });

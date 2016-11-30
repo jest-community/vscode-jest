@@ -55,10 +55,10 @@ export class TestReconciler {
   private passes: TestFileAssertionStatus[];
 
   constructor() {
-    this.fileStatuses = {}; 
+    this.fileStatuses = {};
   }
 
-  updateFileWithJestStatus(results: JestTotalResults) {
+  updateFileWithJestStatus = (results: JestTotalResults) => {
     this.fails = [];
     this.passes = [];
 
@@ -68,36 +68,36 @@ export class TestReconciler {
       const status = this.statusToReconcilationState(file.status);
       // Create our own simpler representation 
       const fileStatus: TestFileAssertionStatus = {
-         file: file.name,
-         status,
-         message: file.message,
-         assertions: this.mapAssertions(file.name, file.assertionResults),
-       };
-       this.fileStatuses[file.name] = fileStatus; 
+        file: file.name,
+        status,
+        message: file.message,
+        assertions: this.mapAssertions(file.name, file.assertionResults),
+      };
+      this.fileStatuses[file.name] = fileStatus;
 
-       if (status === TestReconcilationState.KnownFail) {
-         this.fails.push(fileStatus);
-       } else if(status === TestReconcilationState.KnownSuccess) { 
-         this.passes.push(fileStatus);
-       }
+      if (status === TestReconcilationState.KnownFail) {
+        this.fails.push(fileStatus);
+      } else if (status === TestReconcilationState.KnownSuccess) {
+        this.passes.push(fileStatus);
+      }
     });
   }
 
-  failedStatuses(): TestFileAssertionStatus[] {
+  failedStatuses = (): TestFileAssertionStatus[] => {
     return this.fails || [];
   }
 
-  passedStatuses(): TestFileAssertionStatus[] {
+  passedStatuses = (): TestFileAssertionStatus[] => {
     return this.passes || [];
   }
 
   // A failed test also contains the stack trace for an `expect`
   // we don't get this as structured data, but what we get is useful enough to make it for ourselves
 
-  private mapAssertions(filename:string, assertions: JestAssertionResults[]) : TestAssertionStatus[] {
+  private mapAssertions(filename: string, assertions: JestAssertionResults[]): TestAssertionStatus[] {
     // Is it jest < 17? e.g. Before I added this to the JSON
     if (!assertions) { return []; }
-    
+
     // Change all failing assertions into structured data 
     return assertions.map((assertion) => {
       // Failure messages seems to always be an array of one item
@@ -125,24 +125,24 @@ export class TestReconciler {
   }
 
   private statusToReconcilationState(status: string): TestReconcilationState {
-    switch(status){
+    switch (status) {
       case "passed": return TestReconcilationState.KnownSuccess;
       case "failed": return TestReconcilationState.KnownFail;
       default: return TestReconcilationState.Unknown;
     }
   }
 
-  stateForTestFile(file:string): TestReconcilationState {
+  stateForTestFile = (file: string): TestReconcilationState => {
     const results: TestFileAssertionStatus = this.fileStatuses[file];
     if (!results) { return TestReconcilationState.Unknown; }
-    return results.status; 
+    return results.status;
   }
 
-  stateForTestAssertion(file:string, name:string): TestAssertionStatus | null {
+  stateForTestAssertion = (file: string, name: string): TestAssertionStatus | null => {
     const results: TestFileAssertionStatus = this.fileStatuses[file];
     if (!results) { return null; }
-    const assertion = results.assertions.find((a) => a.title === name );
+    const assertion = results.assertions.find((a) => a.title === name);
     if (!assertion) { return null; }
-    return assertion; 
+    return assertion;
   }
 }
