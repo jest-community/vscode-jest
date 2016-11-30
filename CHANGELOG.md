@@ -3,6 +3,7 @@
 * Separation of VS Code specific code from the extension by creating a lib directory, 
   in prepration for moving to the Jest repo - https://github.com/facebook/jest/issues/2183 - orta
 * Minor improvements for create-react users - orta
+* Support for running Jest even in repos where Jest is not a direct dependency via the command `Start Jest Runner` - you will definitely need to set the per-project `.vscode/settings.json` to whatever would normally trigger a jest run - orta 
 
 ### 1.5.1
 
