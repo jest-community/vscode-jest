@@ -32,13 +32,18 @@ export class JestSettings extends EventEmitter {
     }
 
     getConfig(completed: any) {
+        // A command could look like `npm test --` which doesn't work
+        const runtimeExecutable = pathToJest();
+        const [command, ...initialArgs] = runtimeExecutable.split(" ");
+
         // It'll want to run tests, we don't want that, so tell it to run tests
         // in a non-existant folder.
         const folderThatDoesntExist = "aaskdjfbsjdhbfdhjsfjh";
-        var runtimeArgs = ['--debug', folderThatDoesntExist];
-        const runtimeExecutable = pathToJest();
+        var runtimeArgs = [...initialArgs, '--debug', folderThatDoesntExist];
 
-        this.debugprocess = childProcess.spawn(runtimeExecutable, runtimeArgs, {cwd: workspace.rootPath, env: process.env});
+        const env = process.env;
+        env["CI"] = true;
+        this.debugprocess = childProcess.spawn(command, runtimeArgs, {cwd: workspace.rootPath, env: env});
 
         this.debugprocess.stdout.on('data', (data: Buffer) => {
             const string = data.toString();

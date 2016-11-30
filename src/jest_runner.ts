@@ -17,9 +17,13 @@ export class JestRunner extends EventEmitter {
     start() {
         const runtimeExecutable = pathToJest();
         const tempJSON = tmpdir() + "/vscode-jest_runner.json";
-        const runtimeArgs = ['--json', '--useStderr', '--watch', "--jsonOutputFile", tempJSON];
+        const [command, ...initialArgs] = runtimeExecutable.split(" ");
+        const runtimeArgs = [...initialArgs, '--json', '--useStderr', '--watch', "--jsonOutputFile", tempJSON];
         
-        this.debugprocess = childProcess.spawn(runtimeExecutable, runtimeArgs,  {cwd: workspace.rootPath, env: process.env});
+        const env = process.env;
+        env["CI"] = true;
+
+        this.debugprocess = childProcess.spawn(command, runtimeArgs,  {cwd: workspace.rootPath, env: env});
 
         this.debugprocess.stdout.on('data', (data: Buffer) => {
             // Make jest save to a file, otherwise we get chunked data and it can be hard to put it back together

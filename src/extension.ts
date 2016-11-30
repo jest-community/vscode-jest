@@ -201,7 +201,7 @@ class JestExt  {
     getSettings() {
         this.jestSettings.getConfig(() => {
             if (this.jestSettings.jestVersionMajor < 17) {
-                vscode.window.showErrorMessage("This extension requires Jest 17+", { title: "Sigh, I'll go update my Jest"});
+                vscode.window.showErrorMessage("This extension relies on Jest 17+ features, it will run, but you may experience issues.", { title: "Sigh, I'll go update my Jest"});
             }
         });
     }
