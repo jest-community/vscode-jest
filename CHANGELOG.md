@@ -1,3 +1,7 @@
+### 1.6.1
+
+* More windows improvements - KalleOtt 
+
 ### 1.6.0
 
 * Separation of VS Code specific code from the extension by creating a lib directory, 
