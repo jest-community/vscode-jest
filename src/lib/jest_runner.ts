@@ -1,29 +1,29 @@
 'use strict';
 
-import * as childProcess from 'child_process';
+import {ChildProcess} from 'child_process';
 import {readFile} from 'fs';
 import {tmpdir} from 'os';
 import {EventEmitter} from 'events';
-import {workspace} from 'vscode';
-import {pathToJest} from './helpers';
+import {ProjectWorkspace} from './project_workspace';
+import {jestChildProcessWithArgs} from './jest_process';
 
 // This class represents the running process, and
 // passes out events when it understands what data is being
 // pass sent out of the process
 
 export class JestRunner extends EventEmitter {
-    private debugprocess: childProcess.ChildProcess;
+    private debugprocess: ChildProcess;
+    private workspace: ProjectWorkspace;
+    
+    constructor(workspace: ProjectWorkspace) {
+      super();
+      this.workspace = workspace;
+    }
 
     start() {
-        const runtimeExecutable = pathToJest();
         const tempJSON = tmpdir() + "/vscode-jest_runner.json";
-        const [command, ...initialArgs] = runtimeExecutable.split(" ");
-        const runtimeArgs = [...initialArgs, '--json', '--useStderr', '--watch', "--jsonOutputFile", tempJSON];
-        
-        const env = process.env;
-        env["CI"] = true;
-
-        this.debugprocess = childProcess.spawn(command, runtimeArgs,  {cwd: workspace.rootPath, env: env});
+        const args = ['--json', '--useStderr', '--watch', "--jsonOutputFile", tempJSON];
+        this.debugprocess = jestChildProcessWithArgs(this.workspace, args);
 
         this.debugprocess.stdout.on('data', (data: Buffer) => {
             // Make jest save to a file, otherwise we get chunked data and it can be hard to put it back together
@@ -58,8 +58,7 @@ export class JestRunner extends EventEmitter {
     }
 
     public runJestWithUpdateForSnapshots(completion: any) {
-        const runtimeExecutable = pathToJest();
-        const updateSnapshotProcess = childProcess.spawn(runtimeExecutable, ["--updateSnapshot"],  {cwd: workspace.rootPath, env: process.env});
+        const updateSnapshotProcess = jestChildProcessWithArgs(this.workspace, ["--updateSnapshot"]);
         updateSnapshotProcess.on('close', () => {
             completion();
         });

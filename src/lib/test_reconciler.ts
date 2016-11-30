@@ -1,15 +1,25 @@
 'use strict';
 
-import * as vscode from 'vscode';
 import { basename } from 'path';
-import { JestTotalResults, JestAssertionResults } from './extension';
+import { JestTotalResults, JestAssertionResults } from './types';
 
+/**
+ *  Did the thing pass, fail or was it not run?
+ */
 export enum TestReconcilationState {
+  /** This could be that the file has not changed, so the watched didn't hit it */
   Unknown = 1,
+  /** Definitely failed */
   KnownFail = 2,
+  /** Definitely passed */
   KnownSuccess = 3
 }
 
+/**
+ * The Jest Extension's version of a status for
+ * whether the file passed or not
+ * 
+ */
 export interface TestFileAssertionStatus {
   file: string;
   message: string;
@@ -17,6 +27,11 @@ export interface TestFileAssertionStatus {
   assertions: TestAssertionStatus[];
 }
 
+/**
+ * The Jest Extension's version of a status for
+ * individual assertion fails
+ * 
+ */
 export interface TestAssertionStatus {
   title: string;
   status: TestReconcilationState;
@@ -25,6 +40,14 @@ export interface TestAssertionStatus {
   terseMessage: string;
   line: number | null;
 }
+
+/**
+ *  You have a Jest test runner watching for changes, and you have
+ *  an extension that wants to know where to show errors after file parsing.
+ * 
+ *  This class represents the state between runs, keeping track of passes/fails
+ *  at a file level, generating useful error messages and providing a nice API. 
+ */
 
 export class TestReconciler {
   private fileStatuses: any;
@@ -109,14 +132,14 @@ export class TestReconciler {
     }
   }
 
-  stateForTestFile(file:vscode.Uri): TestReconcilationState {
-    const results: TestFileAssertionStatus = this.fileStatuses[file.fsPath];
+  stateForTestFile(file:string): TestReconcilationState {
+    const results: TestFileAssertionStatus = this.fileStatuses[file];
     if (!results) { return TestReconcilationState.Unknown; }
     return results.status; 
   }
 
-  stateForTestAssertion(file:vscode.Uri, name:string): TestAssertionStatus | null {
-    const results: TestFileAssertionStatus = this.fileStatuses[file.fsPath];
+  stateForTestAssertion(file:string, name:string): TestAssertionStatus | null {
+    const results: TestFileAssertionStatus = this.fileStatuses[file];
     if (!results) { return null; }
     const assertion = results.assertions.find((a) => a.title === name );
     if (!assertion) { return null; }

@@ -2,51 +2,35 @@
 
 import * as vscode from 'vscode';
 import * as path from 'path';
-import {JestRunner} from './jest_runner';
-import {JestSettings} from './jest_settings';
-import {TestReconciler, TestReconcilationState} from './test_reconciler';
-import {TestFileParser, ItBlock} from './test_file_parser';
+
+import {ProjectWorkspace} from './lib/project_workspace';
+import {JestRunner} from './lib/jest_runner';
+import {JestSettings} from './lib/jest_settings';
+import {TestReconciler, TestReconcilationState} from './lib/test_reconciler';
+import {TestFileParser, ItBlock} from './lib/test_file_parser';
+import {JestTotalResults} from './lib/types';
+
 import * as decorations from './decorations';
+import {pathToJest} from './helpers';
 
 var extensionInstance: JestExt;
 
 // Typing the actual JSON we get from Jest's runner
 
-export interface JestFileResults {
-    name: string;
-    summary: string;
-    message: string;
-    status: "failed" | "passed";
-    startTime:number;
-    endTime:number;
-    assertionResults: JestAssertionResults[];
-}
+// TODO: These need to be in lib
 
-export interface JestAssertionResults {
-    name: string;
-    title: string;
-    status: "failed" | "passed";
-    failureMessages: string[];
-}
 
-export interface JestTotalResults {
-    success:boolean;
-    startTime:number;
-    numTotalTests:number;
-    numTotalTestSuites:number;
-    numRuntimeErrorTestSuites:number;
-    numPassedTests:number;
-    numFailedTests:number;
-    numPendingTests:number;
-    testResults: JestFileResults[];
-}
 
 export function activate(context: vscode.ExtensionContext) {
+    // To make us VS Code agnostic outside of this file
+    const jestPath = pathToJest();
+    const workspace = new ProjectWorkspace(vscode.workspace.rootPath, jestPath);
+
     // Create our own console
-    let channel = vscode.window.createOutputChannel("Jest");
+    const channel = vscode.window.createOutputChannel("Jest");
     
     // We need a singleton to represent the extension
-    extensionInstance = new JestExt(channel, context.subscriptions);
+    extensionInstance = new JestExt(workspace, channel, context.subscriptions);
     extensionInstance.getSettings();
     
     // If we should start the process by default, do so
@@ -99,6 +83,7 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 class JestExt  {
+    private workspace: ProjectWorkspace;
     private jestProcess: JestRunner;
     private jestSettings: JestSettings;
     private parser: TestFileParser;
@@ -125,17 +110,18 @@ class JestExt  {
 
     private clearOnNextInput: boolean;
 
-    public constructor(outputChannel: vscode.OutputChannel, disposal:  { dispose(): any }[]) {
+    public constructor(workspace: ProjectWorkspace, outputChannel: vscode.OutputChannel, disposal:  { dispose(): any }[]) {
+        this.workspace = workspace;
         this.channel = outputChannel;
         this.workspaceDisposal = disposal;
         this.perFileDisposals = [];
         this.failingAssertionDecorators = [];
-        this.parser = new TestFileParser(outputChannel); 
+        this.parser = new TestFileParser(); 
         this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
         this.failDiagnostics = vscode.languages.createDiagnosticCollection("Jest");
         this.clearOnNextInput = true;
         this.reconciler = new TestReconciler();
-        this.jestSettings = new JestSettings();
+        this.jestSettings = new JestSettings(workspace);
     }
 
     startProcess() {
@@ -143,7 +129,7 @@ class JestExt  {
         // output and converting it into different types of data that
         // we can handle here differently.
 
-        this.jestProcess = new JestRunner();
+        this.jestProcess = new JestRunner(this.workspace);
         
         this.jestProcess.on('debuggerComplete', () => {
             this.channel.appendLine("Closed Jest");
@@ -251,12 +237,13 @@ class JestExt  {
 
         // Loop through our it/test references, then ask the reconciler ( the thing 
         // that reads the JSON from Jest ) whether it has passed/failed/not ran.
-        const fileState = this.reconciler.stateForTestFile(editor.document.uri);
+        const filePath = editor.document.uri.fsPath;
+        const fileState = this.reconciler.stateForTestFile(filePath);
         switch(fileState) {
             // If the file failed, then it can contain passes, fails and unknowns
             case TestReconcilationState.KnownFail:
                 itBlocks.forEach(it => { 
-                    const state = this.reconciler.stateForTestAssertion(editor.document.uri, it.name);
+                    const state = this.reconciler.stateForTestAssertion(filePath, it.name);
                     if (state !== null) {
                         switch(state.status) {
                             case TestReconcilationState.KnownSuccess: 
