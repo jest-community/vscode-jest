@@ -1,3 +1,8 @@
+### 1.5.1
+
+* Use green empty circles for tests assumed to be good - gabro
+* More windows improvements - bookman25
+
 ### 1.5.0
 
 * Adds support for running the tests inside `create react` apps - orta 
