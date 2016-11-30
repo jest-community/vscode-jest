@@ -192,8 +192,15 @@ class JestExt {
         const testRegex = new RegExp(this.jestSettings.settings.testRegex);
         const root = vscode.workspace.rootPath;
         const filePath = uri.fsPath;
-        const relative = path.relative(root, filePath);
-        return !relative.match(testRegex);
+        let relative = path.normalize(path.relative(root, filePath));
+        // replace windows path separator with normal slash
+        if (path.sep === '\\') {
+            relative = relative.replace(/\\/g, '/');
+        }
+
+        const matches = relative.match(testRegex);
+
+        return matches && matches.length > 0;
     }
 
     detectedSnapshotErrors = () => {
