@@ -46,13 +46,13 @@ export function notRanItName() {
         overviewRulerLane: vscode.OverviewRulerLane.Left,
         dark: {
             before: {
-                color: "darkgrey",
+                color: "#3BB26B",
                 contentText: "○",
             }    
         },
         light: {
             before: {
-                color: "lightgrey",
+                color: "#2F8F51",
                 contentText: "○",
             }    
         }
