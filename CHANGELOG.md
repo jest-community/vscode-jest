@@ -1,3 +1,9 @@
+### 1.6.0
+
+* Separation of VS Code specific code from the extension by creating a lib directory, 
+  in prepration for moving to the Jest repo - https://github.com/facebook/jest/issues/2183 - orta
+* Minor improvements for create-react users - orta
+
 ### 1.5.1
 
 * Use green empty circles for tests assumed to be good - gabro

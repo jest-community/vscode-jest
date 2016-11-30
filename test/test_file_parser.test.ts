@@ -1,17 +1,12 @@
 // The module 'assert' provides assertion methods from node
 import * as assert from 'assert';
 
-// You can import and use all API from the 'vscode' module
-// as well as import your extension to test it
-import * as vscode from 'vscode';
-import * as myExtension from '../src/extension';
-
-import { TestFileParser } from '../src/test_file_parser';
+import { TestFileParser } from '../src/lib/test_file_parser';
 
 suite("File Parsing", () => {
 
     test("For the simplest global case", async () => {
-        let parser = new TestFileParser(null);
+        let parser = new TestFileParser();
         await parser.run(__dirname + "/../../test/fixtures/global_its.js");
         assert.equal(parser.itBlocks.length, 2);
         
@@ -27,7 +22,7 @@ suite("File Parsing", () => {
     });
     
     test("For its inside describes", async () => {
-        let parser = new TestFileParser(null);
+        let parser = new TestFileParser();
         await parser.run(__dirname + "/../../test/fixtures/nested_its.js");
         assert.equal(parser.itBlocks.length, 3);
         
@@ -48,19 +43,19 @@ suite("File Parsing", () => {
     });
 
     test("For a danger test file (which has flow annotations)", async () => {
-        let parser = new TestFileParser(null);
+        let parser = new TestFileParser();
         await parser.run(__dirname + "/../../test/fixtures/dangerjs/travis-ci.jstest.js");
         assert.equal(parser.itBlocks.length, 7);
     });
 
     test("For a metaphysics test file", async () => {
-        let parser = new TestFileParser(null);
+        let parser = new TestFileParser();
         await parser.run(__dirname + "/../../test/fixtures/metaphysics/partner_show.js");
         assert.equal(parser.itBlocks.length, 8);
     });
 
     test("For a danger flow test file ", async () => {
-        let parser = new TestFileParser(null);
+        let parser = new TestFileParser();
         await parser.run(__dirname + "/../../test/fixtures/dangerjs/github.jstest.js");
         assert.equal(parser.itBlocks.length, 2);
     });

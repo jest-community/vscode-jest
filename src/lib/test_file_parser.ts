@@ -1,8 +1,7 @@
 'use strict';
 
-import fs = require('fs');
+import {readFile} from 'fs';
 import * as babylon from 'babylon';
-import * as vscode from 'vscode';
 
 interface Location {
     line: number;
@@ -35,12 +34,7 @@ export class ItBlock {
 
 export class TestFileParser {
     itBlocks: ItBlock[];
-    private channel: vscode.OutputChannel;
     expects: Expect[];
-
-    public constructor(outputChannel: vscode.OutputChannel | null) {
-        this.channel = outputChannel;
-    }
 
     async run(file: string): Promise<any> {
         this.itBlocks = [];
@@ -51,8 +45,7 @@ export class TestFileParser {
             this.findItBlocksInBody(data["program"], file);
             return data;
         } catch (error) {
-            this.channel.appendLine(`Could not parse ${file} for it/test statements.`);
-            return {};
+            throw error;
         }
     }
 
@@ -155,7 +148,7 @@ export class TestFileParser {
 
     generateAST(file: string): Promise<babylon.Node> {
         return new Promise((resolve, reject) =>{
-            fs.readFile(file, "utf8", (err, data) => {
+            readFile(file, "utf8", (err, data) => {
                 if (err) { return reject(err.message); }
 
                 try {
