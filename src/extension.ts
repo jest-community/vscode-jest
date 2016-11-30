@@ -3,15 +3,15 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 
-import {ProjectWorkspace} from './lib/project_workspace';
-import {JestRunner} from './lib/jest_runner';
-import {JestSettings} from './lib/jest_settings';
-import {TestReconciler, TestReconcilationState} from './lib/test_reconciler';
-import {TestFileParser, ItBlock} from './lib/test_file_parser';
-import {JestTotalResults} from './lib/types';
+import { ProjectWorkspace } from './lib/project_workspace';
+import { JestRunner } from './lib/jest_runner';
+import { JestSettings } from './lib/jest_settings';
+import { TestReconciler, TestReconcilationState } from './lib/test_reconciler';
+import { TestFileParser, ItBlock } from './lib/test_file_parser';
+import { JestTotalResults } from './lib/types';
 
 import * as decorations from './decorations';
-import {pathToJest} from './helpers';
+import { pathToJest } from './helpers';
 
 var extensionInstance: JestExt;
 
@@ -24,11 +24,11 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Create our own console
     const channel = vscode.window.createOutputChannel("Jest");
-    
+
     // We need a singleton to represent the extension
     extensionInstance = new JestExt(workspace, channel, context.subscriptions);
     extensionInstance.getSettings();
-    
+
     // If we should start the process by default, do so
     const userJestSettings: any = vscode.workspace.getConfiguration("jest");
     if (userJestSettings.autoEnable) {
@@ -38,7 +38,7 @@ export function activate(context: vscode.ExtensionContext) {
     }
 
     // Register for commands   
-    vscode.commands.registerCommand("io.orta.show-jest-output", ()=> {
+    vscode.commands.registerCommand("io.orta.show-jest-output", () => {
         channel.show();
     });
     vscode.commands.registerTextEditorCommand("io.orta.jest.start", ()=> {
@@ -51,47 +51,47 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     // Setup the file change watchers
-	var activeEditor = vscode.window.activeTextEditor;
-	if (activeEditor) {
-		extensionInstance.triggerUpdateDecorations(activeEditor);
-	}
+    var activeEditor = vscode.window.activeTextEditor;
+    if (activeEditor) {
+        extensionInstance.triggerUpdateDecorations(activeEditor);
+    }
 
-	vscode.window.onDidChangeActiveTextEditor(editor => {
-		activeEditor = editor;
-		if (editor) {
-			extensionInstance.triggerUpdateDecorations(activeEditor);	
-		}
-	}, null, context.subscriptions);
-	
+    vscode.window.onDidChangeActiveTextEditor(editor => {
+        activeEditor = editor;
+        if (editor) {
+            extensionInstance.triggerUpdateDecorations(activeEditor);
+        }
+    }, null, context.subscriptions);
+
     vscode.workspace.onDidSaveTextDocument(document => {
         if (document) {
             extensionInstance.triggerUpdateDecorations(vscode.window.activeTextEditor);
         }
     });
 
-	vscode.workspace.onDidChangeTextDocument(event => {
-		if (activeEditor && event.document === activeEditor.document) {
-			extensionInstance.triggerUpdateDecorations(activeEditor);
-            
-		}
-	}, null, context.subscriptions);
-    
+    vscode.workspace.onDidChangeTextDocument(event => {
+        if (activeEditor && event.document === activeEditor.document) {
+            extensionInstance.triggerUpdateDecorations(activeEditor);
+
+        }
+    }, null, context.subscriptions);
+
 }
 
-class JestExt  {
+class JestExt {
     private workspace: ProjectWorkspace;
     private jestProcess: JestRunner;
     private jestSettings: JestSettings;
     private parser: TestFileParser;
     private reconciler: TestReconciler;
-    
+
     // So you can read what's going on
     private channel: vscode.OutputChannel;
-    
+
     // Memory management
     private workspaceDisposal: { dispose(): any }[];
     private perFileDisposals: { dispose(): any }[];
-    
+
     // The bottom status bar
     private statusBarItem: vscode.StatusBarItem;
     // The ability to show fails in the problems section
@@ -100,19 +100,19 @@ class JestExt  {
     private passingItStyle: vscode.TextEditorDecorationType;
     private failingItStyle: vscode.TextEditorDecorationType;
     private unknownItStyle: vscode.TextEditorDecorationType;
-    
+
     // We have to keep track of our inline assert fails to remove later 
     private failingAssertionDecorators: any[];
 
     private clearOnNextInput: boolean;
 
-    public constructor(workspace: ProjectWorkspace, outputChannel: vscode.OutputChannel, disposal:  { dispose(): any }[]) {
+    public constructor(workspace: ProjectWorkspace, outputChannel: vscode.OutputChannel, disposal: { dispose(): any }[]) {
         this.workspace = workspace;
         this.channel = outputChannel;
         this.workspaceDisposal = disposal;
         this.perFileDisposals = [];
         this.failingAssertionDecorators = [];
-        this.parser = new TestFileParser(); 
+        this.parser = new TestFileParser();
         this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
         this.failDiagnostics = vscode.languages.createDiagnosticCollection("Jest");
         this.clearOnNextInput = true;
@@ -120,13 +120,13 @@ class JestExt  {
         this.jestSettings = new JestSettings(workspace);
     }
 
-    startProcess() {
+    startProcess = () => {
         // The Runner is an event emitter that handles taking the Jest
         // output and converting it into different types of data that
         // we can handle here differently.
 
         this.jestProcess = new JestRunner(this.workspace);
-        
+
         this.jestProcess.on('debuggerComplete', () => {
             this.channel.appendLine("Closed Jest");
 
@@ -136,15 +136,15 @@ class JestExt  {
             this.clearOnNextInput = true;
 
         }).on('executableOutput', (output: string) => {
-            if (!output.includes("Watch Usage")){
+            if (!output.includes("Watch Usage")) {
                 this.channel.appendLine(output);
             }
         }).on('executableStdErr', (error: Buffer) => {
             // The "tests are done" message comes through stdErr
             // We want to use this as a marker that the console should
             // be cleared, as the next input will be from a new test run.
-  
-            if (this.clearOnNextInput){
+
+            if (this.clearOnNextInput) {
                 this.clearOnNextInput = false;
                 this.parsingTestFile = false;
                 this.testsHaveStartedRunning();
@@ -174,34 +174,41 @@ class JestExt  {
         this.jestProcess.start();
     }
 
-    stopProcess() {
+    stopProcess = () => {
         this.channel.appendLine("Closing Jest jest_runner.");
         this.jestProcess.closeProcess();
     }
 
     // Get the settings from Jest's JSON output
-    getSettings() {
+    getSettings = () => {
         this.jestSettings.getConfig(() => {
             if (this.jestSettings.jestVersionMajor < 17) {
-                vscode.window.showErrorMessage("This extension relies on Jest 17+ features, it will run, but you may experience issues.", { title: "Sigh, I'll go update my Jest"});
+                vscode.window.showErrorMessage("This extension relies on Jest 17+ features, it will run, but you may experience issues.", { title: "Sigh, I'll go update my Jest" });
             }
         });
     }
 
-    wouldJestRunURI(uri: vscode.Uri): boolean {
+    wouldJestRunURI = (uri: vscode.Uri): boolean => {
         const testRegex = new RegExp(this.jestSettings.settings.testRegex);
         const root = vscode.workspace.rootPath;
         const filePath = uri.fsPath;
-        const relative = path.relative(root, filePath);
-        return !relative.match(testRegex);
+        let relative = path.normalize(path.relative(root, filePath));
+        // replace windows path separator with normal slash
+        if (path.sep === '\\') {
+            relative = relative.replace(/\\/g, '/');
+        }
+
+        const matches = relative.match(testRegex);
+
+        return matches && matches.length > 0;
     }
 
-    detectedSnapshotErrors() {
-        vscode.window.showInformationMessage("Would you like to update your Snapshots?", { title: "Replace them"}).then((response) => {
+    detectedSnapshotErrors = () => {
+        vscode.window.showInformationMessage("Would you like to update your Snapshots?", { title: "Replace them" }).then((response) => {
             // No response == cancel
             if (response) {
                 this.jestProcess.runJestWithUpdateForSnapshots(() => {
-                    vscode.window.showInformationMessage("Updated Snapshots. It will show in your next test run.", { title: "Thanks"});
+                    vscode.window.showInformationMessage("Updated Snapshots. It will show in your next test run.", { title: "Thanks" });
                 });
             }
         });
@@ -215,9 +222,9 @@ class JestExt  {
         // Are you in settings?
         if (!editor.document) { return; }
         // Is it already happening?
-        if (this.parsingTestFile === true) { return; }
+        if (this.parsingTestFile) { return; }
         // is it in the test regex?
-        if (this.wouldJestRunURI(editor.document.uri)) { return; }
+        if (!this.wouldJestRunURI(editor.document.uri)) { return; }
         // OK - lets go
         this.parsingTestFile = true;
 
@@ -235,21 +242,21 @@ class JestExt  {
         // that reads the JSON from Jest ) whether it has passed/failed/not ran.
         const filePath = editor.document.uri.fsPath;
         const fileState = this.reconciler.stateForTestFile(filePath);
-        switch(fileState) {
+        switch (fileState) {
             // If the file failed, then it can contain passes, fails and unknowns
             case TestReconcilationState.KnownFail:
-                itBlocks.forEach(it => { 
+                itBlocks.forEach(it => {
                     const state = this.reconciler.stateForTestAssertion(filePath, it.name);
                     if (state !== null) {
-                        switch(state.status) {
-                            case TestReconcilationState.KnownSuccess: 
+                        switch (state.status) {
+                            case TestReconcilationState.KnownSuccess:
                                 successes.push(it); break;
-                            case TestReconcilationState.KnownFail: 
+                            case TestReconcilationState.KnownFail:
                                 fails.push(it); break;
-                            case TestReconcilationState.Unknown: 
+                            case TestReconcilationState.Unknown:
                                 unknowns.push(it); break;
                         }
-                    } else { 
+                    } else {
                         unknowns.push(it);
                     }
                 });
@@ -267,16 +274,16 @@ class JestExt  {
 
         // Create a map for the states and styles to show inline.
         // Note that this specifically is only for dots.
-        const styleMap = [ 
-            { data: successes, style: this.passingItStyle, state: TestReconcilationState.KnownSuccess }, 
-            { data: fails, style: this.failingItStyle, state: TestReconcilationState.KnownFail }, 
+        const styleMap = [
+            { data: successes, style: this.passingItStyle, state: TestReconcilationState.KnownSuccess },
+            { data: fails, style: this.failingItStyle, state: TestReconcilationState.KnownFail },
             { data: unknowns, style: this.unknownItStyle, state: TestReconcilationState.Unknown }
         ];
         styleMap.forEach(style => {
             let decorators = this.generateDecoratorsForJustIt(style.data, style.state);
-            editor.setDecorations(style.style, decorators);                
+            editor.setDecorations(style.style, decorators);
         });
-        
+
         // Now we want to handle adding the error message after the failing assertion
         // so first we need to clear all assertions, this is a bit of a shame as it can flash
         // however, the API for a style in this case is not built to handle different inline texts 
@@ -285,15 +292,15 @@ class JestExt  {
         // Remove all of the existing line decorators
         this.failingAssertionDecorators.forEach(element => {
             editor.setDecorations(element, []);
-        }); 
+        });
         this.failingAssertionDecorators = [];
 
         // Loop through all the failing "Statuses" (these are files)
         const failStatuses = this.reconciler.failedStatuses();
-        failStatuses.forEach( (fail) => {
+        failStatuses.forEach((fail) => {
             // Skip fails that aren't for this file
             if (editor.document.uri.fsPath !== fail.file) { return; }
-            
+
             // Get the failed assertions
             const asserts = fail.assertions.filter((a) => a.status === TestReconcilationState.KnownFail);
             asserts.forEach((assertion) => {
@@ -311,7 +318,7 @@ class JestExt  {
         this.parsingTestFile = false;
     }
 
-    setupStatusBar() { 
+    setupStatusBar = () => {
         this.statusBarItem.show();
         this.statusBarItem.command = "io.orta.show-jest-output";
 
@@ -323,18 +330,18 @@ class JestExt  {
         }
     }
 
-    setupDecorators() {
+    setupDecorators = () => {
         this.passingItStyle = decorations.passingItName();
         this.failingItStyle = decorations.failingItName();
         this.unknownItStyle = decorations.notRanItName();
     }
 
-    testsHaveStartedRunning() {
+    testsHaveStartedRunning = () => {
         this.channel.clear();
         this.statusBarItem.text = "Jest: $(sync)";
     }
 
-    updateWithData(data: JestTotalResults) {
+    updateWithData = (data: JestTotalResults) => {
         this.reconciler.updateFileWithJestStatus(data);
         this.failDiagnostics.clear();
 
@@ -347,17 +354,17 @@ class JestExt  {
             // We've got JSON data back from Jest about a failing test run.
             // We don't want to handle the decorators (inline dots/messages here)
             // but we can handle creating "problems" for the workspace here.
-            
+
             // For each failed file
             const fails = this.reconciler.failedStatuses();
-            fails.forEach( (fail) => {
+            fails.forEach((fail) => {
                 // Generate a uri, and pull out the failing it/tests
                 const uri = vscode.Uri.file(fail.file);
                 const asserts = fail.assertions.filter((a) => a.status === TestReconcilationState.KnownFail);
 
                 // Loop through each individual fail and create an diagnostic
                 // to pass back to VS Code.
-                this.failDiagnostics.set(uri, asserts.map( (assertion) => {
+                this.failDiagnostics.set(uri, asserts.map((assertion) => {
                     const expect = this.parser.expectAtLine(assertion.line);
                     const start = expect ? expect.start.column : 0;
                     const daig = new vscode.Diagnostic(
@@ -371,20 +378,20 @@ class JestExt  {
             });
         }
     }
-    
+
     // These are the dots
-    generateDecoratorsForJustIt(blocks: ItBlock[], state: TestReconcilationState): vscode.DecorationOptions[] {
+    generateDecoratorsForJustIt = (blocks: ItBlock[], state: TestReconcilationState): vscode.DecorationOptions[] => {
         const nameForState = (name: string, state: TestReconcilationState): string => {
             switch (state) {
-                    case TestReconcilationState.KnownSuccess: 
-                        return 'Passed';
-                    case TestReconcilationState.KnownFail: 
-                        return 'Failed';
-                    case TestReconcilationState.Unknown: 
-                        return 'Test has not run yet, due to Jest only running tests related to changes.';
-                }
+                case TestReconcilationState.KnownSuccess:
+                    return 'Passed';
+                case TestReconcilationState.KnownFail:
+                    return 'Failed';
+                case TestReconcilationState.Unknown:
+                    return 'Test has not run yet, due to Jest only running tests related to changes.';
+            }
         };
-        return blocks.map((it)=> {
+        return blocks.map((it) => {
             return {
                 // VS Code is 1 based, babylon is 0 based
                 range: new vscode.Range(it.start.line - 1, it.start.column, it.start.line - 1, it.start.column + 2),
@@ -393,7 +400,7 @@ class JestExt  {
         });
     }
 
-    deactivate() {
+    deactivate = () => {
         this.jestProcess.closeProcess();
     }
 }
