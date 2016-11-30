@@ -2,7 +2,7 @@
   "name": "vscode-jest",
   "displayName": "Jest",
   "description": "Use Facebook's Jest With Pleasure.",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "publisher": "Orta",
   "engines": {
     "vscode": "^1.5.0"
@@ -24,7 +24,8 @@
   ],
   "activationEvents": [
     "workspaceContains:node_modules/.bin/jest",
-    "workspaceContains:node_modules/react-scripts/node_modules/.bin/jest"
+    "workspaceContains:node_modules/react-scripts/node_modules/.bin/jest",
+    "onCommand:io.orta.jest.start"
   ],
   "main": "./out/src/extension",
   "icon": "images/vscode-jest.png",
@@ -52,7 +53,7 @@
           "default": true
         },
         "jest.pathToJest": {
-          "title": "The path to the Jest binary",
+          "title": "The path to the Jest binary, or an npm command to run tests prefixed with `--` e.g. `npm test --`",
           "type": "string",
           "default": "node_modules/.bin/jest"
         }
