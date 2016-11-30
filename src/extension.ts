@@ -219,9 +219,9 @@ class JestExt {
         // Are you in settings?
         if (!editor.document) { return; }
         // Is it already happening?
-        if (this.parsingTestFile === true) { return; }
+        if (this.parsingTestFile) { return; }
         // is it in the test regex?
-        if (this.wouldJestRunURI(editor.document.uri)) { return; }
+        if (!this.wouldJestRunURI(editor.document.uri)) { return; }
         // OK - lets go
         this.parsingTestFile = true;
 
