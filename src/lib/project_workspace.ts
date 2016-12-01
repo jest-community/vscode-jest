@@ -25,7 +25,13 @@ export class ProjectWorkspace {
   pathToJest: string;
 
   /**
-   * The path to configuration file
+   * The path to configuration file, if you are using the configuration
+   * inside package.json leave this configuration empty.
+   * 
+   * e.g. "jest.config.json"
+   * 
+   * More info: https://facebook.github.io/jest/docs/configuration.html
+   * 
    */
   pathToConfig: string;
 

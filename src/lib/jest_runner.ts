@@ -23,10 +23,6 @@ export class JestRunner extends EventEmitter {
     start = () => {
         const tempJSON = tmpdir() + "/vscode-jest_runner.json";
         const args = ['--json', '--useStderr', '--watch', "--jsonOutputFile", tempJSON];
-        if (this.workspace.pathToConfig !== "") {
-            args.push("--config");
-            args.push(this.workspace.pathToConfig);
-        }
         this.debugprocess = jestChildProcessWithArgs(this.workspace, args);
 
         this.debugprocess.stdout.on('data', (data: Buffer) => {
