@@ -26,6 +26,13 @@ This project has the expectation that you would run something like `npm run test
 
 Also, you will need to use Jest 17+.
 
-## Future Ideas
+## Want to Contribute?
 
-* Add a statusbar button when snapshots have failed to re-run tests with update
+```js
+git clone https://github.com/orta/vscode-jest
+cd vscode-jest
+npm install
+code .
+```
+
+Then inside VS Code, hit "Run" and it will open a new VS Code window with the new compiled example 👍.

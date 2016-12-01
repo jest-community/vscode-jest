@@ -1,3 +1,7 @@
+### 1.6.2
+
+* Adds an option that allows you to use an external config json file - luizbon
+
 ### 1.6.1
 
 * More windows improvements - KalleOtt 
