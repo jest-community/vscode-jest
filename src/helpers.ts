@@ -28,3 +28,18 @@ export function pathToJest(): string {
   if (!path.includes(".cmd") && platform() === "win32") { return path + ".cmd";  }
   return path;
 }
+
+/**
+ * Handles getting the path to config file
+ *
+ * @returns {string}
+ */
+export function pathToConfig(): string {
+  const jestSettings: any = workspace.getConfiguration("jest");
+
+  if (jestSettings.pathToConfig !== "") {
+    return normalize(jestSettings.pathToConfig);
+  }
+
+  return "";
+} 

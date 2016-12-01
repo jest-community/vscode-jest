@@ -24,8 +24,14 @@ export class ProjectWorkspace {
    */
   pathToJest: string;
 
-  constructor(rootPath: string, pathToJest: string) {
+  /**
+   * The path to configuration file
+   */
+  pathToConfig: string;
+
+  constructor(rootPath: string, pathToJest: string, pathToConfig: string) {
     this.rootPath = rootPath;
     this.pathToJest = pathToJest;
+    this.pathToConfig = pathToConfig;
   }
 }
