@@ -11,7 +11,7 @@ import { TestFileParser, ItBlock } from './lib/test_file_parser';
 import { JestTotalResults } from './lib/types';
 
 import * as decorations from './decorations';
-import { pathToJest } from './helpers';
+import { pathToJest, pathToConfig } from './helpers';
 
 var extensionInstance: JestExt;
 
@@ -20,7 +20,8 @@ var extensionInstance: JestExt;
 export function activate(context: vscode.ExtensionContext) {
     // To make us VS Code agnostic outside of this file
     const jestPath = pathToJest();
-    const workspace = new ProjectWorkspace(vscode.workspace.rootPath, jestPath);
+    const configPath = pathToConfig(); 
+    const workspace = new ProjectWorkspace(vscode.workspace.rootPath, jestPath, configPath);
 
     // Create our own console
     const channel = vscode.window.createOutputChannel("Jest");

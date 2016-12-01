@@ -56,6 +56,11 @@
           "title": "The path to the Jest binary, or an npm command to run tests prefixed with `--` e.g. `npm test --`",
           "type": "string",
           "default": "node_modules/.bin/jest"
+        },
+        "jest.pathToConfig": {
+          "title": "The path to the Jest configuration file",
+          "type": "string",
+          "default": ""
         }
       },
       "title": "The settings for the Jest VS Code runner."

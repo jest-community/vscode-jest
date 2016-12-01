@@ -24,8 +24,20 @@ export class ProjectWorkspace {
    */
   pathToJest: string;
 
-  constructor(rootPath: string, pathToJest: string) {
+  /**
+   * The path to configuration file, if you are using the configuration
+   * inside package.json leave this configuration empty.
+   * 
+   * e.g. "jest.config.json"
+   * 
+   * More info: https://facebook.github.io/jest/docs/configuration.html
+   * 
+   */
+  pathToConfig: string;
+
+  constructor(rootPath: string, pathToJest: string, pathToConfig: string) {
     this.rootPath = rootPath;
     this.pathToJest = pathToJest;
+    this.pathToConfig = pathToConfig;
   }
 }
