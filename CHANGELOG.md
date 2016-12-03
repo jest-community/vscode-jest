@@ -1,3 +1,8 @@
+### 1.6.3
+
+* config file improvements - luizbon
+* Warning message copy improvements - orta
+
 ### 1.6.2
 
 * Adds an option that allows you to use an external config json file - luizbon

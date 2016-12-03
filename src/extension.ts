@@ -43,7 +43,7 @@ export function activate(context: vscode.ExtensionContext) {
         channel.show();
     });
     vscode.commands.registerTextEditorCommand("io.orta.jest.start", ()=> {
-        vscode.window.showInformationMessage("Started Jest");
+        vscode.window.showInformationMessage("Started Jest, press escape to hide this message.");
         extensionInstance.startProcess();
     });
 
@@ -184,7 +184,7 @@ class JestExt {
     getSettings = () => {
         this.jestSettings.getConfig(() => {
             if (this.jestSettings.jestVersionMajor < 17) {
-                vscode.window.showErrorMessage("This extension relies on Jest 17+ features, it will run, but you may experience issues.", { title: "Sigh, I'll go update my Jest" });
+                vscode.window.showErrorMessage("This extension relies on Jest 17+ features, it will work, but the highlighting may not work correctly.");
             }
         });
     }
@@ -209,7 +209,7 @@ class JestExt {
             // No response == cancel
             if (response) {
                 this.jestProcess.runJestWithUpdateForSnapshots(() => {
-                    vscode.window.showInformationMessage("Updated Snapshots. It will show in your next test run.", { title: "Thanks" });
+                    vscode.window.showInformationMessage("Updated Snapshots. It will show in your next test run.");
                 });
             }
         });
