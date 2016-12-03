@@ -133,7 +133,9 @@ class JestExt {
 
         }).on('executableJSON', (data: any) => {
             this.updateWithData(data);
-            this.triggerUpdateDecorations(vscode.window.activeTextEditor);
+            for(const editor of vscode.window.visibleTextEditors) {
+                this.triggerUpdateDecorations(editor);
+            }
             this.clearOnNextInput = true;
 
         }).on('executableOutput', (output: string) => {

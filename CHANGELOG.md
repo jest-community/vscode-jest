@@ -1,3 +1,7 @@
+### 1.6.4
+
+* Allow updating the inline dots when you have multiple panes of code - orta
+
 ### 1.6.3
 
 * config file improvements - luizbon
