@@ -21,8 +21,8 @@ export function jestChildProcessWithArgs(workspace: ProjectWorkspace, args: stri
         // If a path to configuration file was defined, push it to runtimeArgs
         const configPath = workspace.pathToConfig;
         if (configPath !== "") {
-            args.push("--config");
-            args.push(configPath);
+            runtimeArgs.push("--config");
+            runtimeArgs.push(configPath);
         }
 
         // To use our own commands in create-react, we need to tell the command that we're in a CI
