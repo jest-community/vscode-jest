@@ -12,7 +12,7 @@ export function pathToJest(): string {
   const jestSettings: any = workspace.getConfiguration("jest");
   const path = normalize(jestSettings.pathToJest);
 
-  const defaultPath = "node_modules/.bin/jest"; 
+  const defaultPath = normalize("node_modules/.bin/jest"); 
   if (path === defaultPath) {
     const defaultCreateReactPath = "node_modules/react-scripts/node_modules/.bin/jest";
     const defaultCreateReactPathWindows = "node_modules/react-scripts/node_modules/.bin/jest.cmd";
@@ -20,7 +20,7 @@ export function pathToJest(): string {
     const absolutePath = workspace.rootPath + "/" + createReactPath;
     if (!existsSync(path) && existsSync(absolutePath)) {
       // If it's the default, run the script instead
-      return "npm test --";
+      return (platform() === "win32") ? "npm.cmd test --" : "npm test --";
     }
   }
 
