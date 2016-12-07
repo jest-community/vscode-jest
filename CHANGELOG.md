@@ -1,3 +1,7 @@
+### 1.6.4
+
+* Windows + Create React App improvements - brentatkins
+
 ### 1.6.3
 
 * config file improvements - luizbon
