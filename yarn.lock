@@ -947,6 +947,12 @@ jade@0.26.3:
     commander "0.6.1"
     mkdirp "0.3.0"
 
+jest-editor-support@^18.0.0:
+  version "18.0.0"
+  resolved "https://registry.yarnpkg.com/jest-editor-support/-/jest-editor-support-18.0.0.tgz#90a8098e8ac3e320b3b576357778a04a424efa7b"
+  dependencies:
+    typescript "^2.0.10"
+
 jodid25519@^1.0.0:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/jodid25519/-/jodid25519-1.0.2.tgz#06d4912255093419477d425633606e0e90782967"
@@ -1874,7 +1880,7 @@ tweetnacl@^0.14.3, tweetnacl@~0.14.0:
   version "0.14.5"
   resolved "https://registry.yarnpkg.com/tweetnacl/-/tweetnacl-0.14.5.tgz#5ae68177f192d4456269d108afa93ff8743f4f64"
 
-typescript@^2.0.3:
+typescript@^2.0.10, typescript@^2.0.3:
   version "2.1.4"
   resolved "https://registry.yarnpkg.com/typescript/-/typescript-2.1.4.tgz#b53b69fb841126acb1dd4b397d21daba87572251"
 
