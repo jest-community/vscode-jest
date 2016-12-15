@@ -79,6 +79,16 @@ export class TestFileParser {
     }
 
     // When given a node in the AST, does this represent
+    // the start of an it.only block?
+    private isAnItOnly = (node) => {
+        return (
+            node.type === "MemberExpression" &&
+            (node.object.name === "it" || node.object.name === "test") &&
+            node.property.name === "only";
+        );
+    }
+
+    // When given a node in the AST, does this represent
     // the start of an it/test block?
     private isAnIt = (node) => {
         return (
@@ -88,9 +98,11 @@ export class TestFileParser {
             &&
             (
                 node.expression.callee.name === "it" ||
-                node.expression.callee.name === "test"
+                node.expression.callee.name === "test" ||
+                this.isAnItOnly(node.expression.callee)
             );
     }
+
 
     // When given a node in the AST, does this represent
     // the start of an expect expression?
