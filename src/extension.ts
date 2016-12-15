@@ -28,15 +28,15 @@ export function activate(context: vscode.ExtensionContext) {
 
     // We need a singleton to represent the extension
     extensionInstance = new JestExt(workspace, channel, context.subscriptions);
-    extensionInstance.getSettings();
-
-    // If we should start the process by default, do so
-    const userJestSettings: any = vscode.workspace.getConfiguration("jest");
-    if (userJestSettings.autoEnable) {
-        extensionInstance.startProcess();
-    } else {
-        channel.appendLine("Skipping initial Jest runner process start.");
-    }
+    extensionInstance.getSettings((settings: JestSettings) => {
+        // If we should start the process by default, do so
+        const userJestSettings: any = vscode.workspace.getConfiguration("jest");
+        if (userJestSettings.autoEnable) {
+            extensionInstance.startProcess();
+        } else {
+            channel.appendLine("Skipping initial Jest runner process start.");
+        }
+    });
 
     // Register for commands   
     vscode.commands.registerCommand("io.orta.show-jest-output", () => {
@@ -126,7 +126,7 @@ class JestExt {
         // output and converting it into different types of data that
         // we can handle here differently.
 
-        this.jestProcess = new JestRunner(this.workspace);
+        this.jestProcess = new JestRunner(this.workspace, this.jestSettings);
 
         this.jestProcess.on('debuggerComplete', () => {
             this.channel.appendLine("Closed Jest");
@@ -181,11 +181,12 @@ class JestExt {
     }
 
     // Get the settings from Jest's JSON output
-    getSettings = () => {
+    getSettings = (completed: any) => {
         this.jestSettings.getConfig(() => {
             if (this.jestSettings.jestVersionMajor < 17) {
                 vscode.window.showErrorMessage("This extension relies on Jest 17+ features, it will work, but the highlighting may not work correctly.");
             }
+            completed(this.jestSettings);
         });
     }
 

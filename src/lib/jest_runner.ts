@@ -6,6 +6,7 @@ import { tmpdir } from 'os';
 import { EventEmitter } from 'events';
 import { ProjectWorkspace } from './project_workspace';
 import { jestChildProcessWithArgs } from './jest_process';
+import { JestSettings } from './jest_settings';
 
 // This class represents the running process, and
 // passes out events when it understands what data is being
@@ -14,15 +15,19 @@ import { jestChildProcessWithArgs } from './jest_process';
 export class JestRunner extends EventEmitter {
     private debugprocess: ChildProcess;
     private workspace: ProjectWorkspace;
+    private settings: JestSettings;
 
-    constructor(workspace: ProjectWorkspace) {
+    constructor(workspace: ProjectWorkspace, settings: JestSettings) {
         super();
         this.workspace = workspace;
+        this.settings = settings;
     }
 
     start = () => {
+        const outputName = this.settings.jestVersionMajor < 18 ? "jsonOutputFile" : "outputFile" ;
+
         const tempJSON = tmpdir() + "/vscode-jest_runner.json";
-        const args = ['--json', '--useStderr', '--watch', "--jsonOutputFile", tempJSON];
+        const args = ['--json', '--useStderr', '--watch', `--${outputName}`, tempJSON];
         this.debugprocess = jestChildProcessWithArgs(this.workspace, args);
 
         this.debugprocess.stdout.on('data', (data: Buffer) => {
