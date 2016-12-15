@@ -36,7 +36,7 @@ export class JestRunner extends EventEmitter {
             if (stringValue.startsWith("Test results written to")) {
                 readFile(tempJSON, "utf8", (err, data) => {
                     if (err) {
-                        this.emit('terminalError', `JSON test overview file not found at ${outputName}`);
+                        this.emit('terminalError', `JSON test overview file not found at ${tempJSON}`);
                     }
                     else { this.emit('executableJSON', JSON.parse(data)); }
                 });
