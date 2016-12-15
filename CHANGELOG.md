@@ -1,3 +1,7 @@
+### 1.6.5
+
+* Prepare for Jest 18 - orta
+
 ### 1.6.4
 
 * Windows + Create React App improvements - brentatkins
