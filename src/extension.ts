@@ -3,12 +3,26 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 
-import { ProjectWorkspace } from './lib/project_workspace';
-import { JestRunner } from './lib/jest_runner';
-import { JestSettings } from './lib/jest_settings';
-import { TestReconciler, TestReconcilationState } from './lib/test_reconciler';
-import { TestFileParser, ItBlock } from './lib/test_file_parser';
+type TestReconcilationState = "Unknown" |
+"KnownSuccess" |
+"KnownFail";
+const TestReconcilationState = {
+    Unknown: "Unknown" as TestReconcilationState,
+    KnownSuccess: "KnownSuccess" as TestReconcilationState,
+    KnownFail: "KnownFail" as TestReconcilationState,
+};
+
 import { JestTotalResults } from './lib/types';
+import {
+    Expect,
+    ItBlock,
+    Runner,
+    Settings,
+    ProjectWorkspace,
+    parse,
+    TestReconciler,
+    IParseResults
+} from 'jest-editor-support';
 
 import * as decorations from './decorations';
 import { pathToJest, pathToConfig } from './helpers';
@@ -28,7 +42,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // We need a singleton to represent the extension
     extensionInstance = new JestExt(workspace, channel, context.subscriptions);
-    extensionInstance.getSettings((settings: JestSettings) => {
+    extensionInstance.getSettings((settings: Settings) => {
         // If we should start the process by default, do so
         const userJestSettings: any = vscode.workspace.getConfiguration("jest");
         if (userJestSettings.autoEnable) {
@@ -81,9 +95,8 @@ export function activate(context: vscode.ExtensionContext) {
 
 class JestExt {
     private workspace: ProjectWorkspace;
-    private jestProcess: JestRunner;
-    private jestSettings: JestSettings;
-    private parser: TestFileParser;
+    private jestProcess: Runner;
+    private jestSettings: Settings;
     private reconciler: TestReconciler;
 
     // So you can read what's going on
@@ -113,12 +126,11 @@ class JestExt {
         this.workspaceDisposal = disposal;
         this.perFileDisposals = [];
         this.failingAssertionDecorators = [];
-        this.parser = new TestFileParser();
         this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
         this.failDiagnostics = vscode.languages.createDiagnosticCollection("Jest");
         this.clearOnNextInput = true;
         this.reconciler = new TestReconciler();
-        this.jestSettings = new JestSettings(workspace);
+        this.jestSettings = new Settings(workspace);
     }
 
     startProcess = () => {
@@ -126,7 +138,7 @@ class JestExt {
         // output and converting it into different types of data that
         // we can handle here differently.
 
-        this.jestProcess = new JestRunner(this.workspace, this.jestSettings);
+        this.jestProcess = new Runner(this.workspace);
 
         this.jestProcess.on('debuggerComplete', () => {
             this.channel.appendLine("Closed Jest");
@@ -183,8 +195,8 @@ class JestExt {
     // Get the settings from Jest's JSON output
     getSettings = (completed: any) => {
         this.jestSettings.getConfig(() => {
-            if (this.jestSettings.jestVersionMajor < 17) {
-                vscode.window.showErrorMessage("This extension relies on Jest 17+ features, it will work, but the highlighting may not work correctly.");
+            if (this.jestSettings.jestVersionMajor < 18) {
+                vscode.window.showErrorMessage("This extension relies on Jest 18+ features, it will work, but the highlighting may not work correctly.");
             }
             completed(this.jestSettings);
         });
@@ -217,6 +229,10 @@ class JestExt {
     }
 
     private parsingTestFile = false;
+    private parseResults: IParseResults = {
+        expects: [],
+        itBlocks: []
+    };
     async triggerUpdateDecorations(editor: vscode.TextEditor) {
         // Lots of reasons to not show decorators,
         // Are you at the empty screen?
@@ -236,9 +252,9 @@ class JestExt {
         let unknowns: ItBlock[] = [];
 
         // Parse the current JS file
-        await this.parser.run(editor.document.uri.fsPath);
+        this.parseResults = parse(editor.document.uri.fsPath);
         // Use the parsers it blocks for references
-        const itBlocks = this.parser.itBlocks;
+        const itBlocks = this.parseResults.itBlocks;
 
         // Loop through our it/test references, then ask the reconciler ( the thing 
         // that reads the JSON from Jest ) whether it has passed/failed/not ran.
@@ -367,7 +383,7 @@ class JestExt {
                 // Loop through each individual fail and create an diagnostic
                 // to pass back to VS Code.
                 this.failDiagnostics.set(uri, asserts.map((assertion) => {
-                    const expect = this.parser.expectAtLine(assertion.line);
+                    const expect = this.expectAtLine(assertion.line);
                     const start = expect ? expect.start.column : 0;
                     const daig = new vscode.Diagnostic(
                         new vscode.Range(assertion.line - 1, start, assertion.line - 1, start + 6),
@@ -396,10 +412,19 @@ class JestExt {
         return blocks.map((it) => {
             return {
                 // VS Code is 1 based, babylon is 0 based
-                range: new vscode.Range(it.start.line - 1, it.start.column, it.start.line - 1, it.start.column + 2),
+                range: new vscode.Range(it.start.line, it.start.column, it.start.line, it.start.column + 2),
                 hoverMessage: nameForState(it.name, state),
             };
         });
+    }
+    
+    // When we want to show an inline assertion, the only bit of
+    // data to work with is the line number from the stack trace.
+
+    // So we need to be able to go from that to the real
+    // expect data.
+    expectAtLine = (line: number): null | Expect => {
+        return this.parseResults.expects.find((e) => e.start.line === line);
     }
 
     deactivate = () => {

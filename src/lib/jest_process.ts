@@ -1,7 +1,7 @@
 'use strict';
 
 import {ChildProcess, spawn} from 'child_process';
-import {ProjectWorkspace} from './project_workspace';
+import {ProjectWorkspace} from 'jest-editor-support';
 
 /**
  * Spawns and returns a Jest process with specific args 
