@@ -28,13 +28,28 @@ Also, you should use Jest 17+, however 16 works - it will just offer a warning.
 
 ## Want to Contribute?
 
+The extension is in two parts, one is _this_ repo. It contains all the VS Code specific work.
+
 ```js
 git clone https://github.com/orta/vscode-jest
 cd vscode-jest
-npm install
+yarn install
 code .
 ```
 
-ATM it's a little bit complicated to contribute, as I'm moving the core code into facebook/jest - so things you may want to add might need to have code shipped to there first. We're still working on the details of how all that can work.
+The other part is inside the [Jest source code](http://github.com/facebook/jest/). It's a node module called "[jest-editor-support](https://github.com/facebook/jest/tree/master/packages/jest-editor-support)".
 
-Then inside VS Code, hit "Run" and it will open a new VS Code window with the new compiled example 👍.
+It's very possible that you're going to want to make changes inside here, if you're doing something that touches the test runner process or file parsers. To get that set up to work I'd recommend doing this:
+
+```
+cd ..
+git clone https://github.com/facebook/jest.git
+cd jest
+yarn install
+```
+
+Then go back into vscode, and edit the dependency in `package.json` to `"jest-editor-support": "file:../jest/packages/jest-editor-support",`. 
+
+Do one more `yarn install` in the vscode-jest dir and now you're using those files directly from master of Jest.
+
+Yeah, it's a bit of a process, but we'll be sharing code with the nuclide team and that's worth it IMO.
