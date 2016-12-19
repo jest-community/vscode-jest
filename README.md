@@ -26,6 +26,18 @@ This project has the expectation that you would run something like `npm run test
 
 Also, you should use Jest 17+, however 16 works - it will just offer a warning.
 
+## Troubleshooting
+
+```json
+  "activationEvents": [
+    "workspaceContains:node_modules/.bin/jest",
+    "workspaceContains:node_modules/react-scripts/node_modules/.bin/jest",
+    "onCommand:io.orta.jest.start"
+  ],
+```
+
+These are the things that will trigger the extension loading. If one of these applies, and you're not seeing the "Jest" in the bottom bar, run the command `Open Developer Tools` and see if something has crashed, we'd love to know what that is, and ideally a project we can run against.
+
 ## Want to Contribute?
 
 The extension is in two parts, one is _this_ repo. It contains all the VS Code specific work.
