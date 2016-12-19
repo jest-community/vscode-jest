@@ -1,3 +1,7 @@
+### 2.0.1
+
+* tsx support - orta/bookman25
+
 ### 2.0.0
 
 * Move all of the Jest specific code into a new repo: [jest-editor-support](https://github.com/facebook/jest/tree/master/packages/jest-editor-support) where
