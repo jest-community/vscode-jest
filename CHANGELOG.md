@@ -1,3 +1,7 @@
+### 2.0.2
+
+* Whitespace fixes for  the error messages next to a fail - orta
+
 ### 2.0.1
 
 * tsx support - orta/bookman25
