@@ -18,10 +18,10 @@ declare module 'jest-editor-support' {
     }
     
     export class ProjectWorkspace {
-        constructor(a, b, c);
+        constructor(a, b, c, d);
         pathToJest: string;
         rootPath: string;
-        pathToConfig: string;
+        localJestMajorVersion: number;
     }
 
     export interface IParseResults {

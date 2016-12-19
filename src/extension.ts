@@ -35,7 +35,8 @@ export function activate(context: vscode.ExtensionContext) {
     // To make us VS Code agnostic outside of this file
     const jestPath = pathToJest();
     const configPath = pathToConfig(); 
-    const workspace = new ProjectWorkspace(vscode.workspace.rootPath, jestPath, configPath);
+    const currentJestVersion = 18
+    const workspace = new ProjectWorkspace(vscode.workspace.rootPath, jestPath, configPath, currentJestVersion);
 
     // Create our own console
     const channel = vscode.window.createOutputChannel("Jest");
@@ -43,6 +44,8 @@ export function activate(context: vscode.ExtensionContext) {
     // We need a singleton to represent the extension
     extensionInstance = new JestExt(workspace, channel, context.subscriptions);
     extensionInstance.getSettings((settings: Settings) => {
+        workspace.localJestMajorVersion = settings.jestVersionMajor
+
         // If we should start the process by default, do so
         const userJestSettings: any = vscode.workspace.getConfiguration("jest");
         if (userJestSettings.autoEnable) {
@@ -247,9 +250,10 @@ class JestExt {
         this.parsingTestFile = true;
 
         // This makes it cheaper later down the line
-        let successes: ItBlock[] = [];
-        let fails: ItBlock[] = [];
-        let unknowns: ItBlock[] = [];
+        let successes: Array<ItBlock> = [];
+        let fails: Array<ItBlock> = [];
+        let unknowns: Array<ItBlock> = [];
+
 
         // Parse the current JS file
         this.parseResults = parse(editor.document.uri.fsPath);
