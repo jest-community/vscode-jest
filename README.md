@@ -48,8 +48,10 @@ cd jest
 yarn install
 ```
 
-Then go back into vscode, and edit the dependency in `package.json` to `"jest-editor-support": "file:../jest/packages/jest-editor-support",`. 
+With that installed, you want to use a custom `jest-editor-support` by going into `cd packages/jest-editor-support` and running `yarn link`.
 
-Do one more `yarn install` in the vscode-jest dir and now you're using those files directly from master of Jest.
+Go back to vscode-jest, and do one more `yarn link "jest-editor-support"` and now you're using those files directly from master of Jest.
+
+As `jest-editor-support` requires running through babel, you can run the babel watcher for all jest files by running `yarn run watch` inside the jest root directory.
 
 Yeah, it's a bit of a process, but we'll be sharing code with the nuclide team and that's worth it IMO.

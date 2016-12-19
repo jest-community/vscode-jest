@@ -1,3 +1,14 @@
+### 2.0.0
+
+* Move all of the Jest specific code into a new repo: [jest-editor-support](https://github.com/facebook/jest/tree/master/packages/jest-editor-support) where
+  we can share the code with a nuclide implmentatoin. This brings some changes to the development process ( see the README ) but should only affect users
+  if we've missed something in moving over. 
+
+  - orta / bookman25 / cpojer 
+
+* Significant improvements to JavaScript parsers - bookman25
+* Introduction of TypeScript support - bookman25
+
 ### 1.6.5
 
 * Prepare for Jest 18 - orta
