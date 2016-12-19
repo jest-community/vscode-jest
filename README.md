@@ -5,7 +5,7 @@ A comprehensive experience when using [Facebook's Jest](https://github.com/faceb
 * Useful IDE based Feedback
 * Session based test watching
 
-![Screenshot](https://github.com/orta/vscode-jest/raw/master/images/vscode-jest.gif)
+<img src="https://github.com/orta/vscode-jest/raw/master/images/vscode-jest.gif" alt="Screenshot of the tool" width="100%">
 
 ## Features
 
