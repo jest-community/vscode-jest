@@ -388,7 +388,7 @@ class JestExt {
                 // to pass back to VS Code.
                 this.failDiagnostics.set(uri, asserts.map((assertion) => {
                     const expect = this.expectAtLine(assertion.line);
-                    const start = expect ? expect.start.column : 0;
+                    const start = expect ? expect.start.column - 1 : 0;
                     const daig = new vscode.Diagnostic(
                         new vscode.Range(assertion.line - 1, start, assertion.line - 1, start + 6),
                         assertion.terseMessage,
@@ -415,8 +415,9 @@ class JestExt {
         };
         return blocks.map((it) => {
             return {
-                // VS Code is 1 based, babylon is 0 based
-                range: new vscode.Range(it.start.line, it.start.column, it.start.line, it.start.column + 2),
+                // VS Code is indexed starting at 0
+                // jest-editor-support is indexed starting at 1
+                range: new vscode.Range(it.start.line - 1, it.start.column - 1, it.start.line - 1, it.start.column + 1),
                 hoverMessage: nameForState(it.name, state),
             };
         });
