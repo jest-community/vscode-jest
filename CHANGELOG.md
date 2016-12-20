@@ -1,3 +1,7 @@
+### 2.0.3
+
+* Improved underlining of failing expectations - bookman25
+
 ### 2.0.2
 
 * Whitespace fixes for the error messages next to a fail - orta

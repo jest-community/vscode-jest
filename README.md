@@ -9,7 +9,7 @@ A comprehensive experience when using [Facebook's Jest](https://github.com/faceb
 
 ## Features
 
-* Starts Jest automatically when you're in a project with Jest installed.
+* Starts Jest automatically when you're in a root folder project with Jest installed.
 * Show individual fail / passes inline.
 * Show fails inside the problem inspector.
 * Highlights the errors next to the `expect` functions.
@@ -27,6 +27,10 @@ This project has the expectation that you would run something like `npm run test
 Also, you should use Jest 17+, however 16 works - it will just offer a warning.
 
 ## Troubleshooting
+
+If you don't use the root of your project for you JS with Jest tests, do not worry, you can still use this project. You will need to use the "Start Jest Runner" command, and maybe have to configure your own "jest.pathToJest` setting inside the `.vscode/settings.json` to whatever you would use.
+
+These are the [activation events](https://code.visualstudio.com/docs/extensionAPI/activation-events) which trigger the runner to start:
 
 ```json
   "activationEvents": [
