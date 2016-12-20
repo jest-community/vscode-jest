@@ -1,6 +1,6 @@
 ### 2.0.2
 
-* Whitespace fixes for  the error messages next to a fail - orta
+* Whitespace fixes for the error messages next to a fail - orta
 
 ### 2.0.1
 
@@ -9,7 +9,7 @@
 ### 2.0.0
 
 * Move all of the Jest specific code into a new repo: [jest-editor-support](https://github.com/facebook/jest/tree/master/packages/jest-editor-support) where
-  we can share the code with a nuclide implmentatoin. This brings some changes to the development process ( see the README ) but should only affect users
+  we can share the code with a nuclide implementation. This brings some changes to the development process (see the README) but should only affect users
   if we've missed something in moving over. 
 
   - orta / bookman25 / cpojer 
@@ -41,7 +41,7 @@
 ### 1.6.0
 
 * Separation of VS Code specific code from the extension by creating a lib directory, 
-  in prepration for moving to the Jest repo - https://github.com/facebook/jest/issues/2183 - orta
+  in preparation for moving to the Jest repo - https://github.com/facebook/jest/issues/2183 - orta
 * Minor improvements for create-react users - orta
 * Support for running Jest even in repos where Jest is not a direct dependency via the command `Start Jest Runner` - you will definitely need to set the per-project `.vscode/settings.json` to whatever would normally trigger a jest run - orta 
 
