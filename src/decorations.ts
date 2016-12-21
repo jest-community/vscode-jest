@@ -8,14 +8,14 @@ export function failingItName() {
         overviewRulerLane: vscode.OverviewRulerLane.Left,
         light: {
             before: {
-                color: "#FF564B",
-                contentText: "●",
+                color: '#FF564B',
+                contentText: '●',
             }
         },
         dark: {
             before: {
-                color: "#AD322D",
-                contentText: "●",
+                color: '#AD322D',
+                contentText: '●',
             }
         }
     });
@@ -27,14 +27,14 @@ export function passingItName() {
         overviewRulerLane: vscode.OverviewRulerLane.Left,
         light: {
             before: {
-                color: "#3BB26B",
-                contentText: "●" 
+                color: '#3BB26B',
+                contentText: '●' 
             }
         },
         dark: {
             before: {
-                color: "#2F8F51",
-                contentText: "●",
+                color: '#2F8F51',
+                contentText: '●',
             }
         }
     });
@@ -46,14 +46,14 @@ export function notRanItName() {
         overviewRulerLane: vscode.OverviewRulerLane.Left,
         dark: {
             before: {
-                color: "#3BB26B",
-                contentText: "○",
+                color: '#3BB26B',
+                contentText: '○',
             }    
         },
         light: {
             before: {
-                color: "#2F8F51",
-                contentText: "○",
+                color: '#2F8F51',
+                contentText: '○',
             }    
         }
     });
@@ -67,16 +67,16 @@ export function failingAssertionStyle(text: string) {
         overviewRulerLane: vscode.OverviewRulerLane.Left,
         light: {
             before: {
-                color: "#FF564B",
+                color: '#FF564B',
             }
         },
         dark: {
             before: {
-                color: "#AD322D",
+                color: '#AD322D',
             }
         },
         after: {
-            contentText: " // " + text
+            contentText: ' // ' + text
         }
     });
 }

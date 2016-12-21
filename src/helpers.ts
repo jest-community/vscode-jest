@@ -9,23 +9,23 @@ import {normalize} from 'path';
  * @returns {string}
  */
 export function pathToJest(): string {
-  const jestSettings: any = workspace.getConfiguration("jest");
+  const jestSettings: any = workspace.getConfiguration('jest');
   const path = normalize(jestSettings.pathToJest);
 
-  const defaultPath = normalize("node_modules/.bin/jest"); 
+  const defaultPath = normalize('node_modules/.bin/jest'); 
   if (path === defaultPath) {
-    const defaultCreateReactPath = "node_modules/react-scripts/node_modules/.bin/jest";
-    const defaultCreateReactPathWindows = "node_modules/react-scripts/node_modules/.bin/jest.cmd";
-    const createReactPath = (platform() === "win32") ? defaultCreateReactPathWindows : defaultCreateReactPath;
-    const absolutePath = workspace.rootPath + "/" + createReactPath;
+    const defaultCreateReactPath = 'node_modules/react-scripts/node_modules/.bin/jest';
+    const defaultCreateReactPathWindows = 'node_modules/react-scripts/node_modules/.bin/jest.cmd';
+    const createReactPath = (platform() === 'win32') ? defaultCreateReactPathWindows : defaultCreateReactPath;
+    const absolutePath = workspace.rootPath + '/' + createReactPath;
     if (!existsSync(path) && existsSync(absolutePath)) {
       // If it's the default, run the script instead
-      return (platform() === "win32") ? "npm.cmd test --" : "npm test --";
+      return (platform() === 'win32') ? 'npm.cmd test --' : 'npm test --';
     }
   }
 
   // For windows support, see https://github.com/orta/vscode-jest/issues/10
-  if (!path.includes(".cmd") && platform() === "win32") { return path + ".cmd";  }
+  if (!path.includes('.cmd') && platform() === 'win32') { return path + '.cmd';  }
   return path;
 }
 
@@ -35,11 +35,11 @@ export function pathToJest(): string {
  * @returns {string}
  */
 export function pathToConfig(): string {
-  const jestSettings: any = workspace.getConfiguration("jest");
+  const jestSettings: any = workspace.getConfiguration('jest');
 
-  if (jestSettings.pathToConfig !== "") {
+  if (jestSettings.pathToConfig !== '') {
     return normalize(jestSettings.pathToConfig);
   }
 
-  return "";
+  return '';
 } 
