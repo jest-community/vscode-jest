@@ -81,7 +81,7 @@
   },
   "scripts": {
     "clean-out": "rimraf ./out",
-    "vscode:prepublish": "tsc -p ./src",
+    "vscode:prepublish": "yarn clean-out && tsc -p ./src",
     "compile": "tsc -watch -p ./src",
     "postinstall": "node ./node_modules/vscode/bin/install",
     "test": "jest --config jest.json",
