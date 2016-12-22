@@ -3,6 +3,6 @@
     "exclude": [
         "node_modules",
         "**/__mocks__/*",
-        "**/__tests__/*"
+        "**/tests/*"
     ]
 }
