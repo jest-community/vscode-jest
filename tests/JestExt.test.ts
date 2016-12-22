@@ -21,7 +21,7 @@ describe('JestExt', () => {
             getConfig: callback => callback(),
             jestVersionMajor: 17
         }));
-        new JestExt(projectWorkspace, { appendLine: () => {} } as any);
+        new JestExt(projectWorkspace, { appendLine: () => {} } as any, {});
         expect(window.showErrorMessage).toBeCalledWith('This extension relies on Jest 18+ features, it will work, but the highlighting may not work correctly.');
     });
 
@@ -30,7 +30,7 @@ describe('JestExt', () => {
             getConfig: callback => callback(),
             jestVersionMajor: 18
         }));
-        new JestExt(projectWorkspace, { appendLine: () => {} } as any);
+        new JestExt(projectWorkspace, { appendLine: () => {} } as any, {});
         expect(window.showErrorMessage).not.toBeCalled();
     });
 });
