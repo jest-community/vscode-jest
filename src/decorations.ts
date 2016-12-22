@@ -1,11 +1,9 @@
-'use strict';
-
-import * as vscode from 'vscode';
+import { window, OverviewRulerLane } from 'vscode';
 
 export function failingItName() {
-    return vscode.window.createTextEditorDecorationType({
+    return window.createTextEditorDecorationType({
         overviewRulerColor: 'red',
-        overviewRulerLane: vscode.OverviewRulerLane.Left,
+        overviewRulerLane: OverviewRulerLane.Left,
         light: {
             before: {
                 color: '#FF564B',
@@ -22,9 +20,9 @@ export function failingItName() {
 }
 
 export function passingItName() {
-    return vscode.window.createTextEditorDecorationType({
+    return window.createTextEditorDecorationType({
         overviewRulerColor: 'green',
-        overviewRulerLane: vscode.OverviewRulerLane.Left,
+        overviewRulerLane: OverviewRulerLane.Left,
         light: {
             before: {
                 color: '#3BB26B',
@@ -41,9 +39,9 @@ export function passingItName() {
 }
 
 export function notRanItName() {
-    return vscode.window.createTextEditorDecorationType({
+    return window.createTextEditorDecorationType({
         overviewRulerColor: 'darkgrey',
-        overviewRulerLane: vscode.OverviewRulerLane.Left,
+        overviewRulerLane: OverviewRulerLane.Left,
         dark: {
             before: {
                 color: '#3BB26B',
@@ -61,10 +59,10 @@ export function notRanItName() {
 
 
 export function failingAssertionStyle(text: string) {
-    return vscode.window.createTextEditorDecorationType({
+    return window.createTextEditorDecorationType({
         isWholeLine: true,
         overviewRulerColor: 'red',
-        overviewRulerLane: vscode.OverviewRulerLane.Left,
+        overviewRulerLane: OverviewRulerLane.Left,
         light: {
             before: {
                 color: '#FF564B',

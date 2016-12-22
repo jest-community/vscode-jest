@@ -14,6 +14,7 @@ import {
 } from 'jest-editor-support';
 
 import * as decorations from './decorations';
+import { IPluginSettings } from './IPluginSettings';
 
 type TestReconcilationState = 'Unknown' |
     'KnownSuccess' |
@@ -29,6 +30,7 @@ export class JestExt {
     private jestProcess: Runner;
     private jestSettings: Settings;
     private reconciler: TestReconciler;
+    private pluginSettings: IPluginSettings;
 
     // So you can read what's going on
     private channel: vscode.OutputChannel;
@@ -53,7 +55,7 @@ export class JestExt {
 
     private clearOnNextInput: boolean;
 
-    constructor(workspace: ProjectWorkspace, outputChannel: vscode.OutputChannel) {
+    constructor(workspace: ProjectWorkspace, outputChannel: vscode.OutputChannel, pluginSettings: IPluginSettings) {
         this.workspace = workspace;
         this.channel = outputChannel;
         this.failingAssertionDecorators = [];
@@ -62,21 +64,12 @@ export class JestExt {
         this.clearOnNextInput = true;
         this.reconciler = new TestReconciler();
         this.jestSettings = new Settings(workspace);
+        this.pluginSettings = pluginSettings;
 
-        this.getSettings(settings => {
-            this.workspace.localJestMajorVersion = settings.jestVersionMajor;
-
-            // If we should start the process by default, do so
-            const userJestSettings: any = vscode.workspace.getConfiguration('jest');
-            if (userJestSettings.autoEnable) {
-                this.startProcess();
-            } else {
-                this.channel.appendLine('Skipping initial Jest runner process start.');
-            }
-        });
+        this.getSettings();
     }
 
-    public startProcess = () => {
+    public startProcess() {
         // The Runner is an event emitter that handles taking the Jest
         // output and converting it into different types of data that
         // we can handle here differently.
@@ -128,23 +121,30 @@ export class JestExt {
         this.jestProcess.start();
     }
 
-    public stopProcess = () => {
+    public stopProcess() {
         this.channel.appendLine('Closing Jest jest_runner.');
         this.jestProcess.closeProcess();
     }
 
-    private getSettings = (completed: (settings: Settings) => void) => {
+    private getSettings() {
         this.jestSettings.getConfig(() => {
             if (this.jestSettings.jestVersionMajor < 18) {
                 vscode.window.showErrorMessage('This extension relies on Jest 18+ features, it will work, but the highlighting may not work correctly.');
             }
-            completed(this.jestSettings);
+            this.workspace.localJestMajorVersion = this.jestSettings.jestVersionMajor;
+
+            // If we should start the process by default, do so
+            if (this.pluginSettings.autoEnable) {
+                this.startProcess();
+            } else {
+                this.channel.appendLine('Skipping initial Jest runner process start.');
+            }
         });
     }
 
-    private wouldJestRunURI = (uri: vscode.Uri) => {
+    private wouldJestRunURI(uri: vscode.Uri) {
         const testRegex = new RegExp(this.jestSettings.settings.testRegex);
-        const root = vscode.workspace.rootPath;
+        const root = this.pluginSettings.rootPath;
         const filePath = uri.fsPath;
         let relative = path.normalize(path.relative(root, filePath));
         // replace windows path separator with normal slash
@@ -157,7 +157,7 @@ export class JestExt {
         return matches && matches.length > 0;
     }
 
-    private detectedSnapshotErrors = () => {
+    private detectedSnapshotErrors() {
         vscode.window.showInformationMessage('Would you like to update your Snapshots?', { title: 'Replace them' }).then((response) => {
             // No response == cancel
             if (response) {
@@ -169,15 +169,8 @@ export class JestExt {
     }
 
     public triggerUpdateDecorations(editor: vscode.TextEditor) {
-        // Lots of reasons to not show decorators,
-        // Are you at the empty screen?
-        if (!editor) { return; }
-        // Are you in settings?
-        if (!editor.document) { return; }
-        // Is it already happening?
-        if (this.parsingTestFile) { return; }
-        // is it in the test regex?
-        if (!this.wouldJestRunURI(editor.document.uri)) { return; }
+        if (!this.canUpdateDecorators(editor)) { return; }
+
         // OK - lets go
         this.parsingTestFile = true;
 
@@ -269,30 +262,42 @@ export class JestExt {
         this.parsingTestFile = false;
     }
 
-    private setupStatusBar = () => {
+    private canUpdateDecorators(editor: vscode.TextEditor) {
+        const atEmptyScreen = !editor;
+        if (atEmptyScreen) { return false; }
+
+        const inSettings = !editor.document;
+        if (inSettings) { return false; }
+
+        if (this.parsingTestFile) { return false; }
+
+        const isATestFile = this.wouldJestRunURI(editor.document.uri);
+        return isATestFile;
+    }
+
+    private setupStatusBar() {
         this.statusBarItem.show();
         this.statusBarItem.command = 'io.orta.show-jest-output';
 
-        const jestSettings = vscode.workspace.getConfiguration('jest');
-        if (jestSettings['autoEnable']) {
+        if (this.pluginSettings.autoEnable) {
             this.testsHaveStartedRunning();
         } else {
             this.statusBarItem.text = 'Jest: ...';
         }
     }
 
-    private setupDecorators = () => {
+    private setupDecorators() {
         this.passingItStyle = decorations.passingItName();
         this.failingItStyle = decorations.failingItName();
         this.unknownItStyle = decorations.notRanItName();
     }
 
-    private testsHaveStartedRunning = () => {
+    private testsHaveStartedRunning() {
         this.channel.clear();
         this.statusBarItem.text = 'Jest: $(sync)';
     }
 
-    private updateWithData = (data: JestTotalResults) => {
+    private updateWithData(data: JestTotalResults) {
         this.reconciler.updateFileWithJestStatus(data);
         this.failDiagnostics.clear();
 
@@ -330,7 +335,7 @@ export class JestExt {
         }
     }
 
-    private generateDotsForItBlocks = (blocks: ItBlock[], state: TestReconcilationState): vscode.DecorationOptions[] => {
+    private generateDotsForItBlocks(blocks: ItBlock[], state: TestReconcilationState): vscode.DecorationOptions[] {
         const nameForState = (_name: string, state: TestReconcilationState): string => {
             switch (state) {
                 case TestReconcilationState.KnownSuccess:
@@ -355,11 +360,11 @@ export class JestExt {
     // data to work with is the line number from the stack trace.
     // So we need to be able to go from that to the real
     // expect data.
-    private expectAtLine = (line: number): null | Expect => {
+    private expectAtLine(line: number): null | Expect {
         return this.parseResults.expects.find((e) => e.start.line === line);
     }
 
-    public deactivate = () => {
+    public deactivate() {
         this.jestProcess.closeProcess();
     }
 }

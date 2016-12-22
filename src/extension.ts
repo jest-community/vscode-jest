@@ -3,21 +3,29 @@ import { ProjectWorkspace } from 'jest-editor-support';
 
 import { pathToJest, pathToConfig } from './helpers';
 import { JestExt } from './JestExt';
+import { IPluginSettings } from './IPluginSettings';
 
 let extensionInstance: JestExt;
 
 export function activate(context: vscode.ExtensionContext) {
     // To make us VS Code agnostic outside of this file
-    const jestPath = pathToJest();
-    const configPath = pathToConfig(); 
+    const workspaceConfig = vscode.workspace.getConfiguration('jest');
+    const pluginSettings: IPluginSettings = {
+        autoEnable: workspaceConfig.get<boolean>('autoEnable'),
+        pathToConfig: workspaceConfig.get<string>('pathToConfig'),
+        pathToJest: workspaceConfig.get<string>('pathToJest'),
+        rootPath: vscode.workspace.rootPath
+    };
+    const jestPath = pathToJest(pluginSettings);
+    const configPath = pathToConfig(pluginSettings); 
     const currentJestVersion = 18;
-    const workspace = new ProjectWorkspace(vscode.workspace.rootPath, jestPath, configPath, currentJestVersion);
+    const workspace = new ProjectWorkspace(pluginSettings.rootPath, jestPath, configPath, currentJestVersion);
 
     // Create our own console
     const channel = vscode.window.createOutputChannel('Jest');
 
     // We need a singleton to represent the extension
-    extensionInstance = new JestExt(workspace, channel);
+    extensionInstance = new JestExt(workspace, channel, pluginSettings);
 
     // Register for commands   
     vscode.commands.registerCommand('io.orta.show-jest-output', () => {
@@ -34,9 +42,6 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Setup the file change watchers
     let activeEditor = vscode.window.activeTextEditor;
-    if (activeEditor) {
-        extensionInstance.triggerUpdateDecorations(activeEditor);
-    }
 
     vscode.window.onDidChangeActiveTextEditor(editor => {
         activeEditor = editor;
