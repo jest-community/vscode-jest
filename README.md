@@ -1,3 +1,5 @@
+# vscode-jest [![Build Status](https://travis-ci.org/orta/vscode-jest.svg?branch=master)](https://travis-ci.org/orta/vscode-jest)
+
 ## The Aim
 
 A comprehensive experience when using [Facebook's Jest](https://github.com/facebook/jest) within a project.
