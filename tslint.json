@@ -1,15 +1,15 @@
 {
 	"rules": {
-		"no-unused-expression": true,
+		"class-name": true,
+		"curly": true,
+		"eofline": true,
 		"no-duplicate-variable": true,
-		"no-unused-variable": true,
+		"no-unused-expression": true,
 		"no-var-keyword": true,
 		"quotemark": [
 			true,
 			"single"
 		],
-		"curly": true,
-		"class-name": true,
 		"semicolon": ["never"],
 		"triple-equals": true
 	}
