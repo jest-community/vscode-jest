@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 
-import { JestTotalResults } from './lib/types';
 import {
     Expect,
     ItBlock,
@@ -10,6 +9,7 @@ import {
     ProjectWorkspace,
     parse,
     TestReconciler,
+    JestTotalResults,
     IParseResults
 } from 'jest-editor-support';
 
@@ -64,7 +64,7 @@ export class JestExt {
         this.jestSettings = new Settings(workspace);
 
         this.getSettings(settings => {
-            workspace.localJestMajorVersion = settings.jestVersionMajor;
+            this.workspace.localJestMajorVersion = settings.jestVersionMajor;
 
             // If we should start the process by default, do so
             const userJestSettings: any = vscode.workspace.getConfiguration('jest');
@@ -331,7 +331,7 @@ export class JestExt {
     }
 
     private generateDotsForItBlocks = (blocks: ItBlock[], state: TestReconcilationState): vscode.DecorationOptions[] => {
-        const nameForState = (name: string, state: TestReconcilationState): string => {
+        const nameForState = (_name: string, state: TestReconcilationState): string => {
             switch (state) {
                 case TestReconcilationState.KnownSuccess:
                     return 'Passed';
