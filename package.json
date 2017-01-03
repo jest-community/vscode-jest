@@ -100,6 +100,7 @@
     "vscode": "^1.0.0"
   },
   "dependencies": {
+    "elegant-spinner": "^1.0.1",
     "jest-editor-support": "18.0.0"
   }
 }

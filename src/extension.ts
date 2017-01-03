@@ -45,14 +45,12 @@ export function activate(context: vscode.ExtensionContext) {
 
     vscode.window.onDidChangeActiveTextEditor(editor => {
         activeEditor = editor;
-        if (editor) {
-            extensionInstance.triggerUpdateDecorations(activeEditor);
-        }
+        extensionInstance.triggerUpdateDecorations(activeEditor);
     }, null, context.subscriptions);
 
     vscode.workspace.onDidSaveTextDocument(document => {
         if (document) {
-            extensionInstance.triggerUpdateDecorations(vscode.window.activeTextEditor);
+            extensionInstance.triggerUpdateDecorations(activeEditor);
         }
     });
 
