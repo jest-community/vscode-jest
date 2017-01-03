@@ -1,3 +1,8 @@
+### 2.0.4
+
+* New fancy spinner when running tests - bookman25
+* Improved handling of expired test results - bookman25
+
 ### 2.0.3
 
 * Improved underlining of failing expectations - bookman25
