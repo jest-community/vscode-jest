@@ -101,6 +101,6 @@
   },
   "dependencies": {
     "elegant-spinner": "^1.0.1",
-    "jest-editor-support": "18.0.0"
+    "jest-editor-support": "18.1.0"
   }
 }
