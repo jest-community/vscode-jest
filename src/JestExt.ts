@@ -73,6 +73,7 @@ export class JestExt {
         // we can handle here differently.
         if (this.jestProcess) {
             this.jestProcess.closeProcess();
+            delete this.jestProcess;
         }
 
         this.jestProcess = new Runner(this.workspace);
@@ -123,6 +124,7 @@ export class JestExt {
     public stopProcess() {
         this.channel.appendLine('Closing Jest jest_runner.');
         this.jestProcess.closeProcess();
+        delete this.jestProcess;
         status.stopped();
     }
 
