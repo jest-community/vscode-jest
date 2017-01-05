@@ -5,7 +5,9 @@ const languages = {
 const StatusBarAlignment = {};
 
 const window = {
-    createStatusBarItem: jest.fn(),
+    createStatusBarItem: jest.fn(() => ({
+        show: jest.fn()
+    })),
     showErrorMessage: jest.fn()
 };
 

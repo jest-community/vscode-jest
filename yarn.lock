@@ -1611,10 +1611,12 @@ jest-diff@^18.0.0:
     jest-matcher-utils "^18.0.0"
     pretty-format "^18.0.0"
 
-jest-editor-support@18.0.0:
-  version "18.0.0"
-  resolved "https://registry.yarnpkg.com/jest-editor-support/-/jest-editor-support-18.0.0.tgz#90a8098e8ac3e320b3b576357778a04a424efa7b"
+jest-editor-support@18.1.0:
+  version "18.1.0"
+  resolved "https://registry.yarnpkg.com/jest-editor-support/-/jest-editor-support-18.1.0.tgz#5b0e7acc2ce2bdd53e6a7eaa8440b83fc95e620d"
   dependencies:
+    babylon "^6.13.0"
+  optionalDependencies:
     typescript "^2.0.10"
 
 jest-environment-jsdom@^18.0.0:

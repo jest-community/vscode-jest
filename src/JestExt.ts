@@ -12,10 +12,10 @@ import {
     JestTotalResults,
     IParseResults
 } from 'jest-editor-support';
-import * as elegantSpinner from 'elegant-spinner';
 
 import * as decorations from './decorations';
 import { IPluginSettings } from './IPluginSettings';
+import * as status from './statusBar';
 
 type TestReconcilationState = 'Unknown' |
     'KnownSuccess' |
@@ -25,7 +25,6 @@ const TestReconcilationState = {
     KnownSuccess: 'KnownSuccess' as TestReconcilationState,
     KnownFail: 'KnownFail' as TestReconcilationState,
 };
-const frame = elegantSpinner();
 
 export class JestExt {
     private workspace: ProjectWorkspace;
@@ -37,9 +36,6 @@ export class JestExt {
     // So you can read what's going on
     private channel: vscode.OutputChannel;
 
-    // The bottom status bar
-    private statusBarItem: vscode.StatusBarItem;
-    private statusBarSpinner: NodeJS.Timer;
     // The ability to show fails in the problems section
     private failDiagnostics: vscode.DiagnosticCollection;
 
@@ -62,7 +58,6 @@ export class JestExt {
         this.workspace = workspace;
         this.channel = outputChannel;
         this.failingAssertionDecorators = [];
-        this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
         this.failDiagnostics = vscode.languages.createDiagnosticCollection('Jest');
         this.clearOnNextInput = true;
         this.reconciler = new TestReconciler();
@@ -76,6 +71,9 @@ export class JestExt {
         // The Runner is an event emitter that handles taking the Jest
         // output and converting it into different types of data that
         // we can handle here differently.
+        if (this.jestProcess) {
+            this.jestProcess.closeProcess();
+        }
 
         this.jestProcess = new Runner(this.workspace);
 
@@ -125,6 +123,7 @@ export class JestExt {
     public stopProcess() {
         this.channel.appendLine('Closing Jest jest_runner.');
         this.jestProcess.closeProcess();
+        status.stopped();
     }
 
     private getSettings() {
@@ -294,13 +293,10 @@ export class JestExt {
     }
 
     private setupStatusBar() {
-        this.statusBarItem.show();
-        this.statusBarItem.command = 'io.orta.show-jest-output';
-
         if (this.pluginSettings.autoEnable) {
             this.testsHaveStartedRunning();
         } else {
-            this.statusBarItem.text = 'Jest: ...';
+            status.initial();
         }
     }
 
@@ -312,21 +308,17 @@ export class JestExt {
 
     private testsHaveStartedRunning() {
         this.channel.clear();
-        clearInterval(this.statusBarSpinner);
-        this.statusBarSpinner = setInterval(() => {
-            this.statusBarItem.text = `Jest: ${frame()}`;
-        }, 100);
+        status.running();
     }
 
     private updateWithData(data: JestTotalResults) {
         this.reconciler.updateFileWithJestStatus(data);
         this.failDiagnostics.clear();
 
-        clearInterval(this.statusBarSpinner);
         if (data.success) {
-            this.statusBarItem.text = 'Jest: $(check)';
+            status.success();
         } else {
-            this.statusBarItem.text = 'Jest: $(alert)';
+            status.failed();
         }
 
         this.triggerUpdateDecorations(vscode.window.activeTextEditor);
