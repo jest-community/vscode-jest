@@ -1,0 +1,6 @@
+{
+  "private": true,
+  "devDependencies": {
+    "jest": "^18.1.0"
+  }
+}
