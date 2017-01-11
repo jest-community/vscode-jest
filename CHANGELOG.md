@@ -1,3 +1,7 @@
+### 2.0.5
+
+* Improvements to creating and killing the Jest runner process - bookman25
+
 ### 2.0.4
 
 * New fancy spinner when running tests - bookman25
