@@ -11,4 +11,19 @@ declare module 'jest-editor-support' {
   type TestResult = {
     name: string
   }
+  
+  interface SnapshotMetadata {
+    node: {
+      loc: editor.Node
+    }
+    name: string
+    content: string
+    count: number
+    exists: boolean
+  }
+  
+  class Snapshot {
+    constructor()
+    getMetadata(filepath: string): Array<SnapshotMetadata>
+  }
 }
