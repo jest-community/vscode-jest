@@ -106,7 +106,7 @@ export class JestExt {
 
             this.channel.appendLine(noANSI);
         }).on('nonTerminalError', (error: string) => {
-            this.channel.appendLine(`Recieved an error from Jest Runner: ${error.toString()}`);
+            this.channel.appendLine(`Received an error from Jest Runner: ${error.toString()}`);
         }).on('exception', result => {
             this.channel.appendLine(`\nException raised: [${result.type}]: ${result.message}\n`);
         }).on('terminalError', (error: string) => {
