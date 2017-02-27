@@ -36,7 +36,7 @@ I'd like to give a shout out to [Wallaby.js](https://wallabyjs.com), which is a 
 
 ## Troubleshooting
 
-If you don't use the root of your project for you JS with Jest tests, do not worry, you can still use this project. You will need to use the "Start Jest Runner" command, and maybe have to configure your own `jest.pathToJest` setting inside the `.vscode/settings.json` to whatever you would use.
+If you don't use the root of your project for your JS with Jest tests, do not worry, you can still use this project. You will need to use the "Start Jest Runner" command, and maybe have to configure your own `jest.pathToJest` setting inside the `.vscode/settings.json` to whatever you would use.
 
 These are the [activation events](https://code.visualstudio.com/docs/extensionAPI/activation-events) which trigger the runner to start:
 
@@ -76,6 +76,6 @@ With that installed, you want to use a custom `jest-editor-support` by going int
 
 Go back to vscode-jest, and do one more `yarn link "jest-editor-support"` and now you're using those files directly from master of Jest.
 
-As `jest-editor-support` requires running through babel, you can run the babel watcher for all jest files by running `yarn run watch` inside the jest root directory.
+As `jest-editor-support` requires running through Babel, you can run the Babel watcher for all Jest files by running `yarn run watch` inside the Jest root directory.
 
 Yeah, it's a bit of a process, but we'll be sharing code with the nuclide team and that's worth it IMO.
