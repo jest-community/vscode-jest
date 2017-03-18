@@ -1,9 +1,12 @@
 import * as vscode from 'vscode';
 import { ProjectWorkspace } from 'jest-editor-support';
 
+import { extensionName } from './appGlobals';
 import { pathToJest, pathToConfig } from './helpers';
 import { JestExt } from './JestExt';
-import { IPluginSettings } from './IPluginSettings';
+import { IPluginSettings } from './IPluginSettings'; 
+import { registerStatusBar } from './statusBar';
+import { registerFileChangeWatchers } from './fileChangeWatchers';
 
 let extensionInstance: JestExt;
 
@@ -14,7 +17,7 @@ export function activate(context: vscode.ExtensionContext) {
         autoEnable: workspaceConfig.get<boolean>('autoEnable'),
         pathToConfig: workspaceConfig.get<string>('pathToConfig'),
         pathToJest: workspaceConfig.get<string>('pathToJest'),
-        rootPath: vscode.workspace.rootPath
+        rootPath: vscode.workspace.rootPath,
     };
     const jestPath = pathToJest(pluginSettings);
     const configPath = pathToConfig(pluginSettings); 
@@ -27,39 +30,21 @@ export function activate(context: vscode.ExtensionContext) {
     // We need a singleton to represent the extension
     extensionInstance = new JestExt(workspace, channel, pluginSettings);
 
-    // Register for commands   
-    vscode.commands.registerCommand('io.orta.show-jest-output', () => {
-        channel.show();
-    });
-    vscode.commands.registerTextEditorCommand('io.orta.jest.start', ()=> {
-        vscode.window.showInformationMessage('Started Jest, press escape to hide this message.');
-        extensionInstance.startProcess();
-    });
-
-    vscode.commands.registerTextEditorCommand('io.orta.jest.stop', ()=> {
-        extensionInstance.stopProcess();
-    });
-
-    // Setup the file change watchers
-    let activeEditor = vscode.window.activeTextEditor;
-
-    vscode.window.onDidChangeActiveTextEditor(editor => {
-        activeEditor = editor;
-        extensionInstance.triggerUpdateDecorations(activeEditor);
-    }, null, context.subscriptions);
-
-    vscode.workspace.onDidSaveTextDocument(document => {
-        if (document) {
-            extensionInstance.triggerUpdateDecorations(activeEditor);
-        }
-    });
-
-    vscode.workspace.onDidChangeTextDocument(event => {
-        if (activeEditor && event.document === activeEditor.document) {
-            extensionInstance.triggerUpdateDecorations(activeEditor);
-        }
-    }, null, context.subscriptions);
-
+    context.subscriptions.push(
+        registerStatusBar(channel),
+        vscode.commands.registerTextEditorCommand(
+            `${extensionName}.start`,
+            () => {
+                vscode.window.showInformationMessage('Started Jest, press escape to hide this message.');
+                extensionInstance.startProcess();
+            },
+        ),
+        vscode.commands.registerTextEditorCommand(
+            `${extensionName}.stop`,
+            () => extensionInstance.stopProcess(),
+        ),
+        ...registerFileChangeWatchers(extensionInstance),
+    );
 }
 
 export function deactivate() {
