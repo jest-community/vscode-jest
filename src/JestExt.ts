@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-
 import {
     Expect,
     ItBlock,
@@ -10,21 +9,13 @@ import {
     parse,
     TestReconciler,
     JestTotalResults,
-    IParseResults
+    IParseResults,
 } from 'jest-editor-support';
 
 import * as decorations from './decorations';
 import { IPluginSettings } from './IPluginSettings';
 import * as status from './statusBar';
-
-type TestReconcilationState = 'Unknown' |
-    'KnownSuccess' |
-    'KnownFail';
-const TestReconcilationState = {
-    Unknown: 'Unknown' as TestReconcilationState,
-    KnownSuccess: 'KnownSuccess' as TestReconcilationState,
-    KnownFail: 'KnownFail' as TestReconcilationState,
-};
+import { TestReconciliationState } from './TestReconciliationState';
 
 export class JestExt {
     private workspace: ProjectWorkspace;
@@ -46,7 +37,7 @@ export class JestExt {
     private parsingTestFile = false;
     private parseResults: IParseResults = {
         expects: [],
-        itBlocks: []
+        itBlocks: [],
     };
 
     // We have to keep track of our inline assert fails to remove later 
@@ -177,16 +168,16 @@ export class JestExt {
         const fileState = this.reconciler.stateForTestFile(filePath);
         switch (fileState) {
             // If the file failed, then it can contain passes, fails and unknowns
-            case TestReconcilationState.KnownFail:
+            case TestReconciliationState.KnownFail:
                 itBlocks.forEach(it => {
                     const state = this.reconciler.stateForTestAssertion(filePath, it.name);
                     if (state !== null) {
                         switch (state.status) {
-                            case TestReconcilationState.KnownSuccess:
+                            case TestReconciliationState.KnownSuccess:
                                 successes.push(it); break;
-                            case TestReconcilationState.KnownFail:
+                            case TestReconciliationState.KnownFail:
                                 fails.push(it); break;
-                            case TestReconcilationState.Unknown:
+                            case TestReconciliationState.Unknown:
                                 unknowns.push(it); break;
                         }
                     } else {
@@ -195,20 +186,20 @@ export class JestExt {
                 });
                 break;
             // Test passed, all it's must be green
-            case TestReconcilationState.KnownSuccess:
+            case TestReconciliationState.KnownSuccess:
                 successes = itBlocks; break;
 
             // We don't know, not ran probably
-            case TestReconcilationState.Unknown:
+            case TestReconciliationState.Unknown:
                 unknowns = itBlocks; break;
         };
 
         // Create a map for the states and styles to show inline.
         // Note that this specifically is only for dots.
         const styleMap = [
-            { data: successes, decorationType: this.passingItStyle, state: TestReconcilationState.KnownSuccess },
-            { data: fails, decorationType: this.failingItStyle, state: TestReconcilationState.KnownFail },
-            { data: unknowns, decorationType: this.unknownItStyle, state: TestReconcilationState.Unknown }
+            { data: successes, decorationType: this.passingItStyle, state: TestReconciliationState.KnownSuccess },
+            { data: fails, decorationType: this.failingItStyle, state: TestReconciliationState.KnownFail },
+            { data: unknowns, decorationType: this.unknownItStyle, state: TestReconciliationState.Unknown },
         ];
         styleMap.forEach(style => {
             const decorators = this.generateDotsForItBlocks(style.data, style.state);
@@ -234,12 +225,12 @@ export class JestExt {
         this.reconciler.failedStatuses().forEach(fail => {
             // Generate a uri, and pull out the failing it/tests
             const uri = vscode.Uri.file(fail.file);
-            const asserts = fail.assertions.filter(a => a.status === TestReconcilationState.KnownFail);
+            const asserts = fail.assertions.filter(a => a.status === TestReconciliationState.KnownFail);
 
             asserts.forEach((assertion) => {
                 const decorator = {
                     range: new vscode.Range(assertion.line - 1, 0, assertion.line - 1, 0),
-                    hoverMessage: assertion.terseMessage
+                    hoverMessage: assertion.terseMessage,
                 };
                 // We have to make a new style for each unique message, this is
                 // why we have to remove off of them beforehand
@@ -256,7 +247,7 @@ export class JestExt {
                 const daig = new vscode.Diagnostic(
                     new vscode.Range(assertion.line - 1, start, assertion.line - 1, start + 6),
                     assertion.terseMessage,
-                    vscode.DiagnosticSeverity.Error
+                    vscode.DiagnosticSeverity.Error,
                 );
                 daig.source = 'Jest';
                 return daig;
@@ -327,14 +318,14 @@ export class JestExt {
         this.clearOnNextInput = true;
     }
 
-    private generateDotsForItBlocks(blocks: ItBlock[], state: TestReconcilationState): vscode.DecorationOptions[] {
-        const nameForState = (_name: string, state: TestReconcilationState): string => {
+    private generateDotsForItBlocks(blocks: ItBlock[], state: TestReconciliationState): vscode.DecorationOptions[] {
+        const nameForState = (_name: string, state: TestReconciliationState): string => {
             switch (state) {
-                case TestReconcilationState.KnownSuccess:
+                case TestReconciliationState.KnownSuccess:
                     return 'Passed';
-                case TestReconcilationState.KnownFail:
+                case TestReconciliationState.KnownFail:
                     return 'Failed';
-                case TestReconcilationState.Unknown:
+                case TestReconciliationState.Unknown:
                     return 'Test has not run yet, due to Jest only running tests related to changes.';
             }
         };

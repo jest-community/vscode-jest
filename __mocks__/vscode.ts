@@ -1,18 +1,18 @@
 const languages = {
-    createDiagnosticCollection: jest.fn()
+    createDiagnosticCollection: jest.fn(),
 };
 
 const StatusBarAlignment = {};
 
 const window = {
     createStatusBarItem: jest.fn(() => ({
-        show: jest.fn()
+        show: jest.fn(),
     })),
-    showErrorMessage: jest.fn()
+    showErrorMessage: jest.fn(),
 };
 
 const workspace = {
-    getConfiguration: jest.fn()
+    getConfiguration: jest.fn(),
 };
 
 export {

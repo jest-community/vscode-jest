@@ -11,7 +11,15 @@
 			true,
 			"single"
 		],
-		"semicolon": ["never"],
-		"triple-equals": true
+		"semicolon": [
+			"never"
+		],
+		"triple-equals": true,
+		"trailing-comma": [
+			true,
+			{
+				"multiline": "always"
+			}
+		]
 	}
 }

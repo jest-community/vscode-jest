@@ -8,14 +8,14 @@ export function failingItName() {
             before: {
                 color: '#FF564B',
                 contentText: '●',
-            }
+            },
         },
         dark: {
             before: {
                 color: '#AD322D',
                 contentText: '●',
-            }
-        }
+            },
+        },
     });
 }
 
@@ -26,15 +26,15 @@ export function passingItName() {
         light: {
             before: {
                 color: '#3BB26B',
-                contentText: '●' 
-            }
+                contentText: '●', 
+            },
         },
         dark: {
             before: {
                 color: '#2F8F51',
                 contentText: '●',
-            }
-        }
+            },
+        },
     });
 }
 
@@ -46,14 +46,14 @@ export function notRanItName() {
             before: {
                 color: '#3BB26B',
                 contentText: '○',
-            }    
+            },    
         },
         light: {
             before: {
                 color: '#2F8F51',
                 contentText: '○',
-            }    
-        }
+            },    
+        },
     });
 }
 
@@ -66,15 +66,15 @@ export function failingAssertionStyle(text: string) {
         light: {
             before: {
                 color: '#FF564B',
-            }
+            },
         },
         dark: {
             before: {
                 color: '#AD322D',
-            }
+            },
         },
         after: {
-            contentText: ' // ' + text
-        }
+            contentText: ' // ' + text,
+        },
     });
 }

@@ -21,7 +21,7 @@ describe('JestExt', () => {
     it('should show error message if jest version i < 18', () => {
         mockSettings.mockImplementation(() => ({
             getConfig: callback => callback(),
-            jestVersionMajor: 17
+            jestVersionMajor: 17,
         }));
         new JestExt(projectWorkspace, channelStub, {});
         expect(window.showErrorMessage).toBeCalledWith('This extension relies on Jest 18+ features, it will work, but the highlighting may not work correctly.');
@@ -30,7 +30,7 @@ describe('JestExt', () => {
     it('should not show error message if jest version is 18', () => {
         mockSettings.mockImplementation(() => ({
             getConfig: callback => callback(),
-            jestVersionMajor: 18
+            jestVersionMajor: 18,
         }));
         new JestExt(projectWorkspace, channelStub, {});
         expect(window.showErrorMessage).not.toBeCalled();
@@ -44,7 +44,7 @@ describe('JestExt', () => {
             const eventEmitter = {
                 on: jest.fn(() => eventEmitter),
                 start: jest.fn(),
-                closeProcess
+                closeProcess,
             };
             mockRunner.mockImplementation(() => eventEmitter);
             extension = new JestExt(projectWorkspace, channelStub, {});
