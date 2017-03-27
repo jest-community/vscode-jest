@@ -43,7 +43,7 @@ export function activate(context: vscode.ExtensionContext) {
             `${extensionName}.stop`,
             () => extensionInstance.stopProcess(),
         ),
-        vscode.commands.registerTextEditorCommand("io.orta.jest.show-channel", ()=> {
+        vscode.commands.registerTextEditorCommand('io.orta.jest.show-channel', ()=> {
             channel.show();
         }),
         ...registerFileChangeWatchers(extensionInstance),
