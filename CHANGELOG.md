@@ -1,3 +1,7 @@
+## Master
+
+* Show channel command - orta
+
 ### 2.0.4
 
 * New fancy spinner when running tests - bookman25
