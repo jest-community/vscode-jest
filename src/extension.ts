@@ -51,6 +51,10 @@ export function activate(context: vscode.ExtensionContext) {
         extensionInstance.stopProcess();
     });
 
+    vscode.commands.registerTextEditorCommand("io.orta.jest.show-channel", ()=> {
+        channel.show();
+    });
+
     // Setup the file change watchers
     var activeEditor = vscode.window.activeTextEditor;
     if (activeEditor) {
