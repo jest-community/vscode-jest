@@ -1,12 +1,25 @@
 {
 	"rules": {
-		"no-unused-expression": true,
-		"no-duplicate-variable": true,
-		"no-duplicate-key": true,
-		"no-unused-variable": true,
-		"curly": true,
 		"class-name": true,
-		"semicolon": ["never"],
-		"triple-equals": true
+		"curly": true,
+		"eofline": true,
+		"no-duplicate-variable": true,
+		"no-unused-expression": true,
+		"no-var-keyword": true,
+		"prefer-const": true,
+		"quotemark": [
+			true,
+			"single"
+		],
+		"semicolon": [
+			"never"
+		],
+		"triple-equals": true,
+		"trailing-comma": [
+			true,
+			{
+				"multiline": "always"
+			}
+		]
 	}
 }

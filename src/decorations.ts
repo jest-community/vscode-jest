@@ -1,82 +1,80 @@
-'use strict';
-
-import * as vscode from 'vscode';
+import { window, OverviewRulerLane } from 'vscode';
 
 export function failingItName() {
-    return vscode.window.createTextEditorDecorationType({
+    return window.createTextEditorDecorationType({
         overviewRulerColor: 'red',
-        overviewRulerLane: vscode.OverviewRulerLane.Left,
+        overviewRulerLane: OverviewRulerLane.Left,
         light: {
             before: {
-                color: "#FF564B",
-                contentText: "●",
-            }
+                color: '#FF564B',
+                contentText: '●',
+            },
         },
         dark: {
             before: {
-                color: "#AD322D",
-                contentText: "●",
-            }
-        }
+                color: '#AD322D',
+                contentText: '●',
+            },
+        },
     });
 }
 
 export function passingItName() {
-    return vscode.window.createTextEditorDecorationType({
+    return window.createTextEditorDecorationType({
         overviewRulerColor: 'green',
-        overviewRulerLane: vscode.OverviewRulerLane.Left,
+        overviewRulerLane: OverviewRulerLane.Left,
         light: {
             before: {
-                color: "#3BB26B",
-                contentText: "●" 
-            }
+                color: '#3BB26B',
+                contentText: '●', 
+            },
         },
         dark: {
             before: {
-                color: "#2F8F51",
-                contentText: "●",
-            }
-        }
+                color: '#2F8F51',
+                contentText: '●',
+            },
+        },
     });
 }
 
 export function notRanItName() {
-    return vscode.window.createTextEditorDecorationType({
+    return window.createTextEditorDecorationType({
         overviewRulerColor: 'darkgrey',
-        overviewRulerLane: vscode.OverviewRulerLane.Left,
+        overviewRulerLane: OverviewRulerLane.Left,
         dark: {
             before: {
-                color: "#3BB26B",
-                contentText: "○",
-            }    
+                color: '#3BB26B',
+                contentText: '○',
+            },    
         },
         light: {
             before: {
-                color: "#2F8F51",
-                contentText: "○",
-            }    
-        }
+                color: '#2F8F51',
+                contentText: '○',
+            },    
+        },
     });
 }
 
 
 export function failingAssertionStyle(text: string) {
-    return vscode.window.createTextEditorDecorationType({
+    return window.createTextEditorDecorationType({
         isWholeLine: true,
         overviewRulerColor: 'red',
-        overviewRulerLane: vscode.OverviewRulerLane.Left,
+        overviewRulerLane: OverviewRulerLane.Left,
         light: {
             before: {
-                color: "#FF564B",
-            }
+                color: '#FF564B',
+            },
         },
         dark: {
             before: {
-                color: "#AD322D",
-            }
+                color: '#AD322D',
+            },
         },
         after: {
-            contentText: " // " + text
-        }
+            contentText: ' // ' + text,
+        },
     });
 }

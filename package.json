@@ -2,7 +2,7 @@
   "name": "vscode-jest",
   "displayName": "Jest",
   "description": "Use Facebook's Jest With Pleasure.",
-  "version": "1.6.4",
+  "version": "2.0.4",
   "publisher": "Orta",
   "engines": {
     "vscode": "^1.5.0"
@@ -44,17 +44,20 @@
     "configuration": {
       "properties": {
         "jest.autoEnable": {
+          "description": "Automatically starting Jest for this project.",
           "title": "Automatically starting Jest for this project",
           "type": "boolean",
           "default": true
         },
         "jest.pathToJest": {
+          "description": "The path to the Jest binary, or an npm command to run tests prefixed with `--` e.g. `npm test --`",
           "title": "The path to the Jest binary, or an npm command to run tests prefixed with `--` e.g. `npm test --`",
           "type": "string",
           "default": "node_modules/.bin/jest"
         },
         "jest.pathToConfig": {
-          "title": "The path to the Jest configuration file",
+          "description": "The path to your Jest configuration file",
+          "title": "The path to your Jest configuration file",
           "type": "string",
           "default": ""
         }
@@ -73,20 +76,27 @@
     }]
   },
   "scripts": {
-    "vscode:prepublish": "tsc -p ./",
-    "compile": "tsc -watch -p ./",
-    "postinstall": "node ./node_modules/vscode/bin/install"
+    "ci": "yarn lint && yarn test",
+    "clean-out": "rimraf ./out",
+    "vscode:prepublish": "yarn clean-out && tsc -p ./tsconfig.publish.json",
+    "compile": "tsc -watch -p ./tsconfig.publish.json",
+    "lint": "node scripts/lint",
+    "postinstall": "node ./node_modules/vscode/bin/install",
+    "test": "jest --config jest.json",
+    "watch-test": "yarn test -- --watch"
   },
   "devDependencies": {
-    "@types/babylon": "^6.7.14",
-    "@types/mocha": "^2.2.32",
+    "@types/jest": "^19.2.2",
     "@types/node": "^6.0.40",
-    "mocha": "^2.3.3",
-    "typescript": "^2.0.3",
-    "vscode": "^1.0.0"
+    "glob": "^7.1.1",
+    "jest": "^18.0.0",
+    "rimraf": "^2.5.4",
+    "tslint": "^4.5.1",
+    "typescript": "^2.2.1",
+    "vscode": "^1.1.0"
   },
   "dependencies": {
-    "babylon": "^6.13.0",
-    "tmp": "0.0.29"
+    "elegant-spinner": "^1.0.1",
+    "jest-editor-support": "18.1.0"
   }
 }
