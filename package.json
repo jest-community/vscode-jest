@@ -30,17 +30,21 @@
   "main": "./out/src/extension",
   "icon": "images/vscode-jest.png",
   "contributes": {
-    "languages": [{
-      "id": "jest-snapshot",
-      "extensions": [
-        ".js.snap"
-      ]
-    }],
-    "grammars": [{
-      "language": "jest-snapshot",
-      "scopeName": "source.jest.snap",
-      "path": "./syntaxes/jest-snapshot.tmLanguage"
-    }],
+    "languages": [
+      {
+        "id": "jest-snapshot",
+        "extensions": [
+          ".js.snap"
+        ]
+      }
+    ],
+    "grammars": [
+      {
+        "language": "jest-snapshot",
+        "scopeName": "source.jest.snap",
+        "path": "./syntaxes/jest-snapshot.tmLanguage"
+      }
+    ],
     "configuration": {
       "properties": {
         "jest.autoEnable": {
@@ -64,16 +68,20 @@
       },
       "title": "The settings for the Jest VS Code runner."
     },
-    "commands": [{
-      "command": "io.orta.jest.start",
-      "title": "Jest: Start Runner"
-    }, {
-      "command": "io.orta.jest.stop",
-      "title": "Jest: Stop Runner"
-    }, {
-      "command": "io.orta.jest.show-channel",
-      "title": "Jest: Show Test Output Channel"
-    }]
+    "commands": [
+      {
+        "command": "io.orta.jest.start",
+        "title": "Jest: Start Runner"
+      },
+      {
+        "command": "io.orta.jest.stop",
+        "title": "Jest: Stop Runner"
+      },
+      {
+        "command": "io.orta.jest.show-channel",
+        "title": "Jest: Show Test Output Channel"
+      }
+    ]
   },
   "scripts": {
     "ci": "yarn lint && yarn test",
