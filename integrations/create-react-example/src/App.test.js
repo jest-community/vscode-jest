@@ -8,5 +8,5 @@ it('renders without crashing', () => {
 });
 
 it("adds", () => {
-  expect("a").toEqual("b")
+  expect("a").toEqual("c")
 })

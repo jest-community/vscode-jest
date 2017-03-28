@@ -2,6 +2,7 @@
 
 * Show channel command - orta
 * Create React App fixes - orta
+* Use "jest-test-typescript-parser" for our TypeScript parser - orta
 
 ### 2.0.4
 
