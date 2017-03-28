@@ -1,6 +1,7 @@
 ## Master
 
 * Show channel command - orta
+* Create React App fixes - orta
 
 ### 2.0.4
 

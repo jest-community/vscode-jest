@@ -66,10 +66,26 @@ The other part is inside the [Jest source code](http://github.com/facebook/jest/
 It's very possible that you're going to want to make changes inside here, if you're doing something that touches the test runner process or file parsers. To get that set up to work I'd recommend doing this:
 
 ```
+# set up jest
 cd ..
 git clone https://github.com/facebook/jest.git
 cd jest
 yarn install
+
+# link jest-editor-support
+cd packages/jest-editor-support
+yarn link
+
+# set up vscode-jest to use the real jest-editor-support
+cd ../../..
+cd vscode-jest
+yarn link jest-editor-support
+
+
+# go back and start the jest build watcher
+cd ..
+cd jest
+yarn watch
 ```
 
 With that installed, you want to use a custom `jest-editor-support` by going into `cd packages/jest-editor-support` and running `yarn link`.

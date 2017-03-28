@@ -18,7 +18,9 @@ export function pathToJest(pluginSettings: IPluginSettings) {
     const defaultCreateReactPathWindows = 'node_modules/react-scripts/node_modules/.bin/jest.cmd';
     const createReactPath = (platform() === 'win32') ? defaultCreateReactPathWindows : defaultCreateReactPath;
     const absolutePath = pluginSettings.rootPath + '/' + createReactPath;
-    if (!existsSync(path) && existsSync(absolutePath)) {
+
+    const craExists = existsSync(absolutePath);
+    if (craExists) {
       // If it's the default, run the script instead
       return (platform() === 'win32') ? 'npm.cmd test --' : 'npm test --';
     }

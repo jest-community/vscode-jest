@@ -11,5 +11,8 @@
         ],
         "sourceMap": true,
         "rootDir": "."
-    }
+    },
+    "exclude": [
+        "integrations"
+    ]
 }
