@@ -6,11 +6,12 @@ import {
     Runner,
     Settings,
     ProjectWorkspace,
-    parse,
+    parse as babylonParse,
     TestReconciler,
     JestTotalResults,
     IParseResults,
 } from 'jest-editor-support';
+import { parse as typescriptParse } from 'jest-test-typescript-parser';
 
 import * as decorations from './decorations';
 import { IPluginSettings } from './IPluginSettings';
@@ -158,7 +159,11 @@ export class JestExt {
         let unknowns: Array<ItBlock> = [];
 
         // Parse the current JS file
-        this.parseResults = parse(editor.document.uri.fsPath);
+        const path = editor.document.uri.fsPath;
+        const isTypeScript = path.match(/.(ts|tsx)$/);
+        const parser = isTypeScript ? typescriptParse : babylonParse;
+        this.parseResults = parser(editor.document.uri.fsPath);
+        
         // Use the parsers it blocks for references
         const { itBlocks } = this.parseResults;
 

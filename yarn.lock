@@ -695,13 +695,9 @@ error-ex@^1.2.0:
   dependencies:
     is-arrayish "^0.2.1"
 
-escape-string-regexp@1.0.5:
+escape-string-regexp@1.0.5, escape-string-regexp@^1.0.2:
   version "1.0.5"
   resolved "https://registry.yarnpkg.com/escape-string-regexp/-/escape-string-regexp-1.0.5.tgz#1b61c0562190a8dff6ae3bb2cf0200ca130b86d4"
-
-escape-string-regexp@^1.0.2:
-  version "1.0.2"
-  resolved "https://registry.yarnpkg.com/escape-string-regexp/-/escape-string-regexp-1.0.2.tgz#4dbc2fe674e71949caf3fb2695ce7f2dc1d9a8d1"
 
 escodegen@^1.6.1:
   version "1.8.1"
@@ -1547,13 +1543,11 @@ jest-diff@^18.0.0:
     jest-matcher-utils "^18.0.0"
     pretty-format "^18.0.0"
 
-jest-editor-support@18.1.0:
-  version "18.1.0"
-  resolved "https://registry.yarnpkg.com/jest-editor-support/-/jest-editor-support-18.1.0.tgz#5b0e7acc2ce2bdd53e6a7eaa8440b83fc95e620d"
+jest-editor-support@19.0.2, jest-editor-support@^19.0.2:
+  version "19.0.2"
+  resolved "https://registry.yarnpkg.com/jest-editor-support/-/jest-editor-support-19.0.2.tgz#b63a1f8aea0a29fb149dc90ac85cf2e811f596af"
   dependencies:
     babylon "^6.13.0"
-  optionalDependencies:
-    typescript "^2.0.10"
 
 jest-environment-jsdom@^18.0.0:
   version "18.0.0"
@@ -1659,6 +1653,13 @@ jest-snapshot@^18.0.0:
     jest-util "^18.0.0"
     natural-compare "^1.4.0"
     pretty-format "^18.0.0"
+
+jest-test-typescript-parser@18.1.0:
+  version "19.0.2"
+  resolved "https://registry.yarnpkg.com/jest-test-typescript-parser/-/jest-test-typescript-parser-19.0.2.tgz#146cd6665c8afa454b6dbe12bef26cb2f426c353"
+  dependencies:
+    jest-editor-support "^19.0.2"
+    typescript "^2.0.10"
 
 jest-util@^18.0.0:
   version "18.0.0"
@@ -2622,17 +2623,11 @@ sntp@1.x.x:
   dependencies:
     hoek "2.x.x"
 
-source-map-support@^0.4.11:
+source-map-support@^0.4.11, source-map-support@^0.4.2:
   version "0.4.14"
   resolved "https://registry.yarnpkg.com/source-map-support/-/source-map-support-0.4.14.tgz#9d4463772598b86271b4f523f6c1f4e02a7d6aef"
   dependencies:
     source-map "^0.5.6"
-
-source-map-support@^0.4.2:
-  version "0.4.6"
-  resolved "https://registry.yarnpkg.com/source-map-support/-/source-map-support-0.4.6.tgz#32552aa64b458392a85eab3b0b5ee61527167aeb"
-  dependencies:
-    source-map "^0.5.3"
 
 source-map@^0.4.4:
   version "0.4.4"
