@@ -67,7 +67,13 @@
           "title": "The path to your Jest configuration file",
           "type": "string",
           "default": ""
+        },
+        "jest.enableInlineErrorMessages": {
+          "description": "Whether errors should be reported inline on a file",
+          "type": "boolean",
+          "default": true
         }
+
       },
       "title": "The settings for the Jest VS Code runner."
     },

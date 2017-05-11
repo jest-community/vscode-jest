@@ -17,8 +17,10 @@ export function activate(context: vscode.ExtensionContext) {
         autoEnable: workspaceConfig.get<boolean>('autoEnable'),
         pathToConfig: workspaceConfig.get<string>('pathToConfig'),
         pathToJest: workspaceConfig.get<string>('pathToJest'),
+        enableInlineErrorMessages: workspaceConfig.get<boolean>('enableInlineErrorMessages'),
         rootPath: vscode.workspace.rootPath,
     };
+
     const jestPath = pathToJest(pluginSettings);
     const configPath = pathToConfig(pluginSettings); 
     const currentJestVersion = 18;

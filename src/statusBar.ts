@@ -10,7 +10,7 @@ statusBarItem.show();
 statusBarItem.command = statusBarCommand;
 const statusKey = 'Jest:';
 const frame = elegantSpinner();
-let statusBarSpinner: NodeJS.Timer;
+let statusBarSpinner: any;
 
 export function registerStatusBar(channel: OutputChannel) {
     return commands.registerCommand(

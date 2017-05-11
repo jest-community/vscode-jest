@@ -232,17 +232,20 @@ export class JestExt {
             const uri = vscode.Uri.file(fail.file);
             const asserts = fail.assertions.filter(a => a.status === TestReconciliationState.KnownFail);
 
-            asserts.forEach((assertion) => {
-                const decorator = {
-                    range: new vscode.Range(assertion.line - 1, 0, assertion.line - 1, 0),
-                    hoverMessage: assertion.terseMessage,
-                };
-                // We have to make a new style for each unique message, this is
-                // why we have to remove off of them beforehand
-                const style = decorations.failingAssertionStyle(assertion.terseMessage);
-                this.failingAssertionDecorators.push(style);
-                editor.setDecorations(style, [decorator]);
-            });
+            // Support turning off the inline text
+            if (this.pluginSettings.enableInlineErrorMessages) {
+                asserts.forEach((assertion) => {
+                    const decorator = {
+                        range: new vscode.Range(assertion.line - 1, 0, assertion.line - 1, 0),
+                        hoverMessage: assertion.terseMessage,
+                    };
+                    // We have to make a new style for each unique message, this is
+                    // why we have to remove off of them beforehand
+                    const style = decorations.failingAssertionStyle(assertion.terseMessage);
+                    this.failingAssertionDecorators.push(style);
+                    editor.setDecorations(style, [decorator]);
+                });
+            }
 
             // Loop through each individual fail and create an diagnostic
             // to pass back to VS Code.
