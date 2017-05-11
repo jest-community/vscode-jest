@@ -73,7 +73,6 @@
           "type": "boolean",
           "default": true
         }
-
       },
       "title": "The settings for the Jest VS Code runner."
     },
@@ -114,7 +113,7 @@
   },
   "dependencies": {
     "elegant-spinner": "^1.0.1",
-    "jest-editor-support": "19.0.2",
+    "jest-editor-support": "^20.0.0",
     "jest-test-typescript-parser": "18.1.0"
   }
 }

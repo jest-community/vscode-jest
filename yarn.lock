@@ -276,7 +276,7 @@ babel-types@^6.16.0, babel-types@^6.18.0, babel-types@^6.21.0:
     lodash "^4.2.0"
     to-fast-properties "^1.0.1"
 
-babylon@^6.11.0, babylon@^6.13.0:
+babylon@^6.11.0, babylon@^6.13.0, babylon@^6.14.1:
   version "6.14.1"
   resolved "https://registry.yarnpkg.com/babylon/-/babylon-6.14.1.tgz#956275fab72753ad9b3435d7afe58f8bf0a29815"
 
@@ -1543,11 +1543,17 @@ jest-diff@^18.0.0:
     jest-matcher-utils "^18.0.0"
     pretty-format "^18.0.0"
 
-jest-editor-support@19.0.2, jest-editor-support@^19.0.2:
+jest-editor-support@^19.0.2:
   version "19.0.2"
   resolved "https://registry.yarnpkg.com/jest-editor-support/-/jest-editor-support-19.0.2.tgz#b63a1f8aea0a29fb149dc90ac85cf2e811f596af"
   dependencies:
     babylon "^6.13.0"
+
+jest-editor-support@^20.0.0:
+  version "20.0.0"
+  resolved "https://registry.yarnpkg.com/jest-editor-support/-/jest-editor-support-20.0.0.tgz#c2765d5d3621bb4f0c50a187aab8978542bf902a"
+  dependencies:
+    babylon "^6.14.1"
 
 jest-environment-jsdom@^18.0.0:
   version "18.0.0"
