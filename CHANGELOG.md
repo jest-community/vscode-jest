@@ -1,8 +1,10 @@
 ## Master
 
 * Show channel command - orta
+* Supports TS/TSX/JSX .snaps - orta
 * Create React App fixes - orta
 * Use "jest-test-typescript-parser" for our TypeScript parser - orta
+* Bumps min VS code release - orta
 
 ### 2.0.4
 

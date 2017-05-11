@@ -2,10 +2,10 @@
   "name": "vscode-jest",
   "displayName": "Jest",
   "description": "Use Facebook's Jest With Pleasure.",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "publisher": "Orta",
   "engines": {
-    "vscode": "^1.5.0"
+    "vscode": "^1.12.0"
   },
   "author": {
     "name": "Orta Therox",
@@ -34,7 +34,10 @@
       {
         "id": "jest-snapshot",
         "extensions": [
-          ".js.snap"
+          ".js.snap",
+          ".jsx.snap",
+          ".ts.snap",
+          ".tsx.snap"
         ]
       }
     ],
