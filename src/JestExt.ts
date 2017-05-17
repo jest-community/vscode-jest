@@ -17,6 +17,8 @@ import * as decorations from './decorations';
 import { IPluginSettings } from './IPluginSettings';
 import * as status from './statusBar';
 import { TestReconciliationState } from './TestReconciliationState';
+import { pathToJestPackageJSON } from './helpers';
+import { readFileSync } from 'fs';
 
 export class JestExt {
     private workspace: ProjectWorkspace;
@@ -121,12 +123,11 @@ export class JestExt {
     }
 
     private getSettings() {
-
-        this.jestSettings.getConfig(() => {
-            if (this.jestSettings.jestVersionMajor < 20) {
-                vscode.window.showErrorMessage('This extension relies on Jest 20+ features, it continue to work, some features may not work correctly.');
+        this.getJestVersion(jestVersionMajor => {
+            if (jestVersionMajor < 20) {
+                vscode.window.showErrorMessage('This extension relies on Jest 20+ features, it will continue to work, but some features may not work correctly.');
             }
-            this.workspace.localJestMajorVersion = this.jestSettings.jestVersionMajor;
+            this.workspace.localJestMajorVersion = jestVersionMajor;
 
             // If we should start the process by default, do so
             if (this.pluginSettings.autoEnable) {
@@ -135,6 +136,14 @@ export class JestExt {
                 this.channel.appendLine('Skipping initial Jest runner process start.');
             }
         });
+
+        // Do nothing for the minute, the above ^ can come back once 
+        // https://github.com/facebook/jest/pull/3592 is deployed
+        try {
+            this.jestSettings.getConfig(() => {});  
+        } catch (error) {
+            console.log('[vscode-jest] Getting Jest config crashed, likely due to Jest version being below version 20.');
+        }
     }
 
     private detectedSnapshotErrors() {
@@ -359,5 +368,19 @@ export class JestExt {
 
     public deactivate() {
         this.jestProcess.closeProcess();
+    }
+
+    private getJestVersion(version: (v:number) => void) {
+        const packageJSON = pathToJestPackageJSON(this.pluginSettings);
+        if (packageJSON) {
+            const contents = readFileSync(packageJSON, 'utf8');
+            const packageMetadata = JSON.parse(contents);
+            if (packageMetadata['version']) {
+                version(parseInt(packageMetadata['version']));
+                return;
+            }
+        }
+        // Fallback to last pre-20 release
+        version(19);
     }
 }
