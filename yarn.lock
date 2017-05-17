@@ -1585,15 +1585,9 @@ jest-docblock@^20.0.3:
   version "20.0.3"
   resolved "https://registry.yarnpkg.com/jest-docblock/-/jest-docblock-20.0.3.tgz#17bea984342cc33d83c50fbe1545ea0efaa44712"
 
-jest-editor-support@^19.0.2:
-  version "19.0.2"
-  resolved "https://registry.yarnpkg.com/jest-editor-support/-/jest-editor-support-19.0.2.tgz#b63a1f8aea0a29fb149dc90ac85cf2e811f596af"
-  dependencies:
-    babylon "^6.13.0"
-
-jest-editor-support@^20.0.0:
-  version "20.0.0"
-  resolved "https://registry.yarnpkg.com/jest-editor-support/-/jest-editor-support-20.0.0.tgz#c2765d5d3621bb4f0c50a187aab8978542bf902a"
+jest-editor-support@^20.0.3:
+  version "20.0.3"
+  resolved "https://registry.yarnpkg.com/jest-editor-support/-/jest-editor-support-20.0.3.tgz#4f179cd15a7e0af479fa1a440033880ae1d45c2d"
   dependencies:
     babylon "^6.14.1"
 
@@ -1714,12 +1708,12 @@ jest-snapshot@^20.0.3:
     natural-compare "^1.4.0"
     pretty-format "^20.0.3"
 
-jest-test-typescript-parser@18.1.0:
-  version "19.0.2"
-  resolved "https://registry.yarnpkg.com/jest-test-typescript-parser/-/jest-test-typescript-parser-19.0.2.tgz#146cd6665c8afa454b6dbe12bef26cb2f426c353"
+jest-test-typescript-parser@^20.0.3:
+  version "20.0.3"
+  resolved "https://registry.yarnpkg.com/jest-test-typescript-parser/-/jest-test-typescript-parser-20.0.3.tgz#d1a2720c648be1fa71114ed155aebd68afcec3f1"
   dependencies:
-    jest-editor-support "^19.0.2"
-    typescript "^2.0.10"
+    jest-editor-support "^20.0.3"
+    typescript "^2.2.1"
 
 jest-util@^20.0.3:
   version "20.0.3"
@@ -2956,7 +2950,7 @@ type-check@~0.3.2:
   dependencies:
     prelude-ls "~1.1.2"
 
-typescript@^2.0.10, typescript@^2.2.1:
+typescript@^2.2.1:
   version "2.2.1"
   resolved "https://registry.yarnpkg.com/typescript/-/typescript-2.2.1.tgz#4862b662b988a4c8ff691cc7969622d24db76ae9"
 
