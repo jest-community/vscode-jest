@@ -381,6 +381,6 @@ export class JestExt {
             }
         }
         // Fallback to last pre-20 release
-        version(19);
+        version(18);
     }
 }

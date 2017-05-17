@@ -47,12 +47,14 @@ export function pathToConfig(pluginSettings: IPluginSettings) {
 
 export function pathToJestPackageJSON(pluginSettings: IPluginSettings): string | null {
   const defaultPath = normalize('node_modules/jest/package.json');
-  const craPath = normalize('node_modules/react-scripts/node_modules/jest/package.json')
+  const craPath = normalize('node_modules/react-scripts/node_modules/jest/package.json');
 
-  const paths = [defaultPath, craPath]
-  paths.forEach(packagePath => {
-    const absolutePath = join(pluginSettings.rootPath, packagePath);
-    if (existsSync(absolutePath)) { return absolutePath; } 
-  });
+  const paths = [defaultPath, craPath];
+  for (const i in paths) {
+    const absolutePath = join(pluginSettings.rootPath, paths[i]);
+    if (existsSync(absolutePath)) { 
+      return absolutePath; 
+    } 
+  }
   return null;
 }
