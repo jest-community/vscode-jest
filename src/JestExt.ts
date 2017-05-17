@@ -147,7 +147,7 @@ export class JestExt {
     }
 
     private detectedSnapshotErrors() {
-        if (!this.pluginSettings.enableInlineErrorMessages) { return; }
+        if (!this.pluginSettings.enableSnapshotUpdateMessages) { return; }
         vscode.window.showInformationMessage('Would you like to update your Snapshots?', { title: 'Replace them' }).then((response) => {
             // No response == cancel
             if (response) {
