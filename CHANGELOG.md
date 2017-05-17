@@ -1,5 +1,7 @@
 ## Master
 
+### 2.2.0
+
 * Adds an option to not show errors inline in the editor - orta
 * Adds an option to not snapshot update requests - orta
 * Show channel command - orta
