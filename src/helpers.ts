@@ -1,6 +1,6 @@
 import { platform } from 'os';
 import { existsSync } from 'fs';
-import { normalize } from 'path';
+import { normalize, join } from 'path';
 
 import { IPluginSettings } from './IPluginSettings';
 
@@ -17,7 +17,7 @@ export function pathToJest(pluginSettings: IPluginSettings) {
     const defaultCreateReactPath = 'node_modules/react-scripts/node_modules/.bin/jest';
     const defaultCreateReactPathWindows = 'node_modules/react-scripts/node_modules/.bin/jest.cmd';
     const createReactPath = (platform() === 'win32') ? defaultCreateReactPathWindows : defaultCreateReactPath;
-    const absolutePath = pluginSettings.rootPath + '/' + createReactPath;
+    const absolutePath = join(pluginSettings.rootPath, createReactPath);
 
     const craExists = existsSync(absolutePath);
     if (craExists) {
@@ -44,3 +44,17 @@ export function pathToConfig(pluginSettings: IPluginSettings) {
 
   return '';
 } 
+
+export function pathToJestPackageJSON(pluginSettings: IPluginSettings): string | null {
+  const defaultPath = normalize('node_modules/jest/package.json');
+  const craPath = normalize('node_modules/react-scripts/node_modules/jest/package.json');
+
+  const paths = [defaultPath, craPath];
+  for (const i in paths) {
+    const absolutePath = join(pluginSettings.rootPath, paths[i]);
+    if (existsSync(absolutePath)) { 
+      return absolutePath; 
+    } 
+  }
+  return null;
+}

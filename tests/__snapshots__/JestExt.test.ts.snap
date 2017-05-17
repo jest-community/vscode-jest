@@ -1,0 +1,9 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`JestExt should show error message if jest version i < 18 1`] = `
+Array [
+  Array [
+    "This extension relies on Jest 20+ features, it will continue to work, but some features may not work correctly.",
+  ],
+]
+`;

@@ -17,6 +17,8 @@ import * as decorations from './decorations';
 import { IPluginSettings } from './IPluginSettings';
 import * as status from './statusBar';
 import { TestReconciliationState } from './TestReconciliationState';
+import { pathToJestPackageJSON } from './helpers';
+import { readFileSync } from 'fs';
 
 export class JestExt {
     private workspace: ProjectWorkspace;
@@ -121,11 +123,11 @@ export class JestExt {
     }
 
     private getSettings() {
-        this.jestSettings.getConfig(() => {
-            if (this.jestSettings.jestVersionMajor < 18) {
-                vscode.window.showErrorMessage('This extension relies on Jest 18+ features, it will work, but the highlighting may not work correctly.');
+        this.getJestVersion(jestVersionMajor => {
+            if (jestVersionMajor < 20) {
+                vscode.window.showErrorMessage('This extension relies on Jest 20+ features, it will continue to work, but some features may not work correctly.');
             }
-            this.workspace.localJestMajorVersion = this.jestSettings.jestVersionMajor;
+            this.workspace.localJestMajorVersion = jestVersionMajor;
 
             // If we should start the process by default, do so
             if (this.pluginSettings.autoEnable) {
@@ -134,9 +136,18 @@ export class JestExt {
                 this.channel.appendLine('Skipping initial Jest runner process start.');
             }
         });
+
+        // Do nothing for the minute, the above ^ can come back once 
+        // https://github.com/facebook/jest/pull/3592 is deployed
+        try {
+            this.jestSettings.getConfig(() => {});  
+        } catch (error) {
+            console.log('[vscode-jest] Getting Jest config crashed, likely due to Jest version being below version 20.');
+        }
     }
 
     private detectedSnapshotErrors() {
+        if (!this.pluginSettings.enableSnapshotUpdateMessages) { return; }
         vscode.window.showInformationMessage('Would you like to update your Snapshots?', { title: 'Replace them' }).then((response) => {
             // No response == cancel
             if (response) {
@@ -232,17 +243,20 @@ export class JestExt {
             const uri = vscode.Uri.file(fail.file);
             const asserts = fail.assertions.filter(a => a.status === TestReconciliationState.KnownFail);
 
-            asserts.forEach((assertion) => {
-                const decorator = {
-                    range: new vscode.Range(assertion.line - 1, 0, assertion.line - 1, 0),
-                    hoverMessage: assertion.terseMessage,
-                };
-                // We have to make a new style for each unique message, this is
-                // why we have to remove off of them beforehand
-                const style = decorations.failingAssertionStyle(assertion.terseMessage);
-                this.failingAssertionDecorators.push(style);
-                editor.setDecorations(style, [decorator]);
-            });
+            // Support turning off the inline text
+            if (this.pluginSettings.enableInlineErrorMessages) {
+                asserts.forEach((assertion) => {
+                    const decorator = {
+                        range: new vscode.Range(assertion.line - 1, 0, assertion.line - 1, 0),
+                        hoverMessage: assertion.terseMessage,
+                    };
+                    // We have to make a new style for each unique message, this is
+                    // why we have to remove off of them beforehand
+                    const style = decorations.failingAssertionStyle(assertion.terseMessage);
+                    this.failingAssertionDecorators.push(style);
+                    editor.setDecorations(style, [decorator]);
+                });
+            }
 
             // Loop through each individual fail and create an diagnostic
             // to pass back to VS Code.
@@ -354,5 +368,19 @@ export class JestExt {
 
     public deactivate() {
         this.jestProcess.closeProcess();
+    }
+
+    private getJestVersion(version: (v:number) => void) {
+        const packageJSON = pathToJestPackageJSON(this.pluginSettings);
+        if (packageJSON) {
+            const contents = readFileSync(packageJSON, 'utf8');
+            const packageMetadata = JSON.parse(contents);
+            if (packageMetadata['version']) {
+                version(parseInt(packageMetadata['version']));
+                return;
+            }
+        }
+        // Fallback to last pre-20 release
+        version(18);
     }
 }

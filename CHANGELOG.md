@@ -1,8 +1,15 @@
 ## Master
 
+* Adds an option to not show errors inline in the editor - orta
+* Adds an option to not snapshot update requests - orta
 * Show channel command - orta
+* Supports TS/TSX/JSX .snaps - orta
 * Create React App fixes - orta
 * Use "jest-test-typescript-parser" for our TypeScript parser - orta
+* Bumps min VS code release - orta
+
+Note: This release consolidates a lot of code with the Jest project, and so if you have a custom `testRegex` and use 
+      Jest below v20, chances are the decorators will not show. Everything else should be 👍 - orta
 
 ### 2.0.4
 

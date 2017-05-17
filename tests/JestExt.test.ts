@@ -4,6 +4,7 @@ import { JestExt } from '../src/JestExt';
 import { ProjectWorkspace, Settings, Runner } from 'jest-editor-support';
 import { window, workspace } from 'vscode';
 
+
 describe('JestExt', () => {
     const mockSettings = Settings as any as jest.Mock<any>;
     const mockRunner = Runner as any as jest.Mock<any>;
@@ -24,13 +25,13 @@ describe('JestExt', () => {
             jestVersionMajor: 17,
         }));
         new JestExt(projectWorkspace, channelStub, {});
-        expect(window.showErrorMessage).toBeCalledWith('This extension relies on Jest 18+ features, it will work, but the highlighting may not work correctly.');
+        expect(window.showErrorMessage.mock.calls).toMatchSnapshot();
     });
 
-    it('should not show error message if jest version is 18', () => {
+    it.skip('should not show error message if jest version is 20', () => {
         mockSettings.mockImplementation(() => ({
             getConfig: callback => callback(),
-            jestVersionMajor: 18,
+            jestVersionMajor: 20,
         }));
         new JestExt(projectWorkspace, channelStub, {});
         expect(window.showErrorMessage).not.toBeCalled();
@@ -50,6 +51,7 @@ describe('JestExt', () => {
             extension = new JestExt(projectWorkspace, channelStub, {});
             extension.startProcess();
         });
+        
 
         it('should not attempt to closeProcess again after stopping and starting', () => {
             extension.stopProcess();
