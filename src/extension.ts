@@ -18,12 +18,13 @@ export function activate(context: vscode.ExtensionContext) {
         pathToConfig: workspaceConfig.get<string>('pathToConfig'),
         pathToJest: workspaceConfig.get<string>('pathToJest'),
         enableInlineErrorMessages: workspaceConfig.get<boolean>('enableInlineErrorMessages'),
+        enableSnapshotUpdateMessages: workspaceConfig.get<boolean>('enableSnapshotUpdateMessages'),
         rootPath: vscode.workspace.rootPath,
     };
 
     const jestPath = pathToJest(pluginSettings);
     const configPath = pathToConfig(pluginSettings); 
-    const currentJestVersion = 18;
+    const currentJestVersion = 20;
     const workspace = new ProjectWorkspace(pluginSettings.rootPath, jestPath, configPath, currentJestVersion);
 
     // Create our own console

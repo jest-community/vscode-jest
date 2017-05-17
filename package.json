@@ -72,6 +72,11 @@
           "description": "Whether errors should be reported inline on a file",
           "type": "boolean",
           "default": true
+        },
+        "jest.enableSnapshotUpdateMessages": {
+          "description": "Whether snapshot update messages should show",
+          "type": "boolean",
+          "default": true
         }
       },
       "title": "The settings for the Jest VS Code runner."
@@ -102,10 +107,10 @@
     "watch-test": "yarn test -- --watch"
   },
   "devDependencies": {
-    "@types/jest": "^19.2.2",
+    "@types/jest": "^19.2.3",
     "@types/node": "^6.0.40",
     "glob": "^7.1.1",
-    "jest": "^18.0.0",
+    "jest": "20.0.2",
     "rimraf": "^2.5.4",
     "tslint": "^4.5.1",
     "typescript": "^2.2.1",

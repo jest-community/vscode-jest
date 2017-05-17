@@ -24,13 +24,13 @@ describe('JestExt', () => {
             jestVersionMajor: 17,
         }));
         new JestExt(projectWorkspace, channelStub, {});
-        expect(window.showErrorMessage).toBeCalledWith('This extension relies on Jest 18+ features, it will work, but the highlighting may not work correctly.');
+        expect(window.showErrorMessage).toBeCalledWith('This extension relies on Jest 20+ features, it continue to work, some features may not work correctly.');
     });
 
-    it('should not show error message if jest version is 18', () => {
+    it('should not show error message if jest version is 20', () => {
         mockSettings.mockImplementation(() => ({
             getConfig: callback => callback(),
-            jestVersionMajor: 18,
+            jestVersionMajor: 20,
         }));
         new JestExt(projectWorkspace, channelStub, {});
         expect(window.showErrorMessage).not.toBeCalled();

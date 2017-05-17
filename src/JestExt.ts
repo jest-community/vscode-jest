@@ -121,9 +121,10 @@ export class JestExt {
     }
 
     private getSettings() {
+
         this.jestSettings.getConfig(() => {
-            if (this.jestSettings.jestVersionMajor < 18) {
-                vscode.window.showErrorMessage('This extension relies on Jest 18+ features, it will work, but the highlighting may not work correctly.');
+            if (this.jestSettings.jestVersionMajor < 20) {
+                vscode.window.showErrorMessage('This extension relies on Jest 20+ features, it continue to work, some features may not work correctly.');
             }
             this.workspace.localJestMajorVersion = this.jestSettings.jestVersionMajor;
 
@@ -137,6 +138,7 @@ export class JestExt {
     }
 
     private detectedSnapshotErrors() {
+        if (!this.pluginSettings.enableInlineErrorMessages) { return; }
         vscode.window.showInformationMessage('Would you like to update your Snapshots?', { title: 'Replace them' }).then((response) => {
             // No response == cancel
             if (response) {

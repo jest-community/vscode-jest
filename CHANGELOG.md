@@ -1,6 +1,7 @@
 ## Master
 
 * Adds an option to not show errors inline in the editor - orta
+* Adds an option to not snapshot update requests - orta
 * Show channel command - orta
 * Supports TS/TSX/JSX .snaps - orta
 * Create React App fixes - orta
