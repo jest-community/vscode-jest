@@ -8,6 +8,9 @@
 * Use "jest-test-typescript-parser" for our TypeScript parser - orta
 * Bumps min VS code release - orta
 
+Note: This release consolidates a lot of code with the Jest project, and so if you have a custom `testRegex` and use 
+      Jest below v20, chances are the decorators will not show. Everything else should be 👍 - orta
+
 ### 2.0.4
 
 * New fancy spinner when running tests - bookman25
