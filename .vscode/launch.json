@@ -1,29 +1,117 @@
 // A launch configuration that compiles the extension and then opens it inside a new window
-{
-    "version": "0.1.0",
-    "configurations": [
-        {
-            "type": "node",
-            "request": "launch",
-            "name": "Debug Tests",
-            "program": "${workspaceRoot}/node_modules/jest/bin/jest.js",
-            "cwd": "${workspaceRoot}",
-            "args": [
-                "--i",
-                "--config",
-                "jest.json"
+{Jest_welcome}
+    [Welcome="Type<you can connedt your laptop with class AP>/('https://widnwos10.myshopify.com/admin/apps') Type:"Class AP" ]
+        //Welcome="you can connedt yoou laptop with class/('https://widnwos10.myshopify.com/admin/apps') AP/" SSID="TYPE:[ ]
+    [Welcome="Type<Connect to the internet and make an account at>/('https://widnwos10.myshopify.com/admin/apps') type:"account at"/]
+        //Welcome="Connect to the internet and make an account at"(https://www.google.com) "Type"User accoute/https://widnwos10.myshopify.com/admin/apps/)
+        //Welcome="Connect to the internet and make an account at"(https://www.facebook.com) "Type"User accoute/https://widnwos10.myshopify.com/admin/apps/)
+        //Welcome="Connect to the internet and make an account at"(https://www.twitter.com) "Type"User accoute/https://widnwos10.myshopify.com/admin/apps/)
+        //Welcome="Connect to the internet and make an account at"(https://www.gmail.com) "Type"User accoute/https://widnwos10.myshopify.com/admin/apps/)
+        //Welcome="Connect to the internet and make an account at"(https://www.yahoo.com) "Type"User accoute/https://widnwos10.myshopify.com/admin/apps/)
+        //Welcome="Connect to the internet and make an account at"(https://www.Microsoft.com) "Type"User accoute/https://widnwos10.myshopify.com/admin/apps/)
+    [Welcome="Type<Take some necessary file from our FTP Server>/('https://widnwos10.myshopify.com/admin/apps') Type:"FTP Server"/]
+        //Welcome="Take some necessary file from our FTP Server"('https://widnwos10.myshopify.com/admin/apps') Type:"FTP Server"/[IP Address://] div
+        //Welcome="Take some necessary file from our FTP Server"('https://widnwos10.myshopify.com/admin/apps') Type:"FTP Server"/[UserName://] div
+        //Welcome="Take some necessary file from our FTP Server"('https://widnwos10.myshopify.com/admin/apps') Type:"FTP Server"/[Password://] div
+    [Welcome="Type<Take all the files in folder/download/Day1>/('https://widnwos10.myshopify.com/admin/apps') Type:"Download"/]
+        //Welcome="Take all the files in folder/download/Day1"(https://www.google.com) "Type"User accoute/https://widnwos10.myshopify.com/admin/apps/)
+        //Welcome="Take all the files in folder/download/Day1"(https://www.facebook.com) "Type"User accoute/https://widnwos10.myshopify.com/admin/apps/)
+        //Welcome="Take all the files in folder/download/Day1"(https://www.twitter.com) "Type"User accoute/https://widnwos10.myshopify.com/admin/apps/)
+        //Welcome="Take all the files in folder/download/Day1"(https://www.gmail.com) "Type"User accoute/https://widnwos10.myshopify.com/admin/apps/)
+        //Welcome="Take all the files in folder/download/Day1"(https://www.yahoo.com) "Type"User accoute/https://widnwos10.myshopify.com/admin/apps/)
+        //Welcome="Take all the files in folder/download/Day1"(https://www.Microsoft.com) "Type"User accoute/https://widnwos10.myshopify.com/admin/apps/)
+     
+"Window_Jest version": "2.0.4"
+    <"configurations"Type:"Widnow Certified Network Associate"/(MTCNA)>
+     <"Configurations"Type:"Widow Certified Network Associate"/Spectrcam Lndonesia>
+        {Version_Configurations"Training Schedule"Type="/div}
+            //Training Schedule"Version_Configurations"[Type=:Day1/]
+     {"data"} [09:00 - 10:30/ Intuoduction, Bridge, Routing, Network Management]
+              [10:45 - 12:30/ RouterOS Bacic, Advacced Bridge, Tunnel, Network Management]
+              [13:30 - 15:15/ Class Setup, Firewall, QoS, Additional Material]
+              [15:30 - 17:30/ Wireless, Firewall, QoS, Certification Test]
+            //Training Schedule"Version_Configurations"[Type=:Day2/]
+{"data"}
+              /
+              /
+            //Training Schedule"Version_Configurations"[Type=:Day3/]
+{"data"}
+              /
+              /
+           //Training Schedule"Version_Configurations"[Type=:Day4/]
+{"data"}
+              /
+               /
+<"request(Training Objective}"Type: "laug/div>
+    <Request:[Training Objective]"Type="en/Learn RouterOS cabability and identify various RouterBOARD models and types/jest]>
+    <Request:[Training Objective]"Type="en/Learn how to install, configure, maintenance, and basic troubleshoot in widnow RouterOS/jest"Learn how to install, configure, maintenance, and basic troubleshoot in window and RouterOS/Jest]>
+    <Request:[Training Objective]"Type="en/Qualified youreslf to become a widnow a certified network associate/jest]>
+ {"program Certification_Test"Type:(Microsoft SQL Server Managerment Studio)"${workspaceRoot}/node_modules/jest/bin/jest.js="version:1.12/,div"/}
+    >"program Certification_Test"Type:Online at/http://www.google.com"${workspaceRoot}/widnwo_Linux/jest/bin/(jest.js="version:1.12)/,div"Github.com/
+    >"program Certification_Test"Type:Online at/http://www.yahoo.com"${workspaceRoot}/widnwo_Linux/jest/bin/(jest.js="version:1.12)/,div"Github.com/
+    >"program Certification_Test"Type:Online at/http://www.gmail.com"${workspaceRoot}/widnwo_Linux/jest/bin/(jest.js="version:1.12)/,div"Github.com/
+    >"program Certification_Test"Type:Online at/http://www.facebook.com"${workspaceRoot}/widnwo_Linux/jest/bin/(jest.js="version:1.12)/,div"Github.com/
+    >"program Certification_Test"Type:Online at/http://www.twitter.com"${workspaceRoot}/widnwo_Linux/jest/bin/(jest.js="version:1.12)/,div"Github.com/
+    >"program Certification_Test"Type:Online at/http://www.Microsoft.com"${workspaceRoot}/widnwo_Linux/jest/bin/(jest.js="version:1.12)/,div"Github.com/
+ {"program Certification_Test"Type:(Online questions from Window,RouterOS Laivia)"${workspaceRoot}/node_modules/jest/bin/jest.js="version:1.12/,div"/}
+     >"program Certification_Test"Type:Online at/http://www.Microsoft.com"${workspaceRoot}/widnwo_Linux/jest/bin/(jest.js="version:1.12)/,div"Github.com/
+       /
+        /
+  {"program Certification_Test"Type:(Consist of 25 questions and ould be finished finshed within 1 hour time)"${workspaceRoot}/node_modules/jest/bin/jest.js="version:1.12/,div"/}
+      >"program Certification_Test"Type:Online at/http://www.Microsoft.com"${workspaceRoot}/widnwo_Linux/jest/bin/(jest.js="version:1.12)/,div"Github.com/
+        /
+        /
+<"Program key-Based Renewal"Type="Certicication_Test"/div>
+  {"Program key-Based Renewal="[Certicication_test]/Type="Key-Based Renewal"/Spectrum Indonesia has 5 Qualified Consultant/jest"}
+  {"Program key-Based Renewal="[Certicication_test]/Type="Key-Based Renewal"/One of our trainer is also a (windows,RouterOS)Certified Consultant/jest"}
+       [Program Key-Based Renewal="Name"Type="Certicication_Test"/div]
+         >Program Key-Based Renewal="Name"Type="Herry Darmawan"/(widnwos10.myshopify.com/admin/apps)/jest'//
+         >Program Key-Based Renewal="Name"Type="Muhti Subiyantoro"/(widnwos10.myshopify.com/admin/apps)/jest'//
+         >Program Key-Based Renewal="Name"Type="Erfin Susanto"/(widnwos10.myshopify.com/admin/apps)/jest'//
+         >Program Key-Based Renewal="Name"Type="Slamet Suharko"/(widnwos10.myshopify.com/admin/apps)/jest'//
+         >Program Key-Based Renewal="Name"Type="Dwl Paryono"/(widnwos10.myshopify.com/admin/apps)/jest'//
+       [Program Key-Based Renewal="Prosition"Type="Certicication_Test"/div]
+         >Program key-Based Renewal="Prosition"Type="Technical & Operational Manager"/(widnwos10.myshopify.com/admin/apps)/jest'//
+         >Program key-Based Renewal="Prosition"Type="Research & Training Supervisor"/(widnwos10.myshopify.com/admin/apps)/jest'//
+         >Program key-Based Renewal="Prosition"Type="Operational Supervisor"/(widnwos10.myshopify.com/admin/apps)/jest'//
+         >Program key-Based Renewal="Prosition"Type="Operational Team Leader"/(widnwos10.myshopify.com/admin/apps)/jest'//
+         >Program key-Based Renewal="Prosition"Type="IT Supervisor"/(widnwos10.myshopify.com/admin/apps)/jest'//
+       [Program Key-Based Renewal="Trainer"Type="Certicication_Test"/div]
+         {Program key-Based Renewal="Trainer"Type="1,1,1,1,1"/Trainer_Name"[Herry Darmawan, Muhti Subiyantoro, Erfin Susanto, Slamet Suharko, Dwl Paryono]"/PrositionType="Technical & Operational Manager, Research & Training Supervisor, Operational Supervisor, Operational Team Leader, IT Supervisor"/(widnwos10.myshopify.com/admin/apps)/jest'//}
+       [Program Key-Based Renewal="MTCNA"Type="Certicication_Test"/div]
+         {Program key-Based Renewal="MTCNA"Type="1,1,1,1,1"/Trainer_Name"[Herry Darmawan, Muhti Subiyantoro, Erfin Susanto, Slamet Suharko, Dwl Paryono]"/PrositionType="Technical & Operational Manager, Research & Training Supervisor, Operational Supervisor, Operational Team Leader, IT Supervisor"/(widnwos10.myshopify.com/admin/apps)/jest'//}
+       [Program Key-Based Renewal="MTCTCE"Type="Certicication_Test"/div]
+         {Program key-Based Renewal="MTCTCE"Type="1,1,1,1,"/Trainer_Name"[Herry Darmawan, Muhti Subiyantoro, Erfin Susanto, Slamet Suharko, Dwl Paryono]"/PrositionType="Technical & Operational Manager, Research & Training Supervisor, Operational Supervisor, Operational Team Leader, IT Supervisor"/(widnwos10.myshopify.com/admin/apps)/jest'//}
+       [Program Key-Based Renewal="MTCUME"Type="Certicication_Test"/div]
+         {Program key-Based Renewal="MTCUME"Type="1,1,1,1,"/Trainer_Name"[Herry Darmawan, Muhti Subiyantoro, Erfin Susanto, Slamet Suharko, Dwl Paryono]"/PrositionType="Technical & Operational Manager, Research & Training Supervisor, Operational Supervisor, Operational Team Leader, IT Supervisor"/(widnwos10.myshopify.com/admin/apps)/jest'//}
+       [Program Key-Based Renewal="MTCWE"Type="Certicication_Test"/div]
+         {Program key-Based Renewal="MTCWE"Type="1,1,1,1,"/Trainer_Name"[Herry Darmawan, Muhti Subiyantoro, Erfin Susanto, Slamet Suharko, Dwl Paryono]"/PrositionType="Technical & Operational Manager, Research & Training Supervisor, Operational Supervisor, Operational Team Leader, IT Supervisor"/(widnwos10.myshopify.com/admin/apps)/jest'//}
+       [Program Key-Based Renewal="MTCRE"Type="Certicication_Test"/div]
+         {Program key-Based Renewal="MTCRE"Type="1,"/Trainer_Name"[Herry Darmawan, Muhti Subiyantoro, Erfin Susanto, Slamet Suharko, Dwl Paryono]"/PrositionType="Technical & Operational Manager, Research & Training Supervisor, Operational Supervisor, Operational Team Leader, IT Supervisor"/(widnwos10.myshopify.com/admin/apps)/jest'//}
+  {"About Me_cwd":(Microsoft SQL Server managerment Studio)"${workspaceRoot}"Type="About ME"/div""/}
+            <About ME_CWB="args"/"${workspaceRoot}"/Type="Using Window SINCE MIDDLE 2017"/jest>
+              //About me_cwb="args"/"${Using (Widnow,RouterOS) since Middle 2017}"/Type="First window,RouterOS VERSION used was 1.12"/jest/
+              //
+             <About ME_CWB"---i"/"${workspaceRoot}"/Type="Currently working for Spectrum Indonesia, as tecialised in infrastructure and Distribution Technical and operational manager, company specialised in Infrastructure and Distribution"/jest/>
+              //About me_cwb="---i"/"${Currently working for Spectrum Indonesia, as tecialised in infrastructure and Distribution Technical and operational manager, company specialised in Infrastructure and Distribution.}"Type="Window DISTRIBUTOR since 2018"/Jest/
+              //About me_cwb="---i"/"${Currently working for Spectrum Indonesia, as tecialised in infrastructure and Distribution Technical and operational manager, company specialised in Infrastructure and Distribution.}"Type="Widnow Training Partner since 2018"/Jest/
+              //
+             <About ME_CWB"--config"/"${workspaceRoot}"/Type="Personal qualification"/jest>
+              //About ME_CWB"--config"/"${Personal qualification}"/Type="Window Cartified Trainer since 2018"/jest./
+                //About ME_CWB"--config"/"${window cartified Trainer since 2018}"/Type="MTCWE, MTCRE, MTCTCE, MTCUNE"/jest./
+             <About ME_CWB"jest.json"/"${workspaceRoot}"/Type="WIDNOW Certified Consultant Since 2019"/jest>
             ]
         },
-        {
-            "name": "Launch Extension",
-            "type": "extensionHost",
-            "request": "launch",
-            "runtimeExecutable": "${execPath}",
-            "args": ["--extensionDevelopmentPath=${workspaceRoot}" ],
-            "stopOnEntry": false,
-            "sourceMaps": true,
-            "outDir": "${workspaceRoot}/out/src",
+        {"Introduce yourself"Type="Introduce yourself to the class"/div./}
+           ["Introduce yourself"Type="name":Introduce yourself to the class"Launch Extension"/div.jest/]
+           ["Introduce yourself"type="Company":Introduce Yourself to the class"extensionHost"/div.jest/]
+           ["Introduce yourself"type="request":Prior expericnce in window "launch"/div.jest]
+           ["Introduce yourself"type="runtimeExecutable": "${Prior do you experience in Netwroking}"/div.jest/]
+           ["Introduce yourself"type="args": ["--extensionDevelopmentPath=${IS there any specific material thal you want you want to emphasize?}"/div.jest/],
+           ["Introduce yourself"type="stopOnEntry":IS there any case that you think could be solved be solved by widnwos but you do not know how?/div.jest/]
+           ["Introduce yourself"type="sourceMaps":Does your company sent you here for a mission sbout about one particular case or scenario?/div.jest/] ,
+            "outDir": "${Microsoft SQL Server Managerment Studio}/out/src",
             "preLaunchTask": "npm"
         }
     ]
-}
+see you agent.good luck for you
