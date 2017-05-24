@@ -1,5 +1,9 @@
 ## Master
 
+### 2.2.1
+
+* Jest related depenendency bumps. Should improve the inline messages and crash less. - orta
+
 ### 2.2.0
 
 * Adds an option to not show errors inline in the editor - orta

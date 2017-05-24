@@ -110,7 +110,7 @@
     "@types/jest": "^19.2.3",
     "@types/node": "^6.0.40",
     "glob": "^7.1.1",
-    "jest": "20.0.2",
+    "jest": "^20.0.4",
     "rimraf": "^2.5.4",
     "tslint": "^4.5.1",
     "typescript": "^2.2.1",
@@ -118,7 +118,7 @@
   },
   "dependencies": {
     "elegant-spinner": "^1.0.1",
-    "jest-editor-support": "^20.0.3",
-    "jest-test-typescript-parser": "^20.0.3"
+    "jest-editor-support": "^20.0.4",
+    "jest-test-typescript-parser": "^20.0.4"
   }
 }
