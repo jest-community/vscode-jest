@@ -1,25 +1,13 @@
 {
-	"rules": {
-		"class-name": true,
-		"curly": true,
-		"eofline": true,
-		"no-duplicate-variable": true,
-		"no-unused-expression": true,
-		"no-var-keyword": true,
-		"prefer-const": true,
-		"quotemark": [
-			true,
-			"single"
-		],
-		"semicolon": [
-			"never"
-		],
-		"triple-equals": true,
-		"trailing-comma": [
-			true,
-			{
-				"multiline": "always"
-			}
-		]
-	}
+  "extends": ["tslint-config-prettier"],
+  "rules": {
+    "class-name": true,
+    "curly": true,
+    "eofline": true,
+    "no-duplicate-variable": true,
+    "no-unused-expression": true,
+    "no-var-keyword": true,
+    "prefer-const": true,
+    "triple-equals": true
+  }
 }

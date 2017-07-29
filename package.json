@@ -19,9 +19,7 @@
     "theme": "light",
     "color": "#ca461a"
   },
-  "categories": [
-    "Other"
-  ],
+  "categories": ["Other"],
   "activationEvents": [
     "workspaceContains:node_modules/.bin/jest",
     "workspaceContains:node_modules/react-scripts/node_modules/.bin/jest",
@@ -33,12 +31,7 @@
     "languages": [
       {
         "id": "jest-snapshot",
-        "extensions": [
-          ".js.snap",
-          ".jsx.snap",
-          ".ts.snap",
-          ".tsx.snap"
-        ]
+        "extensions": [".js.snap", ".jsx.snap", ".ts.snap", ".tsx.snap"]
       }
     ],
     "grammars": [
@@ -96,7 +89,12 @@
       }
     ]
   },
+  "lint-staged": {
+    "*.json": ["npm run prettier-write --", "git add"],
+    "*.ts": ["npm run prettier-write --", "git add"]
+  },
   "scripts": {
+    "precommit": "lint-staged",
     "ci": "yarn lint && yarn test",
     "clean-out": "rimraf ./out",
     "vscode:prepublish": "yarn clean-out && tsc -p ./tsconfig.publish.json",
@@ -104,15 +102,22 @@
     "lint": "node scripts/lint",
     "postinstall": "node ./node_modules/vscode/bin/install",
     "test": "jest --config jest.json",
-    "watch-test": "yarn test -- --watch"
+    "watch-test": "yarn test -- --watch",
+    "prettier": "prettier",
+    "prettier-write": "npm run prettier -- --parser typescript --no-semi --single-quote --trailing-comma es5 --write --print-width 120",
+    "prettier-project": "npm run prettier-write -- '?(__mocks__|src|tests)/**/*.ts'"
   },
   "devDependencies": {
     "@types/jest": "^19.2.3",
     "@types/node": "^6.0.40",
     "glob": "^7.1.1",
+    "husky": "^0.14.3",
     "jest": "^20.0.4",
+    "lint-staged": "^4.0.2",
+    "prettier": "^1.5.3",
     "rimraf": "^2.5.4",
     "tslint": "^4.5.1",
+    "tslint-config-prettier": "^1.3.0",
     "typescript": "^2.2.1",
     "vscode": "^1.1.0"
   },

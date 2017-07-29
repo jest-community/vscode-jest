@@ -1,1 +1,1 @@
-export const extensionName = 'io.orta.jest';
+export const extensionName = 'io.orta.jest'
