@@ -1,5 +1,7 @@
 ## Master
 
+* Apply [prettier](https://github.com/prettier/prettier) to the codebase. - macklinu
+
 ### 2.2.1
 
 * Jest related depenendency bumps. Should improve the inline messages and crash less. - orta
