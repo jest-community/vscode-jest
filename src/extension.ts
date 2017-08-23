@@ -7,6 +7,7 @@ import { JestExt } from './JestExt'
 import { IPluginSettings } from './IPluginSettings'
 import { registerStatusBar } from './statusBar'
 import { registerFileChangeWatchers } from './fileChangeWatchers'
+import { registerCoverageCodeLens } from './Coverage'
 
 let extensionInstance: JestExt
 
@@ -21,7 +22,6 @@ export function activate(context: vscode.ExtensionContext) {
     enableSnapshotUpdateMessages: workspaceConfig.get<boolean>('enableSnapshotUpdateMessages'),
     rootPath: vscode.workspace.rootPath,
   }
-
   const jestPath = pathToJest(pluginSettings)
   const configPath = pathToConfig(pluginSettings)
   const currentJestVersion = 20
@@ -43,7 +43,8 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerTextEditorCommand('io.orta.jest.show-channel', () => {
       channel.show()
     }),
-    ...registerFileChangeWatchers(extensionInstance)
+    ...registerFileChangeWatchers(extensionInstance),
+    ...registerCoverageCodeLens(extensionInstance)
   )
 }
 

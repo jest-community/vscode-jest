@@ -19,6 +19,7 @@ import * as status from './statusBar'
 import { TestReconciliationState } from './TestReconciliationState'
 import { pathToJestPackageJSON } from './helpers'
 import { readFileSync } from 'fs'
+import { Coverage, showCoverageOverlay } from './Coverage'
 
 export class JestExt {
   private workspace: ProjectWorkspace
@@ -26,6 +27,7 @@ export class JestExt {
   private jestSettings: Settings
   private reconciler: TestReconciler
   private pluginSettings: IPluginSettings
+  public coverage: Coverage
 
   // So you can read what's going on
   private channel: vscode.OutputChannel
@@ -57,6 +59,7 @@ export class JestExt {
     this.reconciler = new TestReconciler()
     this.jestSettings = new Settings(workspace)
     this.pluginSettings = pluginSettings
+    this.coverage = new Coverage(this.workspace.rootPath)
 
     this.getSettings()
   }
@@ -175,6 +178,7 @@ export class JestExt {
   }
 
   public triggerUpdateDecorations(editor: vscode.TextEditor) {
+    showCoverageOverlay(editor, this.coverage)
     if (!this.canUpdateDecorators(editor)) {
       return
     }
@@ -356,6 +360,7 @@ export class JestExt {
   }
 
   private updateWithData(data: JestTotalResults) {
+    this.coverage.mapCoverage(data.coverageMap)
     this.reconciler.updateFileWithJestStatus(data)
     this.failDiagnostics.clear()
 
