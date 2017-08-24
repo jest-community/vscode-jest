@@ -19,6 +19,25 @@ export function failingItName() {
   })
 }
 
+export function skipItName() {
+  return window.createTextEditorDecorationType({
+    overviewRulerColor: 'yellow',
+    overviewRulerLane: OverviewRulerLane.Left,
+    light: {
+      before: {
+        color: '#fed37f',
+        contentText: '○',
+      },
+    },
+    dark: {
+      before: {
+        color: '#fed37f',
+        contentText: '○',
+      },
+    },
+  })
+}
+
 export function passingItName() {
   return window.createTextEditorDecorationType({
     overviewRulerColor: 'green',

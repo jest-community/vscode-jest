@@ -10,6 +10,7 @@ describe('JestExt', () => {
   const getConfiguration = workspace.getConfiguration as jest.Mock<any>
   let projectWorkspace: ProjectWorkspace
   const channelStub = { appendLine: () => {} } as any
+  const mockShowErrorMessage = window.showErrorMessage as jest.Mock<any>
 
   beforeEach(() => {
     jest.resetAllMocks()
@@ -24,7 +25,7 @@ describe('JestExt', () => {
       jestVersionMajor: 17,
     }))
     new JestExt(projectWorkspace, channelStub, {})
-    expect(window.showErrorMessage.mock.calls).toMatchSnapshot()
+    expect(mockShowErrorMessage.mock.calls).toMatchSnapshot()
   })
 
   it.skip('should not show error message if jest version is 20', () => {
