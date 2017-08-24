@@ -17,6 +17,7 @@ A comprehensive experience when using [Facebook's Jest](https://github.com/faceb
 * Highlights the errors next to the `expect` functions.
 * Adds syntax highlighting to snapshot files.
 * A one button update for failed snapshots.
+* Show coverage information in files being tested. (_requires coverage to be collected by your jest config_)
 
 ## How to get it?
 

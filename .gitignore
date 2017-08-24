@@ -2,3 +2,4 @@ out
 node_modules
 _jest-editor/
 integrations/create-react-example/node_modules
+/coverage/

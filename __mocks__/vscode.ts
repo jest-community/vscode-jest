@@ -9,10 +9,15 @@ const window = {
     show: jest.fn(),
   })),
   showErrorMessage: jest.fn(),
+  createTextEditorDecorationType: jest.fn(),
 }
 
 const workspace = {
   getConfiguration: jest.fn(),
 }
 
-export { languages, StatusBarAlignment, window, workspace }
+const OverviewRulerLane = {
+  Left: null,
+}
+
+export { languages, StatusBarAlignment, window, workspace, OverviewRulerLane }
