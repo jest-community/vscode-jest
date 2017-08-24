@@ -37,6 +37,7 @@ export class JestExt {
 
   private passingItStyle: vscode.TextEditorDecorationType
   private failingItStyle: vscode.TextEditorDecorationType
+  private skipItStyle: vscode.TextEditorDecorationType
   private unknownItStyle: vscode.TextEditorDecorationType
 
   private parsingTestFile = false
@@ -187,9 +188,10 @@ export class JestExt {
     this.parsingTestFile = true
 
     // This makes it cheaper later down the line
-    let successes: Array<ItBlock> = []
+    const successes: Array<ItBlock> = []
     const fails: Array<ItBlock> = []
-    let unknowns: Array<ItBlock> = []
+    const skips: Array<ItBlock> = []
+    const unknowns: Array<ItBlock> = []
 
     // Parse the current JS file
     const path = editor.document.uri.fsPath
@@ -203,45 +205,34 @@ export class JestExt {
     // Loop through our it/test references, then ask the reconciler ( the thing
     // that reads the JSON from Jest ) whether it has passed/failed/not ran.
     const filePath = editor.document.uri.fsPath
-    const fileState = this.reconciler.stateForTestFile(filePath)
-    switch (fileState) {
-      // If the file failed, then it can contain passes, fails and unknowns
-      case TestReconciliationState.KnownFail:
-        itBlocks.forEach(it => {
-          const state = this.reconciler.stateForTestAssertion(filePath, it.name)
-          if (state !== null) {
-            switch (state.status) {
-              case TestReconciliationState.KnownSuccess:
-                successes.push(it)
-                break
-              case TestReconciliationState.KnownFail:
-                fails.push(it)
-                break
-              case TestReconciliationState.Unknown:
-                unknowns.push(it)
-                break
-            }
-          } else {
+    itBlocks.forEach(it => {
+      const state = this.reconciler.stateForTestAssertion(filePath, it.name)
+      if (state !== null) {
+        switch (state.status) {
+          case TestReconciliationState.KnownSuccess:
+            successes.push(it)
+            break
+          case TestReconciliationState.KnownFail:
+            fails.push(it)
+            break
+          case TestReconciliationState.KnownSkip:
+            skips.push(it)
+            break
+          case TestReconciliationState.Unknown:
             unknowns.push(it)
-          }
-        })
-        break
-      // Test passed, all it's must be green
-      case TestReconciliationState.KnownSuccess:
-        successes = itBlocks
-        break
-
-      // We don't know, not ran probably
-      case TestReconciliationState.Unknown:
-        unknowns = itBlocks
-        break
-    }
+            break
+        }
+      } else {
+        unknowns.push(it)
+      }
+    })
 
     // Create a map for the states and styles to show inline.
     // Note that this specifically is only for dots.
     const styleMap = [
       { data: successes, decorationType: this.passingItStyle, state: TestReconciliationState.KnownSuccess },
       { data: fails, decorationType: this.failingItStyle, state: TestReconciliationState.KnownFail },
+      { data: skips, decorationType: this.skipItStyle, state: TestReconciliationState.KnownSkip },
       { data: unknowns, decorationType: this.unknownItStyle, state: TestReconciliationState.Unknown },
     ]
     styleMap.forEach(style => {
@@ -351,6 +342,7 @@ export class JestExt {
   private setupDecorators() {
     this.passingItStyle = decorations.passingItName()
     this.failingItStyle = decorations.failingItName()
+    this.skipItStyle = decorations.skipItName()
     this.unknownItStyle = decorations.notRanItName()
   }
 
@@ -381,6 +373,8 @@ export class JestExt {
           return 'Passed'
         case TestReconciliationState.KnownFail:
           return 'Failed'
+        case TestReconciliationState.KnownSkip:
+          return 'Skipped'
         case TestReconciliationState.Unknown:
           return 'Test has not run yet, due to Jest only running tests related to changes.'
       }
