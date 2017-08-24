@@ -12,6 +12,7 @@ import {
   IParseResults,
 } from 'jest-editor-support'
 import { parse as typescriptParse } from 'jest-test-typescript-parser'
+import { matcher } from 'micromatch'
 
 import * as decorations from './decorations'
 import { IPluginSettings } from './IPluginSettings'
@@ -317,17 +318,23 @@ export class JestExt {
   }
 
   private wouldJestRunURI(uri: vscode.Uri) {
-    const testRegex = new RegExp(this.jestSettings.settings.testRegex)
-    const root = this.pluginSettings.rootPath
     const filePath = uri.fsPath
+
+    const globs: string[] = (this.jestSettings.settings as any).testMatch
+    if (globs && globs.length) {
+      const matchers = globs.map(each => matcher(each, { dot: true }))
+      const matched = matchers.some(isMatch => isMatch(filePath))
+      return matched
+    }
+
+    const root = this.pluginSettings.rootPath
     let relative = path.normalize(path.relative(root, filePath))
     // replace windows path separator with normal slash
     if (path.sep === '\\') {
       relative = relative.replace(/\\/g, '/')
     }
-
+    const testRegex = new RegExp(this.jestSettings.settings.testRegex)
     const matches = relative.match(testRegex)
-
     return matches && matches.length > 0
   }
 

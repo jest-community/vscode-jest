@@ -126,6 +126,7 @@
     "istanbul-lib-coverage": "^1.0.1",
     "istanbul-lib-source-maps": "^1.1.0",
     "jest-editor-support": "^20.0.4",
-    "jest-test-typescript-parser": "^20.0.4"
+    "jest-test-typescript-parser": "^20.0.4",
+    "micromatch": "2"
   }
 }
