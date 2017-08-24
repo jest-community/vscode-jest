@@ -1,6 +1,9 @@
 ## Master
 
+### 2.3.0
+
 * Apply [prettier](https://github.com/prettier/prettier) to the codebase. - macklinu
+* Adds coverage support - bookman25
 
 ### 2.2.1
 
