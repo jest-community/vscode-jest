@@ -265,13 +265,14 @@ export class JestExt {
       // Support turning off the inline text
       if (this.pluginSettings.enableInlineErrorMessages) {
         asserts.forEach(assertion => {
+          const errorMessage = assertion.terseMessage || assertion.shortMessage
           const decorator = {
             range: new vscode.Range(assertion.line - 1, 0, assertion.line - 1, 0),
-            hoverMessage: assertion.terseMessage,
+            hoverMessage: errorMessage,
           }
           // We have to make a new style for each unique message, this is
           // why we have to remove off of them beforehand
-          const style = decorations.failingAssertionStyle(assertion.terseMessage)
+          const style = decorations.failingAssertionStyle(errorMessage)
           this.failingAssertionDecorators.push(style)
           editor.setDecorations(style, [decorator])
         })
