@@ -1,21 +1,20 @@
-// Place your settings in this file to overwrite default and user settings.
 {
-    "files.exclude": {
-        "out": true,
-        "node_modules/jest-editor-support/src": false
-    },
-    "tslint.exclude": "./integrations/*",
-    "search.exclude": {
-        "out": true, // set this to false to include "out" folder in search results,
-        "node_modules/jest-editor-support/src": false
-
-    },
-    "typescript.tsdk": "./node_modules/typescript/lib", // we want to use the TS server from our node_modules folder to control its version
-    "eslint.enable": false,
-    "tslint.autoFixOnSave": true,
-    "jest.pathToConfig": "./jest.json",
-    "prettier.semi": false,
-    "prettier.printWidth": 120,
-    "prettier.trailingComma": "es5",
-    "prettier.singleQuote": true
+  "files.exclude": {
+    "out": true,
+    "node_modules/jest-editor-support/src": false,
+    "coverage/": true
+  },
+  "tslint.exclude": "./integrations/*",
+  "search.exclude": {
+    "out": true,
+    "node_modules/jest-editor-support/src": false
+  },
+  "typescript.tsdk": "./node_modules/typescript/lib",
+  "eslint.enable": false,
+  "tslint.autoFixOnSave": true,
+  "jest.pathToConfig": "./jest.json",
+  "prettier.semi": false,
+  "prettier.printWidth": 120,
+  "prettier.trailingComma": "es5",
+  "prettier.singleQuote": true
 }
