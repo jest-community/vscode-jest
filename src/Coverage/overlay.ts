@@ -2,16 +2,27 @@ import * as vscode from 'vscode'
 import { Location } from 'istanbul-lib-coverage'
 
 import { Coverage } from './Coverage'
+import { extensionName } from '../appGlobals'
+
+const toggleCoverageCommand = `${extensionName}.coverage.toggle`
+let showCoverage = false
+
+export function registerToggleCoverageOverlay() {
+  return vscode.commands.registerCommand(toggleCoverageCommand, () => (showCoverage = !showCoverage))
+}
 
 export function showCoverageOverlay(editor: vscode.TextEditor, allCoverage: Coverage) {
+  if (!showCoverage) {
+    return
+  }
   const atEmptyScreen = !editor
   if (atEmptyScreen) {
-    return false
+    return
   }
 
   const inSettings = !editor.document
   if (inSettings) {
-    return false
+    return
   }
 
   const coverage = allCoverage.getCoverageForFile(editor.document.uri.fsPath)
