@@ -86,6 +86,10 @@
       {
         "command": "io.orta.jest.show-channel",
         "title": "Jest: Show Test Output Channel"
+      },
+      {
+        "command": "io.orta.jest.coverage.toggle",
+        "title": "Jest: Toggle Coverage Overlay"
       }
     ]
   },

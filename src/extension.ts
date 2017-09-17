@@ -7,7 +7,7 @@ import { JestExt } from './JestExt'
 import { IPluginSettings } from './IPluginSettings'
 import { registerStatusBar } from './statusBar'
 import { registerFileChangeWatchers } from './fileChangeWatchers'
-import { registerCoverageCodeLens } from './Coverage'
+import { registerCoverageCodeLens, registerToggleCoverageOverlay } from './Coverage'
 
 let extensionInstance: JestExt
 
@@ -44,7 +44,8 @@ export function activate(context: vscode.ExtensionContext) {
       channel.show()
     }),
     ...registerFileChangeWatchers(extensionInstance),
-    ...registerCoverageCodeLens(extensionInstance)
+    ...registerCoverageCodeLens(extensionInstance),
+    registerToggleCoverageOverlay()
   )
 }
 
