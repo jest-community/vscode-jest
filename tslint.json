@@ -8,6 +8,7 @@
     "no-unused-expression": true,
     "no-var-keyword": true,
     "prefer-const": true,
-    "triple-equals": true
+    "triple-equals": true,
+    "no-unused-expression": [true, "allow-new"]
   }
 }

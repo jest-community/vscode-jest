@@ -1,7 +1,6 @@
 import * as vscode from 'vscode'
 import * as path from 'path'
 import {
-  Expect,
   ItBlock,
   Runner,
   Settings,
@@ -10,6 +9,7 @@ import {
   TestReconciler,
   JestTotalResults,
   IParseResults,
+  TestAssertionStatus,
 } from 'jest-editor-support'
 import { parse as typescriptParse } from 'jest-test-typescript-parser'
 import { matcher } from 'micromatch'
@@ -21,6 +21,7 @@ import { TestReconciliationState } from './TestReconciliationState'
 import { pathToJestPackageJSON } from './helpers'
 import { readFileSync } from 'fs'
 import { Coverage, showCoverageOverlay } from './Coverage'
+import { updateDiagnositics, resetDiagnositics, failedSuiteCount } from './diagnostics'
 
 export class JestExt {
   private workspace: ProjectWorkspace
@@ -42,15 +43,12 @@ export class JestExt {
   private unknownItStyle: vscode.TextEditorDecorationType
 
   private parsingTestFile = false
-  private parseResults: IParseResults = {
-    expects: [],
-    itBlocks: [],
-  }
 
   // We have to keep track of our inline assert fails to remove later
   private failingAssertionDecorators: vscode.TextEditorDecorationType[]
 
   private clearOnNextInput: boolean
+  private forcedClose: boolean
 
   constructor(workspace: ProjectWorkspace, outputChannel: vscode.OutputChannel, pluginSettings: IPluginSettings) {
     this.workspace = workspace
@@ -78,34 +76,42 @@ export class JestExt {
     this.jestProcess = new Runner(this.workspace)
 
     this.jestProcess
-      .on('debuggerComplete', () => {
+      .on('debuggerProcessExit', () => {
         this.channel.appendLine('Closed Jest')
+        if (!this.jestProcess.watchMode && !this.forcedClose) {
+          this.channel.appendLine('Starting watch mode...')
+          this.jestProcess.closeProcess()
+          this.jestProcess.start(true)
+        }
       })
       .on('executableJSON', (data: JestTotalResults) => {
         this.updateWithData(data)
       })
       .on('executableOutput', (output: string) => {
-        if (!output.includes('Watch Usage')) {
+        if (!this.shouldIgnoreOutput(output)) {
           this.channel.appendLine(output)
         }
       })
       .on('executableStdErr', (error: Buffer) => {
+        const message = error.toString()
+
+        if (this.shouldIgnoreOutput(message)) {
+          return
+        }
+
         // The "tests are done" message comes through stdErr
         // We want to use this as a marker that the console should
         // be cleared, as the next input will be from a new test run.
-
         if (this.clearOnNextInput) {
           this.clearOnNextInput = false
           this.parsingTestFile = false
           this.testsHaveStartedRunning()
         }
-        const message = error.toString()
         // thanks Qix, http://stackoverflow.com/questions/25245716/remove-all-ansi-colors-styles-from-strings
         const noANSI = message.replace(
           /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g,
           ''
         )
-
         if (noANSI.includes('snapshot test failed')) {
           this.detectedSnapshotErrors()
         }
@@ -126,12 +132,17 @@ export class JestExt {
     this.setupDecorators()
     // The bottom bar thing
     this.setupStatusBar()
+    //reset the jest diagnostics
+    resetDiagnositics(this.failDiagnostics)
+
+    this.forcedClose = false
     // Go!
-    this.jestProcess.start()
+    this.jestProcess.start(false)
   }
 
   public stopProcess() {
     this.channel.appendLine('Closing Jest jest_runner.')
+    this.forcedClose = true
     this.jestProcess.closeProcess()
     delete this.jestProcess
     status.stopped()
@@ -187,34 +198,50 @@ export class JestExt {
 
     // OK - lets go
     this.parsingTestFile = true
+    this.updateDotDecorators(editor)
+    this.parsingTestFile = false
+  }
 
+  private parseTestFile(path: string): IParseResults {
+    const isTypeScript = path.match(/.(ts|tsx)$/)
+    const parser = isTypeScript ? typescriptParse : babylonParse
+    return parser(path)
+  }
+
+  private sortDecorationBlocks(
+    itBlocks: ItBlock[],
+    assertions: TestAssertionStatus[],
+    enableInlineErrorMessages: boolean
+  ): {
+    successes: Array<ItBlock>
+    fails: Array<ItBlock>
+    skips: Array<ItBlock>
+    unknowns: Array<ItBlock>
+    inlineErrors: Array<TestAssertionStatus>
+  } {
     // This makes it cheaper later down the line
     const successes: Array<ItBlock> = []
     const fails: Array<ItBlock> = []
     const skips: Array<ItBlock> = []
     const unknowns: Array<ItBlock> = []
+    const inlineErrors: Array<TestAssertionStatus> = []
 
-    // Parse the current JS file
-    const path = editor.document.uri.fsPath
-    const isTypeScript = path.match(/.(ts|tsx)$/)
-    const parser = isTypeScript ? typescriptParse : babylonParse
-    this.parseResults = parser(editor.document.uri.fsPath)
+    const assertionMap: { [title: string]: TestAssertionStatus } = {}
+    assertions.forEach(a => (assertionMap[a.title] = a))
 
     // Use the parsers it blocks for references
-    const { itBlocks } = this.parseResults
-
-    // Loop through our it/test references, then ask the reconciler ( the thing
-    // that reads the JSON from Jest ) whether it has passed/failed/not ran.
-    const filePath = editor.document.uri.fsPath
     itBlocks.forEach(it => {
-      const state = this.reconciler.stateForTestAssertion(filePath, it.name)
-      if (state !== null) {
+      const state = assertionMap[it.name]
+      if (state) {
         switch (state.status) {
           case TestReconciliationState.KnownSuccess:
             successes.push(it)
             break
           case TestReconciliationState.KnownFail:
             fails.push(it)
+            if (enableInlineErrorMessages) {
+              inlineErrors.push(state)
+            }
             break
           case TestReconciliationState.KnownSkip:
             skips.push(it)
@@ -228,8 +255,19 @@ export class JestExt {
       }
     })
 
-    // Create a map for the states and styles to show inline.
-    // Note that this specifically is only for dots.
+    return { successes, fails, skips, unknowns, inlineErrors }
+  }
+
+  private updateDotDecorators(editor: vscode.TextEditor) {
+    const filePath = editor.document.uri.fsPath
+    const { itBlocks } = this.parseTestFile(filePath)
+    const assertions = this.reconciler.assertionsForTestFile(filePath)
+    const { successes, fails, skips, unknowns, inlineErrors } = this.sortDecorationBlocks(
+      itBlocks,
+      assertions,
+      this.pluginSettings.enableInlineErrorMessages
+    )
+
     const styleMap = [
       { data: successes, decorationType: this.passingItStyle, state: TestReconciliationState.KnownSuccess },
       { data: fails, decorationType: this.failingItStyle, state: TestReconciliationState.KnownFail },
@@ -241,62 +279,32 @@ export class JestExt {
       editor.setDecorations(style.decorationType, decorators)
     })
 
-    // Now we want to handle adding the error message after the failing assertion
-    // so first we need to clear all assertions, this is a bit of a shame as it can flash
-    // however, the API for a style in this case is not built to handle different inline texts
-    // as easily as it handles inline dots
+    this.resetInlineErrorDecorators(editor)
+    inlineErrors.forEach(a => {
+      const { style, decorator } = this.generateInlineErrorDecorator(a)
+      editor.setDecorations(style, [decorator])
+    })
+  }
 
-    // Remove all of the existing line decorators
+  private resetInlineErrorDecorators(editor: vscode.TextEditor) {
     this.failingAssertionDecorators.forEach(element => {
       editor.setDecorations(element, [])
     })
     this.failingAssertionDecorators = []
+  }
 
-    // We've got JSON data back from Jest about a failing test run.
-    // We don't want to handle the decorators (inline dots/messages here)
-    // but we can handle creating "problems" for the workspace here.
+  private generateInlineErrorDecorator(assertion: TestAssertionStatus) {
+    const errorMessage = assertion.terseMessage || assertion.shortMessage
+    const decorator = {
+      range: new vscode.Range(assertion.line - 1, 0, assertion.line - 1, 0),
+      hoverMessage: errorMessage,
+    }
+    // We have to make a new style for each unique message, this is
+    // why we have to remove off of them beforehand
+    const style = decorations.failingAssertionStyle(errorMessage)
+    this.failingAssertionDecorators.push(style)
 
-    // For each failed file
-    this.reconciler.failedStatuses().forEach(fail => {
-      // Generate a uri, and pull out the failing it/tests
-      const uri = vscode.Uri.file(fail.file)
-      const asserts = fail.assertions.filter(a => a.status === TestReconciliationState.KnownFail)
-
-      // Support turning off the inline text
-      if (this.pluginSettings.enableInlineErrorMessages) {
-        asserts.forEach(assertion => {
-          const errorMessage = assertion.terseMessage || assertion.shortMessage
-          const decorator = {
-            range: new vscode.Range(assertion.line - 1, 0, assertion.line - 1, 0),
-            hoverMessage: errorMessage,
-          }
-          // We have to make a new style for each unique message, this is
-          // why we have to remove off of them beforehand
-          const style = decorations.failingAssertionStyle(errorMessage)
-          this.failingAssertionDecorators.push(style)
-          editor.setDecorations(style, [decorator])
-        })
-      }
-
-      // Loop through each individual fail and create an diagnostic
-      // to pass back to VS Code.
-      this.failDiagnostics.set(
-        uri,
-        asserts.map(assertion => {
-          const expect = this.expectAtLine(assertion.line)
-          const start = expect ? expect.start.column - 1 : 0
-          const daig = new vscode.Diagnostic(
-            new vscode.Range(assertion.line - 1, start, assertion.line - 1, start + 6),
-            assertion.terseMessage,
-            vscode.DiagnosticSeverity.Error
-          )
-          daig.source = 'Jest'
-          return daig
-        })
-      )
-    })
-
-    this.parsingTestFile = false
+    return { style, decorator }
   }
 
   private canUpdateDecorators(editor: vscode.TextEditor) {
@@ -354,20 +362,27 @@ export class JestExt {
     this.unknownItStyle = decorations.notRanItName()
   }
 
+  private shouldIgnoreOutput(text: string): boolean {
+    return text.includes('Watch Usage')
+  }
+
   private testsHaveStartedRunning() {
     this.channel.clear()
-    status.running()
+    const details = this.jestProcess && this.jestProcess.watchMode ? 'testing for changed' : 'initial full test run'
+    status.running(details)
   }
 
   private updateWithData(data: JestTotalResults) {
     this.coverage.mapCoverage(data.coverageMap)
-    this.reconciler.updateFileWithJestStatus(data)
-    this.failDiagnostics.clear()
 
-    if (data.success) {
+    const results = this.reconciler.updateFileWithJestStatus(data)
+    updateDiagnositics(results, this.failDiagnostics)
+
+    const failedFileCount = failedSuiteCount(this.failDiagnostics)
+    if (failedFileCount <= 0 && data.success) {
       status.success()
     } else {
-      status.failed()
+      status.failed(` (${failedFileCount} test suite${failedFileCount > 1 ? 's' : ''} failed)`)
     }
 
     this.triggerUpdateDecorations(vscode.window.activeTextEditor)
@@ -395,14 +410,6 @@ export class JestExt {
         hoverMessage: nameForState(it.name, state),
       }
     })
-  }
-
-  // When we want to show an inline assertion, the only bit of
-  // data to work with is the line number from the stack trace.
-  // So we need to be able to go from that to the real
-  // expect data.
-  private expectAtLine(line: number): null | Expect {
-    return this.parseResults.expects.find(e => e.start.line === line)
   }
 
   public deactivate() {

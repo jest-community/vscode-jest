@@ -20,27 +20,27 @@ export function initial() {
   updateStatus('...')
 }
 
-export function running() {
+export function running(details?: string) {
   clearInterval(statusBarSpinner)
   statusBarSpinner = setInterval(() => {
-    statusBarItem.text = `${statusKey} ${frame()}`
+    statusBarItem.text = `${statusKey} ${frame()} ${details || ''}`
   }, 100)
 }
 
-export function success() {
-  updateStatus('$(check)')
+export function success(details?: string) {
+  updateStatus('$(check)', details)
 }
 
-export function failed() {
-  updateStatus('$(alert)')
+export function failed(details?: string) {
+  updateStatus('$(alert)', details)
 }
 
-export function stopped() {
-  updateStatus('stopped')
+export function stopped(details?: string) {
+  updateStatus('stopped', details)
   setTimeout(() => initial(), 2000)
 }
 
-function updateStatus(message: string) {
+function updateStatus(message: string, details?: string) {
   clearInterval(statusBarSpinner)
-  statusBarItem.text = `${statusKey} ${message}`
+  statusBarItem.text = `${statusKey} ${message} ${details || ''}`
 }

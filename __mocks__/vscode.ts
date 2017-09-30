@@ -20,4 +20,19 @@ const OverviewRulerLane = {
   Left: null,
 }
 
-export { languages, StatusBarAlignment, window, workspace, OverviewRulerLane }
+const Uri = { file: f => f }
+const Range = jest.fn()
+const Diagnostic = jest.fn()
+const DiagnosticSeverity = { Error: 0, Warning: 1, Information: 2, Hint: 3 }
+
+export {
+  languages,
+  StatusBarAlignment,
+  window,
+  workspace,
+  OverviewRulerLane,
+  Uri,
+  Range,
+  Diagnostic,
+  DiagnosticSeverity,
+}
