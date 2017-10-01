@@ -129,8 +129,8 @@
     "elegant-spinner": "^1.0.1",
     "istanbul-lib-coverage": "^1.1.1",
     "istanbul-lib-source-maps": "^1.1.0",
-    "jest-editor-support": "^21.2.0",
-    "jest-test-typescript-parser": "^21.2.0",
+    "jest-editor-support": "21.3.0-alpha.eff7a1cf",
+    "jest-test-typescript-parser": "21.3.0-alpha.eff7a1cf",
     "micromatch": "^2.3.11"
   }
 }

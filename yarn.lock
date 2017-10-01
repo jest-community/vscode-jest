@@ -311,7 +311,7 @@ babel-template@^6.16.0, babel-template@^6.24.1, babel-template@^6.26.0:
     babylon "^6.18.0"
     lodash "^4.17.4"
 
-babel-traverse@^6.18.0, babel-traverse@^6.26.0:
+babel-traverse@^6.14.1, babel-traverse@^6.18.0, babel-traverse@^6.26.0:
   version "6.26.0"
   resolved "https://registry.yarnpkg.com/babel-traverse/-/babel-traverse-6.26.0.tgz#46a9cbd7edcc62c8e5c064e2d2d8d0f4035766ee"
   dependencies:
@@ -1699,6 +1699,15 @@ jest-config@^21.2.1:
     jest-validate "^21.2.1"
     pretty-format "^21.2.1"
 
+jest-diff@21.3.0-alpha.eff7a1cf:
+  version "21.3.0-alpha.eff7a1cf"
+  resolved "https://registry.yarnpkg.com/jest-diff/-/jest-diff-21.3.0-alpha.eff7a1cf.tgz#d6b14a5783bb6c93d4d77d3b7aaefd83f01b6381"
+  dependencies:
+    chalk "^2.0.1"
+    diff "^3.2.0"
+    jest-get-type "21.3.0-alpha.eff7a1cf"
+    pretty-format "21.3.0-alpha.eff7a1cf"
+
 jest-diff@^21.2.1:
   version "21.2.1"
   resolved "https://registry.yarnpkg.com/jest-diff/-/jest-diff-21.2.1.tgz#46cccb6cab2d02ce98bc314011764bb95b065b4f"
@@ -1712,11 +1721,13 @@ jest-docblock@^21.2.0:
   version "21.2.0"
   resolved "https://registry.yarnpkg.com/jest-docblock/-/jest-docblock-21.2.0.tgz#51529c3b30d5fd159da60c27ceedc195faf8d414"
 
-jest-editor-support@^21.2.0:
-  version "21.2.0"
-  resolved "https://registry.yarnpkg.com/jest-editor-support/-/jest-editor-support-21.2.0.tgz#b6d6cb17096403ab927ff25727366df6683e9ee2"
+jest-editor-support@21.3.0-alpha.eff7a1cf:
+  version "21.3.0-alpha.eff7a1cf"
+  resolved "https://registry.yarnpkg.com/jest-editor-support/-/jest-editor-support-21.3.0-alpha.eff7a1cf.tgz#efc9ae4d153b374e423b225a91cfd8036b301cb8"
   dependencies:
+    babel-traverse "^6.14.1"
     babylon "^6.14.1"
+    jest-snapshot "21.3.0-alpha.eff7a1cf"
 
 jest-environment-jsdom@^21.2.1:
   version "21.2.1"
@@ -1732,6 +1743,10 @@ jest-environment-node@^21.2.1:
   dependencies:
     jest-mock "^21.2.0"
     jest-util "^21.2.1"
+
+jest-get-type@21.3.0-alpha.eff7a1cf:
+  version "21.3.0-alpha.eff7a1cf"
+  resolved "https://registry.yarnpkg.com/jest-get-type/-/jest-get-type-21.3.0-alpha.eff7a1cf.tgz#aad658d1da023777edc120daa7ed23336519495f"
 
 jest-get-type@^21.2.0:
   version "21.2.0"
@@ -1760,6 +1775,14 @@ jest-jasmine2@^21.2.1:
     jest-message-util "^21.2.1"
     jest-snapshot "^21.2.1"
     p-cancelable "^0.3.0"
+
+jest-matcher-utils@21.3.0-alpha.eff7a1cf:
+  version "21.3.0-alpha.eff7a1cf"
+  resolved "https://registry.yarnpkg.com/jest-matcher-utils/-/jest-matcher-utils-21.3.0-alpha.eff7a1cf.tgz#e462f780d69c00f6c84324e8c572e16ccf625a7c"
+  dependencies:
+    chalk "^2.0.1"
+    jest-get-type "21.3.0-alpha.eff7a1cf"
+    pretty-format "21.3.0-alpha.eff7a1cf"
 
 jest-matcher-utils@^21.2.1:
   version "21.2.1"
@@ -1836,6 +1859,17 @@ jest-runtime@^21.2.1:
     write-file-atomic "^2.1.0"
     yargs "^9.0.0"
 
+jest-snapshot@21.3.0-alpha.eff7a1cf:
+  version "21.3.0-alpha.eff7a1cf"
+  resolved "https://registry.yarnpkg.com/jest-snapshot/-/jest-snapshot-21.3.0-alpha.eff7a1cf.tgz#c0bd54a6d6fef65c2d09a5f5166a022ca0332949"
+  dependencies:
+    chalk "^2.0.1"
+    jest-diff "21.3.0-alpha.eff7a1cf"
+    jest-matcher-utils "21.3.0-alpha.eff7a1cf"
+    mkdirp "^0.5.1"
+    natural-compare "^1.4.0"
+    pretty-format "21.3.0-alpha.eff7a1cf"
+
 jest-snapshot@^21.2.1:
   version "21.2.1"
   resolved "https://registry.yarnpkg.com/jest-snapshot/-/jest-snapshot-21.2.1.tgz#29e49f16202416e47343e757e5eff948c07fd7b0"
@@ -1847,12 +1881,12 @@ jest-snapshot@^21.2.1:
     natural-compare "^1.4.0"
     pretty-format "^21.2.1"
 
-jest-test-typescript-parser@^21.2.0:
-  version "21.2.0"
-  resolved "https://registry.yarnpkg.com/jest-test-typescript-parser/-/jest-test-typescript-parser-21.2.0.tgz#c8b2fbd2130d39ca16bd68d81092334030c454b7"
+jest-test-typescript-parser@21.3.0-alpha.eff7a1cf:
+  version "21.3.0-alpha.eff7a1cf"
+  resolved "https://registry.yarnpkg.com/jest-test-typescript-parser/-/jest-test-typescript-parser-21.3.0-alpha.eff7a1cf.tgz#3342671dff7a57643317efd979c03c92d4561bba"
   dependencies:
-    jest-editor-support "^21.2.0"
-    typescript "^2.2.1"
+    jest-editor-support "21.3.0-alpha.eff7a1cf"
+    typescript "^2.5.3"
 
 jest-util@^21.2.1:
   version "21.2.1"
@@ -2682,6 +2716,13 @@ prettier@^1.7.3:
   version "1.7.3"
   resolved "https://registry.yarnpkg.com/prettier/-/prettier-1.7.3.tgz#8e6974725273914b1c47439959dd3d3ba53664b6"
 
+pretty-format@21.3.0-alpha.eff7a1cf:
+  version "21.3.0-alpha.eff7a1cf"
+  resolved "https://registry.yarnpkg.com/pretty-format/-/pretty-format-21.3.0-alpha.eff7a1cf.tgz#c8d2648ce88753abcdfaa407b555b853db796068"
+  dependencies:
+    ansi-regex "^3.0.0"
+    ansi-styles "^3.2.0"
+
 pretty-format@^21.2.1:
   version "21.2.1"
   resolved "https://registry.yarnpkg.com/pretty-format/-/pretty-format-21.2.1.tgz#ae5407f3cf21066cd011aa1ba5fce7b6a2eddb36"
@@ -3387,7 +3428,7 @@ type-check@~0.3.2:
   dependencies:
     prelude-ls "~1.1.2"
 
-typescript@2.5.3, typescript@^2.2.1:
+typescript@2.5.3, typescript@^2.5.3:
   version "2.5.3"
   resolved "https://registry.yarnpkg.com/typescript/-/typescript-2.5.3.tgz#df3dcdc38f3beb800d4bc322646b04a3f6ca7f0d"
 
