@@ -21,7 +21,7 @@ import { TestReconciliationState } from './TestReconciliationState'
 import { pathToJestPackageJSON } from './helpers'
 import { readFileSync } from 'fs'
 import { Coverage, showCoverageOverlay } from './Coverage'
-import { updateDiagnositics, resetDiagnositics, failedSuiteCount } from './diagnostics'
+import { updateDiagnostics, resetDiagnositics, failedSuiteCount } from './diagnostics'
 
 export class JestExt {
   private workspace: ProjectWorkspace
@@ -376,7 +376,7 @@ export class JestExt {
     this.coverage.mapCoverage(data.coverageMap)
 
     const results = this.reconciler.updateFileWithJestStatus(data)
-    updateDiagnositics(results, this.failDiagnostics)
+    updateDiagnostics(results, this.failDiagnostics)
 
     const failedFileCount = failedSuiteCount(this.failDiagnostics)
     if (failedFileCount <= 0 && data.success) {

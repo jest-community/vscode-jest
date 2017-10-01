@@ -7,7 +7,7 @@ import * as vscode from 'vscode'
 import { TestFileAssertionStatus } from 'jest-editor-support'
 import { TestReconciliationState } from './TestReconciliationState'
 
-export function updateDiagnositics(testResults: TestFileAssertionStatus[], diagnostics: vscode.DiagnosticCollection) {
+export function updateDiagnostics(testResults: TestFileAssertionStatus[], diagnostics: vscode.DiagnosticCollection) {
   function addTestFileError(result: TestFileAssertionStatus, uri: vscode.Uri) {
     const diag = new vscode.Diagnostic(
       new vscode.Range(0, 0, 0, 0),
