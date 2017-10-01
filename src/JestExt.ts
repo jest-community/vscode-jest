@@ -288,7 +288,7 @@ export class JestExt {
 
   private resetInlineErrorDecorators(editor: vscode.TextEditor) {
     this.failingAssertionDecorators.forEach(element => {
-      editor.setDecorations(element, [])
+      element.dispose()
     })
     this.failingAssertionDecorators = []
   }
