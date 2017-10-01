@@ -1,5 +1,12 @@
 ## Master
 
+### 2.4.0
+
+* Fixes for Jest 21 - connectdotz
+* Improvements to settings auto-completion - vvo
+* Support toggling code coverage - bookman25
+* Improve error reporting - bookman25
+
 ### 2.3.0
 
 * Apply [prettier](https://github.com/prettier/prettier) to the codebase. - macklinu
