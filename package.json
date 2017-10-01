@@ -51,7 +51,8 @@
           "default": true
         },
         "jest.pathToJest": {
-          "description": "The path to the Jest binary, or an npm command to run tests prefixed with `--` e.g. `npm test --`",
+          "description":
+            "The path to the Jest binary, or an npm command to run tests prefixed with `--` e.g. `npm test --`",
           "type": "string",
           "default": "node_modules/.bin/jest"
         },
@@ -106,29 +107,30 @@
     "test": "jest --config jest.json",
     "watch-test": "yarn test -- --watch",
     "prettier": "prettier",
-    "prettier-write": "npm run prettier -- --parser typescript --no-semi --single-quote --trailing-comma es5 --write --print-width 120",
+    "prettier-write":
+      "npm run prettier -- --parser typescript --no-semi --single-quote --trailing-comma es5 --write --print-width 120",
     "prettier-project": "npm run prettier-write -- '?(__mocks__|src|tests)/**/*.ts'"
   },
   "devDependencies": {
-    "@types/jest": "^19.2.3",
-    "@types/node": "^6.0.40",
+    "@types/jest": "^21.1.1",
+    "@types/node": "^8.0.31",
     "glob": "^7.1.1",
     "husky": "^0.14.3",
-    "jest": "^20.0.4",
-    "lint-staged": "^4.0.2",
-    "prettier": "^1.5.3",
-    "rimraf": "^2.5.4",
-    "tslint": "^4.5.1",
-    "tslint-config-prettier": "^1.3.0",
-    "typescript": "^2.2.1",
-    "vscode": "^1.1.0"
+    "jest": "^21.2.0",
+    "lint-staged": "^4.2.3",
+    "prettier": "^1.7.3",
+    "rimraf": "^2.6.2",
+    "tslint": "^5.7.0",
+    "tslint-config-prettier": "^1.5.0",
+    "typescript": "2.5.3",
+    "vscode": "^1.1.5"
   },
   "dependencies": {
     "elegant-spinner": "^1.0.1",
-    "istanbul-lib-coverage": "^1.0.1",
+    "istanbul-lib-coverage": "^1.1.1",
     "istanbul-lib-source-maps": "^1.1.0",
-    "jest-editor-support": "^20.0.4",
-    "jest-test-typescript-parser": "^20.0.4",
-    "micromatch": "2"
+    "jest-editor-support": "^21.2.0",
+    "jest-test-typescript-parser": "^21.2.0",
+    "micromatch": "^2.3.11"
   }
 }
