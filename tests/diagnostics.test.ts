@@ -1,6 +1,6 @@
 jest.unmock('../src/diagnostics')
 
-import { updateDiagnositics, resetDiagnositics, failedSuiteCount } from '../src/diagnostics'
+import { updateDiagnostics, resetDiagnositics, failedSuiteCount } from '../src/diagnostics'
 import * as vscode from 'vscode'
 import { TestFileAssertionStatus, TestReconcilationState, TestAssertionStatus } from 'jest-editor-support'
 
@@ -24,7 +24,7 @@ describe('test diagnostics', () => {
     })
   })
 
-  describe('updateDiagnositics', () => {
+  describe('updateDiagnostics', () => {
     // const MockReconciler = (TestReconciler as any) as jest.Mock<any>
 
     let lineNumber = 17
@@ -62,7 +62,7 @@ describe('test diagnostics', () => {
     it('can handle when all tests passed', () => {
       const mockDiagnostics = new MockDiagnosticCollection()
 
-      updateDiagnositics([], mockDiagnostics)
+      updateDiagnostics([], mockDiagnostics)
       expect(mockDiagnostics.clear).not.toBeCalled()
       expect(mockDiagnostics.set).not.toBeCalled()
     })
@@ -91,7 +91,7 @@ describe('test diagnostics', () => {
         0
       )
       const mockDiagnostics = new MockDiagnosticCollection()
-      updateDiagnositics(allTests, mockDiagnostics)
+      updateDiagnostics(allTests, mockDiagnostics)
 
       // verified diagnostics are added for all failed tests including files failed to run
       expect(mockDiagnostics.set).toHaveBeenCalledTimes(failedTestSuiteCount)
