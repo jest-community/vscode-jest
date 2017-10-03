@@ -368,7 +368,7 @@ export class JestExt {
 
   private testsHaveStartedRunning() {
     this.channel.clear()
-    const details = this.jestProcess && this.jestProcess.watchMode ? 'testing for changed' : 'initial full test run'
+    const details = this.jestProcess && this.jestProcess.watchMode ? 'testing changes' : 'initial full test run'
     status.running(details)
   }
 
