@@ -1,6 +1,6 @@
 jest.unmock('../src/diagnostics')
 
-import { updateDiagnostics, resetDiagnositics, failedSuiteCount } from '../src/diagnostics'
+import { updateDiagnostics, resetDiagnostics, failedSuiteCount } from '../src/diagnostics'
 import * as vscode from 'vscode'
 import { TestFileAssertionStatus, TestReconcilationState, TestAssertionStatus } from 'jest-editor-support'
 
@@ -16,10 +16,10 @@ class MockDiagnosticCollection implements vscode.DiagnosticCollection {
 }
 
 describe('test diagnostics', () => {
-  describe('resetDiagnositics', () => {
-    it('will clear given diagnositics', () => {
+  describe('resetDiagnostics', () => {
+    it('will clear given diagnostics', () => {
       const mockDiagnostics = new MockDiagnosticCollection()
-      resetDiagnositics(mockDiagnostics)
+      resetDiagnostics(mockDiagnostics)
       expect(mockDiagnostics.clear).toBeCalled()
     })
   })
