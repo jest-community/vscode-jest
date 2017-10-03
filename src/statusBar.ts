@@ -37,7 +37,6 @@ export function failed(details?: string) {
 
 export function stopped(details?: string) {
   updateStatus('stopped', details)
-  setTimeout(() => initial(), 2000)
 }
 
 function updateStatus(message: string, details?: string) {

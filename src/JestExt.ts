@@ -87,7 +87,7 @@ export class JestExt {
 
         if (maxRestart-- <= 0) {
           console.warn('jest has been restarted too many times, please check your system')
-          status.stopped('too many restart... abort')
+          status.stopped('(too many restart)')
           return
         }
 
@@ -163,6 +163,9 @@ export class JestExt {
     status.stopped()
   }
   private closeJest() {
+    if (!this.jestProcess) {
+      return
+    }
     this.forcedClose = true
     this.jestProcess.closeProcess()
   }
