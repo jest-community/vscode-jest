@@ -2,7 +2,7 @@
   "name": "vscode-jest",
   "displayName": "Jest",
   "description": "Use Facebook's Jest With Pleasure.",
-  "version": "2.4.0",
+  "version": "2.4.1",
   "publisher": "Orta",
   "engines": {
     "vscode": "^1.12.0"
@@ -131,6 +131,7 @@
     "istanbul-lib-coverage": "^1.1.1",
     "istanbul-lib-source-maps": "^1.1.0",
     "jest-editor-support": "21.3.0-alpha.eff7a1cf",
+    "jest-snapshot": "21.3.0-alpha.eff7a1cf",
     "jest-test-typescript-parser": "21.3.0-alpha.eff7a1cf",
     "micromatch": "^2.3.11"
   }

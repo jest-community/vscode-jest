@@ -1,5 +1,9 @@
 ## Master
 
+### 2.4.1
+
+* Restart jest up to three times upon unexpected exit - connectdotz
+
 ### 2.4.0
 
 * Fixes for Jest 21 - connectdotz
