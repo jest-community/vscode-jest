@@ -87,7 +87,7 @@ export class JestExt {
 
         if (maxRestart-- <= 0) {
           console.warn('jest has been restarted too many times, please check your system')
-          status.stopped('(too many restart)')
+          status.stopped('(too many restarts)')
           return
         }
 

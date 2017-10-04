@@ -99,7 +99,7 @@ describe('JestExt', () => {
       it('should not restart jest if closeProcess() is invoked by exit handler', () => {
         expect(eventEmitter.start).toHaveBeenCalledTimes(0)
         ;[true, false].forEach(watchMode => {
-          jest.resetAllMocks()
+          jest.clearAllMocks()
           eventEmitter.watchMode = watchMode
           handler()
           handler()
@@ -120,8 +120,6 @@ describe('JestExt', () => {
       }
       let handler: () => void
       beforeEach(() => {
-        // prepareMock()
-        // extension.startProcess()
         handler = getExitHandler()
         jest.clearAllMocks()
       })
