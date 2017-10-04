@@ -21,7 +21,7 @@ import { TestReconciliationState } from './TestReconciliationState'
 import { pathToJestPackageJSON } from './helpers'
 import { readFileSync } from 'fs'
 import { Coverage, showCoverageOverlay } from './Coverage'
-import { updateDiagnostics, resetDiagnositics, failedSuiteCount } from './diagnostics'
+import { updateDiagnostics, resetDiagnostics, failedSuiteCount } from './diagnostics'
 
 export class JestExt {
   private workspace: ProjectWorkspace
@@ -48,7 +48,7 @@ export class JestExt {
   private failingAssertionDecorators: vscode.TextEditorDecorationType[]
 
   private clearOnNextInput: boolean
-  private forcedClose: boolean
+  private forcedClose = false
 
   constructor(workspace: ProjectWorkspace, outputChannel: vscode.OutputChannel, pluginSettings: IPluginSettings) {
     this.workspace = workspace
@@ -73,16 +73,32 @@ export class JestExt {
       delete this.jestProcess
     }
 
+    let maxRestart = 4
     this.jestProcess = new Runner(this.workspace)
 
     this.jestProcess
       .on('debuggerProcessExit', () => {
         this.channel.appendLine('Closed Jest')
-        if (!this.jestProcess.watchMode && !this.forcedClose) {
-          this.channel.appendLine('Starting watch mode...')
-          this.jestProcess.closeProcess()
-          this.jestProcess.start(true)
+
+        if (this.forcedClose) {
+          this.forcedClose = false
+          return
         }
+
+        if (maxRestart-- <= 0) {
+          console.warn('jest has been restarted too many times, please check your system')
+          status.stopped('(too many restarts)')
+          return
+        }
+
+        const msg = this.jestProcess.watchMode
+          ? 'jest exited unexpectedly, restarting watch mode'
+          : 'starting watch mode'
+        this.channel.appendLine(msg)
+        this.closeJest()
+
+        this.jestProcess.start(true)
+        status.running(msg)
       })
       .on('executableJSON', (data: JestTotalResults) => {
         this.updateWithData(data)
@@ -133,7 +149,7 @@ export class JestExt {
     // The bottom bar thing
     this.setupStatusBar()
     //reset the jest diagnostics
-    resetDiagnositics(this.failDiagnostics)
+    resetDiagnostics(this.failDiagnostics)
 
     this.forcedClose = false
     // Go!
@@ -142,10 +158,16 @@ export class JestExt {
 
   public stopProcess() {
     this.channel.appendLine('Closing Jest jest_runner.')
-    this.forcedClose = true
-    this.jestProcess.closeProcess()
+    this.closeJest()
     delete this.jestProcess
     status.stopped()
+  }
+  private closeJest() {
+    if (!this.jestProcess) {
+      return
+    }
+    this.forcedClose = true
+    this.jestProcess.closeProcess()
   }
 
   private getSettings() {

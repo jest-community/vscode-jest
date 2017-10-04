@@ -23,13 +23,13 @@ export function updateDiagnostics(testResults: TestFileAssertionStatus[], diagno
       uri,
       asserts.map(assertion => {
         const start = 0
-        const daig = new vscode.Diagnostic(
+        const diag = new vscode.Diagnostic(
           new vscode.Range(assertion.line - 1, start, assertion.line - 1, start + 6),
           assertion.terseMessage || assertion.shortMessage || assertion.message,
           vscode.DiagnosticSeverity.Error
         )
-        daig.source = 'Jest'
-        return daig
+        diag.source = 'Jest'
+        return diag
       })
     )
   }
@@ -52,7 +52,7 @@ export function updateDiagnostics(testResults: TestFileAssertionStatus[], diagno
   })
 }
 
-export function resetDiagnositics(diagnostics: vscode.DiagnosticCollection) {
+export function resetDiagnostics(diagnostics: vscode.DiagnosticCollection) {
   diagnostics.clear()
 }
 export function failedSuiteCount(diagnostics: vscode.DiagnosticCollection): number {
