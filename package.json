@@ -61,6 +61,11 @@
           "type": "string",
           "default": ""
         },
+        "jest.rootPath": {
+          "description": "The path to your frontend src folder",
+          "type": "string",
+          "default": ""
+        },
         "jest.enableInlineErrorMessages": {
           "description": "Whether errors should be reported inline on a file",
           "type": "boolean",
