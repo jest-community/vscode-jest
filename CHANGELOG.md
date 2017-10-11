@@ -2,6 +2,10 @@
 
 ### 2.4.1
 
+* Adds an option for `"jest.rootPath"` to let you choose the folder to run jest commands - garyxuehong
+
+### 2.4.1
+
 * Restart jest up to three times upon unexpected exit - connectdotz
 
 ### 2.4.0
