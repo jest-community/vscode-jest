@@ -1,6 +1,10 @@
 ## Master
 
-### 2.4.1
+### 2.4.2
+
+* Improvements for Create React App - seanpoulter
+
+### 2.4.1-2
 
 * Adds an option for `"jest.rootPath"` to let you choose the folder to run jest commands - garyxuehong
 
