@@ -1,6 +1,6 @@
 import * as vscode from 'vscode'
 import { ProjectWorkspace } from 'jest-editor-support'
-import * as path from 'path';
+import * as path from 'path'
 
 import { extensionName } from './appGlobals'
 import { pathToJest, pathToConfig } from './helpers'
@@ -9,6 +9,7 @@ import { IPluginSettings } from './IPluginSettings'
 import { registerStatusBar } from './statusBar'
 import { registerFileChangeWatchers } from './fileChangeWatchers'
 import { registerCoverageCodeLens, registerToggleCoverageOverlay } from './Coverage'
+import { initializeTestRunner } from './testRunner'
 
 let extensionInstance: JestExt
 
@@ -33,6 +34,9 @@ export function activate(context: vscode.ExtensionContext) {
 
   // We need a singleton to represent the extension
   extensionInstance = new JestExt(workspace, channel, pluginSettings)
+
+  // wire up test runner ...
+  initializeTestRunner(configPath, context, channel, currentJestVersion, workspaceConfig)
 
   context.subscriptions.push(
     registerStatusBar(channel),

@@ -1,5 +1,12 @@
 # vscode-jest [![Build Status](https://travis-ci.org/orta/vscode-jest.svg?branch=master)](https://travis-ci.org/orta/vscode-jest)
 
+## Fork changes
+- added dependency on unpublished package [vscode-test-runner](https://github.com/CzBuCHi/vscode-test-runner) (cannot publish now), needs to be `npm link`ed 
+- added configuration properties `babylonPlugins`, `debugPort`, `debugTrace`, `globPatterns`, `jestCli`, `nodePath`, `stateJsonPath`, `tsConfigPath` and `webpackConfigPath`
+  - note: `jestCli` added because my code needs path to `node_modules/jest-cli/bin/jest.js`
+- my code can handle webpack compilation, but yours shows bunch of syntax errors - see [this example project](https://github.com/CzBuCHi/vscode-test-runner/tree/master/examples/example-jest-webpack)
+- my code reads directly from `WorkspaceConfiguration` with makes it non-agnostic
+
 ## The Aim
 
 A comprehensive experience when using [Facebook's Jest](https://github.com/facebook/jest) within a project.
