@@ -76,6 +76,75 @@
           "description": "Whether snapshot update messages should show",
           "type": "boolean",
           "default": true
+        },
+        "jest.testRunner.babylonPlugins": {
+          "default": [],
+          "description": "Array containing the babylon plugins that you want to enable.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "estree",
+              "jsx",
+              "flow",
+              "classConstructorCall",
+              "doExpressions",
+              "objectRestSpread",
+              "decorators",
+              "classProperties",
+              "exportExtensions",
+              "asyncGenerators",
+              "functionBind",
+              "functionSent",
+              "dynamicImport"
+            ]
+          }
+        },
+        "jest.testRunner.debugPort": {
+          "description": "Port o with debugger will try to run.",
+          "type": "number",
+          "default": 12321
+        },
+        "jest.testRunner.debugTrace": {
+          "default": "",
+          "description": "'trace' parameter for vscode debugger.",
+          "type": "string"
+        },
+        "jest.testRunner.globPatterns": {
+          "default": ["**/__tests__/*.test.js"],
+          "description": "Glob pattern for test files.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "jest.testRunner.jestCli": {
+          "description": "The path to the Jest-cli javscript file.",
+          "type": "string",
+          "default": "node_modules\\jest-cli\\bin\\jest.js"
+        },
+        "jest.testRunner.nodePath": {
+          "default": "c:\\Program Files\\nodejs\\node.exe",
+          "description": "Path to node executable.",
+          "type": "string"
+        },
+        "jest.testRunner.stateJsonPath": {
+          "description":
+            "Specifies path to JSON file, that is holding actual state of tests. Extension will watch this file for changes and update lenses accordinly.",
+          "type": "string",
+          "default": ""
+        },
+        "jest.testRunner.tsConfigPath": {
+          "description":
+            "The path to your tsconfig.json configuration file used for compiling tests. Extension will modify files array based on context. Cannot be used with 'webpackConfig'.",
+          "type": "string",
+          "default": ""
+        },
+        "jest.testRunner.webpackConfigPath": {
+          "description":
+            "The path to your webpack configuration file. Extension will modify entry point based on context. Cannot be used with 'tsConfig'.",
+          "type": "string",
+          "default": ""
         }
       }
     },
@@ -136,9 +205,10 @@
     "elegant-spinner": "^1.0.1",
     "istanbul-lib-coverage": "^1.1.1",
     "istanbul-lib-source-maps": "^1.1.0",
-    "jest-editor-support": "21.3.0-alpha.eff7a1cf",
+    "jest-editor-support": "^21.3.0-beta.6",
     "jest-snapshot": "21.3.0-alpha.eff7a1cf",
     "jest-test-typescript-parser": "21.3.0-alpha.eff7a1cf",
-    "micromatch": "^2.3.11"
+    "micromatch": "^2.3.11",
+    "vscode-test-runner": "0.0.1"
   }
 }

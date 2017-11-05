@@ -16,5 +16,6 @@
   "prettier.semi": false,
   "prettier.printWidth": 120,
   "prettier.trailingComma": "es5",
-  "prettier.singleQuote": true
+  "prettier.singleQuote": true,
+  "editor.rulers": [120]
 }
