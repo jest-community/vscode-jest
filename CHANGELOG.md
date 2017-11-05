@@ -1,6 +1,10 @@
 ## Master
 
-### 2.4.2
+### 2.4.4
+
+* Improvements for Create React Native App - anton-matosov
+
+### 2.4.3
 
 * Improvements for Create React App - seanpoulter
 
