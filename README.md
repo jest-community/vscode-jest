@@ -49,6 +49,7 @@ These are the [activation events](https://code.visualstudio.com/docs/extensionAP
   "activationEvents": [
     "workspaceContains:node_modules/.bin/jest",
     "workspaceContains:node_modules/react-scripts/node_modules/.bin/jest",
+    "workspaceContains:node_modules/react-native-scripts",
     "onCommand:io.orta.jest.start"
   ],
 ```
