@@ -47,7 +47,7 @@
       "title": "Jest configuration",
       "properties": {
         "jest.autoEnable": {
-          "description": "Automatically starting Jest for this project.",
+          "description": "Automatically start Jest for this project",
           "type": "boolean",
           "default": true
         },
@@ -74,6 +74,11 @@
         },
         "jest.enableSnapshotUpdateMessages": {
           "description": "Whether snapshot update messages should show",
+          "type": "boolean",
+          "default": true
+        },
+        "jest.runAllTestsFirst": {
+          "description": "Run all tests before starting Jest in watch mode",
           "type": "boolean",
           "default": true
         }
