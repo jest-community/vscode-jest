@@ -22,9 +22,18 @@ export function updateDiagnostics(testResults: TestFileAssertionStatus[], diagno
     diagnostics.set(
       uri,
       asserts.map(assertion => {
+        let line: number
+        if (assertion.line >= 0) {
+          line = Math.max(assertion.line - 1, 0)
+        } else {
+          line = 0
+          console.warn(
+            `received invalid line number '${assertion.line}' for '${uri.toString()}'. (most likely due to unexpected test results... you can help fix the root cause by logging an issue with a sample project to reproduce this warning)`
+          )
+        }
         const start = 0
         const diag = new vscode.Diagnostic(
-          new vscode.Range(assertion.line - 1, start, assertion.line - 1, start + 6),
+          new vscode.Range(line, start, line, start + 6),
           assertion.terseMessage || assertion.shortMessage || assertion.message,
           vscode.DiagnosticSeverity.Error
         )

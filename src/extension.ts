@@ -1,6 +1,6 @@
 import * as vscode from 'vscode'
 import { ProjectWorkspace } from 'jest-editor-support'
-import * as path from 'path';
+import * as path from 'path'
 
 import { extensionName } from './appGlobals'
 import { pathToJest, pathToConfig } from './helpers'
@@ -22,6 +22,7 @@ export function activate(context: vscode.ExtensionContext) {
     enableInlineErrorMessages: workspaceConfig.get<boolean>('enableInlineErrorMessages'),
     enableSnapshotUpdateMessages: workspaceConfig.get<boolean>('enableSnapshotUpdateMessages'),
     rootPath: path.join(vscode.workspace.rootPath, workspaceConfig.get<string>('rootPath')),
+    runAllTestsFirst: workspaceConfig.get<boolean>('runAllTestsFirst'),
   }
   const jestPath = pathToJest(pluginSettings)
   const configPath = pathToConfig(pluginSettings)
