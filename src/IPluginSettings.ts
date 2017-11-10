@@ -5,4 +5,5 @@ export interface IPluginSettings {
   pathToJest?: string
   pathToConfig?: string
   rootPath?: string
+  runAllTestsFirst?: boolean
 }

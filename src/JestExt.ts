@@ -91,14 +91,8 @@ export class JestExt {
           return
         }
 
-        const msg = this.jestProcess.watchMode
-          ? 'jest exited unexpectedly, restarting watch mode'
-          : 'starting watch mode'
-        this.channel.appendLine(msg)
         this.closeJest()
-
-        this.jestProcess.start(true)
-        status.running(msg)
+        this.startWatchMode()
       })
       .on('executableJSON', (data: JestTotalResults) => {
         this.updateWithData(data)
@@ -153,7 +147,11 @@ export class JestExt {
 
     this.forcedClose = false
     // Go!
-    this.jestProcess.start(false)
+    if (this.pluginSettings.runAllTestsFirst) {
+      this.jestProcess.start(false)
+    } else {
+      this.startWatchMode()
+    }
   }
 
   public stopProcess() {
@@ -162,12 +160,20 @@ export class JestExt {
     delete this.jestProcess
     status.stopped()
   }
+
   private closeJest() {
     if (!this.jestProcess) {
       return
     }
     this.forcedClose = true
     this.jestProcess.closeProcess()
+  }
+
+  private startWatchMode() {
+    const msg = this.jestProcess.watchMode ? 'Jest exited unexpectedly, restarting watch mode' : 'Starting watch mode'
+    this.channel.appendLine(msg)
+    this.jestProcess.start(true)
+    status.running(msg)
   }
 
   private getSettings() {
