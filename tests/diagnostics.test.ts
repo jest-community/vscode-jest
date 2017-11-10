@@ -23,7 +23,6 @@ describe('test diagnostics', () => {
       expect(mockDiagnostics.clear).toBeCalled()
     })
   })
-
   describe('updateDiagnostics', () => {
     // const MockReconciler = (TestReconciler as any) as jest.Mock<any>
 
@@ -143,6 +142,21 @@ describe('test diagnostics', () => {
       })
 
       expect(failedSuiteCount(mockDiagnostics)).toEqual(invokeCount)
+    })
+    it('should not produce negative diagnostic range', () => {
+      const mockDiagnostics = new MockDiagnosticCollection()
+      const assertion = createAssertion('a', 'KnownFail')
+      const invalidLine = [0, -1, undefined, null, NaN]
+      invalidLine.forEach(line => {
+        jest.clearAllMocks()
+        assertion.line = line
+        const tests = [createTestResult('f', [assertion])]
+        updateDiagnostics(tests, mockDiagnostics)
+
+        const rangeCalls = (vscode.Range as jest.Mock<any>).mock.calls
+        expect(rangeCalls.length).toEqual(1)
+        validateRange(rangeCalls[0], 0, 0)
+      })
     })
   })
 })
