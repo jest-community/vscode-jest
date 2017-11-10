@@ -1,5 +1,11 @@
 ## Master
 
+
+### 2.4.5
+
+* Adds an option to not run all tests on launch - seanpoulter
+* Never sends VS Code an invalid line number for an unexpected result - connectdotz
+
 ### 2.4.4
 
 * Improvements for Create React Native App - anton-matosov
