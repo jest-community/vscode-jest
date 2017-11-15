@@ -289,7 +289,7 @@ export class JestExt {
   private updateDotDecorators(editor: vscode.TextEditor) {
     const filePath = editor.document.uri.fsPath
     const { itBlocks } = this.parseTestFile(filePath)
-    const assertions = this.reconciler.assertionsForTestFile(filePath)
+    const assertions = this.reconciler.assertionsForTestFile(filePath) || []
     const { successes, fails, skips, unknowns, inlineErrors } = this.sortDecorationBlocks(
       itBlocks,
       assertions,
