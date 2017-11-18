@@ -3,6 +3,7 @@
  * vscode inspector via the DiagnosticsCollection.
  */
 import * as vscode from 'vscode'
+import { existsSync } from 'fs'
 // import { DiagnosticCollection, Uri, Diagnostic, Range, DiagnosticSeverity } from 'vscode'
 import { TestFileAssertionStatus } from 'jest-editor-support'
 import { TestReconciliationState } from './TestReconciliationState'
@@ -45,7 +46,6 @@ export function updateDiagnostics(testResults: TestFileAssertionStatus[], diagno
 
   testResults.forEach(result => {
     const uri = vscode.Uri.file(result.file)
-
     switch (result.status) {
       case TestReconciliationState.KnownFail:
         if (result.assertions.length <= 0) {
@@ -58,6 +58,17 @@ export function updateDiagnostics(testResults: TestFileAssertionStatus[], diagno
         diagnostics.delete(uri)
         break
     }
+  })
+
+  // Remove diagnostics for files no longer in existence
+  const toBeDeleted = []
+  diagnostics.forEach(uri => {
+    if (!existsSync(uri.fsPath)) {
+      toBeDeleted.push(uri)
+    }
+  })
+  toBeDeleted.forEach(uri => {
+    diagnostics.delete(uri)
   })
 }
 
