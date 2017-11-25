@@ -308,9 +308,13 @@ export class JestExt {
     ]
     const lenseDecorations: DecorationOptions[] = []
     styleMap.forEach(style => {
-      const decorators = this.generateDotsForItBlocks(style.data, style.state)
-      editor.setDecorations(style.decorationType, decorators)
-      lenseDecorations.push(...decorators)
+      // Skip debug decorators for passing tests
+      // TODO: Skip debug decorators for unknowns?
+      if (style.state !== TestReconciliationState.KnownSuccess) {
+        const decorators = this.generateDotsForItBlocks(style.data, style.state)
+        editor.setDecorations(style.decorationType, decorators)
+        lenseDecorations.push(...decorators)
+      }
     })
     this.codeLensProvider.updateLenses(lenseDecorations)
 
@@ -529,7 +533,11 @@ export class JestExt {
 
         const line = fs.readFileSync(jest, 'utf8').split('\n')[8]
         const match = /^\s*"[^"]+"\s+"$basedir\/([^"]+)"/.exec(line)
-        return path.join(path.dirname(jest), match[1])
+        if (match) {
+          return path.join(path.dirname(jest), match[1])
+        } else {
+          return jest
+        }
       }
 
       default: {
@@ -544,6 +552,7 @@ export class JestExt {
     this.closeJest()
     const program = this.resolvePathToJestBin()
     if (!program) {
+      console.log("Could not find Jest's CLI path")
       return
     }
 
