@@ -512,8 +512,9 @@ export class JestExt {
       }
 
       case 'jest': {
-        /* same as with jest.cmd - here im extracting from line 9
-
+        /* file without extension uses first line as file type
+           in case of node script i can use this file directly,
+           in case of linux shell script i need to extract path from line 9
         #!/bin/sh
         basedir=$(dirname "$(echo "$0" | sed -e 's,\\,/,g')")
 
@@ -530,21 +531,29 @@ export class JestExt {
         fi
         exit $ret 
         */
+        const lines = fs.readFileSync(jest, 'utf8').split('\n');
+        switch (lines[0]) {
+          case '#!/usr/bin/env node': {
+            return jest
+          }
 
-        const line = fs.readFileSync(jest, 'utf8').split('\n')[8]
-        const match = /^\s*"[^"]+"\s+"$basedir\/([^"]+)"/.exec(line)
-        if (match) {
-          return path.join(path.dirname(jest), match[1])
-        } else {
-          return jest
+          case '#!/bin/sh': {
+            const line = lines[8]
+            const match = /^\s*"[^"]+"\s+"$basedir\/([^"]+)"/.exec(line)
+            if (match) {
+              return path.join(path.dirname(jest), match[1])
+            }
+
+            break
+          }
         }
-      }
 
-      default: {
-        vscode.window.showErrorMessage('Cannot find jest.js file!')
-        return undefined
+        break
       }
     }
+
+    vscode.window.showErrorMessage('Cannot find jest.js file!')
+    return undefined
   }
 
   public runTest = (fileName: string, identifier: string) => {
