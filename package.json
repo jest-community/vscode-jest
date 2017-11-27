@@ -2,7 +2,7 @@
   "name": "vscode-jest",
   "displayName": "Jest",
   "description": "Use Facebook's Jest With Pleasure.",
-  "version": "2.4.5",
+  "version": "2.5.0",
   "publisher": "Orta",
   "engines": {
     "vscode": "^1.18.0"
@@ -108,7 +108,7 @@
     "*.ts": ["npm run prettier-write --", "git add"]
   },
   "scripts": {
-    "___precommit": "lint-staged",
+    "precommit": "lint-staged",
     "ci": "yarn lint && yarn test",
     "clean-out": "rimraf ./out",
     "vscode:prepublish": "yarn clean-out && tsc -p ./tsconfig.publish.json",

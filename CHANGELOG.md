@@ -1,5 +1,8 @@
 ## Master
 
+### 2.5.0
+
+* Allow debugging non-successful tests - orta
 
 ### 2.4.5
 
