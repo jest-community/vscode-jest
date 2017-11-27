@@ -35,6 +35,13 @@ export function activate(context: vscode.ExtensionContext) {
   // We need a singleton to represent the extension
   extensionInstance = new JestExt(workspace, channel, pluginSettings)
 
+  const languages = [
+    { language: 'javascript' },
+    { language: 'javascriptreact' },
+    { language: 'typescript' },
+    { language: 'typescriptreact' },
+  ]
+
   context.subscriptions.push(
     registerStatusBar(channel),
     vscode.commands.registerTextEditorCommand(`${extensionName}.start`, () => {
@@ -42,12 +49,14 @@ export function activate(context: vscode.ExtensionContext) {
       extensionInstance.startProcess()
     }),
     vscode.commands.registerTextEditorCommand(`${extensionName}.stop`, () => extensionInstance.stopProcess()),
-    vscode.commands.registerTextEditorCommand('io.orta.jest.show-channel', () => {
+    vscode.commands.registerTextEditorCommand(`${extensionName}.show-channel`, () => {
       channel.show()
     }),
     ...registerFileChangeWatchers(extensionInstance),
     ...registerCoverageCodeLens(extensionInstance),
-    registerToggleCoverageOverlay()
+    registerToggleCoverageOverlay(),
+    vscode.commands.registerCommand(`${extensionName}.run-test`, extensionInstance.runTest),
+    vscode.languages.registerCodeLensProvider(languages, extensionInstance.codeLensProvider)
   )
 }
 

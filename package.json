@@ -5,7 +5,7 @@
   "version": "2.4.5",
   "publisher": "Orta",
   "engines": {
-    "vscode": "^1.12.0"
+    "vscode": "^1.18.0"
   },
   "author": {
     "name": "Orta Therox",
@@ -108,7 +108,7 @@
     "*.ts": ["npm run prettier-write --", "git add"]
   },
   "scripts": {
-    "precommit": "lint-staged",
+    "___precommit": "lint-staged",
     "ci": "yarn lint && yarn test",
     "clean-out": "rimraf ./out",
     "vscode:prepublish": "yarn clean-out && tsc -p ./tsconfig.publish.json",
@@ -134,14 +134,14 @@
     "tslint": "^5.7.0",
     "tslint-config-prettier": "^1.5.0",
     "typescript": "2.5.3",
-    "vscode": "^1.1.5",
+    "vscode": "^1.1.6",
     "vsce": "^1.31"
   },
   "dependencies": {
     "elegant-spinner": "^1.0.1",
     "istanbul-lib-coverage": "^1.1.1",
     "istanbul-lib-source-maps": "^1.1.0",
-    "jest-editor-support": "21.3.0-alpha.eff7a1cf",
+    "jest-editor-support": "^21.3.0-beta.6",
     "jest-snapshot": "21.3.0-alpha.eff7a1cf",
     "jest-test-typescript-parser": "21.3.0-alpha.eff7a1cf",
     "micromatch": "^2.3.11"

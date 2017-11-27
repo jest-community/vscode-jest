@@ -1,4 +1,7 @@
 jest.unmock('../src/JestExt')
+jest.mock("../src/CodeLens.ts", () => ({
+  CodeLensProvider: class MockCodeLensProvider {}
+}))
 
 import { JestExt } from '../src/JestExt'
 import { ProjectWorkspace, Settings, Runner } from 'jest-editor-support'

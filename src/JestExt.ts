@@ -1,5 +1,6 @@
 import * as vscode from 'vscode'
 import * as path from 'path'
+import * as fs from 'fs'
 import {
   ItBlock,
   Runner,
@@ -22,6 +23,8 @@ import { pathToJestPackageJSON } from './helpers'
 import { readFileSync } from 'fs'
 import { Coverage, showCoverageOverlay } from './Coverage'
 import { updateDiagnostics, resetDiagnostics, failedSuiteCount } from './diagnostics'
+import { CodeLensProvider } from './CodeLens'
+import { DecorationOptions } from './types'
 
 export class JestExt {
   private workspace: ProjectWorkspace
@@ -30,6 +33,7 @@ export class JestExt {
   private reconciler: TestReconciler
   private pluginSettings: IPluginSettings
   public coverage: Coverage
+  public codeLensProvider: CodeLensProvider
 
   // So you can read what's going on
   private channel: vscode.OutputChannel
@@ -60,7 +64,7 @@ export class JestExt {
     this.jestSettings = new Settings(workspace)
     this.pluginSettings = pluginSettings
     this.coverage = new Coverage(this.workspace.rootPath)
-
+    this.codeLensProvider = new CodeLensProvider()
     this.getSettings()
   }
 
@@ -302,10 +306,17 @@ export class JestExt {
       { data: skips, decorationType: this.skipItStyle, state: TestReconciliationState.KnownSkip },
       { data: unknowns, decorationType: this.unknownItStyle, state: TestReconciliationState.Unknown },
     ]
+    const lenseDecorations: DecorationOptions[] = []
     styleMap.forEach(style => {
-      const decorators = this.generateDotsForItBlocks(style.data, style.state)
-      editor.setDecorations(style.decorationType, decorators)
+      // Skip debug decorators for passing tests
+      // TODO: Skip debug decorators for unknowns?
+      if (style.state !== TestReconciliationState.KnownSuccess) {
+        const decorators = this.generateDotsForItBlocks(style.data, style.state)
+        editor.setDecorations(style.decorationType, decorators)
+        lenseDecorations.push(...decorators)
+      }
     })
+    this.codeLensProvider.updateLenses(lenseDecorations)
 
     this.resetInlineErrorDecorators(editor)
     inlineErrors.forEach(a => {
@@ -417,7 +428,7 @@ export class JestExt {
     this.clearOnNextInput = true
   }
 
-  private generateDotsForItBlocks(blocks: ItBlock[], state: TestReconciliationState): vscode.DecorationOptions[] {
+  private generateDotsForItBlocks(blocks: ItBlock[], state: TestReconciliationState): DecorationOptions[] {
     const nameForState = (_name: string, state: TestReconciliationState): string => {
       switch (state) {
         case TestReconciliationState.KnownSuccess:
@@ -436,6 +447,17 @@ export class JestExt {
         // jest-editor-support is indexed starting at 1
         range: new vscode.Range(it.start.line - 1, it.start.column - 1, it.start.line - 1, it.start.column + 1),
         hoverMessage: nameForState(it.name, state),
+        /* ERROR: this needs to include all ancestor describe block names as well!
+          in code bellow it block has identifier = 'aaa bbb ccc': but name is only 'ccc'
+
+          describe('aaa', () => {
+            describe('bbb', () => {
+              it('ccc', () => {
+              });
+            });
+          });
+        */
+        identifier: it.name,
       }
     })
   }
@@ -456,5 +478,115 @@ export class JestExt {
     }
     // Fallback to last pre-20 release
     version(18)
+  }
+
+  /**
+   * Primitive way to resolve path to jest.js
+   */
+  private resolvePathToJestBin() {
+    let jest = this.workspace.pathToJest
+    if (!path.isAbsolute(jest)) {
+      jest = path.join(vscode.workspace.rootPath, jest)
+    }
+
+    const basename = path.basename(jest)
+    switch (basename) {
+      case 'jest.js': {
+        return jest
+      }
+
+      case 'jest.cmd': {
+        /* i need to extract '..\jest-cli\bin\jest.js' from line 2
+
+        @IF EXIST "%~dp0\node.exe" (
+          "%~dp0\node.exe"  "%~dp0\..\jest-cli\bin\jest.js" %*
+        ) ELSE (
+          @SETLOCAL
+          @SET PATHEXT=%PATHEXT:;.JS;=;%
+          node  "%~dp0\..\jest-cli\bin\jest.js" %*
+        )
+        */
+        const line = fs.readFileSync(jest, 'utf8').split('\n')[1]
+        const match = /^\s*"[^"]+"\s+"%~dp0\\([^"]+)"/.exec(line)
+        return path.join(path.dirname(jest), match[1])
+      }
+
+      case 'jest': {
+        /* file without extension uses first line as file type
+           in case of node script i can use this file directly,
+           in case of linux shell script i need to extract path from line 9
+        #!/bin/sh
+        basedir=$(dirname "$(echo "$0" | sed -e 's,\\,/,g')")
+
+        case `uname` in
+            *CYGWIN*) basedir=`cygpath -w "$basedir"`;;
+        esac
+
+        if [ -x "$basedir/node" ]; then
+          "$basedir/node"  "$basedir/../jest-cli/bin/jest.js" "$@"
+          ret=$?
+        else 
+          node  "$basedir/../jest-cli/bin/jest.js" "$@"
+          ret=$?
+        fi
+        exit $ret 
+        */
+        const lines = fs.readFileSync(jest, 'utf8').split('\n');
+        switch (lines[0]) {
+          case '#!/usr/bin/env node': {
+            return jest
+          }
+
+          case '#!/bin/sh': {
+            const line = lines[8]
+            const match = /^\s*"[^"]+"\s+"$basedir\/([^"]+)"/.exec(line)
+            if (match) {
+              return path.join(path.dirname(jest), match[1])
+            }
+
+            break
+          }
+        }
+
+        break
+      }
+    }
+
+    vscode.window.showErrorMessage('Cannot find jest.js file!')
+    return undefined
+  }
+
+  public runTest = (fileName: string, identifier: string) => {
+    const restart = this.jestProcess !== undefined
+    this.closeJest()
+    const program = this.resolvePathToJestBin()
+    if (!program) {
+      console.log("Could not find Jest's CLI path")
+      return
+    }
+
+    const port = Math.floor(Math.random() * 20000) + 10000
+    const configuration = {
+      name: 'TestRunner',
+      type: 'node',
+      request: 'launch',
+      program,
+      args: ['--runInBand', fileName, '--testNamePattern', identifier],
+      runtimeArgs: ['--inspect-brk=' + port],
+      port,
+      protocol: 'inspector',
+      console: 'integratedTerminal',
+      smartStep: true,
+      sourceMaps: true,
+    }
+
+    const handle = vscode.debug.onDidTerminateDebugSession(_ => {
+      handle.dispose()
+      if (restart) {
+        this.startProcess()
+      }
+    })
+
+    vscode.debug.startDebugging(vscode.workspace.workspaceFolders[0], configuration)
   }
 }

@@ -7,9 +7,14 @@
     "noUnusedParameters": true,
     "target": "es6",
     "outDir": "out",
-    "lib": ["es6"],
+    "lib": [
+      "es6"
+    ],
     "sourceMap": true,
     "rootDir": "."
   },
-  "exclude": ["integrations"]
+  "exclude": [
+    "integrations",
+    "__mocks__"
+  ]
 }
