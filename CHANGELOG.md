@@ -2,7 +2,7 @@
 
 ### 2.5.0
 
-* Allow debugging non-successful tests - orta
+* Allow debugging non-successful tests - CzBuCHi
 
 ### 2.4.5
 
