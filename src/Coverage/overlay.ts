@@ -9,7 +9,15 @@ let showCoverage = false
 
 export function registerToggleCoverageOverlay(show: boolean = false) {
   showCoverage = show
-  return vscode.commands.registerCommand(toggleCoverageCommand, () => (showCoverage = !showCoverage))
+  return vscode.commands.registerCommand(toggleCoverageCommand, toggleCoverageOverlay)
+}
+
+export function toggleCoverageOverlay() {
+  showCoverage = !showCoverage
+}
+
+export function isVisible() {
+  return showCoverage
 }
 
 export function showCoverageOverlay(editor: vscode.TextEditor, allCoverage: Coverage) {
