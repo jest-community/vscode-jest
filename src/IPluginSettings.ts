@@ -6,4 +6,5 @@ export interface IPluginSettings {
   pathToConfig?: string
   rootPath?: string
   runAllTestsFirst?: boolean
+  showCoverageOnLoad: boolean
 }

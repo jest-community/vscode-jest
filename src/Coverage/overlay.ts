@@ -7,8 +7,17 @@ import { extensionName } from '../appGlobals'
 const toggleCoverageCommand = `${extensionName}.coverage.toggle`
 let showCoverage = false
 
-export function registerToggleCoverageOverlay() {
-  return vscode.commands.registerCommand(toggleCoverageCommand, () => (showCoverage = !showCoverage))
+export function registerToggleCoverageOverlay(show: boolean = false) {
+  showCoverage = show
+  return vscode.commands.registerCommand(toggleCoverageCommand, toggleCoverageOverlay)
+}
+
+export function toggleCoverageOverlay() {
+  showCoverage = !showCoverage
+}
+
+export function isVisible() {
+  return showCoverage
 }
 
 export function showCoverageOverlay(editor: vscode.TextEditor, allCoverage: Coverage) {
