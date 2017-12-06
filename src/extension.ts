@@ -45,7 +45,7 @@ export function activate(context: vscode.ExtensionContext) {
     }),
     ...registerFileChangeWatchers(extensionInstance),
     ...registerCoverageCodeLens(extensionInstance),
-    registerToggleCoverageOverlay(),
+    registerToggleCoverageOverlay(pluginSettings.showCoverageOnLoad),
     vscode.commands.registerCommand(`${extensionName}.run-test`, extensionInstance.runTest),
     vscode.languages.registerCodeLensProvider(languages, extensionInstance.codeLensProvider)
   )
@@ -64,6 +64,7 @@ function getExtensionSettings(): IPluginSettings {
     enableInlineErrorMessages: config.get<boolean>('enableInlineErrorMessages'),
     enableSnapshotUpdateMessages: config.get<boolean>('enableSnapshotUpdateMessages'),
     rootPath: path.join(vscode.workspace.rootPath, config.get<string>('rootPath')),
-    runAllTestsFirst: config.get<boolean>('runAllTestsFirst')
+    runAllTestsFirst: config.get<boolean>('runAllTestsFirst'),
+    showCoverageOnLoad: config.get<boolean>('showCoverageOnLoad'),
   }
 }
