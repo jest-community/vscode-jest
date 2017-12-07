@@ -41,7 +41,6 @@ export class JestExt {
   // The ability to show fails in the problems section
   private failDiagnostics: vscode.DiagnosticCollection
 
-  private passingItStyle: vscode.TextEditorDecorationType
   private failingItStyle: vscode.TextEditorDecorationType
   private skipItStyle: vscode.TextEditorDecorationType
   private unknownItStyle: vscode.TextEditorDecorationType
@@ -294,27 +293,23 @@ export class JestExt {
     const filePath = editor.document.uri.fsPath
     const { itBlocks } = this.parseTestFile(filePath)
     const assertions = this.reconciler.assertionsForTestFile(filePath) || []
-    const { successes, fails, skips, unknowns, inlineErrors } = this.sortDecorationBlocks(
+    const { fails, skips, unknowns, inlineErrors } = this.sortDecorationBlocks(
       itBlocks,
       assertions,
       this.pluginSettings.enableInlineErrorMessages
     )
 
     const styleMap = [
-      { data: successes, decorationType: this.passingItStyle, state: TestReconciliationState.KnownSuccess },
       { data: fails, decorationType: this.failingItStyle, state: TestReconciliationState.KnownFail },
       { data: skips, decorationType: this.skipItStyle, state: TestReconciliationState.KnownSkip },
       { data: unknowns, decorationType: this.unknownItStyle, state: TestReconciliationState.Unknown },
     ]
     const lenseDecorations: DecorationOptions[] = []
     styleMap.forEach(style => {
-      // Skip debug decorators for passing tests
       // TODO: Skip debug decorators for unknowns?
-      if (style.state !== TestReconciliationState.KnownSuccess) {
-        const decorators = this.generateDotsForItBlocks(style.data, style.state)
-        editor.setDecorations(style.decorationType, decorators)
-        lenseDecorations.push(...decorators)
-      }
+      const decorators = this.generateDotsForItBlocks(style.data, style.state)
+      editor.setDecorations(style.decorationType, decorators)
+      lenseDecorations.push(...decorators)
     })
     this.codeLensProvider.updateLenses(lenseDecorations)
 
@@ -395,7 +390,6 @@ export class JestExt {
   }
 
   private setupDecorators() {
-    this.passingItStyle = decorations.passingItName()
     this.failingItStyle = decorations.failingItName()
     this.skipItStyle = decorations.skipItName()
     this.unknownItStyle = decorations.notRanItName()
