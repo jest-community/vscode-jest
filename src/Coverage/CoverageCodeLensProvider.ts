@@ -1,9 +1,6 @@
 import * as vscode from 'vscode'
 
 import { JestExt } from '../JestExt'
-import { extensionName } from '../appGlobals'
-
-const coverageCommand = `${extensionName}.coverage.metrics`
 
 export function registerCoverageCodeLens(jestExt: JestExt) {
   return [
@@ -11,9 +8,6 @@ export function registerCoverageCodeLens(jestExt: JestExt) {
       { pattern: '**/*.{ts,tsx,js,jsx}' },
       new CoverageCodeLensProvider(jestExt)
     ),
-    vscode.commands.registerCommand(coverageCommand, () => {
-      vscode.window.showInformationMessage('You have unit tests!')
-    }),
   ]
 }
 
@@ -39,7 +33,7 @@ class CoverageCodeLensProvider implements vscode.CodeLensProvider {
     const range = new vscode.Range(0, 0, 0, 0)
     const command: vscode.Command = {
       title: metrics,
-      command: coverageCommand,
+      command: null,
     }
 
     return [new vscode.CodeLens(range, command)]
