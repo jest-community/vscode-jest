@@ -64,7 +64,7 @@ export class JestExt {
     this.jestSettings = new Settings(workspace)
     this.pluginSettings = pluginSettings
     this.coverage = new Coverage(this.workspace.rootPath)
-    this.codeLensProvider = new CodeLensProvider()
+    this.codeLensProvider = new CodeLensProvider(pluginSettings.enableCodeLens)
     this.getSettings()
   }
 
@@ -232,6 +232,10 @@ export class JestExt {
     this.parsingTestFile = true
     this.updateDotDecorators(editor)
     this.parsingTestFile = false
+  }
+
+  public triggerUpdateSettings(updatedSettings: IPluginSettings) {
+    this.codeLensProvider.setEnabled(updatedSettings.enableCodeLens)
   }
 
   private parseTestFile(path: string): IParseResults {
@@ -525,13 +529,13 @@ export class JestExt {
         if [ -x "$basedir/node" ]; then
           "$basedir/node"  "$basedir/../jest-cli/bin/jest.js" "$@"
           ret=$?
-        else 
+        else
           node  "$basedir/../jest-cli/bin/jest.js" "$@"
           ret=$?
         fi
-        exit $ret 
+        exit $ret
         */
-        const lines = fs.readFileSync(jest, 'utf8').split('\n');
+        const lines = fs.readFileSync(jest, 'utf8').split('\n')
         switch (lines[0]) {
           case '#!/usr/bin/env node': {
             return jest

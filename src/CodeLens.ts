@@ -16,9 +16,11 @@ class CodeLens extends vscode.CodeLens {
 export class CodeLensProvider implements vscode.CodeLensProvider {
   private didChangeCodeLenses: vscode.EventEmitter<void>
   private decorations: DecorationOptions[]
+  private enabled: boolean
 
-  constructor() {
+  constructor(enabled: boolean) {
     this.didChangeCodeLenses = new vscode.EventEmitter()
+    this.enabled = enabled
   }
 
   get onDidChangeCodeLenses(): vscode.Event<void> {
@@ -29,6 +31,10 @@ export class CodeLensProvider implements vscode.CodeLensProvider {
     document: vscode.TextDocument,
     _token: vscode.CancellationToken
   ): vscode.ProviderResult<vscode.CodeLens[]> {
+    if (!this.enabled) {
+      return []
+    }
+
     return (this.decorations || []).map(o => {
       const range = new vscode.Range(
         o.range.start.line,
@@ -53,6 +59,11 @@ export class CodeLensProvider implements vscode.CodeLensProvider {
 
   updateLenses(decorations: DecorationOptions[]) {
     this.decorations = decorations
+    this.didChangeCodeLenses.fire()
+  }
+
+  setEnabled(enabled) {
+    this.enabled = enabled
     this.didChangeCodeLenses.fire()
   }
 }
