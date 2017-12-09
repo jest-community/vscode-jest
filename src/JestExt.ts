@@ -523,11 +523,11 @@ export class JestExt {
         if [ -x "$basedir/node" ]; then
           "$basedir/node"  "$basedir/../jest-cli/bin/jest.js" "$@"
           ret=$?
-        else
+        else 
           node  "$basedir/../jest-cli/bin/jest.js" "$@"
           ret=$?
         fi
-        exit $ret
+        exit $ret 
         */
         const lines = fs.readFileSync(jest, 'utf8').split('\n');
         switch (lines[0]) {
