@@ -14,16 +14,7 @@ let extensionInstance: JestExt
 
 export function activate(context: vscode.ExtensionContext) {
   // To make us VS Code agnostic outside of this file
-  const workspaceConfig = vscode.workspace.getConfiguration('jest')
-  const pluginSettings: IPluginSettings = {
-    autoEnable: workspaceConfig.get<boolean>('autoEnable'),
-    pathToConfig: workspaceConfig.get<string>('pathToConfig'),
-    pathToJest: workspaceConfig.get<string>('pathToJest'),
-    enableInlineErrorMessages: workspaceConfig.get<boolean>('enableInlineErrorMessages'),
-    enableSnapshotUpdateMessages: workspaceConfig.get<boolean>('enableSnapshotUpdateMessages'),
-    rootPath: path.join(vscode.workspace.rootPath, workspaceConfig.get<string>('rootPath')),
-    runAllTestsFirst: workspaceConfig.get<boolean>('runAllTestsFirst'),
-  }
+  const pluginSettings = getExtensionSettings()
   const jestPath = pathToJest(pluginSettings)
   const configPath = pathToConfig(pluginSettings)
   const currentJestVersion = 20
@@ -54,12 +45,33 @@ export function activate(context: vscode.ExtensionContext) {
     }),
     ...registerFileChangeWatchers(extensionInstance),
     ...registerCoverageCodeLens(extensionInstance),
-    registerToggleCoverageOverlay(),
+    registerToggleCoverageOverlay(pluginSettings.showCoverageOnLoad),
     vscode.commands.registerCommand(`${extensionName}.run-test`, extensionInstance.runTest),
-    vscode.languages.registerCodeLensProvider(languages, extensionInstance.codeLensProvider)
+    vscode.languages.registerCodeLensProvider(languages, extensionInstance.codeLensProvider),
+    vscode.workspace.onDidChangeConfiguration(e => {
+      if (e.affectsConfiguration('jest')) {
+        const updatedSettings = getExtensionSettings()
+        extensionInstance.triggerUpdateSettings(updatedSettings)
+      }
+    })
   )
 }
 
 export function deactivate() {
   extensionInstance.deactivate()
+}
+
+function getExtensionSettings(): IPluginSettings {
+  const config = vscode.workspace.getConfiguration('jest')
+  return {
+    autoEnable: config.get<boolean>('autoEnable'),
+    pathToConfig: config.get<string>('pathToConfig'),
+    pathToJest: config.get<string>('pathToJest'),
+    enableCodeLens: config.get<boolean>('enableCodeLens'),
+    enableInlineErrorMessages: config.get<boolean>('enableInlineErrorMessages'),
+    enableSnapshotUpdateMessages: config.get<boolean>('enableSnapshotUpdateMessages'),
+    rootPath: path.join(vscode.workspace.rootPath, config.get<string>('rootPath')),
+    runAllTestsFirst: config.get<boolean>('runAllTestsFirst'),
+    showCoverageOnLoad: config.get<boolean>('showCoverageOnLoad'),
+  }
 }

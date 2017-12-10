@@ -81,6 +81,16 @@
           "description": "Run all tests before starting Jest in watch mode",
           "type": "boolean",
           "default": true
+        },
+        "jest.showCoverageOnLoad": {
+          "description": "Show code coverage when extension starts (if collected)",
+          "type": "boolean",
+          "default": false
+        },
+        "jest.enableCodeLens": {
+          "description": "Whether codelens for debugging should show",
+          "type": "boolean",
+          "default": true
         }
       }
     },
