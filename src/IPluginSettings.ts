@@ -1,5 +1,6 @@
 export interface IPluginSettings {
   autoEnable?: boolean
+  enableCodeLens?: boolean
   enableInlineErrorMessages?: boolean
   enableSnapshotUpdateMessages?: boolean
   pathToJest?: string

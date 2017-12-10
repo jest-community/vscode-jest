@@ -63,7 +63,7 @@ export class JestExt {
     this.jestSettings = new Settings(workspace)
     this.pluginSettings = pluginSettings
     this.coverage = new Coverage(this.workspace.rootPath)
-    this.codeLensProvider = new CodeLensProvider()
+    this.codeLensProvider = new CodeLensProvider(pluginSettings.enableCodeLens)
     this.getSettings()
   }
 
@@ -231,6 +231,10 @@ export class JestExt {
     this.parsingTestFile = true
     this.updateDotDecorators(editor)
     this.parsingTestFile = false
+  }
+
+  public triggerUpdateSettings(updatedSettings: IPluginSettings) {
+    this.codeLensProvider.setEnabled(updatedSettings.enableCodeLens)
   }
 
   private parseTestFile(path: string): IParseResults {

@@ -47,7 +47,13 @@ export function activate(context: vscode.ExtensionContext) {
     ...registerCoverageCodeLens(extensionInstance),
     registerToggleCoverageOverlay(pluginSettings.showCoverageOnLoad),
     vscode.commands.registerCommand(`${extensionName}.run-test`, extensionInstance.runTest),
-    vscode.languages.registerCodeLensProvider(languages, extensionInstance.codeLensProvider)
+    vscode.languages.registerCodeLensProvider(languages, extensionInstance.codeLensProvider),
+    vscode.workspace.onDidChangeConfiguration(e => {
+      if (e.affectsConfiguration('jest')) {
+        const updatedSettings = getExtensionSettings()
+        extensionInstance.triggerUpdateSettings(updatedSettings)
+      }
+    })
   )
 }
 
@@ -61,6 +67,7 @@ function getExtensionSettings(): IPluginSettings {
     autoEnable: config.get<boolean>('autoEnable'),
     pathToConfig: config.get<string>('pathToConfig'),
     pathToJest: config.get<string>('pathToJest'),
+    enableCodeLens: config.get<boolean>('enableCodeLens'),
     enableInlineErrorMessages: config.get<boolean>('enableInlineErrorMessages'),
     enableSnapshotUpdateMessages: config.get<boolean>('enableSnapshotUpdateMessages'),
     rootPath: path.join(vscode.workspace.rootPath, config.get<string>('rootPath')),
