@@ -1,6 +1,6 @@
 ## Master
 
-### 2.5.1
+### 2.5.1-2
 
 * Add option to disable codelens - goncharov
 
