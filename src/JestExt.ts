@@ -21,6 +21,7 @@ import { DebugCodeLensProvider } from './DebugCodeLens'
 import { DecorationOptions } from './types'
 import { hasDocument, isOpenInMultipleEditors } from './editor'
 import { CoverageOverlay } from './Coverage/CoverageOverlay'
+import { setTimeout } from 'timers'
 
 export class JestExt {
   private workspace: ProjectWorkspace
@@ -51,7 +52,8 @@ export class JestExt {
   failingAssertionDecorators: { [fileName: string]: vscode.TextEditorDecorationType[] }
 
   private clearOnNextInput: boolean
-  private forcedClose = false
+  private forcedClose = {}
+  private jestProcessId = 0
 
   constructor(workspace: ProjectWorkspace, outputChannel: vscode.OutputChannel, pluginSettings: IPluginSettings) {
     this.workspace = workspace
@@ -71,35 +73,49 @@ export class JestExt {
     this.getSettings()
   }
 
-  public startProcess() {
+  public startProcess(watchMode?: boolean) {
     // The Runner is an event emitter that handles taking the Jest
     // output and converting it into different types of data that
     // we can handle here differently.
     if (this.jestProcess) {
-      this.jestProcess.closeProcess()
-      delete this.jestProcess
+      return
     }
 
-    let maxRestart = 4
     this.jestProcess = new Runner(this.workspace)
+
+    this.jestProcessId = this.jestProcessId + 1
+    const jestProcessId = this.jestProcessId.toString()
+    this.forcedClose[jestProcessId] = false
+    let maxRestart = 6
 
     this.jestProcess
       .on('debuggerProcessExit', () => {
-        this.channel.appendLine('Closed Jest')
-
-        if (this.forcedClose) {
-          this.forcedClose = false
+        if (this.forcedClose[jestProcessId]) {
+          // only clean up the jest process if no more
+          // recent jest process is running
+          if (this.jestProcessId.toString() === jestProcessId) {
+            delete this.jestProcess
+          }
           return
         }
+
+        this.channel.appendLine('Closed Jest')
 
         if (maxRestart-- <= 0) {
           console.warn('jest has been restarted too many times, please check your system')
           status.stopped('(too many restarts)')
           return
         }
+        this.forcedClose[jestProcessId] = true
+        // only clean up the jest process if no more
+        // recent jest process is running
+        if (this.jestProcessId.toString() === jestProcessId) {
+          delete this.jestProcess
+        }
 
-        this.closeJest()
-        this.startWatchMode()
+        setTimeout(() => {
+          this.startProcess(true)
+        }, 0)
       })
       .on('executableJSON', (data: JestTotalResults) => {
         this.updateWithData(data)
@@ -152,9 +168,8 @@ export class JestExt {
     //reset the jest diagnostics
     resetDiagnostics(this.failDiagnostics)
 
-    this.forcedClose = false
     // Go!
-    if (this.pluginSettings.runAllTestsFirst) {
+    if (this.pluginSettings.runAllTestsFirst && !watchMode) {
       this.jestProcess.start(false)
     } else {
       this.startWatchMode()
@@ -162,7 +177,7 @@ export class JestExt {
   }
 
   public stopProcess() {
-    this.channel.appendLine('Closing Jest jest_runner.')
+    this.channel.appendLine('Closing Jest')
     this.closeJest()
     delete this.jestProcess
     status.stopped()
@@ -172,7 +187,7 @@ export class JestExt {
     if (!this.jestProcess) {
       return
     }
-    this.forcedClose = true
+    this.forcedClose[this.jestProcessId.toString()] = true
     this.jestProcess.closeProcess()
   }
 
