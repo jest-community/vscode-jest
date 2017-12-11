@@ -234,7 +234,13 @@ export class JestExt {
         // No response == cancel
         if (response) {
           this.jestProcess.runJestWithUpdateForSnapshots(() => {
-            vscode.window.showInformationMessage('Updated Snapshots. It will show in your next test run.')
+            if (this.pluginSettings.restartJestOnSnapshotUpdate) {
+              this.stopProcess()
+              this.startProcess()
+              vscode.window.showInformationMessage('Updated Snapshots and restarted Jest.')
+            } else {
+              vscode.window.showInformationMessage('Updated Snapshots. It will show in your next test run.')
+            }
           })
         }
       })

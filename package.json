@@ -98,6 +98,11 @@
           "description": "Whether snapshot previews should show",
           "type": "boolean",
           "default": true
+        },
+        "jest.restartJestOnSnapshotUpdate": {
+          "description": "Restart Jest runner after updating the snapshots",
+          "type": "boolean",
+          "default": false
         }
       }
     },
