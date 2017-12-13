@@ -1,5 +1,9 @@
 ## Master
 
+### 2.5.3
+
+* Detect apps bootstrapped using react-scripts-ts  - seanpoulter
+
 ### 2.5.1-2
 
 * Add option to disable codelens - goncharov
