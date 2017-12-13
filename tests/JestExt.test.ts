@@ -1,11 +1,11 @@
 jest.unmock('../src/JestExt')
-jest.mock("../src/CodeLens.ts", () => ({
-  CodeLensProvider: class MockCodeLensProvider {}
+jest.mock('../src/CodeLens.ts', () => ({
+  CodeLensProvider: class MockCodeLensProvider {},
 }))
 
 import { JestExt } from '../src/JestExt'
 import { ProjectWorkspace, Settings, Runner } from 'jest-editor-support'
-import { window, workspace } from 'vscode'
+import { window, workspace, debug } from 'vscode'
 
 describe('JestExt', () => {
   const mockSettings = (Settings as any) as jest.Mock<any>
@@ -144,6 +144,31 @@ describe('JestExt', () => {
 
         testMaxRestart(4)
       })
+    })
+  })
+
+  describe('runTest()', () => {
+    const fileName = 'fileName'
+    const testNamePattern = 'testNamePattern'
+    const defaultArgs = ['--runInBand', fileName, '--testNamePattern', testNamePattern]
+
+    it('should use the config if set', () => {
+      const config = 'jest.json'
+      const expected = [...defaultArgs, '--config', config]
+      const extensionSettings = {
+        pathToConfig: config,
+      } as any
+      const sut = new JestExt(projectWorkspace, channelStub, extensionSettings)
+
+      // @ts-ignore: Overriding private method
+      sut.resolvePathToJestBin = jest.fn().mockReturnValueOnce(true)
+      sut.runTest(fileName, testNamePattern)
+
+      expect(debug.startDebugging).toHaveBeenCalledTimes(1)
+
+      const configuration = (debug.startDebugging as jest.Mock<Function>).mock.calls[0][1]
+      expect(configuration).toBeDefined()
+      expect(configuration.args).toEqual(expected)
     })
   })
 })

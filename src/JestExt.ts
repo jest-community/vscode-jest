@@ -570,13 +570,18 @@ export class JestExt {
       return
     }
 
+    const args = ['--runInBand', fileName, '--testNamePattern', identifier]
+    if (this.pluginSettings.pathToConfig.length) {
+      args.push('--config', this.pluginSettings.pathToConfig)
+    }
+
     const port = Math.floor(Math.random() * 20000) + 10000
     const configuration = {
       name: 'TestRunner',
       type: 'node',
       request: 'launch',
       program,
-      args: ['--runInBand', fileName, '--testNamePattern', identifier],
+      args,
       runtimeArgs: ['--inspect-brk=' + port],
       port,
       protocol: 'inspector',
