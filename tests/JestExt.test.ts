@@ -14,6 +14,7 @@ describe('JestExt', () => {
   let projectWorkspace: ProjectWorkspace
   const channelStub = { appendLine: () => {} } as any
   const mockShowErrorMessage = window.showErrorMessage as jest.Mock<any>
+  const extensionSettings = {} as any
 
   beforeEach(() => {
     jest.resetAllMocks()
@@ -27,7 +28,7 @@ describe('JestExt', () => {
       getConfig: callback => callback(),
       jestVersionMajor: 17,
     }))
-    new JestExt(projectWorkspace, channelStub, {})
+    new JestExt(projectWorkspace, channelStub, extensionSettings)
     expect(mockShowErrorMessage.mock.calls).toMatchSnapshot()
   })
 
@@ -36,7 +37,7 @@ describe('JestExt', () => {
       getConfig: callback => callback(),
       jestVersionMajor: 20,
     }))
-    new JestExt(projectWorkspace, channelStub, {})
+    new JestExt(projectWorkspace, channelStub, extensionSettings)
     expect(window.showErrorMessage).not.toBeCalled()
   })
 
@@ -53,7 +54,7 @@ describe('JestExt', () => {
         closeProcess,
       }
       mockRunner.mockImplementation(() => eventEmitter)
-      extension = new JestExt(projectWorkspace, channelStub, {})
+      extension = new JestExt(projectWorkspace, channelStub, extensionSettings)
       extension.startProcess()
     })
 
@@ -158,8 +159,8 @@ describe('JestExt', () => {
       const extensionSettings = {
         pathToConfig: config,
       } as any
-      const sut = new JestExt(projectWorkspace, channelStub, extensionSettings)
 
+      const sut = new JestExt(projectWorkspace, channelStub, extensionSettings)
       // @ts-ignore: Overriding private method
       sut.resolvePathToJestBin = jest.fn().mockReturnValueOnce(true)
       sut.runTest(fileName, testNamePattern)
