@@ -29,7 +29,8 @@ function isBootstrappedWithCreateReactApp(rootPath: string): boolean {
   return (
     hasExecutable(rootPath, 'node_modules/.bin/react-scripts') ||
     hasExecutable(rootPath, 'node_modules/react-scripts/node_modules/.bin/jest') ||
-    hasExecutable(rootPath, 'node_modules/react-native-scripts')
+    hasExecutable(rootPath, 'node_modules/react-native-scripts') ||
+    hasExecutable(rootPath, 'node_modules/react-scripts-ts')
   )
 }
 
