@@ -14,6 +14,7 @@ const window = {
 
 const workspace = {
   getConfiguration: jest.fn(),
+  workspaceFolders: jest.fn(),
 }
 
 const OverviewRulerLane = {
@@ -25,6 +26,11 @@ const Range = jest.fn()
 const Diagnostic = jest.fn()
 const DiagnosticSeverity = { Error: 0, Warning: 1, Information: 2, Hint: 3 }
 
+const debug = {
+  onDidTerminateDebugSession: jest.fn(),
+  startDebugging: jest.fn(),
+}
+
 export {
   languages,
   StatusBarAlignment,
@@ -35,4 +41,5 @@ export {
   Range,
   Diagnostic,
   DiagnosticSeverity,
+  debug,
 }
