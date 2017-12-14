@@ -3,3 +3,4 @@ node_js:
   - "6"
 script:
   - yarn ci
+  - yarn danger
