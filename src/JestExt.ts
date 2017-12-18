@@ -63,7 +63,7 @@ export class JestExt {
     this.reconciler = new TestReconciler()
     this.jestSettings = new Settings(workspace)
     this.pluginSettings = pluginSettings
-    this.coverage = new Coverage(this.workspace.rootPath)
+    this.coverage = new Coverage()
     this.codeLensProvider = new CodeLensProvider(pluginSettings.enableCodeLens)
     this.getSettings()
   }
