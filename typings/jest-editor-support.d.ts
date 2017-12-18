@@ -3,4 +3,6 @@ declare module 'jest-editor-support' {
   interface JestTotalResults {
     coverageMap: any
   }
+
+  type FormattedTestResults = {}
 }

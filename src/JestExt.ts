@@ -1,18 +1,7 @@
 import * as vscode from 'vscode'
 import * as path from 'path'
 import * as fs from 'fs'
-import {
-  ItBlock,
-  Runner,
-  Settings,
-  ProjectWorkspace,
-  parse as babylonParse,
-  TestReconciler,
-  JestTotalResults,
-  IParseResults,
-  TestAssertionStatus,
-} from 'jest-editor-support'
-import { parse as typescriptParse } from 'jest-test-typescript-parser'
+import { Runner, Settings, ProjectWorkspace, JestTotalResults } from 'jest-editor-support'
 import { matcher } from 'micromatch'
 
 import * as decorations from './decorations'
@@ -23,17 +12,19 @@ import { pathToJestPackageJSON } from './helpers'
 import { readFileSync } from 'fs'
 import { Coverage, showCoverageOverlay } from './Coverage'
 import { updateDiagnostics, resetDiagnostics, failedSuiteCount } from './diagnostics'
-import { CodeLensProvider } from './CodeLens'
+import { DebugCodeLensProvider } from './DebugCodeLens'
 import { DecorationOptions } from './types'
+import { TestResultProvider, TestResult } from './TestResultProvider'
 
 export class JestExt {
   private workspace: ProjectWorkspace
   private jestProcess: Runner
   private jestSettings: Settings
-  private reconciler: TestReconciler
   private pluginSettings: IPluginSettings
   public coverage: Coverage
-  public codeLensProvider: CodeLensProvider
+
+  testResultProvider: TestResultProvider
+  public debugCodeLensProvider: DebugCodeLensProvider
 
   // So you can read what's going on
   private channel: vscode.OutputChannel
@@ -60,11 +51,13 @@ export class JestExt {
     this.failingAssertionDecorators = []
     this.failDiagnostics = vscode.languages.createDiagnosticCollection('Jest')
     this.clearOnNextInput = true
-    this.reconciler = new TestReconciler()
     this.jestSettings = new Settings(workspace)
     this.pluginSettings = pluginSettings
     this.coverage = new Coverage()
-    this.codeLensProvider = new CodeLensProvider(pluginSettings.enableCodeLens)
+
+    this.testResultProvider = new TestResultProvider()
+    this.debugCodeLensProvider = new DebugCodeLensProvider(this.testResultProvider, pluginSettings.enableCodeLens)
+
     this.getSettings()
   }
 
@@ -235,99 +228,37 @@ export class JestExt {
   }
 
   public triggerUpdateSettings(updatedSettings: IPluginSettings) {
-    this.codeLensProvider.setEnabled(updatedSettings.enableCodeLens)
-  }
-
-  private parseTestFile(path: string): IParseResults {
-    const isTypeScript = path.match(/.(ts|tsx)$/)
-    const parser = isTypeScript ? typescriptParse : babylonParse
-    return parser(path)
-  }
-
-  private sortDecorationBlocks(
-    itBlocks: ItBlock[],
-    assertions: TestAssertionStatus[],
-    enableInlineErrorMessages: boolean
-  ): {
-    successes: Array<ItBlock>
-    fails: Array<ItBlock>
-    skips: Array<ItBlock>
-    unknowns: Array<ItBlock>
-    inlineErrors: Array<TestAssertionStatus>
-  } {
-    // This makes it cheaper later down the line
-    const successes: Array<ItBlock> = []
-    const fails: Array<ItBlock> = []
-    const skips: Array<ItBlock> = []
-    const unknowns: Array<ItBlock> = []
-    const inlineErrors: Array<TestAssertionStatus> = []
-
-    const assertionMap: { [title: string]: TestAssertionStatus } = {}
-    assertions.forEach(a => (assertionMap[a.title] = a))
-
-    // Use the parsers it blocks for references
-    itBlocks.forEach(it => {
-      const state = assertionMap[it.name]
-      if (state) {
-        switch (state.status) {
-          case TestReconciliationState.KnownSuccess:
-            successes.push(it)
-            break
-          case TestReconciliationState.KnownFail:
-            fails.push(it)
-            if (enableInlineErrorMessages) {
-              inlineErrors.push(state)
-            }
-            break
-          case TestReconciliationState.KnownSkip:
-            skips.push(it)
-            break
-          case TestReconciliationState.Unknown:
-            unknowns.push(it)
-            break
-        }
-      } else {
-        unknowns.push(it)
-      }
-    })
-
-    return { successes, fails, skips, unknowns, inlineErrors }
+    this.debugCodeLensProvider.enabled = updatedSettings.enableCodeLens
   }
 
   private updateDotDecorators(editor: vscode.TextEditor) {
-    const filePath = editor.document.uri.fsPath
-    const { itBlocks } = this.parseTestFile(filePath)
-    const assertions = this.reconciler.assertionsForTestFile(filePath) || []
-    const { successes, fails, skips, unknowns, inlineErrors } = this.sortDecorationBlocks(
-      itBlocks,
-      assertions,
-      this.pluginSettings.enableInlineErrorMessages
-    )
+    const filePath = editor.document.fileName
+    const testResults = this.testResultProvider.getSortedResults(filePath)
 
+    // Dots
     const styleMap = [
-      { data: successes, decorationType: this.passingItStyle, state: TestReconciliationState.KnownSuccess },
-      { data: fails, decorationType: this.failingItStyle, state: TestReconciliationState.KnownFail },
-      { data: skips, decorationType: this.skipItStyle, state: TestReconciliationState.KnownSkip },
-      { data: unknowns, decorationType: this.unknownItStyle, state: TestReconciliationState.Unknown },
+      { data: testResults.success, decorationType: this.passingItStyle, state: TestReconciliationState.KnownSuccess },
+      { data: testResults.fail, decorationType: this.failingItStyle, state: TestReconciliationState.KnownFail },
+      { data: testResults.skip, decorationType: this.skipItStyle, state: TestReconciliationState.KnownSkip },
+      { data: testResults.unknown, decorationType: this.unknownItStyle, state: TestReconciliationState.Unknown },
     ]
-    const lenseDecorations: DecorationOptions[] = []
+
     styleMap.forEach(style => {
-      // TODO: Skip debug decorators for unknowns?
       const decorators = this.generateDotsForItBlocks(style.data, style.state)
       editor.setDecorations(style.decorationType, decorators)
-
-      // Don't show the Debug CodeLens for passing tests
-      if (style.state !== TestReconciliationState.KnownSuccess) {
-        lenseDecorations.push(...decorators)
-      }
     })
-    this.codeLensProvider.updateLenses(lenseDecorations)
 
+    // Debug CodeLens
+    this.debugCodeLensProvider.didChange()
+
+    // Inline error messages
     this.resetInlineErrorDecorators(editor)
-    inlineErrors.forEach(a => {
-      const { style, decorator } = this.generateInlineErrorDecorator(a)
-      editor.setDecorations(style, [decorator])
-    })
+    if (this.pluginSettings.enableInlineErrorMessages) {
+      testResults.fail.forEach(a => {
+        const { style, decorator } = this.generateInlineErrorDecorator(a)
+        editor.setDecorations(style, [decorator])
+      })
+    }
   }
 
   private resetInlineErrorDecorators(_: vscode.TextEditor) {
@@ -337,12 +268,13 @@ export class JestExt {
     this.failingAssertionDecorators = []
   }
 
-  private generateInlineErrorDecorator(assertion: TestAssertionStatus) {
-    const errorMessage = assertion.terseMessage || assertion.shortMessage
+  private generateInlineErrorDecorator(test: TestResult) {
+    const errorMessage = test.terseMessage || test.shortMessage
     const decorator = {
-      range: new vscode.Range(assertion.line - 1, 0, assertion.line - 1, 0),
+      range: new vscode.Range(test.lineNumberOfError, 0, test.lineNumberOfError, 0),
       hoverMessage: errorMessage,
     }
+
     // We have to make a new style for each unique message, this is
     // why we have to remove off of them beforehand
     const style = decorations.failingAssertionStyle(errorMessage)
@@ -419,8 +351,8 @@ export class JestExt {
   private updateWithData(data: JestTotalResults) {
     this.coverage.mapCoverage(data.coverageMap)
 
-    const results = this.reconciler.updateFileWithJestStatus(data)
-    updateDiagnostics(results, this.failDiagnostics)
+    const statusList = this.testResultProvider.updateTestResults(data)
+    updateDiagnostics(statusList, this.failDiagnostics)
 
     const failedFileCount = failedSuiteCount(this.failDiagnostics)
     if (failedFileCount <= 0 && data.success) {
@@ -429,29 +361,25 @@ export class JestExt {
       status.failed(` (${failedFileCount} test suite${failedFileCount > 1 ? 's' : ''} failed)`)
     }
 
-    this.triggerUpdateDecorations(vscode.window.activeTextEditor)
+    for (const editor of vscode.window.visibleTextEditors) {
+      this.triggerUpdateDecorations(editor)
+    }
     this.clearOnNextInput = true
   }
 
-  private generateDotsForItBlocks(blocks: ItBlock[], state: TestReconciliationState): DecorationOptions[] {
-    const nameForState = (_name: string, state: TestReconciliationState): string => {
-      switch (state) {
-        case TestReconciliationState.KnownSuccess:
-          return 'Passed'
-        case TestReconciliationState.KnownFail:
-          return 'Failed'
-        case TestReconciliationState.KnownSkip:
-          return 'Skipped'
-        case TestReconciliationState.Unknown:
-          return 'Test has not run yet, due to Jest only running tests related to changes.'
-      }
+  private generateDotsForItBlocks(blocks: TestResult[], state: TestReconciliationState): DecorationOptions[] {
+    const nameForState = {
+      [TestReconciliationState.KnownSuccess]: 'Passed',
+      [TestReconciliationState.KnownFail]: 'Failed',
+      [TestReconciliationState.KnownSkip]: 'Skipped',
+      [TestReconciliationState.Unknown]: 'Test has not run yet, due to Jest only running tests related to changes.',
     }
+
     return blocks.map(it => {
       return {
-        // VS Code is indexed starting at 0
-        // jest-editor-support is indexed starting at 1
-        range: new vscode.Range(it.start.line - 1, it.start.column - 1, it.start.line - 1, it.start.column + 1),
-        hoverMessage: nameForState(it.name, state),
+        range: new vscode.Range(it.start.line, it.start.column, it.start.line, it.start.column + 1),
+        hoverMessage: nameForState[state],
+
         /* ERROR: this needs to include all ancestor describe block names as well!
           in code bellow it block has identifier = 'aaa bbb ccc': but name is only 'ccc'
 
@@ -598,5 +526,23 @@ export class JestExt {
     })
 
     vscode.debug.startDebugging(vscode.workspace.workspaceFolders[0], configuration)
+  }
+
+  onDidCloseTextDocument(document: vscode.TextDocument) {
+    this.removeCachedTestResults(document)
+  }
+
+  onDidSaveTextDocument(editor: vscode.TextEditor, document: vscode.TextDocument) {
+    this.removeCachedTestResults(document)
+    this.triggerUpdateDecorations(editor)
+  }
+
+  removeCachedTestResults(document: vscode.TextDocument) {
+    if (!document || document.isUntitled) {
+      return
+    }
+
+    const filePath = document.fileName
+    this.testResultProvider.removeCachedResults(filePath)
   }
 }

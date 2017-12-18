@@ -47,13 +47,15 @@ export function activate(context: vscode.ExtensionContext) {
     ...registerCoverageCodeLens(extensionInstance),
     registerToggleCoverageOverlay(pluginSettings.showCoverageOnLoad),
     vscode.commands.registerCommand(`${extensionName}.run-test`, extensionInstance.runTest),
-    vscode.languages.registerCodeLensProvider(languages, extensionInstance.codeLensProvider),
+    vscode.languages.registerCodeLensProvider(languages, extensionInstance.debugCodeLensProvider),
     vscode.workspace.onDidChangeConfiguration(e => {
       if (e.affectsConfiguration('jest')) {
         const updatedSettings = getExtensionSettings()
         extensionInstance.triggerUpdateSettings(updatedSettings)
       }
-    })
+    }),
+
+    vscode.workspace.onDidCloseTextDocument(extensionInstance.onDidCloseTextDocument)
   )
 }
 

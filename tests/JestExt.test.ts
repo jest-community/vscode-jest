@@ -1,6 +1,6 @@
 jest.unmock('../src/JestExt')
-jest.mock('../src/CodeLens.ts', () => ({
-  CodeLensProvider: class MockCodeLensProvider {},
+jest.mock('../src/DebugCodeLens', () => ({
+  DebugCodeLensProvider: class MockCodeLensProvider {},
 }))
 
 import { JestExt } from '../src/JestExt'
@@ -170,6 +170,69 @@ describe('JestExt', () => {
       const configuration = (debug.startDebugging as jest.Mock<Function>).mock.calls[0][1]
       expect(configuration).toBeDefined()
       expect(configuration.args).toEqual(expected)
+    })
+  })
+
+  describe('onDidCloseTextDocument()', () => {
+    it('should remove the cached test results', () => {
+      const projectWorkspace = new ProjectWorkspace(null, null, null, null)
+      const sut = new JestExt(projectWorkspace, channelStub, extensionSettings)
+      const document = {} as any
+      sut.removeCachedTestResults = jest.fn()
+
+      sut.onDidCloseTextDocument(document)
+      expect(sut.removeCachedTestResults).toBeCalledWith(document)
+    })
+  })
+
+  describe('onDidSaveTextDocument()', () => {
+    let sut
+
+    beforeEach(() => {
+      const projectWorkspace = new ProjectWorkspace(null, null, null, null)
+      sut = new JestExt(projectWorkspace, channelStub, extensionSettings)
+    })
+
+    it('should remove the cached test results', () => {
+      const document = {} as any
+      sut.removeCachedTestResults = jest.fn()
+
+      sut.onDidSaveTextDocument(null, document)
+      expect(sut.removeCachedTestResults).toBeCalledWith(document)
+    })
+
+    it('should update the decorations', () => {
+      const editor = {} as any
+      sut.triggerUpdateDecorations = jest.fn()
+      sut.onDidSaveTextDocument(editor, null)
+
+      expect(sut.triggerUpdateDecorations).toBeCalledWith(editor)
+    })
+  })
+
+  describe('removeCachedTestResults()', () => {
+    const projectWorkspace = new ProjectWorkspace(null, null, null, null)
+    const sut = new JestExt(projectWorkspace, channelStub, extensionSettings)
+    sut.testResultProvider.removeCachedResults = jest.fn()
+
+    it('should do nothing when the document is null', () => {
+      sut.onDidCloseTextDocument(null)
+
+      expect(sut.testResultProvider.removeCachedResults).not.toBeCalled()
+    })
+
+    it('should do nothing when the document is untitled', () => {
+      const document: any = { isUntitled: true } as any
+      sut.onDidCloseTextDocument(document)
+
+      expect(sut.testResultProvider.removeCachedResults).not.toBeCalled()
+    })
+
+    it('should reset the test result cache for the document', () => {
+      const expected = 'file.js'
+      sut.onDidCloseTextDocument({ fileName: expected } as any)
+
+      expect(sut.testResultProvider.removeCachedResults).toBeCalledWith(expected)
     })
   })
 })
