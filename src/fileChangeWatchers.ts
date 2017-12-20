@@ -12,9 +12,7 @@ export function registerFileChangeWatchers(jestExt: JestExt) {
     }),
 
     vscode.workspace.onDidSaveTextDocument(document => {
-      if (document) {
-        jestExt.triggerUpdateDecorations(activeEditor)
-      }
+      jestExt.onDidSaveTextDocument(activeEditor, document)
     }),
 
     vscode.workspace.onDidChangeTextDocument(({ document }) => {
