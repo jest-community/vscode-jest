@@ -55,7 +55,9 @@ export function activate(context: vscode.ExtensionContext) {
       }
     }),
 
-    vscode.workspace.onDidCloseTextDocument(extensionInstance.onDidCloseTextDocument)
+    vscode.workspace.onDidCloseTextDocument(document => {
+      extensionInstance.onDidCloseTextDocument(document)
+    })
   )
 }
 
