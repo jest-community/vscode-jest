@@ -3,7 +3,7 @@
 
 ## Master
 
-*
+* Removes the decorators when you stop the Jest runner - orta
 
 ### 2.5.4
 

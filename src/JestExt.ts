@@ -79,6 +79,7 @@ export class JestExt {
 
     let maxRestart = 4
     this.jestProcess = new Runner(this.workspace)
+    this.codeLensProvider.setEnabled(this.pluginSettings.enableCodeLens)
 
     this.jestProcess
       .on('debuggerProcessExit', () => {
@@ -330,7 +331,17 @@ export class JestExt {
     })
   }
 
-  private resetInlineErrorDecorators(_: vscode.TextEditor) {
+  private resetDotDecorators(editor: vscode.TextEditor | undefined) {
+    const styleMap = [
+      { data: [], decorationType: this.passingItStyle },
+      { data: [], decorationType: this.failingItStyle },
+      { data: [], decorationType: this.skipItStyle },
+      { data: [], decorationType: this.unknownItStyle },
+    ]
+    styleMap.forEach(s => editor.setDecorations(s.decorationType, []))
+  }
+
+  private resetInlineErrorDecorators(_: vscode.TextEditor | undefined) {
     this.failingAssertionDecorators.forEach(element => {
       element.dispose()
     })
@@ -363,6 +374,12 @@ export class JestExt {
     }
 
     if (this.parsingTestFile) {
+      return false
+    }
+
+    // When you've done "stop: jest" don't show
+    // decorators
+    if (this.jestProcess || this.forcedClose) {
       return false
     }
 
@@ -404,6 +421,12 @@ export class JestExt {
     this.failingItStyle = decorations.failingItName()
     this.skipItStyle = decorations.skipItName()
     this.unknownItStyle = decorations.notRanItName()
+  }
+
+  private removeAllDecorators() {
+    this.resetInlineErrorDecorators(vscode.window.activeTextEditor)
+    this.resetDotDecorators(vscode.window.activeTextEditor)
+    this.codeLensProvider.setEnabled(false)
   }
 
   private shouldIgnoreOutput(text: string): boolean {
@@ -469,6 +492,7 @@ export class JestExt {
 
   public deactivate() {
     this.jestProcess.closeProcess()
+    this.removeAllDecorators()
   }
 
   private getJestVersion(version: (v: number) => void) {
