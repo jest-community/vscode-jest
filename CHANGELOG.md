@@ -3,8 +3,11 @@
 
 ## Master
 
-* Improve where the Debug CodeLens is displayed - seanpoulter
 *
+
+### 2.5.5
+
+* Improve where the Debug CodeLens is displayed - seanpoulter
 
 ### 2.5.4
 
