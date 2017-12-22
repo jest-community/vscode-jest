@@ -23,23 +23,65 @@ describe('JestProcess', () => {
   describe('when creating', () => {
     beforeEach(() => {
       runnerMock.mockImplementation(() => runnerMockImplementation)
-      jestProcess = new JestProcess(projectWorkspaceMock)
     })
 
     it('accepts a project workspace argument', () => {
+      jestProcess = new JestProcess({
+        projectWorkspace: projectWorkspaceMock,
+      })
+      expect(jestProcess).not.toBe(null)
+    })
+
+    it('accepts watchMode boolean argument', () => {
+      jestProcess = new JestProcess({
+        projectWorkspace: projectWorkspaceMock,
+        watchMode: true,
+      })
       expect(jestProcess).not.toBe(null)
     })
 
     it('creates and instance of jest-editor-support runner', () => {
+      jestProcess = new JestProcess({
+        projectWorkspace: projectWorkspaceMock,
+      })
       expect(runnerMock.mock.instances.length).toBe(1)
     })
 
     it('passes the workspace argument to the jest-editor-support Runner', () => {
+      jestProcess = new JestProcess({
+        projectWorkspace: projectWorkspaceMock,
+      })
       expect(runnerMock.mock.calls[0][0]).toBe(projectWorkspaceMock)
     })
 
     it('starts the jest-editor-support runner', () => {
+      jestProcess = new JestProcess({
+        projectWorkspace: projectWorkspaceMock,
+      })
       expect(runnerMockImplementation.start).toHaveBeenCalledTimes(1)
+    })
+
+    it('passes the watchMode argument == false to the start command when it is not provided', () => {
+      jestProcess = new JestProcess({
+        projectWorkspace: projectWorkspaceMock,
+      })
+      expect(runnerMockImplementation.start.mock.calls[0][0]).toBe(false)
+    })
+
+    it('passes the watchMode argument == false to the start command when it is false', () => {
+      jestProcess = new JestProcess({
+        projectWorkspace: projectWorkspaceMock,
+        watchMode: false,
+      })
+      expect(runnerMockImplementation.start.mock.calls[0][0]).toBe(false)
+    })
+
+    it('passes the watchMode argument == true to the start command when it is true', () => {
+      jestProcess = new JestProcess({
+        projectWorkspace: projectWorkspaceMock,
+        watchMode: true,
+      })
+      expect(runnerMockImplementation.start.mock.calls[0][0]).toBe(true)
     })
   })
 
@@ -55,7 +97,9 @@ describe('JestProcess', () => {
         },
       }
       runnerMock.mockImplementation(() => runnerMockImplementation)
-      jestProcess = new JestProcess(projectWorkspaceMock)
+      jestProcess = new JestProcess({
+        projectWorkspace: projectWorkspaceMock,
+      })
       onExit = jest.fn()
       jestProcess.onExit(onExit)
     })
@@ -87,7 +131,9 @@ describe('JestProcess', () => {
         },
       }
       runnerMock.mockImplementation(() => runnerMockImplementation)
-      jestProcess = new JestProcess(projectWorkspaceMock)
+      jestProcess = new JestProcess({
+        projectWorkspace: projectWorkspaceMock,
+      })
       eventHandler = jest.fn()
     })
 
