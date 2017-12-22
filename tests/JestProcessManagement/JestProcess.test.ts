@@ -7,21 +7,22 @@ import { EventEmitter } from 'events'
 describe('JestProcess', () => {
   let projectWorkspaceMock
   let jestProcess
-  const mockRunner = (Runner as any) as jest.Mock<any>
-  let eventEmitter: any
+  const runnerMock = (Runner as any) as jest.Mock<any>
+  let runnerMockImplementation
+  let eventEmitter
 
   beforeEach(() => {
     jest.clearAllMocks()
     projectWorkspaceMock = new ProjectWorkspace(null, null, null, null)
+    runnerMockImplementation = {
+      on: jest.fn(() => this),
+      start: jest.fn(),
+    }
   })
 
   describe('when creating', () => {
     beforeEach(() => {
-      eventEmitter = {
-        on: jest.fn(() => eventEmitter),
-        start: jest.fn(),
-      }
-      mockRunner.mockImplementation(() => eventEmitter)
+      runnerMock.mockImplementation(() => runnerMockImplementation)
       jestProcess = new JestProcess(projectWorkspaceMock)
     })
 
@@ -30,31 +31,30 @@ describe('JestProcess', () => {
     })
 
     it('creates and instance of jest-editor-support runner', () => {
-      expect(mockRunner.mock.instances.length).toBe(1)
+      expect(runnerMock.mock.instances.length).toBe(1)
     })
 
     it('passes the workspace argument to the jest-editor-support Runner', () => {
-      expect(mockRunner.mock.calls[0][0]).toBe(projectWorkspaceMock)
+      expect(runnerMock.mock.calls[0][0]).toBe(projectWorkspaceMock)
     })
 
     it('starts the jest-editor-support runner', () => {
-      expect(eventEmitter.start).toHaveBeenCalledTimes(1)
+      expect(runnerMockImplementation.start).toHaveBeenCalledTimes(1)
     })
   })
 
   describe('when jest-editor-support runner exits', () => {
-    let runnerMockImplementation
     let onExit
 
     beforeEach(() => {
       eventEmitter = new EventEmitter()
       runnerMockImplementation = {
+        ...runnerMockImplementation,
         on: (event, callback) => {
           eventEmitter.on(event, callback)
         },
-        start: jest.fn(),
       }
-      mockRunner.mockImplementation(() => runnerMockImplementation)
+      runnerMock.mockImplementation(() => runnerMockImplementation)
       jestProcess = new JestProcess(projectWorkspaceMock)
       onExit = jest.fn()
       jestProcess.onExit(onExit)
@@ -75,19 +75,18 @@ describe('JestProcess', () => {
   })
 
   describe('when subscribing to regular jest-editor-support events', () => {
-    let runnerMockImplementation
     let eventHandler
     const jestEditorSupportedEvent = 'jest-editor-supported-event'
 
     beforeEach(() => {
       eventEmitter = new EventEmitter()
       runnerMockImplementation = {
+        ...runnerMockImplementation,
         on: (event, callback) => {
           eventEmitter.on(event, callback)
         },
-        start: jest.fn(),
       }
-      mockRunner.mockImplementation(() => runnerMockImplementation)
+      runnerMock.mockImplementation(() => runnerMockImplementation)
       jestProcess = new JestProcess(projectWorkspaceMock)
       eventHandler = jest.fn()
     })
