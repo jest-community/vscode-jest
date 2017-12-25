@@ -153,11 +153,19 @@ describe('DebugCodeLensProvider', () => {
       expect(testResultProvider.getResults).toBeCalledWith(document.fileName)
     })
 
-    it('should not show DebugCodeLenses for successful test results', () => {
+    function expectNoDebugCodeLensesForTestStatus(status: TestReconciliationState) {
       const sut = new DebugCodeLensProvider(testResultProvider, true)
-      getResults.mockReturnValueOnce([{ status: TestReconciliationState.KnownSuccess }])
+      getResults.mockReturnValueOnce([{ status }])
 
       expect(sut.provideCodeLenses(document, token)).toEqual([])
+    }
+
+    it('should not show DebugCodeLenses for successful test results', () => {
+      expectNoDebugCodeLensesForTestStatus(TestReconciliationState.KnownSuccess)
+    })
+
+    it('should not show DebugCodeLenses for skipped test results', () => {
+      expectNoDebugCodeLensesForTestStatus(TestReconciliationState.KnownSkip)
     })
 
     it('should create the CodeLens at the start of the `test`/`it` block', () => {

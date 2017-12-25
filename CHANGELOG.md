@@ -3,7 +3,7 @@
 
 ## Master
 
-*
+* Hide Debug CodeLens for skipped tests - seanpoulter
 
 ### 2.5.5
 
