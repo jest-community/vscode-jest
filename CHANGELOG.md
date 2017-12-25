@@ -3,7 +3,7 @@
 
 ## Master
 
-*
+* Improve the dot decoration placement as we edit - seanpoulter
 
 ### 2.5.5
 

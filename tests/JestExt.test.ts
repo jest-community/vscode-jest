@@ -6,6 +6,8 @@ jest.mock('../src/DebugCodeLens', () => ({
 import { JestExt } from '../src/JestExt'
 import { ProjectWorkspace, Settings, Runner } from 'jest-editor-support'
 import { window, workspace, debug } from 'vscode'
+import { hasDocument, isOpenInMultipleEditors } from '../src/editor'
+import { failingAssertionStyle } from '../src/decorations'
 
 describe('JestExt', () => {
   const mockSettings = (Settings as any) as jest.Mock<any>
@@ -29,6 +31,7 @@ describe('JestExt', () => {
       jestVersionMajor: 17,
     }))
     new JestExt(projectWorkspace, channelStub, extensionSettings)
+
     expect(mockShowErrorMessage.mock.calls).toMatchSnapshot()
   })
 
@@ -148,6 +151,90 @@ describe('JestExt', () => {
     })
   })
 
+  describe('resetInlineErrorDecorators()', () => {
+    let sut: JestExt
+    const editor: any = {
+      document: { fileName: 'file.js' },
+      setDecorations: jest.fn(),
+    }
+    const decorationType: any = { dispose: jest.fn() }
+
+    beforeEach(() => {
+      sut = new JestExt(projectWorkspace, channelStub, extensionSettings)
+
+      sut.canUpdateDecorators = jest.fn().mockReturnValueOnce(true)
+      sut.debugCodeLensProvider.didChange = jest.fn()
+      ;(failingAssertionStyle as jest.Mock<{}>).mockReturnValue({})
+      ;(sut.testResultProvider.getSortedResults as jest.Mock<{}>).mockReturnValueOnce({
+        success: [],
+        fail: [],
+        skip: [],
+        unknown: [],
+      })
+    })
+
+    it('should initialize the cached decoration types as an empty array', () => {
+      expect(sut.failingAssertionDecorators[editor.document.fileName]).toBeUndefined()
+      sut.triggerUpdateDecorations(editor)
+
+      expect(sut.failingAssertionDecorators[editor.document.fileName]).toEqual([])
+      expect(isOpenInMultipleEditors).not.toBeCalled()
+    })
+
+    it('should not clear the cached decorations types when the document is open more than once', () => {
+      ;(isOpenInMultipleEditors as jest.Mock<{}>).mockReturnValueOnce(true)
+
+      sut.failingAssertionDecorators[editor.document.fileName] = {
+        forEach: jest.fn(),
+      } as any
+      sut.triggerUpdateDecorations(editor)
+
+      expect(sut.failingAssertionDecorators[editor.document.fileName].forEach).not.toBeCalled()
+    })
+
+    it('should dispose of each cached decoration type', () => {
+      sut.failingAssertionDecorators[editor.document.fileName] = [decorationType]
+      sut.triggerUpdateDecorations(editor)
+
+      expect(decorationType.dispose).toBeCalled()
+    })
+
+    it('should reset the cached decoration types', () => {
+      sut.failingAssertionDecorators[editor.document.fileName] = [decorationType]
+      sut.triggerUpdateDecorations(editor)
+
+      expect(sut.failingAssertionDecorators[editor.document.fileName]).toEqual([])
+    })
+  })
+
+  describe('generateInlineErrorDecorator()', () => {
+    it('should add the decoration type to the cache', () => {
+      const settings: any = { enableInlineErrorMessages: true }
+      const sut = new JestExt(projectWorkspace, channelStub, settings)
+      const editor: any = {
+        document: { fileName: 'file.js' },
+        setDecorations: jest.fn(),
+      }
+      const expected = {}
+      ;(failingAssertionStyle as jest.Mock<{}>).mockReturnValueOnce(expected)
+      sut.canUpdateDecorators = jest.fn().mockReturnValueOnce(true)
+      sut.testResultProvider.getSortedResults = jest.fn().mockReturnValueOnce({
+        success: [],
+        fail: [
+          {
+            start: {},
+          },
+        ],
+        skip: [],
+        unknown: [],
+      })
+      sut.debugCodeLensProvider.didChange = jest.fn()
+      sut.triggerUpdateDecorations(editor)
+
+      expect(sut.failingAssertionDecorators[editor.document.fileName]).toEqual([expected])
+    })
+  })
+
   describe('runTest()', () => {
     const fileName = 'fileName'
     const testNamePattern = 'testNamePattern'
@@ -174,39 +261,20 @@ describe('JestExt', () => {
   })
 
   describe('onDidCloseTextDocument()', () => {
-    it('should remove the cached test results', () => {
-      const projectWorkspace = new ProjectWorkspace(null, null, null, null)
-      const sut = new JestExt(projectWorkspace, channelStub, extensionSettings)
-      const document = {} as any
-      sut.removeCachedTestResults = jest.fn()
+    const projectWorkspace = new ProjectWorkspace(null, null, null, null)
+    const sut = new JestExt(projectWorkspace, channelStub, extensionSettings)
+    const document = {} as any
+    sut.removeCachedTestResults = jest.fn()
+    sut.removeCachedDecorationTypes = jest.fn()
 
+    it('should remove the cached test results', () => {
       sut.onDidCloseTextDocument(document)
       expect(sut.removeCachedTestResults).toBeCalledWith(document)
     })
-  })
 
-  describe('onDidSaveTextDocument()', () => {
-    let sut
-
-    beforeEach(() => {
-      const projectWorkspace = new ProjectWorkspace(null, null, null, null)
-      sut = new JestExt(projectWorkspace, channelStub, extensionSettings)
-    })
-
-    it('should remove the cached test results', () => {
-      const document = {} as any
-      sut.removeCachedTestResults = jest.fn()
-
-      sut.onDidSaveTextDocument(null, document)
-      expect(sut.removeCachedTestResults).toBeCalledWith(document)
-    })
-
-    it('should update the decorations', () => {
-      const editor = {} as any
-      sut.triggerUpdateDecorations = jest.fn()
-      sut.onDidSaveTextDocument(editor, null)
-
-      expect(sut.triggerUpdateDecorations).toBeCalledWith(editor)
+    it('should remove the cached decorations', () => {
+      sut.onDidCloseTextDocument(document)
+      expect(sut.removeCachedDecorationTypes)
     })
   })
 
@@ -215,24 +283,150 @@ describe('JestExt', () => {
     const sut = new JestExt(projectWorkspace, channelStub, extensionSettings)
     sut.testResultProvider.removeCachedResults = jest.fn()
 
-    it('should do nothing when the document is null', () => {
-      sut.onDidCloseTextDocument(null)
-
+    it('should do nothing when the document is falsy', () => {
+      sut.removeCachedTestResults(null)
       expect(sut.testResultProvider.removeCachedResults).not.toBeCalled()
     })
 
     it('should do nothing when the document is untitled', () => {
       const document: any = { isUntitled: true } as any
-      sut.onDidCloseTextDocument(document)
+      sut.removeCachedTestResults(document)
 
       expect(sut.testResultProvider.removeCachedResults).not.toBeCalled()
     })
 
     it('should reset the test result cache for the document', () => {
       const expected = 'file.js'
-      sut.onDidCloseTextDocument({ fileName: expected } as any)
+      sut.removeCachedTestResults({ fileName: expected } as any)
 
       expect(sut.testResultProvider.removeCachedResults).toBeCalledWith(expected)
+    })
+  })
+
+  describe('removeCachedAnnotations()', () => {
+    const projectWorkspace = new ProjectWorkspace(null, null, null, null)
+    const sut = new JestExt(projectWorkspace, channelStub, extensionSettings)
+
+    beforeEach(() => {
+      sut.failingAssertionDecorators = {
+        'file.js': [],
+      }
+    })
+
+    it('should do nothing when the document is falsy', () => {
+      sut.onDidCloseTextDocument(null)
+
+      expect(sut.failingAssertionDecorators['file.js']).toBeDefined()
+    })
+
+    it('should remove the annotations for the document', () => {
+      const document: any = { fileName: 'file.js' } as any
+      sut.onDidCloseTextDocument(document)
+
+      expect(sut.failingAssertionDecorators['file.js']).toBeUndefined()
+    })
+  })
+
+  describe('onDidChangeActiveTextEditor()', () => {
+    let sut
+    const editor: any = {}
+    const projectWorkspace = new ProjectWorkspace(null, null, null, null)
+    sut = new JestExt(projectWorkspace, channelStub, extensionSettings)
+    sut.triggerUpdateDecorations = jest.fn()
+
+    beforeEach(() => {
+      ;(sut.triggerUpdateDecorations as jest.Mock<{}>).mockReset()
+    })
+
+    it('should do nothing if the editor does not have a document', () => {
+      ;(hasDocument as jest.Mock<{}>).mockReturnValueOnce(false)
+      sut.onDidChangeActiveTextEditor(editor)
+
+      expect(sut.triggerUpdateDecorations).not.toBeCalled()
+    })
+
+    it('should update the annotations when the editor has a document', () => {
+      ;(hasDocument as jest.Mock<{}>).mockReturnValueOnce(true)
+      sut.onDidChangeActiveTextEditor(editor)
+
+      expect(sut.triggerUpdateDecorations).toBeCalledWith(editor)
+    })
+  })
+
+  describe('onDidChangeTextDocument()', () => {
+    let sut
+    const event: any = {
+      document: {
+        isDirty: false,
+        uri: { scheme: 'file' },
+      },
+      contentChanges: [],
+    }
+
+    beforeEach(() => {
+      const projectWorkspace = new ProjectWorkspace(null, null, null, null)
+      sut = new JestExt(projectWorkspace, channelStub, extensionSettings)
+    })
+
+    function expectItTakesNoAction(event) {
+      sut.removeCachedTestResults = jest.fn()
+      sut.triggerUpdateDecorations = jest.fn()
+      sut.onDidChangeTextDocument(event)
+
+      expect(sut.removeCachedTestResults).not.toBeCalledWith(event.document)
+      expect(sut.triggerUpdateDecorations).not.toBeCalled()
+    }
+
+    it('should do nothing if the document has unsaved changes', () => {
+      const event: any = {
+        document: {
+          isDirty: true,
+          uri: { scheme: 'file' },
+        },
+        contentChanges: [],
+      }
+      expectItTakesNoAction(event)
+    })
+
+    it('should do nothing if the document URI scheme is "git"', () => {
+      const event: any = {
+        document: {
+          isDirty: false,
+          uri: {
+            scheme: 'git',
+          },
+        },
+        contentChanges: [],
+      }
+      expectItTakesNoAction(event)
+    })
+
+    it('should do nothing if the document is clean but there are changes', () => {
+      const event = {
+        document: {
+          isDirty: false,
+          uri: { scheme: 'file' },
+        },
+        contentChanges: { length: 1 },
+      }
+      expectItTakesNoAction(event)
+    })
+
+    it('should remove the cached test results if the document is clean', () => {
+      sut.removeCachedTestResults = jest.fn()
+      window.visibleTextEditors = []
+      sut.onDidChangeTextDocument(event)
+
+      expect(sut.removeCachedTestResults).toBeCalledWith(event.document)
+    })
+
+    it('should update the decorations', () => {
+      const editor: any = { document: event.document }
+      sut.triggerUpdateDecorations = jest.fn()
+      window.visibleTextEditors = [editor]
+      sut.onDidChangeTextDocument(event)
+
+      expect(sut.triggerUpdateDecorations).toBeCalledWith(editor)
     })
   })
 })

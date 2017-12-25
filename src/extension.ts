@@ -7,7 +7,6 @@ import { pathToJest, pathToConfig } from './helpers'
 import { JestExt } from './JestExt'
 import { IPluginSettings } from './IPluginSettings'
 import { registerStatusBar } from './statusBar'
-import { registerFileChangeWatchers } from './fileChangeWatchers'
 import { registerCoverageCodeLens, registerToggleCoverageOverlay } from './Coverage'
 
 let extensionInstance: JestExt
@@ -32,7 +31,6 @@ export function activate(context: vscode.ExtensionContext) {
     { language: 'typescript' },
     { language: 'typescriptreact' },
   ]
-
   context.subscriptions.push(
     registerStatusBar(channel),
     vscode.commands.registerTextEditorCommand(`${extensionName}.start`, () => {
@@ -43,7 +41,6 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerTextEditorCommand(`${extensionName}.show-channel`, () => {
       channel.show()
     }),
-    ...registerFileChangeWatchers(extensionInstance),
     ...registerCoverageCodeLens(extensionInstance),
     registerToggleCoverageOverlay(pluginSettings.showCoverageOnLoad),
     vscode.commands.registerCommand(`${extensionName}.run-test`, extensionInstance.runTest),
@@ -57,7 +54,10 @@ export function activate(context: vscode.ExtensionContext) {
 
     vscode.workspace.onDidCloseTextDocument(document => {
       extensionInstance.onDidCloseTextDocument(document)
-    })
+    }),
+
+    vscode.window.onDidChangeActiveTextEditor(extensionInstance.onDidChangeActiveTextEditor, extensionInstance),
+    vscode.workspace.onDidChangeTextDocument(extensionInstance.onDidChangeTextDocument, extensionInstance)
   )
 }
 
