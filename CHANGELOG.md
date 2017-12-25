@@ -3,7 +3,7 @@
 
 ## Master
 
-*
+* Mute output from `console.warn` during tests - seanpoulter
 
 ### 2.5.5
 
