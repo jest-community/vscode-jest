@@ -23,10 +23,11 @@ describe('test diagnostics', () => {
       expect(mockDiagnostics.clear).toBeCalled()
     })
   })
-  describe('updateDiagnostics', () => {
-    // const MockReconciler = (TestReconciler as any) as jest.Mock<any>
 
+  describe('updateDiagnostics', () => {
+    const consoleWarn = console.warn
     let lineNumber = 17
+
     function createAssertion(title: string, status: TestReconcilationState): TestAssertionStatus {
       return {
         title,
@@ -56,6 +57,7 @@ describe('test diagnostics', () => {
 
     beforeEach(() => {
       jest.resetAllMocks()
+      console.warn = consoleWarn
     })
 
     it('can handle when all tests passed', () => {
@@ -132,6 +134,7 @@ describe('test diagnostics', () => {
       // verify: removed passed tests
       expect(mockDiagnostics.delete).toHaveBeenCalledTimes(notFailedTestSuiteCount)
     })
+
     it('knows how many failed suite from diagnostics', () => {
       const mockDiagnostics = new MockDiagnosticCollection()
       const invokeCount = 7
@@ -143,10 +146,13 @@ describe('test diagnostics', () => {
 
       expect(failedSuiteCount(mockDiagnostics)).toEqual(invokeCount)
     })
+
     it('should not produce negative diagnostic range', () => {
       const mockDiagnostics = new MockDiagnosticCollection()
       const assertion = createAssertion('a', 'KnownFail')
       const invalidLine = [0, -1, undefined, null, NaN]
+      console.warn = jest.fn()
+
       invalidLine.forEach(line => {
         jest.clearAllMocks()
         assertion.line = line
