@@ -4,6 +4,8 @@
 ## Master
 
 * Improve the dot decoration placement as we edit - seanpoulter
+* Hide Debug CodeLens for skipped tests - seanpoulter
+* Mute output from `console.warn` during tests - seanpoulter
 
 ### 2.5.5
 

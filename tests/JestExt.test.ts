@@ -68,6 +68,7 @@ describe('JestExt', () => {
       extension.startProcess()
       expect(closeProcess).toHaveBeenCalledTimes(1)
     })
+
     it('should closeProcess when starting again', () => {
       expect(closeProcess).toHaveBeenCalledTimes(0)
       extension.startProcess()
@@ -78,6 +79,7 @@ describe('JestExt', () => {
       const filtered = eventEmitter.on.mock.calls.filter(args => args[0] === 'debuggerProcessExit')
       return filtered[filtered.length - 1][1]
     }
+
     describe('when jest process exit', () => {
       function getJestWatchMode(index: number): boolean {
         return eventEmitter.start.mock.calls[index][0]
@@ -87,6 +89,7 @@ describe('JestExt', () => {
         handler = getExitHandler()
         jest.clearAllMocks()
       })
+
       it('if non-watch mode, exit should reset process and trigger the watch mode', () => {
         eventEmitter.watchMode = false
         handler()
@@ -96,6 +99,7 @@ describe('JestExt', () => {
         expect(eventEmitter.start).toHaveBeenCalledTimes(1)
         expect(getJestWatchMode(0)).toEqual(true)
       })
+
       it('in watch mode, exit should re-start the watch mode', () => {
         eventEmitter.watchMode = true
         handler()
@@ -103,6 +107,7 @@ describe('JestExt', () => {
         expect(eventEmitter.start).toHaveBeenCalledTimes(1)
         expect(getJestWatchMode(0)).toEqual(true)
       })
+
       it('should not restart jest if closeProcess() is invoked by exit handler', () => {
         expect(eventEmitter.start).toHaveBeenCalledTimes(0)
         ;[true, false].forEach(watchMode => {
@@ -115,6 +120,7 @@ describe('JestExt', () => {
         })
       })
     })
+
     describe('safeguard restart', () => {
       function testMaxRestart(maxCount: number) {
         for (let i = 1; i <= maxCount * 2; i++) {
@@ -126,20 +132,28 @@ describe('JestExt', () => {
         }
       }
       let handler: () => void
+      const consoleWarn = console.warn
+
       beforeEach(() => {
         handler = getExitHandler()
         jest.clearAllMocks()
+        console.warn = consoleWarn
       })
+
       it('should not restart jest if closeProcess() is invoked by user', () => {
         extension.stopProcess()
         expect(eventEmitter.closeProcess).toHaveBeenCalledTimes(1)
         handler()
         expect(eventEmitter.start).toHaveBeenCalledTimes(0)
       })
+
       it('will not restart if exceed maxRestart (4)', () => {
+        console.warn = jest.fn()
         testMaxRestart(4)
       })
+
       it('will reset maxRestart if startProcess() is called again', () => {
+        console.warn = jest.fn()
         testMaxRestart(4)
 
         extension.startProcess()
