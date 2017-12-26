@@ -40,7 +40,7 @@ export class DebugCodeLensProvider implements vscode.CodeLensProvider {
     const testResults = this.testResultProvider.getResults(filePath)
     const fileName = basename(document.fileName)
     for (const test of testResults) {
-      if (test.status === TestReconciliationState.KnownSuccess) {
+      if (test.status === TestReconciliationState.KnownSuccess || test.status === TestReconciliationState.KnownSkip) {
         continue
       }
 
