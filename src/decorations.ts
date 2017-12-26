@@ -1,4 +1,4 @@
-import { window, OverviewRulerLane } from 'vscode'
+import { window, OverviewRulerLane, DecorationRangeBehavior } from 'vscode'
 
 export function failingItName() {
   return window.createTextEditorDecorationType({
@@ -16,6 +16,7 @@ export function failingItName() {
         contentText: '●',
       },
     },
+    rangeBehavior: DecorationRangeBehavior.ClosedClosed,
   })
 }
 
@@ -35,6 +36,7 @@ export function skipItName() {
         contentText: '○',
       },
     },
+    rangeBehavior: DecorationRangeBehavior.ClosedClosed,
   })
 }
 
@@ -54,6 +56,7 @@ export function passingItName() {
         contentText: '●',
       },
     },
+    rangeBehavior: DecorationRangeBehavior.ClosedClosed,
   })
 }
 
@@ -73,6 +76,7 @@ export function notRanItName() {
         contentText: '○',
       },
     },
+    rangeBehavior: DecorationRangeBehavior.ClosedClosed,
   })
 }
 

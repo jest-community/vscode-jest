@@ -15,6 +15,7 @@ import { updateDiagnostics, resetDiagnostics, failedSuiteCount } from './diagnos
 import { DebugCodeLensProvider } from './DebugCodeLens'
 import { DecorationOptions } from './types'
 import { TestResultProvider, TestResult } from './TestResultProvider'
+import { hasDocument, isOpenInMultipleEditors } from './editor'
 
 export class JestExt {
   private workspace: ProjectWorkspace
@@ -40,7 +41,7 @@ export class JestExt {
   private parsingTestFile = false
 
   // We have to keep track of our inline assert fails to remove later
-  private failingAssertionDecorators: vscode.TextEditorDecorationType[]
+  failingAssertionDecorators: { [fileName: string]: vscode.TextEditorDecorationType[] }
 
   private clearOnNextInput: boolean
   private forcedClose = false
@@ -48,7 +49,7 @@ export class JestExt {
   constructor(workspace: ProjectWorkspace, outputChannel: vscode.OutputChannel, pluginSettings: IPluginSettings) {
     this.workspace = workspace
     this.channel = outputChannel
-    this.failingAssertionDecorators = []
+    this.failingAssertionDecorators = {}
     this.failDiagnostics = vscode.languages.createDiagnosticCollection('Jest')
     this.clearOnNextInput = true
     this.jestSettings = new Settings(workspace)
@@ -254,21 +255,31 @@ export class JestExt {
     // Inline error messages
     this.resetInlineErrorDecorators(editor)
     if (this.pluginSettings.enableInlineErrorMessages) {
+      const fileName = editor.document.fileName
       testResults.fail.forEach(a => {
-        const { style, decorator } = this.generateInlineErrorDecorator(a)
+        const { style, decorator } = this.generateInlineErrorDecorator(fileName, a)
         editor.setDecorations(style, [decorator])
       })
     }
   }
 
-  private resetInlineErrorDecorators(_: vscode.TextEditor) {
-    this.failingAssertionDecorators.forEach(element => {
+  private resetInlineErrorDecorators(editor: vscode.TextEditor) {
+    if (!this.failingAssertionDecorators[editor.document.fileName]) {
+      this.failingAssertionDecorators[editor.document.fileName] = []
+      return
+    }
+
+    if (isOpenInMultipleEditors(editor.document)) {
+      return
+    }
+
+    this.failingAssertionDecorators[editor.document.fileName].forEach(element => {
       element.dispose()
     })
-    this.failingAssertionDecorators = []
+    this.failingAssertionDecorators[editor.document.fileName] = []
   }
 
-  private generateInlineErrorDecorator(test: TestResult) {
+  private generateInlineErrorDecorator(fileName: string, test: TestResult) {
     const errorMessage = test.terseMessage || test.shortMessage
     const decorator = {
       range: new vscode.Range(test.lineNumberOfError, 0, test.lineNumberOfError, 0),
@@ -278,12 +289,12 @@ export class JestExt {
     // We have to make a new style for each unique message, this is
     // why we have to remove off of them beforehand
     const style = decorations.failingAssertionStyle(errorMessage)
-    this.failingAssertionDecorators.push(style)
+    this.failingAssertionDecorators[fileName].push(style)
 
     return { style, decorator }
   }
 
-  private canUpdateDecorators(editor: vscode.TextEditor) {
+  canUpdateDecorators(editor: vscode.TextEditor) {
     const atEmptyScreen = !editor
     if (atEmptyScreen) {
       return false
@@ -530,11 +541,7 @@ export class JestExt {
 
   onDidCloseTextDocument(document: vscode.TextDocument) {
     this.removeCachedTestResults(document)
-  }
-
-  onDidSaveTextDocument(editor: vscode.TextEditor, document: vscode.TextDocument) {
-    this.removeCachedTestResults(document)
-    this.triggerUpdateDecorations(editor)
+    this.removeCachedDecorationTypes(document)
   }
 
   removeCachedTestResults(document: vscode.TextDocument) {
@@ -544,5 +551,48 @@ export class JestExt {
 
     const filePath = document.fileName
     this.testResultProvider.removeCachedResults(filePath)
+  }
+
+  removeCachedDecorationTypes(document: vscode.TextDocument) {
+    if (!document || !document.fileName) {
+      return
+    }
+
+    delete this.failingAssertionDecorators[document.fileName]
+  }
+
+  onDidChangeActiveTextEditor(editor: vscode.TextEditor) {
+    if (!hasDocument(editor)) {
+      return
+    }
+
+    this.triggerUpdateDecorations(editor)
+  }
+
+  /**
+   * This event is fired with the document not dirty when:
+   * - before the onDidSaveTextDocument event
+   * - the document was changed by an external editor
+   */
+  onDidChangeTextDocument(event: vscode.TextDocumentChangeEvent) {
+    if (event.document.isDirty) {
+      return
+    }
+    if (event.document.uri.scheme === 'git') {
+      return
+    }
+
+    // Ignore a clean file with a change:
+    if (event.contentChanges.length > 0) {
+      return
+    }
+
+    this.removeCachedTestResults(event.document)
+
+    for (const editor of vscode.window.visibleTextEditors) {
+      if (editor.document === event.document) {
+        this.triggerUpdateDecorations(editor)
+      }
+    }
   }
 }
