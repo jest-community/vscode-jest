@@ -17,9 +17,23 @@ jest.mock('jest-editor-support', () => {
   return { TestReconciler, parse }
 })
 
+const pathProperties = {
+  sep: jest.fn(),
+}
+jest.mock('path', () => {
+  const path = {}
+
+  Object.defineProperty(path, 'sep', {
+    get: () => pathProperties.sep(),
+  })
+
+  return path
+})
+
 import { TestResultProvider } from '../src/TestResultProvider'
 import { TestReconciliationState } from '../src/TestReconciliationState'
 import { parseTest } from '../src/TestParser'
+import * as path from 'path'
 
 describe('TestResultProvider', () => {
   describe('getResults()', () => {
@@ -48,6 +62,7 @@ describe('TestResultProvider', () => {
       ;(parseTest as jest.Mock<{}>).mockReturnValueOnce({
         itBlocks: [],
       })
+      sut.getAssertions = jest.fn().mockReturnValueOnce([])
       const expected = sut.getResults(filePath)
 
       expect(sut.getResults(filePath)).toBe(expected)
@@ -101,6 +116,25 @@ describe('TestResultProvider', () => {
       expect(actual[0].shortMessage).toBeUndefined()
       expect(actual[0].terseMessage).toBeUndefined()
       expect(actual[0].lineNumberOfError).toBeUndefined()
+    })
+  })
+
+  describe('getAssertions()', () => {
+    it('should get the assertions for a test file', () => {
+      const expected = 'file.js'
+      const sut = new TestResultProvider()
+      sut.getAssertions(expected)
+
+      expect(assertionsForTestFile).toBeCalledWith(expected)
+    })
+
+    it('should use an uppercase drive letter for Windows paths', () => {
+      pathProperties.sep.mockReturnValueOnce('\\')
+
+      const sut = new TestResultProvider()
+      sut.getAssertions('d:\\filePath')
+
+      expect(assertionsForTestFile).toBeCalledWith(`D:\\filePath`)
     })
   })
 
