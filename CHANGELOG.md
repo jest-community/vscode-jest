@@ -3,6 +3,8 @@
 
 ## Master
 
+* Fix dot decoration display on Windows - seanpoulter
+
 ### 2.5.6
 
 * Improve the dot decoration placement as we edit - seanpoulter

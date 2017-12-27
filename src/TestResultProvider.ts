@@ -2,6 +2,7 @@ import { TestReconciler, FormattedTestResults } from 'jest-editor-support'
 import { TestFileAssertionStatus } from 'jest-editor-support'
 import { TestReconciliationState } from './TestReconciliationState'
 import { parseTest } from './TestParser'
+import * as path from 'path'
 
 type Position = {
   /** Zero-based column number */
@@ -52,7 +53,7 @@ export class TestResultProvider {
     }
 
     const { itBlocks } = parseTest(filePath)
-    const results = this.reconciler.assertionsForTestFile(filePath) || []
+    const results = this.getAssertions(filePath) || []
 
     const resultsByTestName = {}
     for (const result of results) {
@@ -125,5 +126,22 @@ export class TestResultProvider {
   removeCachedResults(filePath: string) {
     this.resultsByFilePath[filePath] = null
     this.sortedResultsByFilePath[filePath] = null
+  }
+
+  /**
+   * Look up the cached test results by file path
+   *
+   * This function acts as the adapter between the VS Code document paths that
+   * have lowercase drive letters on Windows systems, and the Jest results that
+   * seem to be in uppercase.
+   *
+   * @param filePath
+   */
+  getAssertions(filePath: string) {
+    if (path.sep === '\\' && filePath.match(/^[a-z]:\\/)) {
+      return this.reconciler.assertionsForTestFile(filePath[0].toUpperCase() + filePath.slice(1))
+    } else {
+      return this.reconciler.assertionsForTestFile(filePath)
+    }
   }
 }
