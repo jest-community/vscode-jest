@@ -3,7 +3,9 @@
 
 ## Master
 
-### 2.5.7
+*
+
+### 2.5.7-8
 
 * Fix dot decoration display on Windows - seanpoulter
 
