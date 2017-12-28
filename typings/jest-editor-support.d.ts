@@ -4,5 +4,11 @@ declare module 'jest-editor-support' {
     coverageMap: any
   }
 
-  type FormattedTestResults = {}
+  type FormattedTestResults = {
+    testResults: TestResult[]
+  }
+
+  type TestResult = {
+    name: string
+  }
 }

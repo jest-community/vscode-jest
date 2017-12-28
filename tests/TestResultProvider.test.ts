@@ -33,7 +33,6 @@ jest.mock('path', () => {
 import { TestResultProvider } from '../src/TestResultProvider'
 import { TestReconciliationState } from '../src/TestReconciliationState'
 import { parseTest } from '../src/TestParser'
-import * as path from 'path'
 
 describe('TestResultProvider', () => {
   describe('getResults()', () => {
@@ -62,7 +61,7 @@ describe('TestResultProvider', () => {
       ;(parseTest as jest.Mock<{}>).mockReturnValueOnce({
         itBlocks: [],
       })
-      sut.getAssertions = jest.fn().mockReturnValueOnce([])
+      assertionsForTestFile.mockReturnValueOnce([])
       const expected = sut.getResults(filePath)
 
       expect(sut.getResults(filePath)).toBe(expected)
@@ -119,25 +118,6 @@ describe('TestResultProvider', () => {
     })
   })
 
-  describe('getAssertions()', () => {
-    it('should get the assertions for a test file', () => {
-      const expected = 'file.js'
-      const sut = new TestResultProvider()
-      sut.getAssertions(expected)
-
-      expect(assertionsForTestFile).toBeCalledWith(expected)
-    })
-
-    it('should use an uppercase drive letter for Windows paths', () => {
-      pathProperties.sep.mockReturnValueOnce('\\')
-
-      const sut = new TestResultProvider()
-      sut.getAssertions('d:\\filePath')
-
-      expect(assertionsForTestFile).toBeCalledWith(`D:\\filePath`)
-    })
-  })
-
   describe('getSortedResults()', () => {
     const filePath = 'file.js'
 
@@ -169,12 +149,28 @@ describe('TestResultProvider', () => {
   })
 
   describe('updateTestResults()', () => {
+    afterEach(() => pathProperties.sep.mockReset())
+
     it('should update the cached file status', () => {
       const sut = new TestResultProvider()
-      const results = {} as any
+      const results: any = {}
       sut.updateTestResults(results)
 
       expect(updateFileWithJestStatus).toBeCalledWith(results)
+    })
+
+    it('should test file paths to use lowercase drive letters on Windows', () => {
+      pathProperties.sep.mockReturnValue('\\')
+
+      const sut = new TestResultProvider()
+      const results: any = {
+        testResults: [{ name: 'relative.js' }, { name: 'c:\\stays-lowercase' }, { name: 'D:\\changes-case' }],
+      }
+      sut.updateTestResults(results)
+
+      expect(updateFileWithJestStatus).toBeCalledWith({
+        testResults: [{ name: 'relative.js' }, { name: 'c:\\stays-lowercase' }, { name: 'd:\\changes-case' }],
+      })
     })
   })
 })

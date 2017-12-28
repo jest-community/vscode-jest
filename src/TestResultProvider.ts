@@ -53,7 +53,7 @@ export class TestResultProvider {
     }
 
     const { itBlocks } = parseTest(filePath)
-    const results = this.getAssertions(filePath) || []
+    const results = this.reconciler.assertionsForTestFile(filePath) || []
 
     const resultsByTestName = {}
     for (const result of results) {
@@ -120,28 +120,23 @@ export class TestResultProvider {
   updateTestResults(data: FormattedTestResults): TestFileAssertionStatus[] {
     this.resultsByFilePath = {}
     this.sortedResultsByFilePath = {}
+
+    // To support Windows systems, the drive letter is converted to a lowercase
+    // letter to match the convention of the document URI (e.g.: document.fileName)
+    if (data.testResults && path.sep === '\\') {
+      for (let i = 0; i < data.testResults.length; i += 1) {
+        if (data.testResults[i].name.match(/^[A-Z]:\\/)) {
+          const filePath = data.testResults[i].name
+          data.testResults[i].name = filePath[0].toLowerCase() + filePath.slice(1)
+        }
+      }
+    }
+
     return this.reconciler.updateFileWithJestStatus(data)
   }
 
   removeCachedResults(filePath: string) {
     this.resultsByFilePath[filePath] = null
     this.sortedResultsByFilePath[filePath] = null
-  }
-
-  /**
-   * Look up the cached test results by file path
-   *
-   * This function acts as the adapter between the VS Code document paths that
-   * have lowercase drive letters on Windows systems, and the Jest results that
-   * seem to be in uppercase.
-   *
-   * @param filePath
-   */
-  getAssertions(filePath: string) {
-    if (path.sep === '\\' && filePath.match(/^[a-z]:\\/)) {
-      return this.reconciler.assertionsForTestFile(filePath[0].toUpperCase() + filePath.slice(1))
-    } else {
-      return this.reconciler.assertionsForTestFile(filePath)
-    }
   }
 }
