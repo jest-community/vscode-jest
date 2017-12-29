@@ -6,7 +6,10 @@ import { previewCommand } from './SnapshotPreviewProvider'
 
 const missingSnapshotCommand = `${extensionName}.snapshot.missing`
 
-export function registerSnapshotCodeLens() {
+export function registerSnapshotCodeLens(enableSnapshotPreviews: boolean) {
+  if (!enableSnapshotPreviews) {
+    return []
+  }
   return [
     vscode.languages.registerCodeLensProvider({ pattern: '**/*.{ts,tsx,js,jsx}' }, new SnapshotCodeLensProvider()),
     vscode.commands.registerCommand(missingSnapshotCommand, () => {

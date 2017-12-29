@@ -42,7 +42,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerTextEditorCommand(`${extensionName}.show-channel`, () => {
       channel.show()
     }),
-    ...registerSnapshotCodeLens(),
+    ...registerSnapshotCodeLens(pluginSettings.enableSnapshotPreviews),
     ...registerSnapshotPreview(),
     ...registerCoverageCodeLens(extensionInstance),
     registerToggleCoverageOverlay(pluginSettings.showCoverageOnLoad),
@@ -76,6 +76,7 @@ function getExtensionSettings(): IPluginSettings {
     pathToJest: config.get<string>('pathToJest'),
     enableCodeLens: config.get<boolean>('enableCodeLens'),
     enableInlineErrorMessages: config.get<boolean>('enableInlineErrorMessages'),
+    enableSnapshotPreviews: config.get<boolean>('enableSnapshotPreviews'),
     enableSnapshotUpdateMessages: config.get<boolean>('enableSnapshotUpdateMessages'),
     rootPath: path.join(vscode.workspace.rootPath, config.get<string>('rootPath')),
     runAllTestsFirst: config.get<boolean>('runAllTestsFirst'),

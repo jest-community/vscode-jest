@@ -91,6 +91,11 @@
           "description": "Whether codelens for debugging should show",
           "type": "boolean",
           "default": true
+        },
+        "jest.enableSnapshotPreviews": {
+          "description": "Whether snapshot previews should show",
+          "type": "boolean",
+          "default": true
         }
       }
     },
