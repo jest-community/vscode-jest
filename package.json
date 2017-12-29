@@ -91,6 +91,11 @@
           "description": "Whether codelens for debugging should show",
           "type": "boolean",
           "default": true
+        },
+        "jest.enableSnapshotPreviews": {
+          "description": "Whether snapshot previews should show",
+          "type": "boolean",
+          "default": true
         }
       }
     },
@@ -114,8 +119,8 @@
     ]
   },
   "lint-staged": {
-    "*.json": ["npm run prettier-write --", "git add"],
-    "*.ts": ["npm run prettier-write --", "git add"]
+    "*.json": ["yarn prettier-write --", "git add"],
+    "*.ts": ["yarn prettier-write --", "git add"]
   },
   "scripts": {
     "precommit": "lint-staged",
@@ -129,8 +134,8 @@
     "watch-test": "yarn test -- --watch",
     "prettier": "prettier",
     "prettier-write":
-      "npm run prettier -- --parser typescript --no-semi --single-quote --trailing-comma es5 --write --print-width 120",
-    "prettier-project": "npm run prettier-write -- '?(__mocks__|src|tests)/**/*.ts'"
+      "yarn prettier -- --parser typescript --no-semi --single-quote --trailing-comma es5 --write --print-width 120",
+    "prettier-project": "yarn prettier-write -- '?(__mocks__|src|tests)/**/*.ts'"
   },
   "devDependencies": {
     "@types/jest": "^21.1.1",
@@ -151,9 +156,9 @@
     "elegant-spinner": "^1.0.1",
     "istanbul-lib-coverage": "^1.1.1",
     "istanbul-lib-source-maps": "^1.1.0",
-    "jest-editor-support": "^21.3.0-beta.6",
-    "jest-snapshot": "21.3.0-alpha.eff7a1cf",
-    "jest-test-typescript-parser": "21.3.0-alpha.eff7a1cf",
+    "jest-editor-support": "^22.0.4",
+    "jest-snapshot": "^22.0.3",
+    "jest-test-typescript-parser": "^22.0.4",
     "micromatch": "^2.3.11"
   }
 }

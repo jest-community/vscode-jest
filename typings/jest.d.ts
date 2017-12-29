@@ -1,7 +1,7 @@
 declare namespace jest {
-    function resetAllMocks(): typeof jest;
+  function resetAllMocks(): typeof jest
 
-    interface Mock<T> {
-        mockReset(): void;
-    }
+  interface Mock<T> {
+    mockReset(): void
+  }
 }
