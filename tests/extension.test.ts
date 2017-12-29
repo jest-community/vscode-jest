@@ -55,6 +55,11 @@ jest.mock('../src/JestExt', () => ({
   },
 }))
 
+jest.mock('../src/SnapshotCodeLens', () => ({
+  registerSnapshotCodeLens: jest.fn(() => []),
+  registerSnapshotPreview: jest.fn(() => []),
+}))
+
 import { activate } from '../src/extension'
 import * as vscode from 'vscode'
 
