@@ -1,9 +1,13 @@
-// Please add your own contribution below inside the Master section
-// Bug-fixes within the same version aren't needed
+<!--
+
+Please add your own contribution below inside the Master section
+Bug-fixes within the same version aren't needed
 
 ## Master
 
 *
+
+-->
 
 ### 2.5.7-8
 
