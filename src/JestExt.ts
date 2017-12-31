@@ -15,18 +15,21 @@ import {
 } from './TestResults'
 import { pathToJestPackageJSON } from './helpers'
 import { readFileSync } from 'fs'
-import { Coverage, showCoverageOverlay } from './Coverage'
+import { CoverageMapProvider } from './Coverage'
 import { updateDiagnostics, resetDiagnostics, failedSuiteCount } from './diagnostics'
 import { DebugCodeLensProvider } from './DebugCodeLens'
 import { DecorationOptions } from './types'
 import { hasDocument, isOpenInMultipleEditors } from './editor'
+import { CoverageOverlay } from './Coverage/CoverageOverlay'
 
 export class JestExt {
   private workspace: ProjectWorkspace
   private jestProcess: Runner
   private jestSettings: Settings
   private pluginSettings: IPluginSettings
-  public coverage: Coverage
+
+  coverageMapProvider: CoverageMapProvider
+  coverageOverlay: CoverageOverlay
 
   testResultProvider: TestResultProvider
   public debugCodeLensProvider: DebugCodeLensProvider
@@ -58,7 +61,9 @@ export class JestExt {
     this.clearOnNextInput = true
     this.jestSettings = new Settings(workspace)
     this.pluginSettings = pluginSettings
-    this.coverage = new Coverage()
+
+    this.coverageMapProvider = new CoverageMapProvider()
+    this.coverageOverlay = new CoverageOverlay(this.coverageMapProvider, pluginSettings.showCoverageOnLoad)
 
     this.testResultProvider = new TestResultProvider()
     this.debugCodeLensProvider = new DebugCodeLensProvider(this.testResultProvider, pluginSettings.enableCodeLens)
@@ -221,7 +226,8 @@ export class JestExt {
   }
 
   public triggerUpdateDecorations(editor: vscode.TextEditor) {
-    showCoverageOverlay(editor, this.coverage)
+    this.coverageOverlay.updateVisibleEditors()
+
     if (!this.canUpdateDecorators(editor)) {
       return
     }
@@ -365,8 +371,7 @@ export class JestExt {
 
   private updateWithData(data: JestTotalResults) {
     const normalizedData = resultsWithLowerCaseWindowsDriveLetters(data)
-
-    this.coverage.mapCoverage(normalizedData.coverageMap)
+    this.coverageMapProvider.update(normalizedData.coverageMap)
 
     const statusList = this.testResultProvider.updateTestResults(normalizedData)
     updateDiagnostics(statusList, this.failDiagnostics)
@@ -602,5 +607,9 @@ export class JestExt {
         this.triggerUpdateDecorations(editor)
       }
     }
+  }
+
+  toggleCoverageOverlay() {
+    this.coverageOverlay.toggleVisibility()
   }
 }

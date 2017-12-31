@@ -1,8 +1,11 @@
+jest.unmock('events')
 jest.unmock('../src/JestExt')
+
 jest.mock('../src/DebugCodeLens', () => ({
   DebugCodeLensProvider: class MockCodeLensProvider {},
 }))
 
+import { EventEmitter } from 'events'
 import { JestExt } from '../src/JestExt'
 import { ProjectWorkspace, Settings, Runner } from 'jest-editor-support'
 import { window, workspace, debug } from 'vscode'
@@ -162,6 +165,36 @@ describe('JestExt', () => {
 
         testMaxRestart(4)
       })
+    })
+  })
+
+  describe('updateWithData()', () => {
+    class MockRunner extends EventEmitter {
+      start: Function = jest.fn()
+    }
+
+    let sut
+    let processMock
+    beforeEach(() => {
+      processMock = new MockRunner()
+      mockRunner.mockImplementation(() => processMock)
+
+      sut = new JestExt(projectWorkspace, channelStub, extensionSettings)
+      sut.startProcess()
+    })
+
+    it('should update coverage map', () => {
+      window.visibleTextEditors = []
+
+      const expected = {}
+      const data = {
+        coverageMap: expected,
+      }
+
+      // Call updateWithData()
+      processMock.emit('executableJSON', data)
+
+      expect(sut.coverageMapProvider.update).toBeCalledWith(expected)
     })
   })
 
@@ -441,6 +474,26 @@ describe('JestExt', () => {
       sut.onDidChangeTextDocument(event)
 
       expect(sut.triggerUpdateDecorations).toBeCalledWith(editor)
+    })
+  })
+
+  describe('toggleCoverageOverlay()', () => {
+    it('should toggle the coverage overlay visibility', () => {
+      const sut = new JestExt(projectWorkspace, channelStub, extensionSettings)
+      sut.toggleCoverageOverlay()
+
+      expect(sut.coverageOverlay.toggleVisibility).toBeCalled()
+    })
+  })
+
+  describe('triggerUpdateDecorations()', () => {
+    it('should update the coverage overlay in visible editors', () => {
+      const editor: any = {}
+
+      const sut = new JestExt(projectWorkspace, channelStub, extensionSettings)
+      sut.triggerUpdateDecorations(editor)
+
+      expect(sut.coverageOverlay.updateVisibleEditors).toBeCalled()
     })
   })
 })

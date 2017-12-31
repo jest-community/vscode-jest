@@ -1,0 +1,9 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Coverage module.exports should match the snapshot 1`] = `
+Object {
+  "CoverageMapProvider": [Function],
+  "CoverageOverlay": [Function],
+  "registerCoverageCodeLens": [Function],
+}
+`;
