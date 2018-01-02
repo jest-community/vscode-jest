@@ -1,7 +1,7 @@
 import * as vscode from 'vscode'
 import * as path from 'path'
 import * as fs from 'fs'
-import { Runner, Settings, ProjectWorkspace, JestTotalResults } from 'jest-editor-support'
+import { Runner, Settings, ProjectWorkspace, JestTotalResults, JestTotalResultsMeta } from 'jest-editor-support'
 import { matcher } from 'micromatch'
 
 import * as decorations from './decorations'
@@ -92,8 +92,8 @@ export class JestExt {
         this.closeJest()
         this.startWatchMode()
       })
-      .on('executableJSON', (data: JestTotalResults) => {
-        this.updateWithData(data)
+      .on('executableJSON', (data: JestTotalResults, meta: JestTotalResultsMeta) => {
+        this.updateWithData(data, meta)
       })
       .on('executableOutput', (output: string) => {
         if (!this.shouldIgnoreOutput(output)) {
@@ -359,8 +359,10 @@ export class JestExt {
     status.running(details)
   }
 
-  private updateWithData(data: JestTotalResults) {
-    this.coverage.mapCoverage(data.coverageMap)
+  private updateWithData(data: JestTotalResults, meta: JestTotalResultsMeta) {
+    if (!meta || !meta.noTestsFound) {
+      this.coverage.mapCoverage(data.coverageMap)
+    }
 
     const statusList = this.testResultProvider.updateTestResults(data)
     updateDiagnostics(statusList, this.failDiagnostics)

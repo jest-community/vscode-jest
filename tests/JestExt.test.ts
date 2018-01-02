@@ -8,6 +8,7 @@ import { ProjectWorkspace, Settings, Runner } from 'jest-editor-support'
 import { window, workspace, debug } from 'vscode'
 import { hasDocument, isOpenInMultipleEditors } from '../src/editor'
 import { failingAssertionStyle } from '../src/decorations'
+import { EventEmitter } from 'events'
 
 describe('JestExt', () => {
   const mockSettings = (Settings as any) as jest.Mock<any>
@@ -162,6 +163,60 @@ describe('JestExt', () => {
 
         testMaxRestart(4)
       })
+    })
+  })
+
+  describe('updateWithData()', () => {
+    class MockRunner extends EventEmitter {
+      start: Function = jest.fn()
+    }
+
+    const expected = {}
+    const data = {
+      coverageMap: expected,
+    }
+
+    let sut
+    let processMock
+    beforeEach(() => {
+      processMock = new MockRunner()
+      mockRunner.mockImplementation(() => processMock)
+
+      sut = new JestExt(projectWorkspace, channelStub, extensionSettings)
+      sut.startProcess()
+    })
+
+    it('should update the coverage map (no additional argument)', () => {
+      window.visibleTextEditors = []
+
+      // Indirectly call updateWithData()
+      processMock.emit('executableJSON', data)
+
+      expect(sut.coverage.mapCoverage).toBeCalledWith(expected)
+    })
+
+    it('should update the coverage map when the test results do not follow "No tests found related to files changed since the last commit"', () => {
+      window.visibleTextEditors = []
+      const meta = {
+        noTestsFound: false,
+      }
+
+      // Indirectly call updateWithData()
+      processMock.emit('executableJSON', data, meta)
+
+      expect(sut.coverage.mapCoverage).toBeCalledWith(expected)
+    })
+
+    it('should not update the coverage map when the test results follow "No tests found related to files changed since the last commit"', () => {
+      window.visibleTextEditors = []
+      const meta = {
+        noTestsFound: true,
+      }
+
+      // Indirectly call updateWithData()
+      processMock.emit('executableJSON', data, meta)
+
+      expect(sut.coverage.mapCoverage).not.toBeCalled()
     })
   })
 
