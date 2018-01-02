@@ -40,6 +40,14 @@ describe('JestProcess', () => {
       expect(jestProcess).not.toBe(null)
     })
 
+    it('records watchMode in the watchMode property', () => {
+      jestProcess = new JestProcess({
+        projectWorkspace: projectWorkspaceMock,
+        watchMode: true,
+      })
+      expect(jestProcess.watchMode).toBe(true)
+    })
+
     it('creates and instance of jest-editor-support runner', () => {
       jestProcess = new JestProcess({
         projectWorkspace: projectWorkspaceMock,
@@ -108,6 +116,12 @@ describe('JestProcess', () => {
       eventEmitter.emit('debuggerProcessExit')
 
       expect(onExit).toHaveBeenCalledTimes(1)
+    })
+
+    it('calls the callback with the argument being the instance of the jest process', () => {
+      eventEmitter.emit('debuggerProcessExit')
+
+      expect(onExit.mock.calls[0][0]).toBe(jestProcess)
     })
 
     it('only responds to first debuggerProcessExit event from the runner', () => {

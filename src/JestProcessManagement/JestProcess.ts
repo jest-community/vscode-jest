@@ -4,8 +4,10 @@ export class JestProcess {
   private runner: Runner
   private onExitCallback: Function
   private exited: boolean = false
+  public watchMode: boolean
 
   constructor({ projectWorkspace, watchMode = false }: { projectWorkspace: ProjectWorkspace; watchMode?: boolean }) {
+    this.watchMode = watchMode
     this.runner = new Runner(projectWorkspace)
 
     this.runner.start(watchMode)
@@ -13,7 +15,7 @@ export class JestProcess {
     this.runner.on('debuggerProcessExit', () => {
       if (!this.exited) {
         this.exited = true
-        this.onExitCallback()
+        this.onExitCallback(this)
       }
     })
   }
