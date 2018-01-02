@@ -11,16 +11,20 @@ export class JestProcessManager {
   }
 
   private onJestProcessExit(jestProcess, exitCallback) {
-    exitCallback(jestProcess)
     this.jestProcessInWatchMode = new JestProcess({
       projectWorkspace: this.projectWorkspace,
       watchMode: true,
     })
+    exitCallback(jestProcess, this.jestProcessInWatchMode)
     this.jestProcessInWatchMode.onExit(exitCallback)
   }
 
   private handleWatchMode(exitCallback) {
     this.jestProcess.onExit(jestProcess => this.onJestProcessExit(jestProcess, exitCallback))
+  }
+
+  private handleNonWatchMode(exitCallback) {
+    this.jestProcess.onExit(exitCallback)
   }
 
   public startJestProcess(
@@ -43,7 +47,7 @@ export class JestProcessManager {
     if (watch) {
       this.handleWatchMode(exitCallback)
     } else {
-      this.jestProcess.onExit(exitCallback)
+      this.handleNonWatchMode(exitCallback)
     }
 
     return this.jestProcess

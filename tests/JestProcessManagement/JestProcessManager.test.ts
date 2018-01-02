@@ -6,6 +6,7 @@ import { JestProcessManager } from '../../src/JestProcessManagement/JestProcessM
 import { EventEmitter } from 'events'
 
 describe('JestProcessManager', () => {
+  let jestProcessManager
   let projectWorkspaceMock
   let exitHandler
   let eventEmitter
@@ -15,6 +16,7 @@ describe('JestProcessManager', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     projectWorkspaceMock = new ProjectWorkspace(null, null, null, null)
+    jestProcessManager = new JestProcessManager({ projectWorkspace: projectWorkspaceMock })
     exitHandler = jest.fn()
     eventEmitter = new EventEmitter()
   })
@@ -28,24 +30,18 @@ describe('JestProcessManager', () => {
 
   describe('when starting jest process', () => {
     it('creates JestProcess', () => {
-      const jestProcessManager = new JestProcessManager({ projectWorkspace: projectWorkspaceMock })
-
       jestProcessManager.startJestProcess()
 
       expect(jestProcessMock.mock.instances.length).toBe(1)
     })
 
     it('returns an instance of JestProcess', () => {
-      const jestProcessManager = new JestProcessManager({ projectWorkspace: projectWorkspaceMock })
-
       const jestProcess = jestProcessManager.startJestProcess()
 
       expect(jestProcess).toBe(jestProcessMock.mock.instances[0])
     })
 
     it('passes the project workspace to the JestProcess instance', () => {
-      const jestProcessManager = new JestProcessManager({ projectWorkspace: projectWorkspaceMock })
-
       jestProcessManager.startJestProcess()
 
       expect(jestProcessMock.mock.calls[0][0]).toHaveProperty('projectWorkspace', projectWorkspaceMock)
@@ -58,8 +54,6 @@ describe('JestProcessManager', () => {
         },
       }))
 
-      const jestProcessManager = new JestProcessManager({ projectWorkspace: projectWorkspaceMock })
-
       jestProcessManager.startJestProcess({ exitCallback: exitHandler })
 
       eventEmitter.emit('debuggerProcessExit')
@@ -70,8 +64,6 @@ describe('JestProcessManager', () => {
 
   describe('when starting jest process in non-watch mode', () => {
     it('passes the watchMode flag set to false', () => {
-      const jestProcessManager = new JestProcessManager({ projectWorkspace: projectWorkspaceMock })
-
       jestProcessManager.startJestProcess()
 
       expect(jestProcessMock.mock.calls[0][0]).toHaveProperty('watchMode', false)
@@ -85,8 +77,6 @@ describe('JestProcessManager', () => {
           eventEmitter.on('debuggerProcessExit', callback)
         },
       }))
-
-      const jestProcessManager = new JestProcessManager({ projectWorkspace: projectWorkspaceMock })
 
       jestProcessManager.startJestProcess({ watch: true })
 
@@ -102,8 +92,6 @@ describe('JestProcessManager', () => {
         },
       }))
 
-      const jestProcessManager = new JestProcessManager({ projectWorkspace: projectWorkspaceMock })
-
       jestProcessManager.startJestProcess({ watch: true })
 
       eventEmitter.emit('debuggerProcessExit')
@@ -118,8 +106,6 @@ describe('JestProcessManager', () => {
           eventEmitter.on('debuggerProcessExit', callback)
         },
       }))
-
-      const jestProcessManager = new JestProcessManager({ projectWorkspace: projectWorkspaceMock })
 
       jestProcessManager.startJestProcess({ watch: true })
 
@@ -144,8 +130,6 @@ describe('JestProcessManager', () => {
         onExit: onExitMock,
       }))
 
-      const jestProcessManager = new JestProcessManager({ projectWorkspace: projectWorkspaceMock })
-
       jestProcessManager.startJestProcess({ watch: true, exitCallback: exitHandler })
 
       eventEmitter.emit('debuggerProcessExit', { watchMode: false })
@@ -154,6 +138,32 @@ describe('JestProcessManager', () => {
       expect(exitHandler).toHaveBeenCalledTimes(2)
       expect(exitHandler.mock.calls[0][0].watchMode).toBe(false)
       expect(exitHandler.mock.calls[1][0].watchMode).toBe(true)
+    })
+
+    it('the exit handler for the non-watch mode passes the jest process representing the watch mode as the second argument', () => {
+      const eventEmitterForWatchMode = new EventEmitter()
+      const onExitMock = jest
+        .fn()
+        .mockImplementationOnce(callback => {
+          eventEmitter.on('debuggerProcessExit', callback)
+        })
+        .mockImplementationOnce(callback => {
+          eventEmitterForWatchMode.on('debuggerProcessExit', callback)
+        })
+
+      let mockImplementation = {
+        onExit: onExitMock,
+      }
+
+      jestProcessMock.mockImplementation(() => mockImplementation)
+
+      jestProcessManager.startJestProcess({ watch: true, exitCallback: exitHandler })
+
+      eventEmitter.emit('debuggerProcessExit', mockImplementation)
+      eventEmitterForWatchMode.emit('debuggerProcessExit', mockImplementation)
+
+      expect(exitHandler.mock.calls[0].length).toBe(2)
+      expect(exitHandler.mock.calls[0][1]).toBe(mockImplementation)
     })
   })
 })
