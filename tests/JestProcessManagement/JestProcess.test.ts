@@ -104,7 +104,7 @@ describe('JestProcess', () => {
       jestProcess.onExit(onExit)
     })
 
-    it('call the callback provided to onExit', () => {
+    it('calls the callback provided to onExit', () => {
       eventEmitter.emit('debuggerProcessExit')
 
       expect(onExit).toHaveBeenCalledTimes(1)
