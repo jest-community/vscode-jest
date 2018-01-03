@@ -9,22 +9,38 @@ export class JestProcessManager {
     this.projectWorkspace = projectWorkspace
   }
 
-  private onJestProcessExit(jestProcess, exitCallback) {
+  private startJestProcessInWatchMode(exitCallback) {
     const jestProcessInWatchMode = new JestProcess({
       projectWorkspace: this.projectWorkspace,
       watchMode: true,
     })
     this.jestProcesses.unshift(jestProcessInWatchMode)
+    this.handleNonWatchMode(jestProcessInWatchMode, exitCallback)
+    return jestProcessInWatchMode
+  }
+
+  private onJestProcessExit(jestProcess, exitCallback) {
+    const jestProcessInWatchMode = this.startJestProcessInWatchMode(exitCallback)
+    this.removeJestProcessReference(jestProcess)
     exitCallback(jestProcess, jestProcessInWatchMode)
-    jestProcessInWatchMode.onExit(exitCallback)
   }
 
   private handleWatchMode(jestProcess, exitCallback) {
     jestProcess.onExit(exitedJestProcess => this.onJestProcessExit(exitedJestProcess, exitCallback))
   }
 
+  private removeJestProcessReference(jestProcess) {
+    const index = this.jestProcesses.indexOf(jestProcess)
+    if (index !== -1) {
+      this.jestProcesses.splice(index, 1)
+    }
+  }
+
   private handleNonWatchMode(jestProcess, exitCallback) {
-    jestProcess.onExit(exitCallback)
+    jestProcess.onExit(exitedJestProcess => {
+      exitCallback(exitedJestProcess)
+      this.removeJestProcessReference(exitedJestProcess)
+    })
   }
 
   public startJestProcess(
@@ -58,8 +74,12 @@ export class JestProcessManager {
   public stopJestProcess() {
     if (this.jestProcesses.length > 0) {
       const mostRecentJestProcess = this.jestProcesses[0]
-
       mostRecentJestProcess.stop()
+      this.jestProcesses.shift()
     }
+  }
+
+  public get numberOfProcesses() {
+    return this.jestProcesses.length
   }
 }
