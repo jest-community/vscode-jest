@@ -3,28 +3,28 @@ import { JestProcess } from './JestProcess'
 
 export class JestProcessManager {
   private projectWorkspace: ProjectWorkspace
-  private jestProcess: JestProcess
-  private jestProcessInWatchMode: JestProcess
+  private jestProcesses: Array<JestProcess> = []
 
   constructor({ projectWorkspace }: { projectWorkspace: ProjectWorkspace }) {
     this.projectWorkspace = projectWorkspace
   }
 
   private onJestProcessExit(jestProcess, exitCallback) {
-    this.jestProcessInWatchMode = new JestProcess({
+    const jestProcessInWatchMode = new JestProcess({
       projectWorkspace: this.projectWorkspace,
       watchMode: true,
     })
-    exitCallback(jestProcess, this.jestProcessInWatchMode)
-    this.jestProcessInWatchMode.onExit(exitCallback)
+    this.jestProcesses.push(jestProcessInWatchMode)
+    exitCallback(jestProcess, jestProcessInWatchMode)
+    jestProcessInWatchMode.onExit(exitCallback)
   }
 
-  private handleWatchMode(exitCallback) {
-    this.jestProcess.onExit(jestProcess => this.onJestProcessExit(jestProcess, exitCallback))
+  private handleWatchMode(jestProcess, exitCallback) {
+    jestProcess.onExit(exitedJestProcess => this.onJestProcessExit(exitedJestProcess, exitCallback))
   }
 
-  private handleNonWatchMode(exitCallback) {
-    this.jestProcess.onExit(exitCallback)
+  private handleNonWatchMode(jestProcess, exitCallback) {
+    jestProcess.onExit(exitCallback)
   }
 
   public startJestProcess(
@@ -39,17 +39,19 @@ export class JestProcessManager {
       watch: false,
     }
   ): JestProcess {
-    this.jestProcess = new JestProcess({
+    const jestProcess = new JestProcess({
       projectWorkspace: this.projectWorkspace,
       watchMode: false,
     })
 
+    this.jestProcesses.push(jestProcess)
+
     if (watch) {
-      this.handleWatchMode(exitCallback)
+      this.handleWatchMode(jestProcess, exitCallback)
     } else {
-      this.handleNonWatchMode(exitCallback)
+      this.handleNonWatchMode(jestProcess, exitCallback)
     }
 
-    return this.jestProcess
+    return jestProcess
   }
 }
