@@ -167,4 +167,25 @@ describe('JestProcess', () => {
       expect(eventHandler.mock.calls[0][1]).toEqual({ value: 'arg2' })
     })
   })
+
+  describe('when stopping', () => {
+    let closeProcessMock = jest.fn()
+
+    beforeEach(() => {
+      runnerMockImplementation = {
+        ...runnerMockImplementation,
+        closeProcess: closeProcessMock,
+      }
+      runnerMock.mockImplementation(() => runnerMockImplementation)
+      jestProcess = new JestProcess({
+        projectWorkspace: projectWorkspaceMock,
+      })
+    })
+
+    it('calls closeProcess on the underlying runner from jest-editor-support', () => {
+      jestProcess.stop()
+
+      expect(closeProcessMock).toHaveBeenCalledTimes(1)
+    })
+  })
 })

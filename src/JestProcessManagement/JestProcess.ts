@@ -27,4 +27,8 @@ export class JestProcess {
   public onJestEditorSupportEvent(event, callback) {
     this.runner.on(event, callback)
   }
+
+  public stop() {
+    this.runner.closeProcess()
+  }
 }
