@@ -14,7 +14,7 @@ export class JestProcessManager {
       projectWorkspace: this.projectWorkspace,
       watchMode: true,
     })
-    this.jestProcesses.push(jestProcessInWatchMode)
+    this.jestProcesses.unshift(jestProcessInWatchMode)
     exitCallback(jestProcess, jestProcessInWatchMode)
     jestProcessInWatchMode.onExit(exitCallback)
   }
@@ -44,7 +44,7 @@ export class JestProcessManager {
       watchMode: false,
     })
 
-    this.jestProcesses.push(jestProcess)
+    this.jestProcesses.unshift(jestProcess)
 
     if (watch) {
       this.handleWatchMode(jestProcess, exitCallback)
@@ -53,5 +53,13 @@ export class JestProcessManager {
     }
 
     return jestProcess
+  }
+
+  public stopJestProcess() {
+    if (this.jestProcesses.length > 0) {
+      const mostRecentJestProcess = this.jestProcesses[0]
+
+      mostRecentJestProcess.stop()
+    }
   }
 }

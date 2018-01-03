@@ -166,4 +166,52 @@ describe('JestProcessManager', () => {
       expect(exitHandler.mock.calls[0][1]).toBe(mockImplementation)
     })
   })
+
+  describe('when restarting process that runs in non-watch mode', () => {
+    it('stops the most recent running jest process', () => {
+      const stopMock = jest.fn()
+      jestProcessMock.mockImplementation(() => ({
+        onExit: jest.fn(),
+        stop: stopMock,
+      }))
+      jestProcessManager.startJestProcess()
+
+      jestProcessManager.stopJestProcess()
+
+      expect(stopMock).toHaveBeenCalledTimes(1)
+    })
+
+    // jest mocking does not let us test it properly because
+    // jestProcessMock.instances does not work as expected
+    it('only stops the most recent jest process', () => {
+      const mockImplementation = {
+        onExit: jest.fn(),
+        stop: jest.fn(),
+      }
+
+      jestProcessMock.mockImplementation(() => mockImplementation)
+
+      jestProcessManager.startJestProcess()
+      jestProcessManager.startJestProcess()
+
+      jestProcessManager.stopJestProcess()
+
+      expect(jestProcessMock.mock.instances.length).toBe(2)
+      expect(mockImplementation.stop).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not stops jest process if none is running', () => {
+      const mockImplementation = {
+        onExit: jest.fn(),
+        stop: jest.fn(),
+      }
+
+      jestProcessMock.mockImplementation(() => mockImplementation)
+
+      jestProcessManager.stopJestProcess()
+
+      expect(jestProcessMock.mock.instances.length).toBe(0)
+      expect(mockImplementation.stop).not.toHaveBeenCalled()
+    })
+  })
 })
