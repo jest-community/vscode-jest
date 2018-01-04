@@ -21,7 +21,7 @@ import { DebugCodeLensProvider } from './DebugCodeLens'
 import { DecorationOptions } from './types'
 import { hasDocument, isOpenInMultipleEditors } from './editor'
 import { CoverageOverlay } from './Coverage/CoverageOverlay'
-import { JestProcessManager } from './JestProcessManagement/JestProcessManager'
+import { JestProcess, JestProcessManager } from './JestProcessManagement'
 
 export class JestExt {
   private workspace: ProjectWorkspace
@@ -51,6 +51,7 @@ export class JestExt {
   failingAssertionDecorators: { [fileName: string]: vscode.TextEditorDecorationType[] }
 
   private jestProcessManager: JestProcessManager
+  private jestProcess: JestProcess
 
   private clearOnNextInput: boolean
 
@@ -71,6 +72,7 @@ export class JestExt {
 
     this.jestProcessManager = new JestProcessManager({
       projectWorkspace: workspace,
+      runAllTestsFirstInWatchMode: this.pluginSettings.runAllTestsFirst,
     })
 
     this.getSettings()
@@ -92,6 +94,7 @@ export class JestExt {
       keepAlive: true,
       exitCallback: (_, jestProcessInWatchMode) => {
         if (jestProcessInWatchMode) {
+          this.jestProcess = jestProcessInWatchMode
           this.channel.appendLine('Finished running all tests. Starting watch mode.')
           status.running('Starting watch mode')
           jestProcessInWatchMode
@@ -147,7 +150,7 @@ export class JestExt {
 
   public stopProcess() {
     this.channel.appendLine('Closing Jest')
-    this.jestProcessManager.stopJestProcess()
+    this.jestProcessManager.stopAll()
     status.stopped()
   }
 
@@ -186,9 +189,9 @@ export class JestExt {
       .then(response => {
         // No response == cancel
         if (response) {
-          this.jestProcessManager.runJestWithUpdateForSnapshots(() => {
+          this.jestProcess.runJestWithUpdateForSnapshots(() => {
             if (this.pluginSettings.restartJestOnSnapshotUpdate) {
-              this.jestProcessManager.stopJestProcess()
+              this.jestProcessManager.stopAll()
               this.startProcess()
               vscode.window.showInformationMessage('Updated Snapshots and restarted Jest.')
             } else {
@@ -393,7 +396,7 @@ export class JestExt {
   }
 
   public deactivate() {
-    this.jestProcessManager.stopJestProcess()
+    this.jestProcessManager.stopAll()
   }
 
   private getJestVersion(version: (v: number) => void) {
@@ -490,7 +493,7 @@ export class JestExt {
 
   public runTest = (fileName: string, identifier: string) => {
     const restart = this.jestProcessManager.numberOfProcesses > 0
-    this.jestProcessManager.startJestProcess()
+    this.jestProcessManager.stopAll()
     const program = this.resolvePathToJestBin()
     if (!program) {
       console.log("Could not find Jest's CLI path")

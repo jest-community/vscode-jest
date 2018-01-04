@@ -1,8 +1,8 @@
 jest.unmock('../../src/JestProcessManagement/JestProcessManager')
 
 import { ProjectWorkspace } from 'jest-editor-support'
-import { JestProcess } from '../../src/JestProcessManagement/JestProcess'
 import { JestProcessManager } from '../../src/JestProcessManagement/JestProcessManager'
+import { JestProcess } from '../../src/JestProcessManagement/JestProcess'
 import { EventEmitter } from 'events'
 
 describe('JestProcessManager', () => {
@@ -24,6 +24,14 @@ describe('JestProcessManager', () => {
   describe('when creating', () => {
     it('accepts Project Workspace as the argument', () => {
       const jestProcessManager = new JestProcessManager({ projectWorkspace: projectWorkspaceMock })
+      expect(jestProcessManager).not.toBe(null)
+    })
+
+    it('accepts runAllTestsFirstInWatchMode argument (true if not provided)', () => {
+      const jestProcessManager = new JestProcessManager({
+        projectWorkspace: projectWorkspaceMock,
+        runAllTestsFirstInWatchMode: false,
+      })
       expect(jestProcessManager).not.toBe(null)
     })
   })
@@ -216,16 +224,17 @@ describe('JestProcessManager', () => {
         onExit: jest.fn(),
         stop: stopMock,
       }))
-      jestProcessManager.startJestProcess()
+      const jestProcess = jestProcessManager.startJestProcess()
 
-      jestProcessManager.stopJestProcess()
+      jestProcessManager.stopJestProcess(jestProcess)
 
       expect(stopMock).toHaveBeenCalledTimes(1)
+      expect(jestProcessManager.numberOfProcesses).toBe(0)
     })
 
     // jest mocking does not let us test it properly because
     // jestProcessMock.instances does not work as expected
-    it('only stops the most recent jest process', () => {
+    it('can stop all process at once', () => {
       const mockImplementation = {
         onExit: jest.fn(),
         stop: jest.fn(),
@@ -236,13 +245,14 @@ describe('JestProcessManager', () => {
       jestProcessManager.startJestProcess()
       jestProcessManager.startJestProcess()
 
-      jestProcessManager.stopJestProcess()
+      jestProcessManager.stopAll()
 
       expect(jestProcessMock.mock.instances.length).toBe(2)
-      expect(mockImplementation.stop).toHaveBeenCalledTimes(1)
+      expect(mockImplementation.stop).toHaveBeenCalledTimes(2)
+      expect(jestProcessManager.numberOfProcesses).toBe(0)
     })
 
-    it('does not stops jest process if none is running', () => {
+    it('does not stop any jest process if none is running', () => {
       const mockImplementation = {
         onExit: jest.fn(),
         stop: jest.fn(),
@@ -250,18 +260,19 @@ describe('JestProcessManager', () => {
 
       jestProcessMock.mockImplementation(() => mockImplementation)
 
-      jestProcessManager.stopJestProcess()
+      jestProcessManager.stopAll()
 
       expect(jestProcessMock.mock.instances.length).toBe(0)
       expect(mockImplementation.stop).not.toHaveBeenCalled()
+      expect(jestProcessManager.numberOfProcesses).toBe(0)
     })
   })
 
   describe('jest process exits with keepAlive === true', () => {
     it('removes the reference to the jest process that has been stopped', () => {
-      jestProcessManager.startJestProcess({ keepAlive: true })
+      const jestProcess = jestProcessManager.startJestProcess({ keepAlive: true })
 
-      jestProcessManager.stopJestProcess()
+      jestProcessManager.stopJestProcess(jestProcess)
 
       expect(jestProcessManager.numberOfProcesses).toBe(0)
     })
@@ -276,7 +287,7 @@ describe('JestProcessManager', () => {
       }))
 
       const jestProcess = jestProcessManager.startJestProcess({ keepAlive: true })
-      jestProcessManager.stopJestProcess()
+      jestProcessManager.stopJestProcess(jestProcess)
 
       eventEmitter.emit('debuggerProcessExit', jestProcess)
 
@@ -397,6 +408,31 @@ describe('JestProcessManager', () => {
       eventEmitter.emit('debuggerProcessExit', jestProcess)
 
       expect(jestProcessManager.numberOfProcesses).toBe(0)
+    })
+  })
+
+  describe('when runAllTestsFirstInWatchMode is false', () => {
+    beforeEach(() => {
+      jestProcessManager = new JestProcessManager({
+        projectWorkspace: projectWorkspaceMock,
+        runAllTestsFirstInWatchMode: false,
+      })
+    })
+
+    it('does not run all tests first', () => {
+      jestProcessMock.mockImplementation(() => ({
+        onExit: callback => {
+          eventEmitter.on('debuggerProcessExit', callback)
+        },
+      }))
+
+      const jestProcess = jestProcessManager.startJestProcess({ watch: true })
+
+      eventEmitter.emit('debuggerProcessExit', jestProcess)
+
+      expect(jestProcessMock.mock.instances.length).toBe(1)
+
+      expect(jestProcessMock.mock.calls[0][0]).toHaveProperty('watchMode', true)
     })
   })
 })

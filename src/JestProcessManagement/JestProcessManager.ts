@@ -4,9 +4,17 @@ import { JestProcess } from './JestProcess'
 export class JestProcessManager {
   private projectWorkspace: ProjectWorkspace
   private jestProcesses: Array<JestProcess> = []
+  private runAllTestsFirstInWatchMode: boolean
 
-  constructor({ projectWorkspace }: { projectWorkspace: ProjectWorkspace }) {
+  constructor({
+    projectWorkspace,
+    runAllTestsFirstInWatchMode = true,
+  }: {
+    projectWorkspace: ProjectWorkspace
+    runAllTestsFirstInWatchMode?: boolean
+  }) {
     this.projectWorkspace = projectWorkspace
+    this.runAllTestsFirstInWatchMode = runAllTestsFirstInWatchMode
   }
 
   private startJestProcessInWatchMode(exitCallback, keepAlive) {
@@ -73,29 +81,27 @@ export class JestProcessManager {
       keepAlive: false,
     }
   ): JestProcess {
-    if (watch) {
+    if (watch && this.runAllTestsFirstInWatchMode) {
       return this.handleWatchMode(exitCallback, keepAlive)
     } else {
       return this.handleNonWatchMode(watch, exitCallback, keepAlive)
     }
   }
 
-  public stopJestProcess() {
-    if (this.jestProcesses.length > 0) {
-      const mostRecentJestProcess = this.jestProcesses[0]
-      mostRecentJestProcess.stop()
-      this.jestProcesses.shift()
-    }
+  public stopAll() {
+    const processesToRemove = [...this.jestProcesses]
+    this.jestProcesses = []
+    processesToRemove.forEach(jestProcess => {
+      jestProcess.stop()
+    })
+  }
+
+  public stopJestProcess(jestProcess) {
+    this.removeJestProcessReference(jestProcess)
+    jestProcess.stop()
   }
 
   public get numberOfProcesses() {
     return this.jestProcesses.length
-  }
-
-  public runJestWithUpdateForSnapshots(callback) {
-    if (this.jestProcesses.length > 0) {
-      const mostRecentJestProcess = this.jestProcesses[0]
-      mostRecentJestProcess.runJestWithUpdateForSnapshots(callback)
-    }
   }
 }
