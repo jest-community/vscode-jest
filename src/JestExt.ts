@@ -99,17 +99,16 @@ export class JestExt {
               this.updateWithData(data)
             })
             .onJestEditorSupportEvent('executableOutput', (output: string) => {
-              this.channel.appendLine(output)
-              // if (!this.shouldIgnoreOutput(output)) {
-              //   this.channel.appendLine(output)
-              // }
+              if (!this.shouldIgnoreOutput(output)) {
+                this.channel.appendLine(output)
+              }
             })
             .onJestEditorSupportEvent('executableStdErr', (error: Buffer) => {
               const message = error.toString()
 
-              // if (this.shouldIgnoreOutput(message)) {
-              //   return
-              // }
+              if (this.shouldIgnoreOutput(message)) {
+                return
+              }
 
               // The "tests are done" message comes through stdErr
               // We want to use this as a marker that the console should
@@ -196,15 +195,6 @@ export class JestExt {
               vscode.window.showInformationMessage('Updated Snapshots. It will show in your next test run.')
             }
           })
-          // this.jestProcess.runJestWithUpdateForSnapshots(() => {
-          //   if (this.pluginSettings.restartJestOnSnapshotUpdate) {
-          //     this.stopProcess()
-          //     this.startProcess()
-          //     vscode.window.showInformationMessage('Updated Snapshots and restarted Jest.')
-          //   } else {
-          //     vscode.window.showInformationMessage('Updated Snapshots. It will show in your next test run.')
-          //   }
-          // })
         }
       })
   }
@@ -343,9 +333,11 @@ export class JestExt {
     this.unknownItStyle = decorations.notRanItName()
   }
 
-  // private shouldIgnoreOutput(text: string): boolean {
-  //   return text.includes('Watch Usage')
-  // }
+  private shouldIgnoreOutput(text: string): boolean {
+    // this fails when snapshots change - to be revised - returning always false for now
+    // return text.includes('Watch Usage')
+    return false
+  }
 
   private testsHaveStartedRunning() {
     this.channel.clear()
