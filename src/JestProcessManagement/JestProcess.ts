@@ -52,10 +52,15 @@ export class JestProcess {
 
   public onJestEditorSupportEvent(event, callback) {
     this.runner.on(event, callback)
+    return this
   }
 
   public stop() {
     this.keepAlive = false
     this.runner.closeProcess()
+  }
+
+  public runJestWithUpdateForSnapshots(callback) {
+    this.runner.runJestWithUpdateForSnapshots(callback)
   }
 }

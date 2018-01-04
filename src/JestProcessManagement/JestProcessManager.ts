@@ -64,7 +64,7 @@ export class JestProcessManager {
       watch = false,
       keepAlive = false,
     }: {
-      exitCallback?: () => void
+      exitCallback?: Function
       watch?: boolean
       keepAlive?: boolean
     } = {
@@ -90,5 +90,12 @@ export class JestProcessManager {
 
   public get numberOfProcesses() {
     return this.jestProcesses.length
+  }
+
+  public runJestWithUpdateForSnapshots(callback) {
+    if (this.jestProcesses.length > 0) {
+      const mostRecentJestProcess = this.jestProcesses[0]
+      mostRecentJestProcess.runJestWithUpdateForSnapshots(callback)
+    }
   }
 }
