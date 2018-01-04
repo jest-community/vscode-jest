@@ -17,6 +17,9 @@ Bug-fixes within the same version aren't needed
 * Fix missing coverage overlay on Windows - seanpoulter
 * Toggle coverage overlay without changing documents - seanpoulter
 
+### 2.5.8
+
+* Added `JestProcess` and `JestProcessManager` abstractions to simplify Jest process management - marcinczenko
 
 ### 2.5.7-8
 
