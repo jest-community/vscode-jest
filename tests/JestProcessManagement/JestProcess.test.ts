@@ -169,7 +169,7 @@ describe('JestProcess', () => {
   })
 
   describe('when stopping', () => {
-    let closeProcessMock = jest.fn()
+    const closeProcessMock = jest.fn()
 
     beforeEach(() => {
       runnerMockImplementation = {

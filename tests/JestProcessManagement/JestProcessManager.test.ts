@@ -192,7 +192,7 @@ describe('JestProcessManager', () => {
           eventEmitterForWatchMode.on('debuggerProcessExit', callback)
         })
 
-      let mockImplementation = {
+      const mockImplementation = {
         onExit: onExitMock,
         restart: jest.fn(),
       }
@@ -324,7 +324,7 @@ describe('JestProcessManager', () => {
           eventEmitterForWatchMode.on('debuggerProcessExit', callback)
         })
 
-      let mockImplementation = {
+      const mockImplementation = {
         keepAlive: true,
         onExit: onExitMock,
         restart: jest.fn(),
@@ -378,7 +378,7 @@ describe('JestProcessManager', () => {
           eventEmitterForWatchMode.on('debuggerProcessExit', callback)
         })
 
-      let mockImplementation = {
+      const mockImplementation = {
         keepAlive: false,
         onExit: onExitMock,
         restart: jest.fn(),

@@ -333,7 +333,7 @@ export class JestExt {
     this.unknownItStyle = decorations.notRanItName()
   }
 
-  private shouldIgnoreOutput(text: string): boolean {
+  private shouldIgnoreOutput(_: string): boolean {
     // this fails when snapshots change - to be revised - returning always false for now
     // return text.includes('Watch Usage')
     return false
