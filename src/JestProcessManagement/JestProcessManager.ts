@@ -9,24 +9,28 @@ export class JestProcessManager {
     this.projectWorkspace = projectWorkspace
   }
 
-  private startJestProcessInWatchMode(exitCallback) {
-    const jestProcessInWatchMode = new JestProcess({
-      projectWorkspace: this.projectWorkspace,
-      watchMode: true,
-    })
-    this.jestProcesses.unshift(jestProcessInWatchMode)
-    this.handleNonWatchMode(jestProcessInWatchMode, exitCallback)
-    return jestProcessInWatchMode
+  private startJestProcessInWatchMode(exitCallback, keepAlive) {
+    return this.handleNonWatchMode(true, exitCallback, keepAlive)
   }
 
-  private onJestProcessExit(jestProcess, exitCallback) {
-    const jestProcessInWatchMode = this.startJestProcessInWatchMode(exitCallback)
+  private onJestProcessExit(jestProcess, exitCallback, keepAlive) {
+    const jestProcessInWatchMode = this.startJestProcessInWatchMode(exitCallback, keepAlive)
     this.removeJestProcessReference(jestProcess)
     exitCallback(jestProcess, jestProcessInWatchMode)
   }
 
-  private handleWatchMode(jestProcess, exitCallback) {
-    jestProcess.onExit(exitedJestProcess => this.onJestProcessExit(exitedJestProcess, exitCallback))
+  private handleWatchMode(exitCallback, keepAlive) {
+    const jestProcess = new JestProcess({
+      projectWorkspace: this.projectWorkspace,
+      watchMode: false,
+      keepAlive: false,
+    })
+
+    this.jestProcesses.unshift(jestProcess)
+
+    jestProcess.onExit(exitedJestProcess => this.onJestProcessExit(exitedJestProcess, exitCallback, keepAlive))
+
+    return jestProcess
   }
 
   private removeJestProcessReference(jestProcess) {
@@ -36,39 +40,44 @@ export class JestProcessManager {
     }
   }
 
-  private handleNonWatchMode(jestProcess, exitCallback) {
+  private handleNonWatchMode(watchMode, exitCallback, keepAlive) {
+    const jestProcess = new JestProcess({
+      projectWorkspace: this.projectWorkspace,
+      watchMode: watchMode,
+      keepAlive: keepAlive,
+    })
+
+    this.jestProcesses.unshift(jestProcess)
+
     jestProcess.onExit(exitedJestProcess => {
       exitCallback(exitedJestProcess)
-      this.removeJestProcessReference(exitedJestProcess)
+      if (!exitedJestProcess.keepAlive) {
+        this.removeJestProcessReference(exitedJestProcess)
+      }
     })
+    return jestProcess
   }
 
   public startJestProcess(
     {
       exitCallback = () => {},
       watch = false,
+      keepAlive = false,
     }: {
       exitCallback?: () => void
       watch?: boolean
+      keepAlive?: boolean
     } = {
       exitCallback: () => {},
       watch: false,
+      keepAlive: false,
     }
   ): JestProcess {
-    const jestProcess = new JestProcess({
-      projectWorkspace: this.projectWorkspace,
-      watchMode: false,
-    })
-
-    this.jestProcesses.unshift(jestProcess)
-
     if (watch) {
-      this.handleWatchMode(jestProcess, exitCallback)
+      return this.handleWatchMode(exitCallback, keepAlive)
     } else {
-      this.handleNonWatchMode(jestProcess, exitCallback)
+      return this.handleNonWatchMode(watch, exitCallback, keepAlive)
     }
-
-    return jestProcess
   }
 
   public stopJestProcess() {
