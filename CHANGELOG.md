@@ -6,6 +6,7 @@ Bug-fixes within the same version aren't needed
 ## Master
 
 * Adds ability to open snapshot file directly from test - bookman25
+* start automatically if jest.config.js or jest.json is in workspace - uucue2
 
 -->
 

@@ -21,6 +21,8 @@
   },
   "categories": ["Other"],
   "activationEvents": [
+    "workspaceContains:jest.config.js",
+    "workspaceContains:jest.json",
     "workspaceContains:node_modules/.bin/jest",
     "workspaceContains:node_modules/react-scripts/node_modules/.bin/jest",
     "workspaceContains:node_modules/react-native-scripts",
