@@ -78,6 +78,52 @@ export class JestExt {
     this.getSettings()
   }
 
+  private handleStdErr(error: Buffer) {
+    const message = error.toString()
+
+    if (this.shouldIgnoreOutput(message)) {
+      return
+    }
+
+    // The "tests are done" message comes through stdErr
+    // We want to use this as a marker that the console should
+    // be cleared, as the next input will be from a new test run.
+    if (this.clearOnNextInput) {
+      this.clearOnNextInput = false
+      this.parsingTestFile = false
+      this.testsHaveStartedRunning()
+    }
+    // thanks Qix, http://stackoverflow.com/questions/25245716/remove-all-ansi-colors-styles-from-strings
+    const noANSI = message.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '')
+    if (noANSI.includes('snapshot test failed')) {
+      this.detectedSnapshotErrors()
+    }
+
+    this.channel.appendLine(noANSI)
+  }
+
+  private assignHandlers(jestProcess) {
+    jestProcess
+      .onJestEditorSupportEvent('executableJSON', (data: JestTotalResults) => {
+        this.updateWithData(data)
+      })
+      .onJestEditorSupportEvent('executableOutput', (output: string) => {
+        if (!this.shouldIgnoreOutput(output)) {
+          this.channel.appendLine(output)
+        }
+      })
+      .onJestEditorSupportEvent('executableStdErr', (error: Buffer) => this.handleStdErr(error))
+      .onJestEditorSupportEvent('nonTerminalError', (error: string) => {
+        this.channel.appendLine(`Received an error from Jest Runner: ${error.toString()}`)
+      })
+      .onJestEditorSupportEvent('exception', result => {
+        this.channel.appendLine(`\nException raised: [${result.type}]: ${result.message}\n`)
+      })
+      .onJestEditorSupportEvent('terminalError', (error: string) => {
+        this.channel.appendLine('\nException raised: ' + error)
+      })
+  }
+
   public startProcess() {
     if (this.jestProcessManager.numberOfProcesses > 0) {
       return
@@ -89,63 +135,24 @@ export class JestExt {
     //reset the jest diagnostics
     resetDiagnostics(this.failDiagnostics)
 
-    this.jestProcessManager.startJestProcess({
+    this.jestProcess = this.jestProcessManager.startJestProcess({
       watch: true,
       keepAlive: true,
       exitCallback: (_, jestProcessInWatchMode) => {
         if (jestProcessInWatchMode) {
           this.jestProcess = jestProcessInWatchMode
+
           this.channel.appendLine('Finished running all tests. Starting watch mode.')
           status.running('Starting watch mode')
-          jestProcessInWatchMode
-            .onJestEditorSupportEvent('executableJSON', (data: JestTotalResults) => {
-              this.updateWithData(data)
-            })
-            .onJestEditorSupportEvent('executableOutput', (output: string) => {
-              if (!this.shouldIgnoreOutput(output)) {
-                this.channel.appendLine(output)
-              }
-            })
-            .onJestEditorSupportEvent('executableStdErr', (error: Buffer) => {
-              const message = error.toString()
 
-              if (this.shouldIgnoreOutput(message)) {
-                return
-              }
-
-              // The "tests are done" message comes through stdErr
-              // We want to use this as a marker that the console should
-              // be cleared, as the next input will be from a new test run.
-              if (this.clearOnNextInput) {
-                this.clearOnNextInput = false
-                this.parsingTestFile = false
-                this.testsHaveStartedRunning()
-              }
-              // thanks Qix, http://stackoverflow.com/questions/25245716/remove-all-ansi-colors-styles-from-strings
-              const noANSI = message.replace(
-                /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g,
-                ''
-              )
-              if (noANSI.includes('snapshot test failed')) {
-                this.detectedSnapshotErrors()
-              }
-
-              this.channel.appendLine(noANSI)
-            })
-            .onJestEditorSupportEvent('nonTerminalError', (error: string) => {
-              this.channel.appendLine(`Received an error from Jest Runner: ${error.toString()}`)
-            })
-            .onJestEditorSupportEvent('exception', result => {
-              this.channel.appendLine(`\nException raised: [${result.type}]: ${result.message}\n`)
-            })
-            .onJestEditorSupportEvent('terminalError', (error: string) => {
-              this.channel.appendLine('\nException raised: ' + error)
-            })
+          this.assignHandlers(this.jestProcess)
         } else {
           this.channel.appendLine('Exited watch mode.')
         }
       },
     })
+
+    this.assignHandlers(this.jestProcess)
   }
 
   public stopProcess() {
