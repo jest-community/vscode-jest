@@ -2,32 +2,27 @@ import { Runner, ProjectWorkspace } from 'jest-editor-support'
 
 export class JestProcess {
   private runner: Runner
-  private exited: boolean
   private projectWorkspace: ProjectWorkspace
   public keepAlive: boolean
   public onExitCallback: Function
   public watchMode: boolean
 
   private startRunner() {
-    this.exited = false
+    let exited = false
     this.runner = new Runner(this.projectWorkspace)
 
     this.runner.start(this.watchMode)
 
     this.runner.on('debuggerProcessExit', () => {
-      if (!this.exited) {
-        this.exited = true
+      if (!exited) {
+        exited = true
         this.onExitCallback(this)
         if (this.keepAlive) {
-          this.restart()
+          this.runner.removeAllListeners()
+          this.startRunner()
         }
       }
     })
-  }
-
-  private restart() {
-    this.runner.removeAllListeners()
-    this.startRunner()
   }
 
   constructor({
