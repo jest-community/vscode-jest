@@ -1,4 +1,4 @@
-# vscode-jest [![Build Status](https://travis-ci.org/orta/vscode-jest.svg?branch=master)](https://travis-ci.org/orta/vscode-jest)
+# vscode-jest [![Build Status](https://travis-ci.org/jest-community/vscode-jest.svg?branch=master)](https://travis-ci.org/jest-community/vscode-jest)
 
 ## The Aim
 
@@ -7,7 +7,7 @@ A comprehensive experience when using [Facebook's Jest](https://github.com/faceb
 * Useful IDE based Feedback
 * Session based test watching
 
-<img src="https://github.com/orta/vscode-jest/raw/master/images/vscode-jest.gif" alt="Screenshot of the tool" width="100%">
+<img src="https://github.com/jest-community/vscode-jest/raw/master/images/vscode-jest.gif" alt="Screenshot of the tool" width="100%">
 
 ## Features
 
@@ -61,7 +61,7 @@ These are the things that will trigger the extension loading. If one of these ap
 The extension is in two parts, one is _this_ repo. It contains all the VS Code specific work.
 
 ```js
-git clone https://github.com/orta/vscode-jest
+git clone https://github.com/jest-community/vscode-jest
 cd vscode-jest
 yarn install
 code .
