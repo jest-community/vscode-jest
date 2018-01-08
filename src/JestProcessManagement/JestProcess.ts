@@ -1,9 +1,10 @@
 import { Runner, ProjectWorkspace } from 'jest-editor-support'
 
 export class JestProcess {
+  static readonly keepAliveLimit = 5
   private runner: Runner
   private projectWorkspace: ProjectWorkspace
-  public keepAlive: boolean
+  public keepAliveCounter: number
   public onExitCallback: Function
   public watchMode: boolean
 
@@ -17,7 +18,7 @@ export class JestProcess {
       if (!exited) {
         exited = true
         this.onExitCallback(this)
-        if (this.keepAlive) {
+        if (--this.keepAliveCounter > 0) {
           this.runner.removeAllListeners()
           this.startRunner()
         }
@@ -36,7 +37,7 @@ export class JestProcess {
   }) {
     this.watchMode = watchMode
     this.projectWorkspace = projectWorkspace
-    this.keepAlive = keepAlive
+    this.keepAliveCounter = keepAlive ? JestProcess.keepAliveLimit : 1
 
     this.startRunner()
   }
@@ -51,7 +52,7 @@ export class JestProcess {
   }
 
   public stop() {
-    this.keepAlive = false
+    this.keepAliveCounter = 1
     this.runner.closeProcess()
   }
 

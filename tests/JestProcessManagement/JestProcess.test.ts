@@ -200,6 +200,7 @@ describe('JestProcess', () => {
           eventEmitter.on(event, callback)
         },
         removeAllListeners: jest.fn(() => eventEmitter.removeAllListeners()),
+        closeProcess: jest.fn(),
       }
       runnerMock.mockImplementation(() => runnerMockImplementation)
       onExit = jest.fn()
@@ -213,6 +214,32 @@ describe('JestProcess', () => {
       jestProcess.onExit(onExit)
       eventEmitter.emit('debuggerProcessExit')
       expect(runnerMock.mock.instances.length).toBe(2)
+    })
+
+    it('limits number of restarts (keepAlive boundary)', () => {
+      const limit = JestProcess.keepAliveLimit
+      jestProcess = new JestProcess({
+        projectWorkspace: projectWorkspaceMock,
+        keepAlive: true,
+      })
+      jestProcess.onExit(onExit)
+      Array.from(Array(limit + 1).keys()).forEach(_ => {
+        eventEmitter.emit('debuggerProcessExit')
+      })
+      expect(runnerMock.mock.instances.length).toBe(limit)
+    })
+
+    it('does not restart the process if stopped explicitely', () => {
+      jestProcess = new JestProcess({
+        projectWorkspace: projectWorkspaceMock,
+        keepAlive: true,
+      })
+      jestProcess.onExit(onExit)
+      eventEmitter.emit('debuggerProcessExit')
+      eventEmitter.emit('debuggerProcessExit')
+      jestProcess.stop()
+      eventEmitter.emit('debuggerProcessExit')
+      expect(runnerMock.mock.instances.length).toBe(3)
     })
 
     it('passes the workspace argument to the jest-editor-support Runner', () => {
