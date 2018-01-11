@@ -412,11 +412,7 @@ export class JestExt {
   }
 
   private getJestVersion(version: (v: number) => void) {
-    // if all else fails, fallback to the last pre-20 release
-    version(this.getJestVersionViaPackageJson() || this.getJestVersionViaCommand() || 18)
-  }
-
-  private getJestVersionViaPackageJson() {
+    let ver = 18 // default to the last pre-20 release if nothing else can be determined
     const packageJSON = pathToJestPackageJSON(this.pluginSettings)
 
     if (packageJSON) {
@@ -424,29 +420,11 @@ export class JestExt {
       const packageMetadata = JSON.parse(contents)
 
       if (packageMetadata['version']) {
-        return parseInt(packageMetadata['version'])
+        ver = parseInt(packageMetadata['version'])
       }
     }
 
-    return null
-  }
-
-  private getJestVersionViaCommand() {
-    if (this.pluginSettings.pathToJest) {
-      const relativeJestCmd = this.pluginSettings.pathToJest.split(' ')[0]
-      const versionCmd = `${path.join(this.pluginSettings.rootPath, relativeJestCmd)} --version`
-
-      try {
-        const stdOut = execSync(versionCmd)
-          .toString()
-          .trim()
-        const ver = stdOut.slice(1) // stdOut will be something like 'v22.0.4', so trim the 'v'
-
-        return parseInt(ver)
-      } catch {}
-    }
-
-    return null
+    version(ver)
   }
 
   /**
