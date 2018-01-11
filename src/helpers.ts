@@ -18,7 +18,7 @@ export function pathToJest(pluginSettings: IPluginSettings) {
     return platform() === 'win32' ? 'npm.cmd test --' : 'npm test --'
   }
 
-  // For windows support, see https://github.com/orta/vscode-jest/issues/10
+  // For windows support, see https://github.com/jest-community/vscode-jest/issues/10
   if (!path.includes('.cmd') && platform() === 'win32') {
     return path + '.cmd'
   }
