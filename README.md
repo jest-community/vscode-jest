@@ -9,6 +9,10 @@ A comprehensive experience when using [Facebook's Jest](https://github.com/faceb
 
 <img src="https://github.com/jest-community/vscode-jest/raw/master/images/vscode-jest.gif" alt="Screenshot of the tool" width="100%">
 
+## Maintainers
+
+Orta Therox ([@orta](https://github.com/orta)), Sean Poulter ([@seanpoulter](https://github.com/seanpoulter), Vincent Voyer ([@vvo](https://github.com/vvo)) & ConnectDotz ([@vvo](https://github.com/connectdotz)).
+
 ## Features
 
 * Starts Jest automatically when you're in a root folder project with Jest installed.
