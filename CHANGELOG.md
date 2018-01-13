@@ -7,6 +7,7 @@ Bug-fixes within the same version aren't needed
 
 * Adds ability to open snapshot file directly from test - bookman25
 * start automatically if jest.config.js or jest.json is in workspace - uucue2
+* search for jest/package.json in node_modules or ../node_modules or ../../node_modules etc.
 
 -->
 
