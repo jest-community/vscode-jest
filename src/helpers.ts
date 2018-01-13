@@ -67,7 +67,7 @@ export function pathToJestPackageJSON(pluginSettings: IPluginSettings): string |
       }
     }
     updir += '../'
-  } while (join(pluginSettings.rootPath, updir) != join(pluginSettings.rootPath, updir, '../'))
+  } while (join(pluginSettings.rootPath, updir) !== join(pluginSettings.rootPath, updir, '../'))
 
   return null
 }
