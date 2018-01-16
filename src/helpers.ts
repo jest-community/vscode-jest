@@ -6,7 +6,7 @@ import { IPluginSettings } from './IPluginSettings'
 
 /**
  *  Handles getting the jest runner, handling the OS and project specific work too
- * 
+ *
  * @returns {string}
  */
 export function pathToJest(pluginSettings: IPluginSettings) {
@@ -57,7 +57,7 @@ export function pathToJestPackageJSON(pluginSettings: IPluginSettings): string |
   let pathToNodeModules = join(pluginSettings.rootPath, 'node_modules')
 
   if (pluginSettings.pathToJest) {
-    const relativeJestCmd = pluginSettings.pathToJest.split(' ')[0]
+    const relativeJestCmd = removeSurroundingQuotes(pluginSettings.pathToJest.split(' ')[0])
     const relativePathToNodeModules = relativeJestCmd.replace(/node_modules.+$/i, 'node_modules')
 
     pathToNodeModules = join(pluginSettings.rootPath, relativePathToNodeModules)
@@ -74,4 +74,8 @@ export function pathToJestPackageJSON(pluginSettings: IPluginSettings): string |
   }
 
   return null
+}
+
+function removeSurroundingQuotes(str) {
+  return str.replace(/^['"`]/, '').replace(/['"`]$/, '')
 }
