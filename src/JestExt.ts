@@ -411,17 +411,19 @@ export class JestExt {
   }
 
   private getJestVersion(version: (v: number) => void) {
+    let ver = 18 // default to the last pre-20 release if nothing else can be determined
     const packageJSON = pathToJestPackageJSON(this.pluginSettings)
+
     if (packageJSON) {
       const contents = readFileSync(packageJSON, 'utf8')
       const packageMetadata = JSON.parse(contents)
+
       if (packageMetadata['version']) {
-        version(parseInt(packageMetadata['version']))
-        return
+        ver = parseInt(packageMetadata['version'])
       }
     }
-    // Fallback to last pre-20 release
-    version(18)
+
+    version(ver)
   }
 
   /**
