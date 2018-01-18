@@ -4,8 +4,8 @@ export class JestProcess {
   static readonly keepAliveLimit = 5
   private runner: Runner
   private projectWorkspace: ProjectWorkspace
+  private onExitCallback: Function
   public keepAliveCounter: number
-  public onExitCallback: Function
   public watchMode: boolean
 
   private startRunner() {
