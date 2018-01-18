@@ -26,4 +26,8 @@ declare module 'jest-editor-support' {
     constructor(parser?: any, customMatchers?: Array<string>)
     getMetadata(filepath: string): Array<SnapshotMetadata>
   }
+
+  interface JestTotalResultsMeta {
+    noTestsFound: boolean
+  }
 }
