@@ -1,29 +1,9 @@
 import { TestReconciler, FormattedTestResults } from 'jest-editor-support'
 import { TestFileAssertionStatus } from 'jest-editor-support'
-import { TestReconciliationState } from './TestReconciliationState'
-import { parseTest } from '../TestParser'
 import * as path from 'path'
-
-type Position = {
-  /** Zero-based column number */
-  column: number
-
-  /** Zero-based line number */
-  line: number
-}
-
-export type TestResult = {
-  name: string
-  start: Position
-  end: Position
-
-  status: TestReconciliationState
-  shortMessage?: string
-  terseMessage?: string
-
-  /** Zero-based line number */
-  lineNumberOfError?: number
-}
+import { TestReconciliationState } from './TestReconciliationState'
+import { TestResult } from './TestResult'
+import { parseTest } from '../TestParser'
 
 type TestResultsMap = { [filePath: string]: TestResult[] }
 
