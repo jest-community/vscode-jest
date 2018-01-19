@@ -1,4 +1,4 @@
-jest.unmock('../src/TestResultProvider')
+jest.unmock('../../src/TestResults/TestResultProvider')
 
 const updateFileWithJestStatus = jest.fn()
 const assertionsForTestFile = jest.fn()
@@ -30,9 +30,9 @@ jest.mock('path', () => {
   return path
 })
 
-import { TestResultProvider } from '../src/TestResultProvider'
-import { TestReconciliationState } from '../src/TestReconciliationState'
-import { parseTest } from '../src/TestParser'
+import { TestResultProvider } from '../../src/TestResults/TestResultProvider'
+import { TestReconciliationState } from '../../src/TestResults'
+import { parseTest } from '../../src/TestParser'
 
 describe('TestResultProvider', () => {
   describe('getResults()', () => {

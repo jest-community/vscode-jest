@@ -1,7 +1,7 @@
 import { TestReconciler, FormattedTestResults } from 'jest-editor-support'
 import { TestFileAssertionStatus } from 'jest-editor-support'
 import { TestReconciliationState } from './TestReconciliationState'
-import { parseTest } from './TestParser'
+import { parseTest } from '../TestParser'
 import * as path from 'path'
 
 type Position = {
