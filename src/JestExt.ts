@@ -7,7 +7,12 @@ import { matcher } from 'micromatch'
 import * as decorations from './decorations'
 import { IPluginSettings } from './IPluginSettings'
 import * as status from './statusBar'
-import { TestReconciliationState, TestResultProvider, TestResult } from './TestResults'
+import {
+  TestReconciliationState,
+  TestResultProvider,
+  TestResult,
+  resultsWithLowerCaseWindowsDriveLetters,
+} from './TestResults'
 import { pathToJestPackageJSON } from './helpers'
 import { readFileSync } from 'fs'
 import { Coverage, showCoverageOverlay } from './Coverage'
@@ -359,13 +364,15 @@ export class JestExt {
   }
 
   private updateWithData(data: JestTotalResults) {
-    this.coverage.mapCoverage(data.coverageMap)
+    const normalizedData = resultsWithLowerCaseWindowsDriveLetters(data)
 
-    const statusList = this.testResultProvider.updateTestResults(data)
+    this.coverage.mapCoverage(normalizedData.coverageMap)
+
+    const statusList = this.testResultProvider.updateTestResults(normalizedData)
     updateDiagnostics(statusList, this.failDiagnostics)
 
     const failedFileCount = failedSuiteCount(this.failDiagnostics)
-    if (failedFileCount <= 0 && data.success) {
+    if (failedFileCount <= 0 && normalizedData.success) {
       status.success()
     } else {
       status.failed(` (${failedFileCount} test suite${failedFileCount > 1 ? 's' : ''} failed)`)

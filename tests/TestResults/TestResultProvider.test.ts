@@ -149,28 +149,24 @@ describe('TestResultProvider', () => {
   })
 
   describe('updateTestResults()', () => {
-    afterEach(() => pathProperties.sep.mockReset())
-
-    it('should update the cached file status', () => {
+    it('should reset the cache', () => {
       const sut = new TestResultProvider()
       const results: any = {}
+      sut.resetCache = jest.fn()
       sut.updateTestResults(results)
 
-      expect(updateFileWithJestStatus).toBeCalledWith(results)
+      expect(sut.resetCache).toBeCalled()
     })
 
-    it('should test file paths to use lowercase drive letters on Windows', () => {
-      pathProperties.sep.mockReturnValue('\\')
+    it('should update the cached file status', () => {
+      const expected: any = {}
+      updateFileWithJestStatus.mockReturnValueOnce(expected)
 
       const sut = new TestResultProvider()
-      const results: any = {
-        testResults: [{ name: 'relative.js' }, { name: 'c:\\stays-lowercase' }, { name: 'D:\\changes-case' }],
-      }
-      sut.updateTestResults(results)
+      const results: any = {}
 
-      expect(updateFileWithJestStatus).toBeCalledWith({
-        testResults: [{ name: 'relative.js' }, { name: 'c:\\stays-lowercase' }, { name: 'd:\\changes-case' }],
-      })
+      expect(sut.updateTestResults(results)).toBe(expected)
+      expect(updateFileWithJestStatus).toBeCalledWith(results)
     })
   })
 })

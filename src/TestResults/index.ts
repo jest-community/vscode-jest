@@ -1,3 +1,3 @@
 export * from './TestReconciliationState'
-export * from './TestResult'
+export { TestResult, resultsWithLowerCaseWindowsDriveLetters } from './TestResult'
 export * from './TestResultProvider'

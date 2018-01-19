@@ -1,6 +1,5 @@
 import { TestReconciler, FormattedTestResults } from 'jest-editor-support'
 import { TestFileAssertionStatus } from 'jest-editor-support'
-import * as path from 'path'
 import { TestReconciliationState } from './TestReconciliationState'
 import { TestResult } from './TestResult'
 import { parseTest } from '../TestParser'
@@ -23,6 +22,10 @@ export class TestResultProvider {
 
   constructor() {
     this.reconciler = new TestReconciler()
+    this.resetCache()
+  }
+
+  resetCache() {
     this.resultsByFilePath = {}
     this.sortedResultsByFilePath = {}
   }
@@ -98,20 +101,7 @@ export class TestResultProvider {
   }
 
   updateTestResults(data: FormattedTestResults): TestFileAssertionStatus[] {
-    this.resultsByFilePath = {}
-    this.sortedResultsByFilePath = {}
-
-    // To support Windows systems, the drive letter is converted to a lowercase
-    // letter to match the convention of the document URI (e.g.: document.fileName)
-    if (data.testResults && path.sep === '\\') {
-      for (let i = 0; i < data.testResults.length; i += 1) {
-        if (data.testResults[i].name.match(/^[A-Z]:\\/)) {
-          const filePath = data.testResults[i].name
-          data.testResults[i].name = filePath[0].toLowerCase() + filePath.slice(1)
-        }
-      }
-    }
-
+    this.resetCache()
     return this.reconciler.updateFileWithJestStatus(data)
   }
 
