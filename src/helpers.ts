@@ -66,12 +66,19 @@ export function pathToJestPackageJSON(pluginSettings: IPluginSettings): string |
   const defaultPath = normalize(join(pathToNodeModules, 'jest/package.json'))
   const craPath = normalize(join(pathToNodeModules, 'react-scripts/node_modules/jest/package.json'))
   const paths = [defaultPath, craPath]
+  let updir = ''
 
-  for (const i in paths) {
-    if (existsSync(paths[i])) {
-      return paths[i]
+  let max_levels = 20
+  do {
+    for (const i in paths) {
+      const absolutePath = join(pluginSettings.rootPath, updir, paths[i])
+      if (existsSync(absolutePath)) {
+        return absolutePath
+      }
     }
-  }
+    updir += '../'
+    max_levels--
+  } while (max_levels > 0 && join(pluginSettings.rootPath, updir) !== join(pluginSettings.rootPath, updir, '../'))
 
   return null
 }
