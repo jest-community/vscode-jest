@@ -59,6 +59,7 @@ export function pathToJestPackageJSON(pluginSettings: IPluginSettings): string |
   let updir = ''
 
   const paths = [defaultPath, craPath]
+  let max_levels = 20
   do {
     for (const i in paths) {
       const absolutePath = join(pluginSettings.rootPath, updir, paths[i])
@@ -67,7 +68,8 @@ export function pathToJestPackageJSON(pluginSettings: IPluginSettings): string |
       }
     }
     updir += '../'
-  } while (join(pluginSettings.rootPath, updir) !== join(pluginSettings.rootPath, updir, '../'))
+    max_levels--
+  } while (max_levels > 0 && join(pluginSettings.rootPath, updir) !== join(pluginSettings.rootPath, updir, '../'))
 
   return null
 }
