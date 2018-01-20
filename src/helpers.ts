@@ -6,7 +6,7 @@ import { IPluginSettings } from './IPluginSettings'
 
 /**
  *  Handles getting the jest runner, handling the OS and project specific work too
- * 
+ *
  * @returns {string}
  */
 export function pathToJest(pluginSettings: IPluginSettings) {
@@ -54,11 +54,20 @@ export function pathToConfig(pluginSettings: IPluginSettings) {
 }
 
 export function pathToJestPackageJSON(pluginSettings: IPluginSettings): string | null {
-  const defaultPath = normalize('node_modules/jest/package.json')
-  const craPath = normalize('node_modules/react-scripts/node_modules/jest/package.json')
+  let pathToNodeModules = join(pluginSettings.rootPath, 'node_modules')
+
+  if (pluginSettings.pathToJest) {
+    const relativeJestCmd = removeSurroundingQuotes(pluginSettings.pathToJest.split(' ')[0])
+    const relativePathToNodeModules = relativeJestCmd.replace(/node_modules.+$/i, 'node_modules')
+
+    pathToNodeModules = join(pluginSettings.rootPath, relativePathToNodeModules)
+  }
+
+  const defaultPath = normalize(join(pathToNodeModules, 'jest/package.json'))
+  const craPath = normalize(join(pathToNodeModules, 'react-scripts/node_modules/jest/package.json'))
+  const paths = [defaultPath, craPath]
   let updir = ''
 
-  const paths = [defaultPath, craPath]
   let max_levels = 20
   do {
     for (const i in paths) {
@@ -72,4 +81,8 @@ export function pathToJestPackageJSON(pluginSettings: IPluginSettings): string |
   } while (max_levels > 0 && join(pluginSettings.rootPath, updir) !== join(pluginSettings.rootPath, updir, '../'))
 
   return null
+}
+
+function removeSurroundingQuotes(str) {
+  return str.replace(/^['"`]/, '').replace(/['"`]$/, '')
 }
