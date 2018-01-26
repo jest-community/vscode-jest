@@ -10,6 +10,7 @@ declare module 'istanbul-lib-coverage' {
     toSummary(): CoverageSummary
     b: HitCount
     branchMap: BranchMap
+    path: string
   }
 
   interface HitCount {
