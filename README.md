@@ -11,7 +11,7 @@ A comprehensive experience when using [Facebook's Jest](https://github.com/faceb
 
 ## Maintainers
 
-Orta Therox ([@orta](https://github.com/orta)), Sean Poulter ([@seanpoulter](https://github.com/seanpoulter), Vincent Voyer ([@vvo](https://github.com/vvo)) & ConnectDotz ([@vvo](https://github.com/connectdotz)).
+Orta Therox ([@orta](https://github.com/orta)), Sean Poulter ([@seanpoulter](https://github.com/seanpoulter)), Vincent Voyer ([@vvo](https://github.com/vvo)) & ConnectDotz ([@connectdotz](https://github.com/connectdotz)).
 
 ## Features
 
