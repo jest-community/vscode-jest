@@ -11,6 +11,7 @@ import { ProjectWorkspace, Settings, Runner } from 'jest-editor-support'
 import { window, workspace, debug } from 'vscode'
 import { hasDocument, isOpenInMultipleEditors } from '../src/editor'
 import { failingAssertionStyle } from '../src/decorations'
+import { resultsWithLowerCaseWindowsDriveLetters } from '../src/TestResults'
 
 describe('JestExt', () => {
   const mockSettings = (Settings as any) as jest.Mock<any>
@@ -190,6 +191,7 @@ describe('JestExt', () => {
       const data = {
         coverageMap: expected,
       }
+      ;(resultsWithLowerCaseWindowsDriveLetters as jest.Mock<{}>) = jest.fn().mockImplementationOnce(a => a)
 
       // Call updateWithData()
       processMock.emit('executableJSON', data)
