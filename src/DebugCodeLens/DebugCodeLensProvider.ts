@@ -2,8 +2,7 @@ import * as vscode from 'vscode'
 import { extensionName } from '../appGlobals'
 import { basename } from 'path'
 import { DebugCodeLens } from './DebugCodeLens'
-import { TestReconciliationState } from '../TestReconciliationState'
-import { TestResultProvider } from '../TestResultProvider'
+import { TestReconciliationState, TestResultProvider } from '../TestResults'
 
 export class DebugCodeLensProvider implements vscode.CodeLensProvider {
   private _enabled: boolean

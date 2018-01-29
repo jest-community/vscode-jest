@@ -1,8 +1,9 @@
 declare module 'istanbul-lib-coverage' {
   class CoverageMap {
+    data: { [fileName: string]: FileCoverage }
+    fileCoverageFor(file: string): FileCoverage
     files(): string[]
     merge(map: CoverageMap): void
-    fileCoverageFor(file: string): FileCoverage
   }
 
   class FileCoverage {
@@ -10,6 +11,7 @@ declare module 'istanbul-lib-coverage' {
     toSummary(): CoverageSummary
     b: HitCount
     branchMap: BranchMap
+    path: string
   }
 
   interface HitCount {
@@ -51,5 +53,5 @@ declare module 'istanbul-lib-coverage' {
     }
   }
 
-  function createCoverageMap(map?: CoverageMap): CoverageMap
+  function createCoverageMap(map?: CoverageMap | Object): CoverageMap
 }

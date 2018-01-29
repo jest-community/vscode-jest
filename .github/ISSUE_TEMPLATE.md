@@ -6,9 +6,11 @@
 
 1. Operating system: [fill]
 
+
 ### Steps to Reproduce
 
-[fill]
+[fill] <!-- If possible, please create a minimal repository that reproduces the issue. -->
+
 
 ### Expected Behavior
 
@@ -18,6 +20,7 @@
 ### Actual Behavior
 
 [fill]
+
 
 --- 
 

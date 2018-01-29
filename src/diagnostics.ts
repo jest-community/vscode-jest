@@ -6,7 +6,7 @@ import * as vscode from 'vscode'
 import { existsSync } from 'fs'
 // import { DiagnosticCollection, Uri, Diagnostic, Range, DiagnosticSeverity } from 'vscode'
 import { TestFileAssertionStatus } from 'jest-editor-support'
-import { TestReconciliationState } from './TestReconciliationState'
+import { TestReconciliationState } from './TestResults'
 
 export function updateDiagnostics(testResults: TestFileAssertionStatus[], diagnostics: vscode.DiagnosticCollection) {
   function addTestFileError(result: TestFileAssertionStatus, uri: vscode.Uri) {
