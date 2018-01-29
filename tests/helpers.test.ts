@@ -5,12 +5,13 @@ import { pathToJestPackageJSON } from '../src/helpers'
 import { existsSync } from 'fs'
 import * as path from 'path'
 
+const existsMock = existsSync as jest.Mock<boolean>
 const defaultPathToJest = 'node_modules/.bin/jest'
 
 describe('ModuleHelpers', () => {
   describe('pathToJestPackageJSON', () => {
     it('should return null when not found', () => {
-      ;(existsSync as jest.Mock<boolean>).mockReturnValueOnce(false).mockReturnValueOnce(false)
+      existsMock.mockReturnValueOnce(false).mockReturnValueOnce(false)
 
       const workspace: any = {
         rootPath: '',
@@ -23,7 +24,7 @@ describe('ModuleHelpers', () => {
       describe('rootPath: <default>', () => {
         it('should return package.json when Jest is installed as a dependency', () => {
           const expected = path.join('node_modules', 'jest', 'package.json')
-          ;(existsSync as jest.Mock<boolean>).mockImplementation(path => path === expected)
+          existsMock.mockImplementation(path => path === expected)
 
           const workspace: any = {
             rootPath: '',
@@ -34,7 +35,7 @@ describe('ModuleHelpers', () => {
 
         it('should return package.json when React Scripts are installed as a dependency', () => {
           const expected = path.join('node_modules', 'react-scripts', 'node_modules', 'jest', 'package.json')
-          ;(existsSync as jest.Mock<boolean>).mockImplementation(path => path === expected)
+          existsMock.mockImplementation(path => path === expected)
 
           const workspace: any = {
             rootPath: '',
@@ -47,7 +48,7 @@ describe('ModuleHelpers', () => {
       describe('rootPath: <string>', () => {
         it('should return package.json when Jest is installed as a dependency', () => {
           const expected = path.join('..', '..', 'node_modules', 'jest', 'package.json')
-          ;(existsSync as jest.Mock<boolean>).mockImplementation(path => path === expected)
+          existsMock.mockImplementation(path => path === expected)
 
           const workspace: any = {
             rootPath: path.join('..', '..'),
@@ -66,7 +67,7 @@ describe('ModuleHelpers', () => {
             'jest',
             'package.json'
           )
-          ;(existsSync as jest.Mock<boolean>).mockImplementation(path => path === expected)
+          existsMock.mockImplementation(path => path === expected)
 
           const workspace: any = {
             rootPath: path.join('..', '..'),
@@ -80,7 +81,7 @@ describe('ModuleHelpers', () => {
     describe('pathToJest: npm test --', () => {
       it('will not find package.json', () => {
         const expected = null
-        ;(existsSync as jest.Mock<boolean>).mockImplementation(path => path === expected)
+        existsMock.mockImplementation(path => path === expected)
 
         const workspace: any = {
           rootPath: '',
@@ -93,7 +94,7 @@ describe('ModuleHelpers', () => {
     describe(`pathToJest: ${path.join('"test scripts"', 'test')}`, () => {
       it('will not find package.json', () => {
         const expected = path.join('"test scripts"', 'test')
-        ;(existsSync as jest.Mock<boolean>).mockImplementation(path => path === expected)
+        existsMock.mockImplementation(path => path === expected)
 
         const workspace: any = {
           rootPath: '',
