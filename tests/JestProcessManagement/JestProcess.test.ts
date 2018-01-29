@@ -307,4 +307,106 @@ describe('JestProcess', () => {
       expect(onExit).toHaveBeenCalledTimes(2)
     })
   })
+
+  describe('restoring jest events', () => {
+    let jestEvents
+
+    beforeEach(() => {
+      eventEmitter = new EventEmitter()
+      jestEvents = new Map<
+        string,
+        {
+          callback: (...args: any[]) => void
+          count: number
+        }
+      >()
+
+      runnerMockImplementation = {
+        ...runnerMockImplementation,
+        on: (event, callback) => {
+          if (event === 'debuggerProcessExit') {
+            eventEmitter.on(event, callback)
+          }
+          let count = 0
+          if (jestEvents.has(event)) {
+            count = jestEvents.get(event).count
+          }
+          jestEvents.set(event, {
+            callback: callback,
+            count: count + 1,
+          })
+        },
+        removeAllListeners: jest.fn(() => eventEmitter.removeAllListeners()),
+        closeProcess: jest.fn(),
+      }
+      runnerMock.mockImplementation(() => runnerMockImplementation)
+    })
+
+    it('restores the previously registered jest event', () => {
+      jestProcess = new JestProcess({
+        projectWorkspace: projectWorkspaceMock,
+        keepAlive: true,
+      })
+
+      const handler = () => {}
+
+      jestProcess.onJestEditorSupportEvent('event', handler)
+      eventEmitter.emit('debuggerProcessExit')
+
+      expect(jestEvents.has('event')).toBeTruthy()
+      expect(jestEvents.get('event').count).toBe(2)
+      expect(jestEvents.get('event').callback).toBe(handler)
+    })
+
+    it('restores the previously registered multiple jest events', () => {
+      jestProcess = new JestProcess({
+        projectWorkspace: projectWorkspaceMock,
+        keepAlive: true,
+      })
+
+      const handler1 = () => {}
+      const handler2 = () => {}
+
+      jestProcess.onJestEditorSupportEvent('event1', handler1)
+      jestProcess.onJestEditorSupportEvent('event2', handler2)
+      eventEmitter.emit('debuggerProcessExit')
+
+      expect(jestEvents.has('event1')).toBeTruthy()
+      expect(jestEvents.get('event1').count).toBe(2)
+      expect(jestEvents.get('event1').callback).toBe(handler1)
+
+      expect(jestEvents.has('event2')).toBeTruthy()
+      expect(jestEvents.get('event2').count).toBe(2)
+      expect(jestEvents.get('event2').callback).toBe(handler2)
+    })
+
+    it('does not restore the previously registered jest event if keepAlive is false', () => {
+      jestProcess = new JestProcess({
+        projectWorkspace: projectWorkspaceMock,
+        keepAlive: false,
+      })
+
+      const handler = () => {}
+
+      jestProcess.onJestEditorSupportEvent('event', handler)
+      eventEmitter.emit('debuggerProcessExit')
+
+      expect(jestEvents.get('event').count).toBe(1)
+    })
+
+    it('does not restore any events when explicitely stopped', () => {
+      jestProcess = new JestProcess({
+        projectWorkspace: projectWorkspaceMock,
+        keepAlive: true,
+      })
+
+      const handler = () => {}
+
+      jestProcess.onJestEditorSupportEvent('event', handler)
+      jestProcess.stop()
+      eventEmitter.emit('debuggerProcessExit')
+
+      expect(jestEvents.get('event').count).toBe(1)
+    })
+  })
 })

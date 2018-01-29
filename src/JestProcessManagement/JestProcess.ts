@@ -5,6 +5,7 @@ export class JestProcess {
   private runner: Runner
   private projectWorkspace: ProjectWorkspace
   private onExitCallback: Function
+  private jestSupportEvents: Map<string, (...args: any[]) => void>
   public keepAliveCounter: number
   public watchMode: boolean
 
@@ -14,16 +15,26 @@ export class JestProcess {
 
     this.runner.start(this.watchMode)
 
+    this.restoreJestEvents()
+
     this.runner.on('debuggerProcessExit', () => {
       if (!exited) {
         exited = true
-        this.onExitCallback(this)
+        if (this.onExitCallback) {
+          this.onExitCallback(this)
+        }
         if (--this.keepAliveCounter > 0) {
           this.runner.removeAllListeners()
           this.startRunner()
         }
       }
     })
+  }
+
+  private restoreJestEvents() {
+    for (const [event, callback] of this.jestSupportEvents.entries()) {
+      this.runner.on(event, callback)
+    }
   }
 
   constructor({
@@ -38,6 +49,7 @@ export class JestProcess {
     this.watchMode = watchMode
     this.projectWorkspace = projectWorkspace
     this.keepAliveCounter = keepAlive ? JestProcess.keepAliveLimit : 1
+    this.jestSupportEvents = new Map()
 
     this.startRunner()
   }
@@ -47,12 +59,14 @@ export class JestProcess {
   }
 
   public onJestEditorSupportEvent(event, callback) {
+    this.jestSupportEvents.set(event, callback)
     this.runner.on(event, callback)
     return this
   }
 
   public stop() {
     this.keepAliveCounter = 1
+    this.jestSupportEvents.clear()
     this.runner.closeProcess()
   }
 
