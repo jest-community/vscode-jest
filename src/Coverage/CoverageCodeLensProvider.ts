@@ -19,7 +19,7 @@ class CoverageCodeLensProvider implements vscode.CodeLensProvider {
   }
 
   public provideCodeLenses(document: vscode.TextDocument, _token: vscode.CancellationToken) {
-    const coverage = this.jestExt.coverage.getCoverageForFile(document.fileName)
+    const coverage = this.jestExt.coverageMapProvider.getFileCoverage(document.fileName)
     if (!coverage) {
       return
     }

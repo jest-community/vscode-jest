@@ -9,6 +9,7 @@ Bug-fixes within the same version aren't needed
 * start automatically if jest.config.js or jest.json is in workspace - uucue2
 * use pathToJest setting to properly locate jest's package.json and read the version - uucue2
 * Fix missing coverage overlay on Windows - seanpoulter
+* Toggle coverage overlay without changing documents - seanpoulter
 
 -->
 
