@@ -9,8 +9,10 @@ export class JestProcess {
   private keepAliveCounter: number
   public keepAlive: boolean
   public watchMode: boolean
+  public stopRequested: boolean
 
   private startRunner() {
+    this.stopRequested = false
     let exited = false
     this.runner = new Runner(this.projectWorkspace)
 
@@ -66,6 +68,7 @@ export class JestProcess {
   }
 
   public stop() {
+    this.stopRequested = true
     this.keepAliveCounter = 1
     this.jestSupportEvents.clear()
     this.runner.closeProcess()

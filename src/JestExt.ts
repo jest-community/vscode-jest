@@ -76,6 +76,12 @@ export class JestExt {
     })
 
     this.getSettings()
+    // The theme stuff
+    this.setupDecorators()
+    // The bottom bar thing
+    this.setupStatusBar()
+    //reset the jest diagnostics
+    resetDiagnostics(this.failDiagnostics)
   }
 
   private handleStdErr(error: Buffer) {
@@ -128,17 +134,11 @@ export class JestExt {
     if (this.jestProcessManager.numberOfProcesses > 0) {
       return
     }
-    // The theme stuff
-    this.setupDecorators()
-    // The bottom bar thing
-    this.setupStatusBar()
-    //reset the jest diagnostics
-    resetDiagnostics(this.failDiagnostics)
 
     this.jestProcess = this.jestProcessManager.startJestProcess({
       watch: true,
       keepAlive: true,
-      exitCallback: (_, jestProcessInWatchMode) => {
+      exitCallback: (jestProcess, jestProcessInWatchMode) => {
         if (jestProcessInWatchMode) {
           this.jestProcess = jestProcessInWatchMode
 
@@ -148,9 +148,11 @@ export class JestExt {
           this.assignHandlers(this.jestProcess)
         } else {
           status.stopped()
-          this.channel.appendLine(
-            'Starting Jest in Watch mode failed too many times and has been stopped. Please check your system configuration.'
-          )
+          if (!jestProcess.stopRequested) {
+            this.channel.appendLine(
+              'Starting Jest in Watch mode failed too many times and has been stopped. Please check your system configuration.'
+            )
+          }
         }
       },
     })

@@ -32,6 +32,13 @@ describe('JestProcess', () => {
       expect(jestProcess).not.toBe(null)
     })
 
+    it('clears the stopRequested flag', () => {
+      jestProcess = new JestProcess({
+        projectWorkspace: projectWorkspaceMock,
+      })
+      expect(jestProcess.stopRequested).toBeFalsy()
+    })
+
     it('accepts watchMode boolean argument', () => {
       jestProcess = new JestProcess({
         projectWorkspace: projectWorkspaceMock,
@@ -118,6 +125,12 @@ describe('JestProcess', () => {
       expect(onExit).toHaveBeenCalledTimes(1)
     })
 
+    it('does not set the stopRequested flag', () => {
+      eventEmitter.emit('debuggerProcessExit')
+
+      expect(jestProcess.stopRequested).toBeFalsy()
+    })
+
     it('calls the callback with the argument being the instance of the jest process', () => {
       eventEmitter.emit('debuggerProcessExit')
 
@@ -186,6 +199,12 @@ describe('JestProcess', () => {
       jestProcess.stop()
 
       expect(closeProcessMock).toHaveBeenCalledTimes(1)
+    })
+
+    it('sets the stopRequested flag', () => {
+      jestProcess.stop()
+
+      expect(jestProcess.stopRequested).toBeTruthy()
     })
   })
 
