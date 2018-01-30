@@ -207,8 +207,9 @@ export class JestExt {
         if (response) {
           this.jestProcess.runJestWithUpdateForSnapshots(() => {
             if (this.pluginSettings.restartJestOnSnapshotUpdate) {
-              this.jestProcessManager.stopAll()
-              this.startProcess()
+              this.jestProcessManager.stopJestProcess(this.jestProcess).then(() => {
+                this.startProcess()
+              })
               vscode.window.showInformationMessage('Updated Snapshots and restarted Jest.')
             } else {
               vscode.window.showInformationMessage('Updated Snapshots. It will show in your next test run.')

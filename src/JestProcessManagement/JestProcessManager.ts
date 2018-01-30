@@ -102,7 +102,7 @@ export class JestProcessManager {
 
   public stopJestProcess(jestProcess) {
     this.removeJestProcessReference(jestProcess)
-    jestProcess.stop()
+    return jestProcess.stop()
   }
 
   public get numberOfProcesses() {

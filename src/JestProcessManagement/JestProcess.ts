@@ -6,6 +6,7 @@ export class JestProcess {
   private projectWorkspace: ProjectWorkspace
   private onExitCallback: Function
   private jestSupportEvents: Map<string, (...args: any[]) => void>
+  private resolve: Function
   private keepAliveCounter: number
   public keepAlive: boolean
   public watchMode: boolean
@@ -28,6 +29,9 @@ export class JestProcess {
           this.startRunner()
         } else if (this.onExitCallback) {
           this.onExitCallback(this)
+          if (this.stopRequested) {
+            this.resolve()
+          }
         }
       }
     })
@@ -72,6 +76,9 @@ export class JestProcess {
     this.keepAliveCounter = 1
     this.jestSupportEvents.clear()
     this.runner.closeProcess()
+    return new Promise(resolve => {
+      this.resolve = resolve
+    })
   }
 
   public runJestWithUpdateForSnapshots(callback) {
