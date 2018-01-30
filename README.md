@@ -1,5 +1,7 @@
 # vscode-jest [![Build Status](https://travis-ci.org/jest-community/vscode-jest.svg?branch=master)](https://travis-ci.org/jest-community/vscode-jest)
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/jest-community/vscode-jest.svg)](https://greenkeeper.io/)
+
 ## The Aim
 
 A comprehensive experience when using [Facebook's Jest](https://github.com/facebook/jest) within a project.
