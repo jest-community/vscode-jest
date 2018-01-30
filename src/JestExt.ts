@@ -82,6 +82,13 @@ export class JestExt {
     this.setupStatusBar()
     //reset the jest diagnostics
     resetDiagnostics(this.failDiagnostics)
+
+    // If we should start the process by default, do so
+    if (this.pluginSettings.autoEnable) {
+      this.startProcess()
+    } else {
+      this.channel.appendLine('Skipping initial Jest runner process start.')
+    }
   }
 
   private handleStdErr(error: Buffer) {
@@ -97,7 +104,7 @@ export class JestExt {
     if (this.clearOnNextInput) {
       this.clearOnNextInput = false
       this.parsingTestFile = false
-      this.testsHaveStartedRunning()
+      this.channel.clear()
     }
     // thanks Qix, http://stackoverflow.com/questions/25245716/remove-all-ansi-colors-styles-from-strings
     const noANSI = message.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '')
@@ -133,6 +140,10 @@ export class JestExt {
   public startProcess() {
     if (this.jestProcessManager.numberOfProcesses > 0) {
       return
+    }
+
+    if (this.pluginSettings.runAllTestsFirst) {
+      this.testsHaveStartedRunning()
     }
 
     this.jestProcess = this.jestProcessManager.startJestProcess({
@@ -174,13 +185,6 @@ export class JestExt {
         )
       }
       this.workspace.localJestMajorVersion = jestVersionMajor
-
-      // If we should start the process by default, do so
-      if (this.pluginSettings.autoEnable) {
-        this.startProcess()
-      } else {
-        this.channel.appendLine('Skipping initial Jest runner process start.')
-      }
     })
 
     // Do nothing for the minute, the above ^ can come back once
@@ -334,11 +338,7 @@ export class JestExt {
   }
 
   private setupStatusBar() {
-    if (this.pluginSettings.autoEnable) {
-      this.testsHaveStartedRunning()
-    } else {
-      status.initial()
-    }
+    status.initial()
   }
 
   private setupDecorators() {
