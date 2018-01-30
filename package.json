@@ -140,18 +140,18 @@
     "prettier-project": "yarn prettier-write -- '?(__mocks__|src|tests)/**/*.ts'"
   },
   "devDependencies": {
-    "@types/jest": "^21.1.1",
-    "@types/node": "^8.0.31",
-    "danger": "^2",
+    "@types/jest": "^22.1.1",
+    "@types/node": "^9.4.0",
+    "danger": "^3.1.3",
     "glob": "^7.1.1",
     "husky": "^0.14.3",
-    "jest": "^21.2.0",
-    "lint-staged": "^4.2.3",
+    "jest": "^22.1.4",
+    "lint-staged": "^6.1.0",
     "prettier": "^1.7.3",
     "rimraf": "^2.6.2",
     "tslint": "^5.7.0",
     "tslint-config-prettier": "^1.5.0",
-    "typescript": "2.5.3",
+    "typescript": "2.6.2",
     "vscode": "^1.1.6"
   },
   "dependencies": {
@@ -161,6 +161,6 @@
     "jest-editor-support": "^22.0.4",
     "jest-snapshot": "^22.0.3",
     "jest-test-typescript-parser": "^22.0.4",
-    "micromatch": "^2.3.11"
+    "micromatch": "^3.1.5"
   }
 }
