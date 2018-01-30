@@ -16,9 +16,9 @@ export class JestProcess {
     let exited = false
     this.runner = new Runner(this.projectWorkspace)
 
-    this.runner.start(this.watchMode)
-
     this.restoreJestEvents()
+
+    this.runner.start(this.watchMode)
 
     this.runner.on('debuggerProcessExit', () => {
       if (!exited) {
