@@ -189,7 +189,7 @@ describe('JestProcess', () => {
     })
   })
 
-  describe('when process created with keepAlive set to true', () => {
+  describe('when process is created with keepAlive set to true', () => {
     let onExit
 
     beforeEach(() => {
@@ -204,6 +204,22 @@ describe('JestProcess', () => {
       }
       runnerMock.mockImplementation(() => runnerMockImplementation)
       onExit = jest.fn()
+    })
+
+    it('provides public attribute providing the keepAlive setting', () => {
+      jestProcess = new JestProcess({
+        projectWorkspace: projectWorkspaceMock,
+        keepAlive: true,
+      })
+
+      expect(jestProcess.keepAlive).toBeTruthy()
+
+      jestProcess = new JestProcess({
+        projectWorkspace: projectWorkspaceMock,
+        keepAlive: false,
+      })
+
+      expect(jestProcess.keepAlive).toBeFalsy()
     })
 
     it('creates new instance of jest-editor-support runner', () => {
@@ -295,16 +311,28 @@ describe('JestProcess', () => {
       expect(runnerMockImplementation.removeAllListeners).toHaveBeenCalledTimes(1)
     })
 
-    it('uses the same callback as the one provided when the jest process has been created', () => {
+    it('does not call the exit callback if number of restart attempts did not reach JestProcess.keepAliveLimit', () => {
       jestProcess = new JestProcess({
         projectWorkspace: projectWorkspaceMock,
         keepAlive: true,
       })
       jestProcess.onExit(onExit)
-      eventEmitter.emit('debuggerProcessExit')
-      eventEmitter.emit('debuggerProcessExit')
+      for (let i = 0; i < JestProcess.keepAliveLimit - 1; i++) {
+        eventEmitter.emit('debuggerProcessExit')
+      }
+      expect(onExit).not.toHaveBeenCalled()
+    })
 
-      expect(onExit).toHaveBeenCalledTimes(2)
+    it('call the exit callback if number of restart attempts is equal or greater than JestProcess.keepAliveLimit', () => {
+      jestProcess = new JestProcess({
+        projectWorkspace: projectWorkspaceMock,
+        keepAlive: true,
+      })
+      jestProcess.onExit(onExit)
+      for (let i = 0; i < JestProcess.keepAliveLimit; i++) {
+        eventEmitter.emit('debuggerProcessExit')
+      }
+      expect(onExit).toHaveBeenCalledTimes(1)
     })
   })
 

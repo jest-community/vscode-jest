@@ -147,7 +147,10 @@ export class JestExt {
 
           this.assignHandlers(this.jestProcess)
         } else {
-          this.channel.appendLine('Exited watch mode.')
+          status.stopped()
+          this.channel.appendLine(
+            'Starting Jest in Watch mode failed too many times and has been stopped. Please check your system configuration.'
+          )
         }
       },
     })
