@@ -64,8 +64,9 @@ export function pathToJestPackageJSON(pluginSettings: IPluginSettings): string |
   }
 
   const defaultPath = normalize(join(pathToNodeModules, 'jest/package.json'))
+  const cliPath = normalize(join(pathToNodeModules, 'jest-cli/package.json'))
   const craPath = normalize(join(pathToNodeModules, 'react-scripts/node_modules/jest/package.json'))
-  const paths = [defaultPath, craPath]
+  const paths = [defaultPath, cliPath, craPath]
 
   for (const i in paths) {
     if (existsSync(paths[i])) {
