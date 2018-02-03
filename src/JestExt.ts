@@ -1,6 +1,7 @@
 import * as vscode from 'vscode'
 import * as path from 'path'
 import * as fs from 'fs'
+import { platform } from 'os'
 import { Runner, Settings, ProjectWorkspace, JestTotalResults } from 'jest-editor-support'
 import { matcher } from 'micromatch'
 
@@ -81,7 +82,10 @@ export class JestExt {
     }
 
     let maxRestart = 4
-    this.jestProcess = new Runner(this.workspace)
+    // Use a shell to run Jest command on Windows in order to correctly spawn `.cmd` files
+    // For details see https://github.com/jest-community/vscode-jest/issues/98
+    const useShell = platform() === 'win32'
+    this.jestProcess = new Runner(this.workspace, { shell: useShell })
 
     this.jestProcess
       .on('debuggerProcessExit', () => {

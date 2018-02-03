@@ -15,13 +15,9 @@ export function pathToJest(pluginSettings: IPluginSettings) {
   const defaultPath = normalize('node_modules/.bin/jest')
   if (path === defaultPath && isBootstrappedWithCreateReactApp(pluginSettings.rootPath)) {
     // If it's the default, run the script instead
-    return platform() === 'win32' ? 'npm.cmd test --' : 'npm test --'
+    return 'npm test --'
   }
 
-  // For windows support, see https://github.com/jest-community/vscode-jest/issues/10
-  if (!path.includes('.cmd') && platform() === 'win32') {
-    return path + '.cmd'
-  }
   return path
 }
 
