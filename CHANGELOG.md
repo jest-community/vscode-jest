@@ -9,6 +9,10 @@ Bug-fixes within the same version aren't needed
 
 -->
 
+## Master
+
+* Adding `.cmd` in `pathToJest` on Windows isn't necessary anymore - stephtr
+
 ### 2.6.0
 
 * Adds ability to open snapshot file directly from test - bookman25
