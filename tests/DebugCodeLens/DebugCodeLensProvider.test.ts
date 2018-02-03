@@ -46,10 +46,9 @@ jest.mock('vscode', () => {
 })
 
 import { DebugCodeLensProvider } from '../../src/DebugCodeLens/DebugCodeLensProvider'
-import { TestResultProvider, TestResult } from '../../src/TestResultProvider'
+import { TestResultProvider, TestResult, TestReconciliationState } from '../../src/TestResults'
 import { DebugCodeLens } from '../../src/DebugCodeLens/DebugCodeLens'
 import { extensionName } from '../../src/appGlobals'
-import { TestReconciliationState } from '../../src/TestReconciliationState'
 import { basename } from 'path'
 import * as vscode from 'vscode'
 

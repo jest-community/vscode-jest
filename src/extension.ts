@@ -8,7 +8,7 @@ import { JestExt } from './JestExt'
 import { IPluginSettings } from './IPluginSettings'
 import { registerStatusBar } from './statusBar'
 import { registerSnapshotCodeLens, registerSnapshotPreview } from './SnapshotCodeLens'
-import { registerCoverageCodeLens, registerToggleCoverageOverlay } from './Coverage'
+import { registerCoverageCodeLens } from './Coverage'
 
 let extensionInstance: JestExt
 
@@ -45,7 +45,11 @@ export function activate(context: vscode.ExtensionContext) {
     ...registerSnapshotCodeLens(pluginSettings.enableSnapshotPreviews),
     ...registerSnapshotPreview(),
     ...registerCoverageCodeLens(extensionInstance),
-    registerToggleCoverageOverlay(pluginSettings.showCoverageOnLoad),
+    vscode.commands.registerCommand(
+      `${extensionName}.coverage.toggle`,
+      extensionInstance.toggleCoverageOverlay,
+      extensionInstance
+    ),
     vscode.commands.registerCommand(`${extensionName}.run-test`, extensionInstance.runTest),
     vscode.languages.registerCodeLensProvider(languages, extensionInstance.debugCodeLensProvider),
     vscode.workspace.onDidChangeConfiguration(e => {

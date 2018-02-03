@@ -2,7 +2,7 @@
   "name": "vscode-jest",
   "displayName": "Jest",
   "description": "Use Facebook's Jest With Pleasure.",
-  "version": "2.5.7",
+  "version": "2.6.0",
   "publisher": "Orta",
   "engines": {
     "vscode": "^1.18.0"
@@ -13,7 +13,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/orta/vscode-jest"
+    "url": "https://github.com/jest-community/vscode-jest"
   },
   "galleryBanner": {
     "theme": "light",
@@ -21,6 +21,8 @@
   },
   "categories": ["Other"],
   "activationEvents": [
+    "workspaceContains:jest.config.js",
+    "workspaceContains:jest.json",
     "workspaceContains:node_modules/.bin/jest",
     "workspaceContains:node_modules/react-scripts/node_modules/.bin/jest",
     "workspaceContains:node_modules/react-native-scripts",
