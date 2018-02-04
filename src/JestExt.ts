@@ -522,7 +522,9 @@ export class JestExt {
       return
     }
 
-    const args = ['--runInBand', fileName, '--testNamePattern', identifier]
+    const escapedIdentifier = JSON.stringify(identifier).slice(1, -1)
+
+    const args = ['--runInBand', fileName, '--testNamePattern', escapedIdentifier]
     if (this.pluginSettings.pathToConfig.length) {
       args.push('--config', this.pluginSettings.pathToConfig)
     }
