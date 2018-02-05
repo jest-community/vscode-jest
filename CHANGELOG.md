@@ -9,6 +9,10 @@ Bug-fixes within the same version aren't needed
 
 -->
 
+## Master
+
+* Strips testNames so they can be used as regex - BLamy
+
 ### 2.6.0
 
 * Adds ability to open snapshot file directly from test - bookman25
