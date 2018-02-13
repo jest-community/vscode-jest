@@ -7,22 +7,29 @@ import { matcher } from 'micromatch'
 import * as decorations from './decorations'
 import { IPluginSettings } from './IPluginSettings'
 import * as status from './statusBar'
-import { TestReconciliationState } from './TestReconciliationState'
+import {
+  TestReconciliationState,
+  TestResultProvider,
+  TestResult,
+  resultsWithLowerCaseWindowsDriveLetters,
+} from './TestResults'
 import { pathToJestPackageJSON } from './helpers'
 import { readFileSync } from 'fs'
-import { Coverage, showCoverageOverlay } from './Coverage'
+import { CoverageMapProvider } from './Coverage'
 import { updateDiagnostics, resetDiagnostics, failedSuiteCount } from './diagnostics'
 import { DebugCodeLensProvider } from './DebugCodeLens'
 import { DecorationOptions } from './types'
-import { TestResultProvider, TestResult } from './TestResultProvider'
 import { hasDocument, isOpenInMultipleEditors } from './editor'
+import { CoverageOverlay } from './Coverage/CoverageOverlay'
 
 export class JestExt {
   private workspace: ProjectWorkspace
   private jestProcess: Runner
   private jestSettings: Settings
   private pluginSettings: IPluginSettings
-  public coverage: Coverage
+
+  coverageMapProvider: CoverageMapProvider
+  coverageOverlay: CoverageOverlay
 
   testResultProvider: TestResultProvider
   public debugCodeLensProvider: DebugCodeLensProvider
@@ -54,7 +61,9 @@ export class JestExt {
     this.clearOnNextInput = true
     this.jestSettings = new Settings(workspace)
     this.pluginSettings = pluginSettings
-    this.coverage = new Coverage()
+
+    this.coverageMapProvider = new CoverageMapProvider()
+    this.coverageOverlay = new CoverageOverlay(this.coverageMapProvider, pluginSettings.showCoverageOnLoad)
 
     this.testResultProvider = new TestResultProvider()
     this.debugCodeLensProvider = new DebugCodeLensProvider(this.testResultProvider, pluginSettings.enableCodeLens)
@@ -217,7 +226,8 @@ export class JestExt {
   }
 
   public triggerUpdateDecorations(editor: vscode.TextEditor) {
-    showCoverageOverlay(editor, this.coverage)
+    this.coverageOverlay.updateVisibleEditors()
+
     if (!this.canUpdateDecorators(editor)) {
       return
     }
@@ -360,13 +370,14 @@ export class JestExt {
   }
 
   private updateWithData(data: JestTotalResults) {
-    this.coverage.mapCoverage(data.coverageMap)
+    const normalizedData = resultsWithLowerCaseWindowsDriveLetters(data)
+    this.coverageMapProvider.update(normalizedData.coverageMap)
 
-    const statusList = this.testResultProvider.updateTestResults(data)
+    const statusList = this.testResultProvider.updateTestResults(normalizedData)
     updateDiagnostics(statusList, this.failDiagnostics)
 
     const failedFileCount = failedSuiteCount(this.failDiagnostics)
-    if (failedFileCount <= 0 && data.success) {
+    if (failedFileCount <= 0 && normalizedData.success) {
       status.success()
     } else {
       status.failed(` (${failedFileCount} test suite${failedFileCount > 1 ? 's' : ''} failed)`)
@@ -411,17 +422,19 @@ export class JestExt {
   }
 
   private getJestVersion(version: (v: number) => void) {
+    let ver = 18 // default to the last pre-20 release if nothing else can be determined
     const packageJSON = pathToJestPackageJSON(this.pluginSettings)
+
     if (packageJSON) {
       const contents = readFileSync(packageJSON, 'utf8')
       const packageMetadata = JSON.parse(contents)
+
       if (packageMetadata['version']) {
-        version(parseInt(packageMetadata['version']))
-        return
+        ver = parseInt(packageMetadata['version'])
       }
     }
-    // Fallback to last pre-20 release
-    version(18)
+
+    version(ver)
   }
 
   /**
@@ -509,7 +522,9 @@ export class JestExt {
       return
     }
 
-    const args = ['--runInBand', fileName, '--testNamePattern', identifier]
+    const escapedIdentifier = JSON.stringify(identifier).slice(1, -1)
+
+    const args = ['--runInBand', fileName, '--testNamePattern', escapedIdentifier]
     if (this.pluginSettings.pathToConfig.length) {
       args.push('--config', this.pluginSettings.pathToConfig)
     }
@@ -594,5 +609,9 @@ export class JestExt {
         this.triggerUpdateDecorations(editor)
       }
     }
+  }
+
+  toggleCoverageOverlay() {
+    this.coverageOverlay.toggleVisibility()
   }
 }

@@ -2,14 +2,16 @@
 
 1. `node -v`: [fill]
 2. `npm -v`: [fill]
-4. `npm ls react-scripts` (if you haven’t ejected): [fill]
+3. `npm ls react-scripts` (if you haven’t ejected): [fill]
 
-1. Operating system: [fill]
+4. Operating system: [fill]
 
 
 ### Steps to Reproduce
 
-[fill] <!-- If possible, please create a minimal repository that reproduces the issue. -->
+<!-- Please create a repository that reproduces the issue with the minimal amount of code possible. -->
+
+[fill]
 
 
 ### Expected Behavior

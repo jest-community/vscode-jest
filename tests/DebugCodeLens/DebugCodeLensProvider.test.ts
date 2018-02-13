@@ -1,5 +1,6 @@
 jest.unmock('../../src/DebugCodeLens/DebugCodeLensProvider')
 jest.unmock('../../src/DebugCodeLens/DebugCodeLens')
+jest.unmock('../../src/helpers')
 jest.mock('path')
 
 const rangeConstructor = jest.fn()
@@ -46,10 +47,9 @@ jest.mock('vscode', () => {
 })
 
 import { DebugCodeLensProvider } from '../../src/DebugCodeLens/DebugCodeLensProvider'
-import { TestResultProvider, TestResult } from '../../src/TestResultProvider'
+import { TestResultProvider, TestResult, TestReconciliationState } from '../../src/TestResults'
 import { DebugCodeLens } from '../../src/DebugCodeLens/DebugCodeLens'
 import { extensionName } from '../../src/appGlobals'
-import { TestReconciliationState } from '../../src/TestReconciliationState'
 import { basename } from 'path'
 import * as vscode from 'vscode'
 
@@ -217,6 +217,22 @@ describe('DebugCodeLensProvider', () => {
 
       expect(codeLens.command).toEqual({
         arguments: [fileName, testName],
+        command: `${extensionName}.run-test`,
+        title: 'Debug',
+      })
+    })
+
+    it('should escape testName for regex', () => {
+      const sut = new DebugCodeLensProvider(testResultProvider, true)
+      const range = {} as any
+      const fileName = 'fileName'
+      const testName = 'testName()'
+      const codeLens = new DebugCodeLens(range, fileName, testName)
+      const token = {} as any
+      sut.resolveCodeLens(codeLens, token)
+
+      expect(codeLens.command).toEqual({
+        arguments: [fileName, 'testName\\(\\)'],
         command: `${extensionName}.run-test`,
         title: 'Debug',
       })

@@ -6,7 +6,7 @@ import { IPluginSettings } from './IPluginSettings'
 
 /**
  *  Handles getting the jest runner, handling the OS and project specific work too
- * 
+ *
  * @returns {string}
  */
 export function pathToJest(pluginSettings: IPluginSettings) {
@@ -18,7 +18,7 @@ export function pathToJest(pluginSettings: IPluginSettings) {
     return platform() === 'win32' ? 'npm.cmd test --' : 'npm test --'
   }
 
-  // For windows support, see https://github.com/orta/vscode-jest/issues/10
+  // For windows support, see https://github.com/jest-community/vscode-jest/issues/10
   if (!path.includes('.cmd') && platform() === 'win32') {
     return path + '.cmd'
   }
@@ -54,15 +54,36 @@ export function pathToConfig(pluginSettings: IPluginSettings) {
 }
 
 export function pathToJestPackageJSON(pluginSettings: IPluginSettings): string | null {
-  const defaultPath = normalize('node_modules/jest/package.json')
-  const craPath = normalize('node_modules/react-scripts/node_modules/jest/package.json')
+  let pathToNodeModules = join(pluginSettings.rootPath, 'node_modules')
 
-  const paths = [defaultPath, craPath]
+  if (pluginSettings.pathToJest) {
+    const relativeJestCmd = removeSurroundingQuotes(pluginSettings.pathToJest.split(' ')[0])
+    const relativePathToNodeModules = relativeJestCmd.replace(/node_modules.+$/i, 'node_modules')
+
+    pathToNodeModules = join(pluginSettings.rootPath, relativePathToNodeModules)
+  }
+
+  const defaultPath = normalize(join(pathToNodeModules, 'jest/package.json'))
+  const cliPath = normalize(join(pathToNodeModules, 'jest-cli/package.json'))
+  const craPath = normalize(join(pathToNodeModules, 'react-scripts/node_modules/jest/package.json'))
+  const paths = [defaultPath, cliPath, craPath]
+
   for (const i in paths) {
-    const absolutePath = join(pluginSettings.rootPath, paths[i])
-    if (existsSync(absolutePath)) {
-      return absolutePath
+    if (existsSync(paths[i])) {
+      return paths[i]
     }
   }
+
   return null
+}
+
+function removeSurroundingQuotes(str) {
+  return str.replace(/^['"`]/, '').replace(/['"`]$/, '')
+}
+
+/**
+ *  Taken From https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
+ */
+export function escapeRegExp(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') // $& means the whole matched string
 }
