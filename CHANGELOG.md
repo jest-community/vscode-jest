@@ -11,6 +11,8 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 
+### 2.6.1
+
 * Strips testNames so they can be used as regex - BLamy
 * Show "update snapshots" message when multiple snapshot tests failed - uucue2
 
