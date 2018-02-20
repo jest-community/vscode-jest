@@ -85,5 +85,6 @@ function getExtensionSettings(): IPluginSettings {
     rootPath: path.join(vscode.workspace.rootPath, config.get<string>('rootPath')),
     runAllTestsFirst: config.get<boolean>('runAllTestsFirst'),
     showCoverageOnLoad: config.get<boolean>('showCoverageOnLoad'),
+    restartJestOnSnapshotUpdate: config.get<boolean>('restartJestOnSnapshotUpdate'),
   }
 }

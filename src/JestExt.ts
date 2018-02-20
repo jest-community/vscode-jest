@@ -1,8 +1,7 @@
 import * as vscode from 'vscode'
 import * as path from 'path'
 import * as fs from 'fs'
-import { platform } from 'os'
-import { Runner, Settings, ProjectWorkspace, JestTotalResults } from 'jest-editor-support'
+import { Settings, ProjectWorkspace, JestTotalResults } from 'jest-editor-support'
 import { matcher } from 'micromatch'
 
 import * as decorations from './decorations'
@@ -22,10 +21,10 @@ import { DebugCodeLensProvider } from './DebugCodeLens'
 import { DecorationOptions } from './types'
 import { hasDocument, isOpenInMultipleEditors } from './editor'
 import { CoverageOverlay } from './Coverage/CoverageOverlay'
+import { JestProcess, JestProcessManager } from './JestProcessManagement'
 
 export class JestExt {
   private workspace: ProjectWorkspace
-  private jestProcess: Runner
   private jestSettings: Settings
   private pluginSettings: IPluginSettings
 
@@ -51,8 +50,10 @@ export class JestExt {
   // We have to keep track of our inline assert fails to remove later
   failingAssertionDecorators: { [fileName: string]: vscode.TextEditorDecorationType[] }
 
+  private jestProcessManager: JestProcessManager
+  private jestProcess: JestProcess
+
   private clearOnNextInput: boolean
-  private forcedClose = false
 
   constructor(workspace: ProjectWorkspace, outputChannel: vscode.OutputChannel, pluginSettings: IPluginSettings) {
     this.workspace = workspace
@@ -69,86 +70,12 @@ export class JestExt {
     this.testResultProvider = new TestResultProvider()
     this.debugCodeLensProvider = new DebugCodeLensProvider(this.testResultProvider, pluginSettings.enableCodeLens)
 
+    this.jestProcessManager = new JestProcessManager({
+      projectWorkspace: workspace,
+      runAllTestsFirstInWatchMode: this.pluginSettings.runAllTestsFirst,
+    })
+
     this.getSettings()
-  }
-
-  public startProcess() {
-    // The Runner is an event emitter that handles taking the Jest
-    // output and converting it into different types of data that
-    // we can handle here differently.
-    if (this.jestProcess) {
-      this.jestProcess.closeProcess()
-      delete this.jestProcess
-    }
-
-    let maxRestart = 4
-    // Use a shell to run Jest command on Windows in order to correctly spawn `.cmd` files
-    // For details see https://github.com/jest-community/vscode-jest/issues/98
-    const useShell = platform() === 'win32'
-    this.jestProcess = new Runner(this.workspace, { shell: useShell })
-
-    this.jestProcess
-      .on('debuggerProcessExit', () => {
-        this.channel.appendLine('Closed Jest')
-
-        if (this.forcedClose) {
-          this.forcedClose = false
-          return
-        }
-
-        if (maxRestart-- <= 0) {
-          console.warn('jest has been restarted too many times, please check your system')
-          status.stopped('(too many restarts)')
-          return
-        }
-
-        this.closeJest()
-        this.startWatchMode()
-      })
-      .on('executableJSON', (data: JestTotalResults) => {
-        this.updateWithData(data)
-      })
-      .on('executableOutput', (output: string) => {
-        if (!this.shouldIgnoreOutput(output)) {
-          this.channel.appendLine(output)
-        }
-      })
-      .on('executableStdErr', (error: Buffer) => {
-        const message = error.toString()
-
-        if (this.shouldIgnoreOutput(message)) {
-          return
-        }
-
-        // The "tests are done" message comes through stdErr
-        // We want to use this as a marker that the console should
-        // be cleared, as the next input will be from a new test run.
-        if (this.clearOnNextInput) {
-          this.clearOnNextInput = false
-          this.parsingTestFile = false
-          this.testsHaveStartedRunning()
-        }
-        // thanks Qix, http://stackoverflow.com/questions/25245716/remove-all-ansi-colors-styles-from-strings
-        const noANSI = message.replace(
-          /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g,
-          ''
-        )
-        if (noANSI.includes('snapshot test failed')) {
-          this.detectedSnapshotErrors()
-        }
-
-        this.channel.appendLine(noANSI)
-      })
-      .on('nonTerminalError', (error: string) => {
-        this.channel.appendLine(`Received an error from Jest Runner: ${error.toString()}`)
-      })
-      .on('exception', result => {
-        this.channel.appendLine(`\nException raised: [${result.type}]: ${result.message}\n`)
-      })
-      .on('terminalError', (error: string) => {
-        this.channel.appendLine('\nException raised: ' + error)
-      })
-
     // The theme stuff
     this.setupDecorators()
     // The bottom bar thing
@@ -156,35 +83,98 @@ export class JestExt {
     //reset the jest diagnostics
     resetDiagnostics(this.failDiagnostics)
 
-    this.forcedClose = false
-    // Go!
-    if (this.pluginSettings.runAllTestsFirst) {
-      this.jestProcess.start(false)
+    // If we should start the process by default, do so
+    if (this.pluginSettings.autoEnable) {
+      this.startProcess()
     } else {
-      this.startWatchMode()
+      this.channel.appendLine('Skipping initial Jest runner process start.')
     }
+  }
+
+  private handleStdErr(error: Buffer) {
+    const message = error.toString()
+
+    if (this.shouldIgnoreOutput(message)) {
+      return
+    }
+
+    // The "tests are done" message comes through stdErr
+    // We want to use this as a marker that the console should
+    // be cleared, as the next input will be from a new test run.
+    if (this.clearOnNextInput) {
+      this.clearOnNextInput = false
+      this.parsingTestFile = false
+      this.channel.clear()
+    }
+    // thanks Qix, http://stackoverflow.com/questions/25245716/remove-all-ansi-colors-styles-from-strings
+    const noANSI = message.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '')
+    if (noANSI.includes('snapshot test failed')) {
+      this.detectedSnapshotErrors()
+    }
+
+    this.channel.appendLine(noANSI)
+  }
+
+  private assignHandlers(jestProcess) {
+    jestProcess
+      .onJestEditorSupportEvent('executableJSON', (data: JestTotalResults) => {
+        this.updateWithData(data)
+      })
+      .onJestEditorSupportEvent('executableOutput', (output: string) => {
+        if (!this.shouldIgnoreOutput(output)) {
+          this.channel.appendLine(output)
+        }
+      })
+      .onJestEditorSupportEvent('executableStdErr', (error: Buffer) => this.handleStdErr(error))
+      .onJestEditorSupportEvent('nonTerminalError', (error: string) => {
+        this.channel.appendLine(`Received an error from Jest Runner: ${error.toString()}`)
+      })
+      .onJestEditorSupportEvent('exception', result => {
+        this.channel.appendLine(`\nException raised: [${result.type}]: ${result.message}\n`)
+      })
+      .onJestEditorSupportEvent('terminalError', (error: string) => {
+        this.channel.appendLine('\nException raised: ' + error)
+      })
+  }
+
+  public startProcess() {
+    if (this.jestProcessManager.numberOfProcesses > 0) {
+      return
+    }
+
+    if (this.pluginSettings.runAllTestsFirst) {
+      this.testsHaveStartedRunning()
+    }
+
+    this.jestProcess = this.jestProcessManager.startJestProcess({
+      watch: true,
+      keepAlive: true,
+      exitCallback: (jestProcess, jestProcessInWatchMode) => {
+        if (jestProcessInWatchMode) {
+          this.jestProcess = jestProcessInWatchMode
+
+          this.channel.appendLine('Finished running all tests. Starting watch mode.')
+          status.running('Starting watch mode')
+
+          this.assignHandlers(this.jestProcess)
+        } else {
+          status.stopped()
+          if (!jestProcess.stopRequested) {
+            this.channel.appendLine(
+              'Starting Jest in Watch mode failed too many times and has been stopped. Please check your system configuration.'
+            )
+          }
+        }
+      },
+    })
+
+    this.assignHandlers(this.jestProcess)
   }
 
   public stopProcess() {
-    this.channel.appendLine('Closing Jest jest_runner.')
-    this.closeJest()
-    delete this.jestProcess
+    this.channel.appendLine('Closing Jest')
+    this.jestProcessManager.stopAll()
     status.stopped()
-  }
-
-  private closeJest() {
-    if (!this.jestProcess) {
-      return
-    }
-    this.forcedClose = true
-    this.jestProcess.closeProcess()
-  }
-
-  private startWatchMode() {
-    const msg = this.jestProcess.watchMode ? 'Jest exited unexpectedly, restarting watch mode' : 'Starting watch mode'
-    this.channel.appendLine(msg)
-    this.jestProcess.start(true)
-    status.running(msg)
   }
 
   private getSettings() {
@@ -195,13 +185,6 @@ export class JestExt {
         )
       }
       this.workspace.localJestMajorVersion = jestVersionMajor
-
-      // If we should start the process by default, do so
-      if (this.pluginSettings.autoEnable) {
-        this.startProcess()
-      } else {
-        this.channel.appendLine('Skipping initial Jest runner process start.')
-      }
     })
 
     // Do nothing for the minute, the above ^ can come back once
@@ -223,7 +206,14 @@ export class JestExt {
         // No response == cancel
         if (response) {
           this.jestProcess.runJestWithUpdateForSnapshots(() => {
-            vscode.window.showInformationMessage('Updated Snapshots. It will show in your next test run.')
+            if (this.pluginSettings.restartJestOnSnapshotUpdate) {
+              this.jestProcessManager.stopJestProcess(this.jestProcess).then(() => {
+                this.startProcess()
+              })
+              vscode.window.showInformationMessage('Updated Snapshots and restarted Jest.')
+            } else {
+              vscode.window.showInformationMessage('Updated Snapshots. It will show in your next test run.')
+            }
           })
         }
       })
@@ -349,11 +339,7 @@ export class JestExt {
   }
 
   private setupStatusBar() {
-    if (this.pluginSettings.autoEnable) {
-      this.testsHaveStartedRunning()
-    } else {
-      status.initial()
-    }
+    status.initial()
   }
 
   private setupDecorators() {
@@ -364,13 +350,13 @@ export class JestExt {
   }
 
   private shouldIgnoreOutput(text: string): boolean {
+    // this fails when snapshots change - to be revised - returning always false for now
     return text.includes('Watch Usage')
   }
 
   private testsHaveStartedRunning() {
     this.channel.clear()
-    const details = this.jestProcess && this.jestProcess.watchMode ? 'testing changes' : 'initial full test run'
-    status.running(details)
+    status.running('initial full test run')
   }
 
   private updateWithData(data: JestTotalResults) {
@@ -422,7 +408,7 @@ export class JestExt {
   }
 
   public deactivate() {
-    this.jestProcess.closeProcess()
+    this.jestProcessManager.stopAll()
   }
 
   private getJestVersion(version: (v: number) => void) {
@@ -518,15 +504,17 @@ export class JestExt {
   }
 
   public runTest = (fileName: string, identifier: string) => {
-    const restart = this.jestProcess !== undefined
-    this.closeJest()
+    const restart = this.jestProcessManager.numberOfProcesses > 0
+    this.jestProcessManager.stopAll()
     const program = this.resolvePathToJestBin()
     if (!program) {
       console.log("Could not find Jest's CLI path")
       return
     }
 
-    const args = ['--runInBand', fileName, '--testNamePattern', identifier]
+    const escapedIdentifier = JSON.stringify(identifier).slice(1, -1)
+
+    const args = ['--runInBand', fileName, '--testNamePattern', escapedIdentifier]
     if (this.pluginSettings.pathToConfig.length) {
       args.push('--config', this.pluginSettings.pathToConfig)
     }

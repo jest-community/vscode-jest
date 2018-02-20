@@ -7,7 +7,7 @@ jest.mock('../src/DebugCodeLens', () => ({
 
 import { EventEmitter } from 'events'
 import { JestExt } from '../src/JestExt'
-import { ProjectWorkspace, Settings, Runner } from 'jest-editor-support'
+import { ProjectWorkspace, Settings } from 'jest-editor-support'
 import { window, workspace, debug } from 'vscode'
 import { hasDocument, isOpenInMultipleEditors } from '../src/editor'
 import { failingAssertionStyle } from '../src/decorations'
@@ -15,7 +15,6 @@ import { resultsWithLowerCaseWindowsDriveLetters } from '../src/TestResults'
 
 describe('JestExt', () => {
   const mockSettings = (Settings as any) as jest.Mock<any>
-  const mockRunner = (Runner as any) as jest.Mock<any>
   const getConfiguration = workspace.getConfiguration as jest.Mock<any>
   let projectWorkspace: ProjectWorkspace
   const channelStub = { appendLine: () => {} } as any
@@ -46,158 +45,6 @@ describe('JestExt', () => {
     }))
     new JestExt(projectWorkspace, channelStub, extensionSettings)
     expect(window.showErrorMessage).not.toBeCalled()
-  })
-
-  describe('after starting the process', () => {
-    const closeProcess = jest.fn()
-    let extension: JestExt
-    let eventEmitter: any
-
-    beforeEach(() => {
-      jest.clearAllMocks()
-      eventEmitter = {
-        on: jest.fn(() => eventEmitter),
-        start: jest.fn(),
-        closeProcess,
-      }
-      mockRunner.mockImplementation(() => eventEmitter)
-      extension = new JestExt(projectWorkspace, channelStub, extensionSettings)
-      extension.startProcess()
-    })
-
-    it('should not attempt to closeProcess again after stopping and starting', () => {
-      expect(closeProcess).toHaveBeenCalledTimes(0)
-      extension.stopProcess()
-      expect(closeProcess).toHaveBeenCalledTimes(1)
-      extension.startProcess()
-      expect(closeProcess).toHaveBeenCalledTimes(1)
-    })
-
-    it('should closeProcess when starting again', () => {
-      expect(closeProcess).toHaveBeenCalledTimes(0)
-      extension.startProcess()
-      expect(closeProcess).toHaveBeenCalledTimes(1)
-    })
-
-    function getExitHandler() {
-      const filtered = eventEmitter.on.mock.calls.filter(args => args[0] === 'debuggerProcessExit')
-      return filtered[filtered.length - 1][1]
-    }
-
-    describe('when jest process exit', () => {
-      function getJestWatchMode(index: number): boolean {
-        return eventEmitter.start.mock.calls[index][0]
-      }
-      let handler: () => void
-      beforeEach(() => {
-        handler = getExitHandler()
-        jest.clearAllMocks()
-      })
-
-      it('if non-watch mode, exit should reset process and trigger the watch mode', () => {
-        eventEmitter.watchMode = false
-        handler()
-
-        expect(eventEmitter.closeProcess).toHaveBeenCalledTimes(1)
-
-        expect(eventEmitter.start).toHaveBeenCalledTimes(1)
-        expect(getJestWatchMode(0)).toEqual(true)
-      })
-
-      it('in watch mode, exit should re-start the watch mode', () => {
-        eventEmitter.watchMode = true
-        handler()
-        expect(eventEmitter.closeProcess).toHaveBeenCalledTimes(1)
-        expect(eventEmitter.start).toHaveBeenCalledTimes(1)
-        expect(getJestWatchMode(0)).toEqual(true)
-      })
-
-      it('should not restart jest if closeProcess() is invoked by exit handler', () => {
-        expect(eventEmitter.start).toHaveBeenCalledTimes(0)
-        ;[true, false].forEach(watchMode => {
-          jest.clearAllMocks()
-          eventEmitter.watchMode = watchMode
-          handler()
-          handler()
-          expect(eventEmitter.start).toHaveBeenCalledTimes(1)
-          expect(getJestWatchMode(0)).toEqual(true)
-        })
-      })
-    })
-
-    describe('safeguard restart', () => {
-      function testMaxRestart(maxCount: number) {
-        for (let i = 1; i <= maxCount * 2; i++) {
-          const j = Math.min(maxCount, i)
-          handler()
-          expect(eventEmitter.closeProcess).toHaveBeenCalledTimes(j)
-          expect(eventEmitter.start).toHaveBeenCalledTimes(j)
-          handler()
-        }
-      }
-      let handler: () => void
-      const consoleWarn = console.warn
-
-      beforeEach(() => {
-        handler = getExitHandler()
-        jest.clearAllMocks()
-        console.warn = consoleWarn
-      })
-
-      it('should not restart jest if closeProcess() is invoked by user', () => {
-        extension.stopProcess()
-        expect(eventEmitter.closeProcess).toHaveBeenCalledTimes(1)
-        handler()
-        expect(eventEmitter.start).toHaveBeenCalledTimes(0)
-      })
-
-      it('will not restart if exceed maxRestart (4)', () => {
-        console.warn = jest.fn()
-        testMaxRestart(4)
-      })
-
-      it('will reset maxRestart if startProcess() is called again', () => {
-        console.warn = jest.fn()
-        testMaxRestart(4)
-
-        extension.startProcess()
-        handler = getExitHandler()
-        jest.clearAllMocks()
-
-        testMaxRestart(4)
-      })
-    })
-  })
-
-  describe('updateWithData()', () => {
-    class MockRunner extends EventEmitter {
-      start: Function = jest.fn()
-    }
-
-    let sut
-    let processMock
-    beforeEach(() => {
-      processMock = new MockRunner()
-      mockRunner.mockImplementation(() => processMock)
-
-      sut = new JestExt(projectWorkspace, channelStub, extensionSettings)
-      sut.startProcess()
-    })
-
-    it('should update coverage map', () => {
-      window.visibleTextEditors = []
-
-      const expected = {}
-      const data = {
-        coverageMap: expected,
-      }
-      ;(resultsWithLowerCaseWindowsDriveLetters as jest.Mock<{}>) = jest.fn().mockImplementationOnce(a => a)
-
-      // Call updateWithData()
-      processMock.emit('executableJSON', data)
-
-      expect(sut.coverageMapProvider.update).toBeCalledWith(expected)
-    })
   })
 
   describe('resetInlineErrorDecorators()', () => {

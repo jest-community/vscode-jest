@@ -12,15 +12,20 @@ Bug-fixes within the same version aren't needed
 ## Master
 
 * Adding `.cmd` in `pathToJest` on Windows isn't necessary anymore - stephtr
+* Added `JestProcess` and `JestProcessManager` abstractions to simplify Jest process management - marcinczenko
+
+### 2.6.1
+
+* Strips testNames so they can be used as regex - BLamy
+* Show "update snapshots" message when multiple snapshot tests failed - uucue2
 
 ### 2.6.0
 
 * Adds ability to open snapshot file directly from test - bookman25
-* start automatically if jest.config.js or jest.json is in workspace - uucue2
-* use pathToJest setting to properly locate jest's package.json and read the version - uucue2
+* Start automatically if jest.config.js or jest.json is in workspace - uucue2
+* Use pathToJest setting to properly locate jest's package.json and read the version - uucue2
 * Fix missing coverage overlay on Windows - seanpoulter
 * Toggle coverage overlay without changing documents - seanpoulter
-
 
 ### 2.5.7-8
 
