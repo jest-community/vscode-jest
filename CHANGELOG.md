@@ -11,6 +11,8 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 
+* Added `JestProcess` and `JestProcessManager` abstractions to simplify Jest process management - marcinczenko
+
 ### 2.6.1
 
 * Strips testNames so they can be used as regex - BLamy
