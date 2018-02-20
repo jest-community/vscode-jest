@@ -11,6 +11,8 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 
+* Update settings at runtime - gcangussu
+
 ### 2.6.1
 
 * Strips testNames so they can be used as regex - BLamy
