@@ -57,6 +57,17 @@ describe('ModuleHelpers', () => {
           expect(pathToJestPackageJSON(workspace)).toBe(expected)
         })
 
+        it('should return package.json when Jest-cli is installed as a dependency', () => {
+          const expected = path.join('..', '..', 'node_modules', 'jest-cli', 'package.json')
+          existsMock.mockImplementation(path => path === expected)
+
+          const workspace: any = {
+            rootPath: path.join('..', '..'),
+            pathToJest: defaultPathToJest,
+          }
+          expect(pathToJestPackageJSON(workspace)).toBe(expected)
+        })
+
         it('should return package.json when React Scripts are installed as a dependency', () => {
           const expected = path.join(
             '..',

@@ -1,5 +1,6 @@
 import * as vscode from 'vscode'
 import { extensionName } from '../appGlobals'
+import { escapeRegExp } from '../helpers'
 import { basename } from 'path'
 import { DebugCodeLens } from './DebugCodeLens'
 import { TestReconciliationState, TestResultProvider } from '../TestResults'
@@ -55,7 +56,7 @@ export class DebugCodeLensProvider implements vscode.CodeLensProvider {
   resolveCodeLens(codeLens: vscode.CodeLens, _: vscode.CancellationToken): vscode.ProviderResult<vscode.CodeLens> {
     if (codeLens instanceof DebugCodeLens) {
       codeLens.command = {
-        arguments: [codeLens.fileName, codeLens.testName],
+        arguments: [codeLens.fileName, escapeRegExp(codeLens.testName)],
         command: `${extensionName}.run-test`,
         title: 'Debug',
       }
