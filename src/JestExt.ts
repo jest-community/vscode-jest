@@ -239,6 +239,8 @@ export class JestExt {
   }
 
   public triggerUpdateSettings(updatedSettings: IPluginSettings) {
+    this.pluginSettings = updatedSettings
+    this.coverageOverlay.enabled = updatedSettings.showCoverageOnLoad
     this.debugCodeLensProvider.enabled = updatedSettings.enableCodeLens
   }
 
