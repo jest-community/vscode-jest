@@ -3,7 +3,6 @@ import { existsSync, readFileSync } from 'fs'
 import { normalize, join } from 'path'
 
 import { IPluginSettings } from './IPluginSettings'
-import { isArray, isObject } from 'util'
 
 /**
  *  Handles getting the jest runner, handling the OS and project specific work too
@@ -31,7 +30,7 @@ function isBootstrappedWithCreateReactApp(rootPath: string): boolean {
   try {
     const packagePath = join(rootPath, 'package.json')
     const packageJSON = JSON.parse(readFileSync(packagePath, 'utf8'))
-    if (!packageJSON || !packageJSON.dependencies || !isObject(packageJSON.dependencies)) {
+    if (!packageJSON || !packageJSON.dependencies) {
       return false
     }
     const dependencies = packageJSON.dependencies as { [id: string]: string }
