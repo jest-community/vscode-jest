@@ -1,3 +1,4 @@
+import { platform } from 'os'
 import { Runner, ProjectWorkspace } from 'jest-editor-support'
 
 export class JestProcess {
@@ -15,7 +16,10 @@ export class JestProcess {
   private startRunner() {
     this.stopRequested = false
     let exited = false
-    this.runner = new Runner(this.projectWorkspace)
+    // Use a shell to run Jest command on Windows in order to correctly spawn `.cmd` files
+    // For details see https://github.com/jest-community/vscode-jest/issues/98
+    const useShell = platform() === 'win32'
+    this.runner = new Runner(this.projectWorkspace, { shell: useShell })
 
     this.restoreJestEvents()
 
