@@ -23,7 +23,7 @@ export function pathToJest(pluginSettings: IPluginSettings) {
 
 function isBootstrappedWithCreateReactApp(rootPath: string): boolean {
   // Known binary names of `react-scripts` forks:
-  const packageBinaryNames = ['react-scripts', 'react-native-scripts', 'react-scripts-ts']
+  const packageBinaryNames = ['react-scripts', 'react-native-scripts', 'react-scripts-ts', 'react-app-rewired']
   // If possible, try to parse `package.json` and look for known binary beeing called in `scripts.test`
   try {
     const packagePath = join(rootPath, 'package.json')
