@@ -243,6 +243,12 @@ export class JestExt {
 
     this.coverageOverlay.enabled = updatedSettings.showCoverageOnLoad
     this.debugCodeLensProvider.enabled = updatedSettings.enableCodeLens
+
+    this.stopProcess()
+
+    setTimeout(() => {
+      this.startProcess()
+    }, 500)
   }
 
   private updateDotDecorators(editor: vscode.TextEditor) {
