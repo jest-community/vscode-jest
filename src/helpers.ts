@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'fs'
 import { normalize, join } from 'path'
 
 import { IPluginSettings } from './IPluginSettings'
+import { isArray } from 'util'
 
 /**
  *  Handles getting the jest runner, handling the OS and project specific work too
@@ -26,25 +27,22 @@ export function pathToJest(pluginSettings: IPluginSettings) {
 }
 
 function isBootstrappedWithCreateReactApp(rootPath: string): boolean {
+  const packageNames = ['react-scripts', 'react-native-scripts', 'react-scripts-ts']
   try {
     const packagePath = join(rootPath, 'package.json')
     const packageJSON = JSON.parse(readFileSync(packagePath, 'utf8'))
-    if (!packageJSON || !packageJSON.dependencies) {
+    if (!packageJSON || !packageJSON.dependencies || !isArray(packageJSON.dependencies)) {
       return false
     }
     const dependencies = packageJSON.dependencies as { [id: string]: string }
-    return !!(dependencies['react-scripts'] || dependencies['react-native-scripts'] || dependencies['react-scripts-ts'])
+    return packageNames.some(pkg => !!dependencies[pkg])
   } catch {}
-  return (
-    hasExecutable(rootPath, 'node_modules/.bin/react-scripts') ||
-    hasExecutable(rootPath, 'node_modules/.bin/react-native-scripts') ||
-    hasExecutable(rootPath, 'node_modules/.bin/react-scripts-ts')
-  )
+  return packageNames.some(pkg => hasNodeExecutable(rootPath, pkg))
 }
 
-function hasExecutable(rootPath: string, executablePath: string): boolean {
+function hasNodeExecutable(rootPath: string, executable: string): boolean {
   const ext = platform() === 'win32' ? '.cmd' : ''
-  const absolutePath = join(rootPath, executablePath + ext)
+  const absolutePath = join(rootPath, 'node_modules', '.bin', executable + ext)
   return existsSync(absolutePath)
 }
 
