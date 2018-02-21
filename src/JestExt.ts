@@ -13,7 +13,7 @@ import {
   TestResult,
   resultsWithLowerCaseWindowsDriveLetters,
 } from './TestResults'
-import { pathToJestPackageJSON } from './helpers'
+import { pathToJestPackageJSON, pathToJest, pathToConfig } from './helpers'
 import { readFileSync } from 'fs'
 import { CoverageMapProvider } from './Coverage'
 import { updateDiagnostics, resetDiagnostics, failedSuiteCount } from './diagnostics'
@@ -233,7 +233,22 @@ export class JestExt {
   }
 
   public triggerUpdateSettings(updatedSettings: IPluginSettings) {
+    this.pluginSettings = updatedSettings
+
+    this.workspace.rootPath = updatedSettings.rootPath
+    this.workspace.pathToJest = pathToJest(updatedSettings)
+    this.workspace.pathToConfig = pathToConfig(updatedSettings)
+
+    this.jestSettings = new Settings(this.workspace)
+
+    this.coverageOverlay.enabled = updatedSettings.showCoverageOnLoad
     this.debugCodeLensProvider.enabled = updatedSettings.enableCodeLens
+
+    this.stopProcess()
+
+    setTimeout(() => {
+      this.startProcess()
+    }, 500)
   }
 
   private updateDotDecorators(editor: vscode.TextEditor) {
