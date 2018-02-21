@@ -1,5 +1,5 @@
 import { platform } from 'os'
-import { existsSync } from 'fs'
+import { existsSync, readFileSync } from 'fs'
 import { normalize, join } from 'path'
 
 import { IPluginSettings } from './IPluginSettings'
@@ -26,11 +26,19 @@ export function pathToJest(pluginSettings: IPluginSettings) {
 }
 
 function isBootstrappedWithCreateReactApp(rootPath: string): boolean {
+  try {
+    const packagePath = join(rootPath, 'package.json')
+    const packageJSON = JSON.parse(readFileSync(packagePath, 'utf8'))
+    if (!packageJSON || !packageJSON.dependencies) {
+      return false
+    }
+    const dependencies = packageJSON.dependencies as { [id: string]: string }
+    return !!(dependencies['react-scripts'] || dependencies['react-native-scripts'] || dependencies['react-scripts-ts'])
+  } catch {}
   return (
     hasExecutable(rootPath, 'node_modules/.bin/react-scripts') ||
-    hasExecutable(rootPath, 'node_modules/react-scripts/node_modules/.bin/jest') ||
-    hasExecutable(rootPath, 'node_modules/react-native-scripts') ||
-    hasExecutable(rootPath, 'node_modules/react-scripts-ts')
+    hasExecutable(rootPath, 'node_modules/.bin/react-native-scripts') ||
+    hasExecutable(rootPath, 'node_modules/.bin/react-scripts-ts')
   )
 }
 
