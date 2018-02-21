@@ -12,6 +12,7 @@ Bug-fixes within the same version aren't needed
 ## Master
 
 * Update settings at runtime - gcangussu
+* Improved detection logic for projects created by `create-react-app`
 * Added `JestProcess` and `JestProcessManager` abstractions to simplify Jest process management - marcinczenko
 
 ### 2.6.1
