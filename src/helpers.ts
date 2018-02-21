@@ -26,7 +26,9 @@ export function pathToJest(pluginSettings: IPluginSettings) {
 }
 
 function isBootstrappedWithCreateReactApp(rootPath: string): boolean {
+  // Known `create-react-app` `scripts-version`s:
   const packageNames = ['react-scripts', 'react-native-scripts', 'react-scripts-ts']
+  // If possible, try to parse `package.json` and look for known packages
   try {
     const packagePath = join(rootPath, 'package.json')
     const packageJSON = JSON.parse(readFileSync(packagePath, 'utf8'))
@@ -36,6 +38,8 @@ function isBootstrappedWithCreateReactApp(rootPath: string): boolean {
     const dependencies = packageJSON.dependencies as { [id: string]: string }
     return packageNames.some(pkg => !!dependencies[pkg])
   } catch {}
+  // In case parsing `package.json` failed or was unconclusive,
+  // check for the presence of binaries from known packages
   return packageNames.some(pkg => hasNodeExecutable(rootPath, pkg))
 }
 
