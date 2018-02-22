@@ -586,6 +586,7 @@ export class JestExt {
 
     const port = Math.floor(Math.random() * 20000) + 10000
     let runtimeArgs = ['--inspect-brk=' + port]
+    const env: any = {}
 
     if (launcher.isCreateReactApp) {
       // If the project has been created by create-react-app,
@@ -598,6 +599,9 @@ export class JestExt {
       // arguments for generating the new node process.
       args = runtimeArgs.concat(args)
       runtimeArgs = []
+      // `react-scripts` automatically appends the `--watch` flag
+      // if CI isn't set.
+      env.CI = 'VSCode-test-debugger'
     }
 
     const configuration = {
@@ -612,7 +616,7 @@ export class JestExt {
       console: 'integratedTerminal',
       smartStep: true,
       sourceMaps: true,
-      env: { CI: 'VSCode-test-debugger' },
+      env,
     }
 
     const handle = vscode.debug.onDidTerminateDebugSession(_ => {
