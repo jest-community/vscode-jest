@@ -447,17 +447,39 @@ export class JestExt {
    */
   private resolvePathToJestBin() {
     let jest = this.workspace.pathToJest
+    let basename = path.basename(jest)
+
+    if (basename.indexOf('npm test') === 0 || basename.indexOf('npm.cmd test') === 0) {
+      try {
+        const packagePath = path.join(vscode.workspace.rootPath, 'package.json')
+        const packageJSON = JSON.parse(readFileSync(packagePath, 'utf8'))
+        if (!packageJSON || !packageJSON.scripts || !packageJSON.scripts.test) {
+          throw 'invalid package.json'
+        }
+        const args = basename.split('0').slice(3)
+        basename = packageJSON.scripts.test + ' ' + args.join(' ')
+        jest = 'node_modules/.bin/' + basename
+      } catch {
+        vscode.window.showErrorMessage("package.json couldn't be read!")
+        return undefined
+      }
+    }
+
     if (!path.isAbsolute(jest)) {
       jest = path.join(vscode.workspace.rootPath, jest)
     }
 
-    const basename = path.basename(jest)
-    switch (basename) {
-      case 'jest.js': {
+    const args = basename.split(' ')
+    basename = args.shift()
+    const extension = path.extname(basename)
+    jest = path.join(path.dirname(jest), basename)
+
+    switch (extension) {
+      case 'js': {
         return jest
       }
 
-      case 'jest.cmd': {
+      case 'cmd': {
         /* i need to extract '..\jest-cli\bin\jest.js' from line 2
 
         @IF EXIST "%~dp0\node.exe" (
@@ -473,7 +495,7 @@ export class JestExt {
         return path.join(path.dirname(jest), match[1])
       }
 
-      case 'jest': {
+      case '': {
         /* file without extension uses first line as file type
            in case of node script i can use this file directly,
            in case of linux shell script i need to extract path from line 9
