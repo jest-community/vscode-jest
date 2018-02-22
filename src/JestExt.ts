@@ -501,7 +501,7 @@ export class JestExt {
 
           case '#!/bin/sh': {
             const line = lines[8]
-            const match = /^\s*"[^"]+"\s+"$basedir\/([^"]+)"/.exec(line)
+            const match = /^\s*"[^"]+"\s+"\$basedir\/([^"]+)"/.exec(line)
             if (match) {
               return path.join(path.dirname(jest), match[1])
             }
