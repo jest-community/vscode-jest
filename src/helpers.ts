@@ -21,9 +21,14 @@ export function pathToJest(pluginSettings: IPluginSettings) {
   return path
 }
 
+const knownCreateReactAppBinaries = ['react-scripts', 'react-native-scripts', 'react-scripts-ts', 'react-app-rewired']
+
+export function testCommandIsCreateReactApp(command: string): boolean {
+  return knownCreateReactAppBinaries.some(binary => command.indexOf(binary + ' ') === 0)
+}
+
 function isBootstrappedWithCreateReactApp(rootPath: string): boolean {
   // Known binary names of `react-scripts` forks:
-  const packageBinaryNames = ['react-scripts', 'react-native-scripts', 'react-scripts-ts', 'react-app-rewired']
   // If possible, try to parse `package.json` and look for known binary beeing called in `scripts.test`
   try {
     const packagePath = join(rootPath, 'package.json')
@@ -31,12 +36,11 @@ function isBootstrappedWithCreateReactApp(rootPath: string): boolean {
     if (!packageJSON || !packageJSON.scripts || !packageJSON.scripts.test) {
       return false
     }
-    const testCommand = packageJSON.scripts.test as string
-    return packageBinaryNames.some(binary => testCommand.indexOf(binary + ' test ') === 0)
+    return testCommandIsCreateReactApp(packageJSON.scripts.test)
   } catch {}
   // In case parsing `package.json` failed or was unconclusive,
   // fallback to checking for the presence of the binaries in `./node_modules/.bin`
-  return packageBinaryNames.some(binary => hasNodeExecutable(rootPath, binary))
+  return knownCreateReactAppBinaries.some(binary => hasNodeExecutable(rootPath, binary))
 }
 
 function hasNodeExecutable(rootPath: string, executable: string): boolean {

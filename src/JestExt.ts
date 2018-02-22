@@ -13,7 +13,7 @@ import {
   TestResult,
   resultsWithLowerCaseWindowsDriveLetters,
 } from './TestResults'
-import { pathToJestPackageJSON, pathToJest, pathToConfig } from './helpers'
+import { pathToJestPackageJSON, pathToJest, pathToConfig, testCommandIsCreateReactApp } from './helpers'
 import { readFileSync } from 'fs'
 import { CoverageMapProvider } from './Coverage'
 import { updateDiagnostics, resetDiagnostics, failedSuiteCount } from './diagnostics'
@@ -448,6 +448,7 @@ export class JestExt {
   private resolvePathToJestBin() {
     let jest = this.workspace.pathToJest
     let basename = path.basename(jest)
+    let isCreateReactApp = false
 
     if (basename.indexOf('npm test') === 0 || basename.indexOf('npm.cmd test') === 0) {
       try {
@@ -459,6 +460,7 @@ export class JestExt {
         const args = basename.split('0').slice(3)
         basename = packageJSON.scripts.test + ' ' + args.join(' ')
         jest = 'node_modules/.bin/' + basename
+        isCreateReactApp = testCommandIsCreateReactApp(packageJSON.scripts.test)
       } catch {
         vscode.window.showErrorMessage("package.json couldn't be read!")
         return undefined
@@ -474,12 +476,12 @@ export class JestExt {
     const extension = path.extname(basename)
     jest = path.join(path.dirname(jest), basename)
 
-    let runCommand = ''
+    let program = ''
 
     try {
       switch (extension) {
         case 'js': {
-          runCommand = jest
+          program = jest
           break
         }
 
@@ -496,7 +498,7 @@ export class JestExt {
           */
           const line = fs.readFileSync(jest, 'utf8').split('\n')[1]
           const match = /^\s*"[^"]+"\s+"%~dp0\\([^"]+)"/.exec(line)
-          runCommand = path.join(path.dirname(jest), match[1])
+          program = path.join(path.dirname(jest), match[1])
           break
         }
 
@@ -523,7 +525,7 @@ export class JestExt {
           const lines = fs.readFileSync(jest, 'utf8').split('\n')
           switch (lines[0]) {
             case '#!/usr/bin/env node': {
-              runCommand = jest
+              program = jest
               break
             }
 
@@ -531,7 +533,7 @@ export class JestExt {
               const line = lines[8]
               const match = /^\s*"[^"]+"\s+"\$basedir\/([^"]+)"/.exec(line)
               if (match) {
-                runCommand = path.join(path.dirname(jest), match[1])
+                program = path.join(path.dirname(jest), match[1])
               }
 
               break
@@ -546,8 +548,8 @@ export class JestExt {
       return undefined
     }
 
-    if (runCommand !== '') {
-      return { program: runCommand, args: args }
+    if (program !== '') {
+      return { program, args, isCreateReactApp }
     }
 
     vscode.window.showErrorMessage('Cannot find jest.js file!')
@@ -565,20 +567,25 @@ export class JestExt {
 
     const escapedIdentifier = JSON.stringify(identifier).slice(1, -1)
 
-    const args = launcher.args
+    let args = launcher.args
     args.push('--runInBand', fileName, '--testNamePattern', escapedIdentifier)
     if (this.pluginSettings.pathToConfig.length) {
       args.push('--config', this.pluginSettings.pathToConfig)
     }
 
     const port = Math.floor(Math.random() * 20000) + 10000
+    let runtimeArgs = ['--inspect-brk=' + port]
+    if (launcher.isCreateReactApp) {
+      args = runtimeArgs.concat(args)
+      runtimeArgs = []
+    }
     const configuration = {
       name: 'TestRunner',
       type: 'node',
       request: 'launch',
       program: launcher.program,
       args,
-      runtimeArgs: ['--inspect-brk=' + port],
+      runtimeArgs: runtimeArgs,
       port,
       protocol: 'inspector',
       console: 'integratedTerminal',
