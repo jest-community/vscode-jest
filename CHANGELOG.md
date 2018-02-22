@@ -11,6 +11,8 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 
+* Fixes debugging of tasks on Windows (bug introduced in 2.6.2) - stephtr
+
 ### 2.6.3
 
 * Even better detection logic for projects created by `create-react-app` - stephtr
