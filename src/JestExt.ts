@@ -474,72 +474,80 @@ export class JestExt {
     const extension = path.extname(basename)
     jest = path.join(path.dirname(jest), basename)
 
-    switch (extension) {
-      case 'js': {
-        return jest
-      }
+    let runCommand = ''
 
-      case 'cmd': {
-        /* i need to extract '..\jest-cli\bin\jest.js' from line 2
-
-        @IF EXIST "%~dp0\node.exe" (
-          "%~dp0\node.exe"  "%~dp0\..\jest-cli\bin\jest.js" %*
-        ) ELSE (
-          @SETLOCAL
-          @SET PATHEXT=%PATHEXT:;.JS;=;%
-          node  "%~dp0\..\jest-cli\bin\jest.js" %*
-        )
-        */
-        const line = fs.readFileSync(jest, 'utf8').split('\n')[1]
-        const match = /^\s*"[^"]+"\s+"%~dp0\\([^"]+)"/.exec(line)
-        return path.join(path.dirname(jest), match[1])
-      }
-
-      case '': {
-        /* file without extension uses first line as file type
-           in case of node script i can use this file directly,
-           in case of linux shell script i need to extract path from line 9
-        #!/bin/sh
-        basedir=$(dirname "$(echo "$0" | sed -e 's,\\,/,g')")
-
-        case `uname` in
-            *CYGWIN*) basedir=`cygpath -w "$basedir"`;;
-        esac
-
-        if [ -x "$basedir/node" ]; then
-          "$basedir/node"  "$basedir/../jest-cli/bin/jest.js" "$@"
-          ret=$?
-        else
-          node  "$basedir/../jest-cli/bin/jest.js" "$@"
-          ret=$?
-        fi
-        exit $ret
-        */
-        const lines = fs.readFileSync(jest, 'utf8').split('\n')
-        switch (lines[0]) {
-          case '#!/usr/bin/env node': {
-            return jest
-          }
-
-          case '#!/bin/sh': {
-            const line = lines[8]
-            const match = /^\s*"[^"]+"\s+"\$basedir\/([^"]+)"/.exec(line)
-            if (match) {
-              return path.join(path.dirname(jest), match[1])
-            }
-
-            break
-          }
+    try {
+      switch (extension) {
+        case 'js': {
+          runCommand = jest
+          break
         }
 
-        break
-      }
+        case 'cmd': {
+          /* i need to extract '..\jest-cli\bin\jest.js' from line 2
+  
+          @IF EXIST "%~dp0\node.exe" (
+            "%~dp0\node.exe"  "%~dp0\..\jest-cli\bin\jest.js" %*
+          ) ELSE (
+            @SETLOCAL
+            @SET PATHEXT=%PATHEXT:;.JS;=;%
+            node  "%~dp0\..\jest-cli\bin\jest.js" %*
+          )
+          */
+          const line = fs.readFileSync(jest, 'utf8').split('\n')[1]
+          const match = /^\s*"[^"]+"\s+"%~dp0\\([^"]+)"/.exec(line)
+          runCommand = path.join(path.dirname(jest), match[1])
+          break
+        }
 
-      case 'npm test --':
-      case 'npm.cmd test --': {
-        vscode.window.showErrorMessage('Debugging of tasks is currently only available when directly running jest!')
-        return undefined
+        case '': {
+          /* file without extension uses first line as file type
+             in case of node script i can use this file directly,
+             in case of linux shell script i need to extract path from line 9
+          #!/bin/sh
+          basedir=$(dirname "$(echo "$0" | sed -e 's,\\,/,g')")
+  
+          case `uname` in
+              *CYGWIN*) basedir=`cygpath -w "$basedir"`;;
+          esac
+  
+          if [ -x "$basedir/node" ]; then
+            "$basedir/node"  "$basedir/../jest-cli/bin/jest.js" "$@"
+            ret=$?
+          else
+            node  "$basedir/../jest-cli/bin/jest.js" "$@"
+            ret=$?
+          fi
+          exit $ret
+          */
+          const lines = fs.readFileSync(jest, 'utf8').split('\n')
+          switch (lines[0]) {
+            case '#!/usr/bin/env node': {
+              runCommand = jest
+              break
+            }
+
+            case '#!/bin/sh': {
+              const line = lines[8]
+              const match = /^\s*"[^"]+"\s+"\$basedir\/([^"]+)"/.exec(line)
+              if (match) {
+                runCommand = path.join(path.dirname(jest), match[1])
+              }
+
+              break
+            }
+          }
+
+          break
+        }
       }
+    } catch {
+      vscode.window.showErrorMessage('Cannot debug jest command!')
+      return undefined
+    }
+
+    if (runCommand !== '') {
+      return { program: runCommand, args: args }
     }
 
     vscode.window.showErrorMessage('Cannot find jest.js file!')
@@ -549,15 +557,16 @@ export class JestExt {
   public runTest = (fileName: string, identifier: string) => {
     const restart = this.jestProcessManager.numberOfProcesses > 0
     this.jestProcessManager.stopAll()
-    const program = this.resolvePathToJestBin()
-    if (!program) {
+    const launcher = this.resolvePathToJestBin()
+    if (!launcher) {
       console.log("Could not find Jest's CLI path")
       return
     }
 
     const escapedIdentifier = JSON.stringify(identifier).slice(1, -1)
 
-    const args = ['--runInBand', fileName, '--testNamePattern', escapedIdentifier]
+    const args = launcher.args
+    args.push('--runInBand', fileName, '--testNamePattern', escapedIdentifier)
     if (this.pluginSettings.pathToConfig.length) {
       args.push('--config', this.pluginSettings.pathToConfig)
     }
@@ -567,7 +576,7 @@ export class JestExt {
       name: 'TestRunner',
       type: 'node',
       request: 'launch',
-      program,
+      program: launcher.program,
       args,
       runtimeArgs: ['--inspect-brk=' + port],
       port,
@@ -575,6 +584,7 @@ export class JestExt {
       console: 'integratedTerminal',
       smartStep: true,
       sourceMaps: true,
+      env: { CI: 'VSCode-test-debugger' },
     }
 
     const handle = vscode.debug.onDidTerminateDebugSession(_ => {
