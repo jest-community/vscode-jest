@@ -11,9 +11,15 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 
+### 2.6.3
+
+* Even better detection logic for projects created by `create-react-app` - stephtr
+
+### 2.6.2
+
 * Adding `.cmd` in `pathToJest` on Windows isn't necessary anymore - stephtr
 * Update settings at runtime - gcangussu
-* Improved detection logic for projects created by `create-react-app`
+* Improved detection logic for projects created by `create-react-app` - stephtr
 * Added `JestProcess` and `JestProcessManager` abstractions to simplify Jest process management - marcinczenko
 
 ### 2.6.1

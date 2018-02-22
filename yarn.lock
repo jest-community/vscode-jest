@@ -1887,19 +1887,28 @@ jest-diff@^22.0.3:
     jest-get-type "^22.0.3"
     pretty-format "^22.0.3"
 
+jest-diff@^22.4.0:
+  version "22.4.0"
+  resolved "https://registry.yarnpkg.com/jest-diff/-/jest-diff-22.4.0.tgz#384c2b78519ca44ca126382df53f134289232525"
+  dependencies:
+    chalk "^2.0.1"
+    diff "^3.2.0"
+    jest-get-type "^22.1.0"
+    pretty-format "^22.4.0"
+
 jest-docblock@^22.0.3:
   version "22.0.3"
   resolved "https://registry.yarnpkg.com/jest-docblock/-/jest-docblock-22.0.3.tgz#c33aa22682b9fc68a5373f5f82994428a2ded601"
   dependencies:
     detect-newline "^2.1.0"
 
-jest-editor-support@^22.0.4:
-  version "22.0.4"
-  resolved "https://registry.yarnpkg.com/jest-editor-support/-/jest-editor-support-22.0.4.tgz#885f95ecc95c160085e12c8d6a14aa491e2d1379"
+jest-editor-support@^22.1.3, jest-editor-support@^22.4.0:
+  version "22.4.0"
+  resolved "https://registry.yarnpkg.com/jest-editor-support/-/jest-editor-support-22.4.0.tgz#1f6e2359dbf90f84c1a8a16b911db5ef4333b0a0"
   dependencies:
     babel-traverse "^6.14.1"
     babylon "^6.14.1"
-    jest-snapshot "^22.0.3"
+    jest-snapshot "^22.4.0"
 
 jest-environment-jsdom@^22.0.4:
   version "22.0.4"
@@ -1923,6 +1932,10 @@ jest-get-type@^21.2.0:
 jest-get-type@^22.0.3:
   version "22.0.3"
   resolved "https://registry.yarnpkg.com/jest-get-type/-/jest-get-type-22.0.3.tgz#fa894b677c0fcd55eff3fd8ee28c7be942e32d36"
+
+jest-get-type@^22.1.0:
+  version "22.1.0"
+  resolved "https://registry.yarnpkg.com/jest-get-type/-/jest-get-type-22.1.0.tgz#4e90af298ed6181edc85d2da500dbd2753e0d5a9"
 
 jest-haste-map@^22.0.3:
   version "22.0.3"
@@ -1964,6 +1977,14 @@ jest-matcher-utils@^22.0.3:
     chalk "^2.0.1"
     jest-get-type "^22.0.3"
     pretty-format "^22.0.3"
+
+jest-matcher-utils@^22.4.0:
+  version "22.4.0"
+  resolved "https://registry.yarnpkg.com/jest-matcher-utils/-/jest-matcher-utils-22.4.0.tgz#d55f5faf2270462736bdf7c7485ee931c9d4b6a1"
+  dependencies:
+    chalk "^2.0.1"
+    jest-get-type "^22.1.0"
+    pretty-format "^22.4.0"
 
 jest-message-util@^22.0.3:
   version "22.0.3"
@@ -2045,11 +2066,22 @@ jest-snapshot@^22.0.3:
     natural-compare "^1.4.0"
     pretty-format "^22.0.3"
 
-jest-test-typescript-parser@^22.0.4:
-  version "22.0.4"
-  resolved "https://registry.yarnpkg.com/jest-test-typescript-parser/-/jest-test-typescript-parser-22.0.4.tgz#98b45190efa3ac2ad740102ba8c98dd9bc2b9484"
+jest-snapshot@^22.1.2, jest-snapshot@^22.4.0:
+  version "22.4.0"
+  resolved "https://registry.yarnpkg.com/jest-snapshot/-/jest-snapshot-22.4.0.tgz#03d3ce63f8fa7352388afc6a3c8b5ccc3a180ed7"
   dependencies:
-    jest-editor-support "^22.0.4"
+    chalk "^2.0.1"
+    jest-diff "^22.4.0"
+    jest-matcher-utils "^22.4.0"
+    mkdirp "^0.5.1"
+    natural-compare "^1.4.0"
+    pretty-format "^22.4.0"
+
+jest-test-typescript-parser@^22.1.3:
+  version "22.4.0"
+  resolved "https://registry.yarnpkg.com/jest-test-typescript-parser/-/jest-test-typescript-parser-22.4.0.tgz#4076554feb096905b29d7f36dbc020ede1ec6315"
+  dependencies:
+    jest-editor-support "^22.4.0"
     typescript "^2.5.3"
 
 jest-util@^22.0.4:
@@ -2978,6 +3010,13 @@ pretty-format@^21.2.1:
 pretty-format@^22.0.3:
   version "22.0.3"
   resolved "https://registry.yarnpkg.com/pretty-format/-/pretty-format-22.0.3.tgz#a2bfa59fc33ad24aa4429981bb52524b41ba5dd7"
+  dependencies:
+    ansi-regex "^3.0.0"
+    ansi-styles "^3.2.0"
+
+pretty-format@^22.4.0:
+  version "22.4.0"
+  resolved "https://registry.yarnpkg.com/pretty-format/-/pretty-format-22.4.0.tgz#237b1f7e1c50ed03bc65c03ccc29d7c8bb7beb94"
   dependencies:
     ansi-regex "^3.0.0"
     ansi-styles "^3.2.0"
