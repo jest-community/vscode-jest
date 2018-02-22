@@ -145,7 +145,7 @@ describe('JestExt', () => {
 
       const sut = new JestExt(projectWorkspace, channelStub, extensionSettings)
       // @ts-ignore: Overriding private method
-      sut.resolvePathToJestBin = jest.fn().mockReturnValueOnce({
+      sut.resolveTestProgram = jest.fn().mockReturnValueOnce({
         program: 'jest',
         args: [],
         isCreateReactApp: false,
