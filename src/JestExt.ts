@@ -446,20 +446,28 @@ export class JestExt {
    * Primitive way to resolve path to jest.js
    */
   private resolvePathToJestBin() {
+    // Let's start with the given command
     let jest = this.workspace.pathToJest
     let basename = path.basename(jest)
     let isCreateReactApp = false
 
     if (basename.indexOf('npm test') === 0 || basename.indexOf('npm.cmd test') === 0) {
+      // We can't always debug running npm test, therefore we have to dig deeper.
       try {
         const packagePath = path.join(vscode.workspace.rootPath, 'package.json')
         const packageJSON = JSON.parse(readFileSync(packagePath, 'utf8'))
         if (!packageJSON || !packageJSON.scripts || !packageJSON.scripts.test) {
           throw 'invalid package.json'
         }
+        // If the initial command contained additional parameters (separated by `--`),
+        // add them to the test command as if npm would do it.
         const args = basename.split('0').slice(3)
         basename = packageJSON.scripts.test + ' ' + args.join(' ')
-        jest = 'node_modules/.bin/' + basename
+        // If the test script given in package.json hasn't the form of a relative path,
+        // we assume that it resides in `node_modules/.bin`.
+        if (basename.substr(0, 1) !== '.') {
+          jest = 'node_modules/.bin/' + basename
+        }
         isCreateReactApp = testCommandIsCreateReactApp(packageJSON.scripts.test)
       } catch {
         vscode.window.showErrorMessage("package.json couldn't be read!")
@@ -471,6 +479,8 @@ export class JestExt {
       jest = path.join(vscode.workspace.rootPath, jest)
     }
 
+    // We hope for the best that the filename doesn't contain any spaces and separate
+    // the basename from the arguments.
     const args = basename.split(' ')
     basename = args.shift()
     const extension = path.extname(basename)
@@ -479,6 +489,7 @@ export class JestExt {
     let program = ''
 
     try {
+      // We would like to run a JavaScript file, so let us look for one.
       switch (extension) {
         case 'js': {
           program = jest
@@ -535,7 +546,6 @@ export class JestExt {
               if (match) {
                 program = path.join(path.dirname(jest), match[1])
               }
-
               break
             }
           }
@@ -568,6 +578,7 @@ export class JestExt {
     const escapedIdentifier = JSON.stringify(identifier).slice(1, -1)
 
     let args = launcher.args
+    // These settings identify the test we would like to run.
     args.push('--runInBand', fileName, '--testNamePattern', escapedIdentifier)
     if (this.pluginSettings.pathToConfig.length) {
       args.push('--config', this.pluginSettings.pathToConfig)
@@ -575,10 +586,20 @@ export class JestExt {
 
     const port = Math.floor(Math.random() * 20000) + 10000
     let runtimeArgs = ['--inspect-brk=' + port]
+
     if (launcher.isCreateReactApp) {
+      // If the project has been created by create-react-app,
+      // things get a little bit complicated.
+      // Running `react-scripts test` starts Jest within a separately spawned
+      // process and we want to debug that process, not the outer
+      // `react-scripts` process.
+      // We therefore run `react-scripts --inspect-brk=... test`, because
+      // `react-scripts` interprets the arguments before `test` as launching
+      // arguments for generating the new node process.
       args = runtimeArgs.concat(args)
       runtimeArgs = []
     }
+
     const configuration = {
       name: 'TestRunner',
       type: 'node',
