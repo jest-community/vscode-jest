@@ -11,6 +11,8 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 
+* Enable debugging of tasks in (some) more complex scenarios (like when using `create-react-app`) - stephtr
+
 ### 2.6.4
 
 * Fixes debugging of tasks on Windows (bug introduced in 2.6.2) - stephtr
