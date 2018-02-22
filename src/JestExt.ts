@@ -512,6 +512,12 @@ export class JestExt {
 
         break
       }
+
+      case 'npm test --':
+      case 'npm.cmd test --': {
+        vscode.window.showErrorMessage('Debugging of tasks is currently only available when directly running jest!')
+        return undefined
+      }
     }
 
     vscode.window.showErrorMessage('Cannot find jest.js file!')
