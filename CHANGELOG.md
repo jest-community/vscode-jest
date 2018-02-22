@@ -11,6 +11,8 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 
+### 2.6.4
+
 * Fixes debugging of tasks on Windows (bug introduced in 2.6.2) - stephtr
 
 ### 2.6.3
