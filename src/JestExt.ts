@@ -445,7 +445,7 @@ export class JestExt {
   /**
    * Primitive way to resolve path to jest.js
    */
-  private resolvePathToJestBin() {
+  private resolveTestProgram(): { program: string; args: string[]; isCreateReactApp: boolean } {
     // Let's start with the given command
     let jest = this.workspace.pathToJest
     let basename = path.basename(jest)
@@ -569,7 +569,7 @@ export class JestExt {
   public runTest = (fileName: string, identifier: string) => {
     const restart = this.jestProcessManager.numberOfProcesses > 0
     this.jestProcessManager.stopAll()
-    const launcher = this.resolvePathToJestBin()
+    const launcher = this.resolveTestProgram()
     if (!launcher) {
       console.log("Could not find Jest's CLI path")
       return
