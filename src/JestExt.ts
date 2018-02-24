@@ -13,7 +13,7 @@ import {
   TestResult,
   resultsWithLowerCaseWindowsDriveLetters,
 } from './TestResults'
-import { pathToJestPackageJSON, pathToJest, pathToConfig } from './helpers'
+import { pathToJestPackageJSON, pathToJest, pathToConfig, testCommandIsCreateReactApp } from './helpers'
 import { readFileSync } from 'fs'
 import { CoverageMapProvider } from './Coverage'
 import { updateDiagnostics, resetDiagnostics, failedSuiteCount } from './diagnostics'
@@ -445,79 +445,121 @@ export class JestExt {
   /**
    * Primitive way to resolve path to jest.js
    */
-  private resolvePathToJestBin() {
+  private resolveTestProgram(): { program: string; args: string[]; isCreateReactApp: boolean } {
+    // Let's start with the given command
     let jest = this.workspace.pathToJest
+    let basename = path.basename(jest)
+    let isCreateReactApp = false
+
+    if (basename.indexOf('npm test') === 0 || basename.indexOf('npm.cmd test') === 0) {
+      // We can't always debug running npm test, therefore we have to dig deeper.
+      try {
+        const packagePath = path.join(vscode.workspace.rootPath, 'package.json')
+        const packageJSON = JSON.parse(readFileSync(packagePath, 'utf8'))
+        if (!packageJSON || !packageJSON.scripts || !packageJSON.scripts.test) {
+          throw 'invalid package.json'
+        }
+        // If the initial command contained additional parameters (separated by `--`),
+        // add them to the test command as if npm would do it.
+        const args = basename.split('0').slice(3)
+        basename = packageJSON.scripts.test + ' ' + args.join(' ')
+        // If the test script given in package.json hasn't the form of a relative path,
+        // we assume that it resides in `node_modules/.bin`.
+        if (basename.substr(0, 1) !== '.') {
+          jest = 'node_modules/.bin/' + basename
+        }
+        isCreateReactApp = testCommandIsCreateReactApp(packageJSON.scripts.test)
+      } catch {
+        vscode.window.showErrorMessage("package.json couldn't be read!")
+        return undefined
+      }
+    }
+
     if (!path.isAbsolute(jest)) {
       jest = path.join(vscode.workspace.rootPath, jest)
     }
 
-    const basename = path.basename(jest)
-    switch (basename) {
-      case 'jest.js': {
-        return jest
-      }
+    // We hope for the best that the filename doesn't contain any spaces and separate
+    // the basename from the arguments.
+    const args = basename.split(' ')
+    basename = args.shift()
+    const extension = path.extname(basename)
+    jest = path.join(path.dirname(jest), basename)
 
-      case 'jest.cmd': {
-        /* i need to extract '..\jest-cli\bin\jest.js' from line 2
+    let program = ''
 
-        @IF EXIST "%~dp0\node.exe" (
-          "%~dp0\node.exe"  "%~dp0\..\jest-cli\bin\jest.js" %*
-        ) ELSE (
-          @SETLOCAL
-          @SET PATHEXT=%PATHEXT:;.JS;=;%
-          node  "%~dp0\..\jest-cli\bin\jest.js" %*
-        )
-        */
-        const line = fs.readFileSync(jest, 'utf8').split('\n')[1]
-        const match = /^\s*"[^"]+"\s+"%~dp0\\([^"]+)"/.exec(line)
-        return path.join(path.dirname(jest), match[1])
-      }
-
-      case 'jest': {
-        /* file without extension uses first line as file type
-           in case of node script i can use this file directly,
-           in case of linux shell script i need to extract path from line 9
-        #!/bin/sh
-        basedir=$(dirname "$(echo "$0" | sed -e 's,\\,/,g')")
-
-        case `uname` in
-            *CYGWIN*) basedir=`cygpath -w "$basedir"`;;
-        esac
-
-        if [ -x "$basedir/node" ]; then
-          "$basedir/node"  "$basedir/../jest-cli/bin/jest.js" "$@"
-          ret=$?
-        else
-          node  "$basedir/../jest-cli/bin/jest.js" "$@"
-          ret=$?
-        fi
-        exit $ret
-        */
-        const lines = fs.readFileSync(jest, 'utf8').split('\n')
-        switch (lines[0]) {
-          case '#!/usr/bin/env node': {
-            return jest
-          }
-
-          case '#!/bin/sh': {
-            const line = lines[8]
-            const match = /^\s*"[^"]+"\s+"\$basedir\/([^"]+)"/.exec(line)
-            if (match) {
-              return path.join(path.dirname(jest), match[1])
-            }
-
-            break
-          }
+    try {
+      // We would like to run a JavaScript file, so let us look for one.
+      switch (extension) {
+        case 'js': {
+          program = jest
+          break
         }
 
-        break
-      }
+        case 'cmd': {
+          /* i need to extract '..\jest-cli\bin\jest.js' from line 2
+  
+          @IF EXIST "%~dp0\node.exe" (
+            "%~dp0\node.exe"  "%~dp0\..\jest-cli\bin\jest.js" %*
+          ) ELSE (
+            @SETLOCAL
+            @SET PATHEXT=%PATHEXT:;.JS;=;%
+            node  "%~dp0\..\jest-cli\bin\jest.js" %*
+          )
+          */
+          const line = fs.readFileSync(jest, 'utf8').split('\n')[1]
+          const match = /^\s*"[^"]+"\s+"%~dp0\\([^"]+)"/.exec(line)
+          program = path.join(path.dirname(jest), match[1])
+          break
+        }
 
-      case 'npm test --':
-      case 'npm.cmd test --': {
-        vscode.window.showErrorMessage('Debugging of tasks is currently only available when directly running jest!')
-        return undefined
+        case '': {
+          /* file without extension uses first line as file type
+             in case of node script i can use this file directly,
+             in case of linux shell script i need to extract path from line 9
+          #!/bin/sh
+          basedir=$(dirname "$(echo "$0" | sed -e 's,\\,/,g')")
+  
+          case `uname` in
+              *CYGWIN*) basedir=`cygpath -w "$basedir"`;;
+          esac
+  
+          if [ -x "$basedir/node" ]; then
+            "$basedir/node"  "$basedir/../jest-cli/bin/jest.js" "$@"
+            ret=$?
+          else
+            node  "$basedir/../jest-cli/bin/jest.js" "$@"
+            ret=$?
+          fi
+          exit $ret
+          */
+          const lines = fs.readFileSync(jest, 'utf8').split('\n')
+          switch (lines[0]) {
+            case '#!/usr/bin/env node': {
+              program = jest
+              break
+            }
+
+            case '#!/bin/sh': {
+              const line = lines[8]
+              const match = /^\s*"[^"]+"\s+"\$basedir\/([^"]+)"/.exec(line)
+              if (match) {
+                program = path.join(path.dirname(jest), match[1])
+              }
+              break
+            }
+          }
+
+          break
+        }
       }
+    } catch {
+      vscode.window.showErrorMessage('Cannot debug jest command!')
+      return undefined
+    }
+
+    if (program !== '') {
+      return { program, args, isCreateReactApp }
     }
 
     vscode.window.showErrorMessage('Cannot find jest.js file!')
@@ -527,32 +569,54 @@ export class JestExt {
   public runTest = (fileName: string, identifier: string) => {
     const restart = this.jestProcessManager.numberOfProcesses > 0
     this.jestProcessManager.stopAll()
-    const program = this.resolvePathToJestBin()
-    if (!program) {
+    const launcher = this.resolveTestProgram()
+    if (!launcher) {
       console.log("Could not find Jest's CLI path")
       return
     }
 
     const escapedIdentifier = JSON.stringify(identifier).slice(1, -1)
 
-    const args = ['--runInBand', fileName, '--testNamePattern', escapedIdentifier]
+    let args = launcher.args
+    // These settings identify the test we would like to run.
+    args.push('--runInBand', fileName, '--testNamePattern', escapedIdentifier)
     if (this.pluginSettings.pathToConfig.length) {
       args.push('--config', this.pluginSettings.pathToConfig)
     }
 
     const port = Math.floor(Math.random() * 20000) + 10000
+    let runtimeArgs = ['--inspect-brk=' + port]
+    const env: any = {}
+
+    if (launcher.isCreateReactApp) {
+      // If the project has been created by create-react-app,
+      // things get a little bit complicated.
+      // Running `react-scripts test` starts Jest within a separately spawned
+      // process and we want to debug that process, not the outer
+      // `react-scripts` process.
+      // We therefore run `react-scripts --inspect-brk=... test`, because
+      // `react-scripts` interprets the arguments before `test` as launching
+      // arguments for generating the new node process.
+      args = runtimeArgs.concat(args)
+      runtimeArgs = []
+      // `react-scripts` automatically appends the `--watch` flag
+      // if CI isn't set.
+      env.CI = 'VSCode-test-debugger'
+    }
+
     const configuration = {
       name: 'TestRunner',
       type: 'node',
       request: 'launch',
-      program,
+      program: launcher.program,
       args,
-      runtimeArgs: ['--inspect-brk=' + port],
+      runtimeArgs: runtimeArgs,
       port,
       protocol: 'inspector',
       console: 'integratedTerminal',
       smartStep: true,
       sourceMaps: true,
+      env,
     }
 
     const handle = vscode.debug.onDidTerminateDebugSession(_ => {
