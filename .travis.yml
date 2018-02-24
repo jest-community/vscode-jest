@@ -3,4 +3,5 @@ node_js:
   - "6"
 script:
   - yarn ci
+  - cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js
   - yarn danger

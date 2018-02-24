@@ -131,7 +131,7 @@
   },
   "scripts": {
     "precommit": "lint-staged",
-    "ci": "yarn lint && yarn test",
+    "ci": "yarn lint && yarn test --coverage",
     "clean-out": "rimraf ./out",
     "vscode:prepublish": "yarn clean-out && tsc -p ./tsconfig.publish.json",
     "compile": "tsc -watch -p ./tsconfig.publish.json",
@@ -147,6 +147,7 @@
   "devDependencies": {
     "@types/jest": "^21.1.1",
     "@types/node": "^8.0.31",
+    "coveralls": "^3.0.0",
     "danger": "^2",
     "glob": "^7.1.1",
     "husky": "^0.14.3",
