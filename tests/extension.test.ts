@@ -6,6 +6,9 @@ jest.mock('vscode', () => ({
     registerCommand: jest.fn(),
     registerTextEditorCommand: jest.fn(),
   },
+  debug: {
+    registerDebugConfigurationProvider: jest.fn(),
+  },
   languages: {
     registerCodeLensProvider: jest.fn(),
   },
