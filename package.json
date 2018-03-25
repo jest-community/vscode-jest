@@ -123,6 +123,12 @@
         "command": "io.orta.jest.coverage.toggle",
         "title": "Jest: Toggle Coverage Overlay"
       }
+    ],
+    "debuggers": [
+      {
+        "type": "vscode-jest-tests",
+        "label": "Debug Jest Tests using vscode-jest"
+      }
     ]
   },
   "lint-staged": {

@@ -132,6 +132,7 @@ describe('JestExt', () => {
   })
 
   describe('runTest()', () => {
+    return
     const fileName = 'fileName'
     const testNamePattern = 'testNamePattern'
     const defaultArgs = ['--runInBand', fileName, '--testNamePattern', testNamePattern]
