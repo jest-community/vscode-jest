@@ -31,7 +31,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
 
   provideDebugConfigurations(folder: vscode.WorkspaceFolder | undefined, token?: vscode.CancellationToken) {
     const debugConfiguration: vscode.DebugConfiguration = {
-      type: 'vscode-jest-tests',
+      type: 'node',
       name: 'vscode-jest-tests',
       request: 'launch',
       args: ['--runInBand'],
@@ -55,7 +55,14 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     debugConfiguration: vscode.DebugConfiguration,
     token?: vscode.CancellationToken
   ) {
-    debugConfiguration.type = 'node'
+    if (debugConfiguration.name !== 'vscode-jest-tests') {
+      return debugConfiguration
+    }
+    if (debugConfiguration.env) {
+      debugConfiguration.env.CI = 'vscode-jest-tests'
+    } else {
+      debugConfiguration.env = { CI: 'vscode-jest-tests' }
+    }
     if (this.fileNameToRun) {
       debugConfiguration.args.push(this.fileNameToRun)
       if (this.testToRun) {

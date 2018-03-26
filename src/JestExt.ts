@@ -458,8 +458,9 @@ export class JestExt {
     })
 
     const workspaceFolder = vscode.workspace.workspaceFolders[0]
-    const success = await vscode.debug.startDebugging(workspaceFolder, 'vscode-jest-tests')
-    if (!success) {
+    try {
+      await vscode.debug.startDebugging(workspaceFolder, 'vscode-jest-tests')
+    } catch {
       const debugConfiguration = this.debugConfigurationProvider.provideDebugConfigurations(workspaceFolder)[0]
       vscode.debug.startDebugging(workspaceFolder, debugConfiguration)
     }

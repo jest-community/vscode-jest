@@ -52,7 +52,7 @@ export function activate(context: vscode.ExtensionContext) {
     ),
     vscode.commands.registerCommand(`${extensionName}.run-test`, extensionInstance.runTest),
     vscode.languages.registerCodeLensProvider(languages, extensionInstance.debugCodeLensProvider),
-    vscode.debug.registerDebugConfigurationProvider('vscode-jest-tests', extensionInstance.debugConfigurationProvider),
+    vscode.debug.registerDebugConfigurationProvider('node', extensionInstance.debugConfigurationProvider),
     vscode.workspace.onDidChangeConfiguration(e => {
       if (e.affectsConfiguration('jest')) {
         const updatedSettings = getExtensionSettings()
