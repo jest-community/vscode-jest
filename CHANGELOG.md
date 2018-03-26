@@ -11,9 +11,11 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 
+* Add the ability to configure debugging of tests - stephtr
+
 ### 2.6.4
 
-* Fixes debugging of tasks on Windows (bug introduced in 2.6.2) - stephtr
+* Fixes debugging of tests on Windows (bug introduced in 2.6.2) - stephtr
 
 ### 2.6.3
 
