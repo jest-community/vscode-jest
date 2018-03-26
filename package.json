@@ -126,7 +126,7 @@
     ],
     "debuggers": [
       {
-        "type": "vscode-jest-tests",
+        "type": "node",
         "label": "Debug Jest Tests using vscode-jest"
       }
     ]
