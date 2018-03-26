@@ -35,13 +35,13 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
       name: 'vscode-jest-tests',
       request: 'launch',
       args: ['--runInBand'],
-      cwd: '${workspaceRoot}',
+      cwd: '${workspaceFolder}',
       console: 'integratedTerminal',
       internalConsoleOptions: 'neverOpen',
     }
     const craCommand = tryGetCRACommand(folder.uri.fsPath).split(' ')
     if (craCommand.length > 1 || craCommand[0]) {
-      debugConfiguration.runtimeExecutable = '${workspaceRoot}/node_modules/.bin/' + craCommand.shift()
+      debugConfiguration.runtimeExecutable = '${workspaceFolder}/node_modules/.bin/' + craCommand.shift()
       debugConfiguration.args = [...craCommand, ...debugConfiguration.args]
       debugConfiguration.protocol = 'inspector'
     } else {
@@ -58,6 +58,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     if (debugConfiguration.name !== 'vscode-jest-tests') {
       return debugConfiguration
     }
+    // necessary for running CRA test scripts in non-watch mode
     if (debugConfiguration.env) {
       debugConfiguration.env.CI = 'vscode-jest-tests'
     } else {
