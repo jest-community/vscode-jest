@@ -1,6 +1,5 @@
 import * as vscode from 'vscode'
 import * as path from 'path'
-import * as fs from 'fs'
 import { Settings, ProjectWorkspace, JestTotalResults } from 'jest-editor-support'
 import { matcher } from 'micromatch'
 
@@ -445,7 +444,7 @@ export class JestExt {
     version(ver)
   }
 
-  public runTest = (fileName: string, identifier: string) => {
+  public runTest = async (fileName: string, identifier: string) => {
     const restart = this.jestProcessManager.numberOfProcesses > 0
     this.jestProcessManager.stopAll()
 
@@ -458,7 +457,12 @@ export class JestExt {
       }
     })
 
-    vscode.debug.startDebugging(vscode.workspace.workspaceFolders[0], 'vscode-jest-tests')
+    const workspaceFolder = vscode.workspace.workspaceFolders[0]
+    const success = await vscode.debug.startDebugging(workspaceFolder, 'vscode-jest-tests')
+    if (!success) {
+      const debugConfiguration = this.debugConfigurationProvider.provideDebugConfigurations(workspaceFolder)[0]
+      vscode.debug.startDebugging(workspaceFolder, debugConfiguration)
+    }
   }
 
   onDidCloseTextDocument(document: vscode.TextDocument) {
