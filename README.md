@@ -62,6 +62,8 @@ These are the things that will trigger the extension loading. If one of these ap
 
 ## Want to Contribute?
 
+### Repository Setup
+
 The extension is in two parts, one is _this_ repo. It contains all the VS Code specific work.
 
 ```js
@@ -105,3 +107,12 @@ Go back to vscode-jest, and do one more `yarn link "jest-editor-support"` and no
 As `jest-editor-support` requires running through Babel, you can run the Babel watcher for all Jest files by running `yarn run watch` inside the Jest root directory.
 
 Yeah, it's a bit of a process, but we'll be sharing code with the nuclide team and that's worth it IMO.
+
+
+### Debugging
+
+There are two debugging launch configurations defined in `.vscode/launch.json`:
+  * Debug Tests
+  * Launch Extension
+
+To debug the extension, [change the launch configuration](https://code.visualstudio.com/docs/editor/debugging#_launch-configurations) to **Launch Extension** and start debugging.
