@@ -20,7 +20,7 @@ function tryGetCRACommand(rootPath: string): string {
   return ''
 }
 
-export class DebugConfigurationProvider implements vscode.DebugConfigurationProvider {
+export class NodeDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
   private fileNameToRun: string = ''
   private testToRun: string = ''
 
@@ -29,31 +29,10 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     this.testToRun = testToRun
   }
 
-  provideDebugConfigurations(folder: vscode.WorkspaceFolder | undefined, token?: vscode.CancellationToken) {
-    const debugConfiguration: vscode.DebugConfiguration = {
-      type: 'node',
-      name: 'vscode-jest-tests',
-      request: 'launch',
-      args: ['--runInBand'],
-      cwd: '${workspaceFolder}',
-      console: 'integratedTerminal',
-      internalConsoleOptions: 'neverOpen',
-    }
-    const craCommand = tryGetCRACommand(folder.uri.fsPath).split(' ')
-    if (craCommand.length > 1 || craCommand[0]) {
-      debugConfiguration.runtimeExecutable = '${workspaceFolder}/node_modules/.bin/' + craCommand.shift()
-      debugConfiguration.args = [...craCommand, ...debugConfiguration.args]
-      debugConfiguration.protocol = 'inspector'
-    } else {
-      debugConfiguration.program = '${workspaceFolder}/node_modules/jest/bin/jest'
-    }
-    return [debugConfiguration]
-  }
-
   resolveDebugConfiguration(
-    folder: vscode.WorkspaceFolder | undefined,
+    _folder: vscode.WorkspaceFolder | undefined,
     debugConfiguration: vscode.DebugConfiguration,
-    token?: vscode.CancellationToken
+    _token?: vscode.CancellationToken
   ) {
     if (debugConfiguration.name !== 'vscode-jest-tests') {
       return debugConfiguration
@@ -74,5 +53,28 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
       this.testToRun = ''
     }
     return debugConfiguration
+  }
+}
+
+export class SnippetDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
+  provideDebugConfigurations(folder: vscode.WorkspaceFolder | undefined, _token?: vscode.CancellationToken) {
+    const debugConfiguration: vscode.DebugConfiguration = {
+      type: 'node',
+      name: 'vscode-jest-tests',
+      request: 'launch',
+      args: ['--runInBand'],
+      cwd: '${workspaceFolder}',
+      console: 'integratedTerminal',
+      internalConsoleOptions: 'neverOpen',
+    }
+    const craCommand = tryGetCRACommand(folder.uri.fsPath).split(' ')
+    if (craCommand.length > 1 || craCommand[0]) {
+      debugConfiguration.runtimeExecutable = '${workspaceFolder}/node_modules/.bin/' + craCommand.shift()
+      debugConfiguration.args = [...craCommand, ...debugConfiguration.args]
+      debugConfiguration.protocol = 'inspector'
+    } else {
+      debugConfiguration.program = '${workspaceFolder}/node_modules/jest/bin/jest'
+    }
+    return [debugConfiguration]
   }
 }
