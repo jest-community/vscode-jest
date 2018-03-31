@@ -94,6 +94,14 @@
           "type": "boolean",
           "default": true
         },
+        "jest.debugCodeLens.showWhenTestStateIn": {
+          "description": "Show the debug CodeLens when the it/test block state is in this collection",
+          "type": "array",
+          "items": {
+            "enum": ["fail", "pass", "skip", "unknown"]
+          },
+          "default": ["fail", "unknown"]
+        },
         "jest.enableSnapshotPreviews": {
           "description": "Whether snapshot previews should show",
           "type": "boolean",

@@ -9,6 +9,7 @@ import { IPluginSettings } from './IPluginSettings'
 import { registerStatusBar } from './statusBar'
 import { registerSnapshotCodeLens, registerSnapshotPreview } from './SnapshotCodeLens'
 import { registerCoverageCodeLens } from './Coverage'
+import { TestState } from './DebugCodeLens'
 
 let extensionInstance: JestExt
 
@@ -80,7 +81,10 @@ export function getExtensionSettings(): IPluginSettings {
   const config = vscode.workspace.getConfiguration('jest')
   return {
     autoEnable: config.get<boolean>('autoEnable'),
-    enableCodeLens: config.get<boolean>('enableCodeLens'),
+    debugCodeLens: {
+      enabled: config.get<boolean>('enableCodeLens'),
+      showWhenTestStateIn: config.get<TestState[]>('debugCodeLens.showWhenTestStateIn'),
+    },
     enableInlineErrorMessages: config.get<boolean>('enableInlineErrorMessages'),
     enableSnapshotPreviews: config.get<boolean>('enableSnapshotPreviews'),
     enableSnapshotUpdateMessages: config.get<boolean>('enableSnapshotUpdateMessages'),

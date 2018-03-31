@@ -66,6 +66,7 @@ jest.mock('../src/SnapshotCodeLens', () => ({
 import { activate, getExtensionSettings } from '../src/extension'
 import * as vscode from 'vscode'
 import { readFileSync } from 'fs'
+import { TestState } from '../src/DebugCodeLens'
 
 describe('Extension', () => {
   describe('activate()', () => {
@@ -126,7 +127,10 @@ describe('Extension', () => {
 
       expect(getExtensionSettings()).toEqual({
         autoEnable: true,
-        enableCodeLens: true,
+        debugCodeLens: {
+          enabled: true,
+          showWhenTestStateIn: [TestState.Fail, TestState.Unknown],
+        },
         enableInlineErrorMessages: true,
         enableSnapshotPreviews: true,
         enableSnapshotUpdateMessages: true,
