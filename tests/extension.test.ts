@@ -21,8 +21,21 @@ jest.mock('vscode', () => ({
     onDidChangeActiveTextEditor: jest.fn().mockReturnValue('onDidChangeActiveTextEditor'),
   },
   workspace: {
-    getConfiguration: jest.fn().mockReturnValue({
-      get: jest.fn().mockImplementation(key => key),
+    /** Mock getConfiguration by reading default values from package.json */
+    getConfiguration: jest.fn().mockImplementation(section => {
+      const data = readFileSync('./package.json')
+      const config = JSON.parse(data.toString()).contributes.configuration.properties
+
+      const defaults = {}
+      for (const key of Object.keys(config)) {
+        if (section.length === 0 || key.startsWith(`${section}.`)) {
+          defaults[key] = config[key].default
+        }
+      }
+
+      return {
+        get: jest.fn().mockImplementation(key => defaults[`${section}.${key}`]),
+      }
     }),
     onDidChangeConfiguration: jest.fn(),
     onDidCloseTextDocument: jest.fn(),
@@ -50,8 +63,9 @@ jest.mock('../src/SnapshotCodeLens', () => ({
   registerSnapshotPreview: jest.fn(() => []),
 }))
 
-import { activate } from '../src/extension'
+import { activate, getExtensionSettings } from '../src/extension'
 import * as vscode from 'vscode'
+import { readFileSync } from 'fs'
 
 describe('Extension', () => {
   describe('activate()', () => {
@@ -103,6 +117,26 @@ describe('Extension', () => {
       const registeredAsNode = register.mock.calls.some(parameters => parameters[0] === 'node')
       const registeredAsJestTest = register.mock.calls.some(parameters => parameters[0] === 'vscode-jest-tests')
       expect(registeredAsNode && registeredAsJestTest).toBeTruthy()
+    })
+  })
+
+  describe('getExtensionSettings()', () => {
+    it('should return the extension configuration', async () => {
+      vscode.workspace.rootPath = '<rootDir>'
+
+      expect(getExtensionSettings()).toEqual({
+        autoEnable: true,
+        enableCodeLens: true,
+        enableInlineErrorMessages: true,
+        enableSnapshotPreviews: true,
+        enableSnapshotUpdateMessages: true,
+        pathToConfig: '',
+        pathToJest: 'node_modules/.bin/jest',
+        restartJestOnSnapshotUpdate: false,
+        rootPath: '<rootDir>',
+        runAllTestsFirst: true,
+        showCoverageOnLoad: false,
+      })
     })
   })
 })

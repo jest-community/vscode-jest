@@ -76,19 +76,19 @@ export function deactivate() {
   extensionInstance.deactivate()
 }
 
-function getExtensionSettings(): IPluginSettings {
+export function getExtensionSettings(): IPluginSettings {
   const config = vscode.workspace.getConfiguration('jest')
   return {
     autoEnable: config.get<boolean>('autoEnable'),
-    pathToConfig: config.get<string>('pathToConfig'),
-    pathToJest: config.get<string>('pathToJest'),
     enableCodeLens: config.get<boolean>('enableCodeLens'),
     enableInlineErrorMessages: config.get<boolean>('enableInlineErrorMessages'),
     enableSnapshotPreviews: config.get<boolean>('enableSnapshotPreviews'),
     enableSnapshotUpdateMessages: config.get<boolean>('enableSnapshotUpdateMessages'),
+    pathToConfig: config.get<string>('pathToConfig'),
+    pathToJest: config.get<string>('pathToJest'),
+    restartJestOnSnapshotUpdate: config.get<boolean>('restartJestOnSnapshotUpdate'),
     rootPath: path.join(vscode.workspace.rootPath, config.get<string>('rootPath')),
     runAllTestsFirst: config.get<boolean>('runAllTestsFirst'),
     showCoverageOnLoad: config.get<boolean>('showCoverageOnLoad'),
-    restartJestOnSnapshotUpdate: config.get<boolean>('restartJestOnSnapshotUpdate'),
   }
 }
