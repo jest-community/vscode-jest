@@ -5,11 +5,9 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 
-* [your thing] - [you]
+* Adds a setting to control when the debug CodeLens appears - seanpoulter
 
 -->
-
-## Master
 
 ### 2.7.2
 
