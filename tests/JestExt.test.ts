@@ -136,7 +136,7 @@ describe('JestExt', () => {
     const testNamePattern = 'testNamePattern'
     const defaultArgs = ['--runInBand', fileName, '--testNamePattern', testNamePattern]
 
-    it('should use the config if set', () => {
+    it('should use the config if set', async () => {
       const config = 'jest.json'
       const expected = [...defaultArgs, '--config', config]
       const extensionSettings = {
@@ -144,13 +144,11 @@ describe('JestExt', () => {
       } as any
 
       const sut = new JestExt(projectWorkspace, channelStub, extensionSettings)
-      // @ts-ignore: Overriding private method
-      sut.resolvePathToJestBin = jest.fn().mockReturnValueOnce(true)
-      sut.runTest(fileName, testNamePattern)
+      await sut.runTest(fileName, testNamePattern)
 
-      expect(debug.startDebugging).toHaveBeenCalledTimes(1)
+      expect(debug.startDebugging).toHaveBeenCalledTimes(2)
 
-      const configuration = (debug.startDebugging as jest.Mock<Function>).mock.calls[0][1]
+      const configuration = (debug.startDebugging as jest.Mock<Function>).mock.calls[1][1]
       expect(configuration).toBeDefined()
       expect(configuration.args).toEqual(expected)
     })
