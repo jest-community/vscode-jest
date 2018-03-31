@@ -28,7 +28,11 @@ const DiagnosticSeverity = { Error: 0, Warning: 1, Information: 2, Hint: 3 }
 
 const debug = {
   onDidTerminateDebugSession: jest.fn(),
-  startDebugging: jest.fn(),
+  startDebugging: jest.fn(async (_folder: any, nameOrConfig: any) => {
+    if (typeof nameOrConfig === 'string') {
+      throw null
+    }
+  }),
 }
 
 export {
