@@ -17,7 +17,7 @@ describe('JestExt', () => {
   let projectWorkspace: ProjectWorkspace
   const channelStub = { appendLine: () => {} } as any
   const mockShowErrorMessage = window.showErrorMessage as jest.Mock<any>
-  const extensionSettings = {} as any
+  const extensionSettings = { debugCodeLens: {} } as any
 
   beforeEach(() => {
     jest.resetAllMocks()
@@ -103,7 +103,10 @@ describe('JestExt', () => {
 
   describe('generateInlineErrorDecorator()', () => {
     it('should add the decoration type to the cache', () => {
-      const settings: any = { enableInlineErrorMessages: true }
+      const settings: any = {
+        debugCodeLens: {},
+        enableInlineErrorMessages: true,
+      }
       const sut = new JestExt(projectWorkspace, channelStub, settings)
       const editor: any = {
         document: { fileName: 'file.js' },
