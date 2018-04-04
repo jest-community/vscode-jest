@@ -1,5 +1,6 @@
 jest.unmock('events')
 jest.unmock('../src/JestExt')
+jest.unmock('../src/DebugConfigurationProvider')
 
 jest.mock('../src/DebugCodeLens', () => ({
   DebugCodeLensProvider: class MockCodeLensProvider {},
@@ -134,21 +135,33 @@ describe('JestExt', () => {
   describe('runTest()', () => {
     const fileName = 'fileName'
     const testNamePattern = 'testNamePattern'
-    const defaultArgs = ['--runInBand', fileName, '--testNamePattern', testNamePattern]
 
     it('should use the config if set', async () => {
       const config = 'jest.json'
-      const expected = [...defaultArgs, '--config', config]
+      const expected = ['--runInBand', '--config', config, fileName, '--testNamePattern', testNamePattern]
       const extensionSettings = {
         pathToConfig: config,
       } as any
+
+      projectWorkspace.pathToConfig = extensionSettings.pathToConfig
+
+      const startDebugging = debug.startDebugging as jest.Mock<Function>
+
+      startDebugging.mockImplementation(async (_folder: any, nameOrConfig: any) => {
+        if (typeof nameOrConfig === 'string') {
+          throw null
+        }
+      })
 
       const sut = new JestExt(projectWorkspace, channelStub, extensionSettings)
       await sut.runTest(fileName, testNamePattern)
 
       expect(debug.startDebugging).toHaveBeenCalledTimes(2)
 
-      const configuration = (debug.startDebugging as jest.Mock<Function>).mock.calls[1][1]
+      let configuration = startDebugging.mock.calls[1][1]
+      expect(configuration.type).toBe('node')
+
+      configuration = sut.nodeDebugConfigurationProvider.resolveDebugConfiguration(undefined, configuration)
       expect(configuration).toBeDefined()
       expect(configuration.args).toEqual(expected)
     })

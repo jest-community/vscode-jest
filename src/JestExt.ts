@@ -73,6 +73,7 @@ export class JestExt {
     this.debugCodeLensProvider = new DebugCodeLensProvider(this.testResultProvider, pluginSettings.enableCodeLens)
     this.nodeDebugConfigurationProvider = new NodeDebugConfigurationProvider()
     this.snippetDebugConfigurationProvider = new SnippetDebugConfigurationProvider()
+    this.snippetDebugConfigurationProvider.setPathToConfig(workspace.pathToConfig)
 
     this.jestProcessManager = new JestProcessManager({
       projectWorkspace: workspace,
@@ -253,6 +254,8 @@ export class JestExt {
     setTimeout(() => {
       this.startProcess()
     }, 500)
+
+    this.snippetDebugConfigurationProvider.setPathToConfig(this.workspace.pathToConfig)
   }
 
   private updateDotDecorators(editor: vscode.TextEditor) {

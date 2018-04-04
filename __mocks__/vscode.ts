@@ -14,7 +14,7 @@ const window = {
 
 const workspace = {
   getConfiguration: jest.fn(),
-  workspaceFolders: jest.fn(),
+  workspaceFolders: [],
 }
 
 const OverviewRulerLane = {

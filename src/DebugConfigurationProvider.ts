@@ -57,6 +57,12 @@ export class NodeDebugConfigurationProvider implements vscode.DebugConfiguration
 }
 
 export class SnippetDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
+  private pathToConfig: string = ''
+
+  public setPathToConfig(pathToConfig: string) {
+    this.pathToConfig = pathToConfig
+  }
+
   provideDebugConfigurations(folder: vscode.WorkspaceFolder | undefined, _token?: vscode.CancellationToken) {
     const debugConfiguration: vscode.DebugConfiguration = {
       type: 'node',
@@ -67,13 +73,16 @@ export class SnippetDebugConfigurationProvider implements vscode.DebugConfigurat
       console: 'integratedTerminal',
       internalConsoleOptions: 'neverOpen',
     }
-    const craCommand = tryGetCRACommand(folder.uri.fsPath).split(' ')
-    if (craCommand[0]) {
+    const craCommand = folder && tryGetCRACommand(folder.uri.fsPath).split(' ')
+    if (craCommand && craCommand[0]) {
       debugConfiguration.runtimeExecutable = '${workspaceFolder}/node_modules/.bin/' + craCommand.shift()
       debugConfiguration.args = [...craCommand, ...debugConfiguration.args]
       debugConfiguration.protocol = 'inspector'
     } else {
       debugConfiguration.program = '${workspaceFolder}/node_modules/jest/bin/jest'
+    }
+    if (this.pathToConfig) {
+      debugConfiguration.args.push('--config', this.pathToConfig)
     }
     return [debugConfiguration]
   }
