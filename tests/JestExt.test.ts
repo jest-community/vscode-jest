@@ -159,7 +159,7 @@ describe('JestExt', () => {
       let configuration = startDebugging.mock.calls[1][1]
       expect(configuration.type).toBe('node')
 
-      configuration = sut.nodeDebugConfigurationProvider.resolveDebugConfiguration(undefined, configuration)
+      configuration = sut.debugConfigurationProvider.resolveDebugConfiguration(undefined, configuration)
       expect(configuration).toBeDefined()
       expect(configuration.args).toEqual(expected)
     })

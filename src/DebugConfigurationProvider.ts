@@ -20,13 +20,18 @@ function tryGetCRACommand(rootPath: string): string {
   return ''
 }
 
-export class NodeDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
+export class DebugConfigurationProvider implements vscode.DebugConfigurationProvider {
   private fileNameToRun: string = ''
   private testToRun: string = ''
+  private pathToConfig: string = ''
 
   public prepareTestRun(fileNameToRun: string, testToRun: string) {
     this.fileNameToRun = fileNameToRun
     this.testToRun = testToRun
+  }
+
+  public setPathToConfig(pathToConfig: string) {
+    this.pathToConfig = pathToConfig
   }
 
   resolveDebugConfiguration(
@@ -53,14 +58,6 @@ export class NodeDebugConfigurationProvider implements vscode.DebugConfiguration
       this.testToRun = ''
     }
     return debugConfiguration
-  }
-}
-
-export class SnippetDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
-  private pathToConfig: string = ''
-
-  public setPathToConfig(pathToConfig: string) {
-    this.pathToConfig = pathToConfig
   }
 
   provideDebugConfigurations(folder: vscode.WorkspaceFolder | undefined, _token?: vscode.CancellationToken) {
