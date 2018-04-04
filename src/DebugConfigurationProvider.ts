@@ -68,7 +68,7 @@ export class SnippetDebugConfigurationProvider implements vscode.DebugConfigurat
       internalConsoleOptions: 'neverOpen',
     }
     const craCommand = tryGetCRACommand(folder.uri.fsPath).split(' ')
-    if (craCommand.length > 1 || craCommand[0]) {
+    if (craCommand[0]) {
       debugConfiguration.runtimeExecutable = '${workspaceFolder}/node_modules/.bin/' + craCommand.shift()
       debugConfiguration.args = [...craCommand, ...debugConfiguration.args]
       debugConfiguration.protocol = 'inspector'

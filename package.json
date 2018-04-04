@@ -126,10 +126,6 @@
     ],
     "debuggers": [
       {
-        "type": "node",
-        "label": "Debug Jest tests using vscode-jest"
-      },
-      {
         "type": "vscode-jest-tests",
         "label": "Debug Jest tests using vscode-jest",
         "languages": ["javascript", "javascriptreact", "typescript", "typescriptreact"],
