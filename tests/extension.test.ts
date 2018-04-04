@@ -92,5 +92,11 @@ describe('Extension', () => {
       expect((vscode.commands.registerCommand as jest.Mock<any>).mock.calls).toContainEqual(expected)
       expect(context.subscriptions.push.mock.calls[0]).toContain(expected)
     })
+
+    it('should register a DebugConfigurationProvider', () => {
+      activate(context)
+
+      expect(vscode.debug.registerDebugConfigurationProvider).toBeCalled()
+    })
   })
 })
