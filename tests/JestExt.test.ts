@@ -6,13 +6,11 @@ jest.mock('../src/DebugCodeLens', () => ({
   DebugCodeLensProvider: class MockCodeLensProvider {},
 }))
 
-import { EventEmitter } from 'events'
 import { JestExt } from '../src/JestExt'
 import { ProjectWorkspace, Settings } from 'jest-editor-support'
 import { window, workspace, debug } from 'vscode'
 import { hasDocument, isOpenInMultipleEditors } from '../src/editor'
 import { failingAssertionStyle } from '../src/decorations'
-import { resultsWithLowerCaseWindowsDriveLetters } from '../src/TestResults'
 
 describe('JestExt', () => {
   const mockSettings = (Settings as any) as jest.Mock<any>
