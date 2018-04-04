@@ -23,15 +23,10 @@ function tryGetCRACommand(rootPath: string): string {
 export class DebugConfigurationProvider implements vscode.DebugConfigurationProvider {
   private fileNameToRun: string = ''
   private testToRun: string = ''
-  private pathToConfig: string = ''
 
   public prepareTestRun(fileNameToRun: string, testToRun: string) {
     this.fileNameToRun = fileNameToRun
     this.testToRun = testToRun
-  }
-
-  public setPathToConfig(pathToConfig: string) {
-    this.pathToConfig = pathToConfig
   }
 
   resolveDebugConfiguration(
@@ -77,9 +72,6 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
       debugConfiguration.protocol = 'inspector'
     } else {
       debugConfiguration.program = '${workspaceFolder}/node_modules/jest/bin/jest'
-    }
-    if (this.pathToConfig) {
-      debugConfiguration.args.push('--config', this.pathToConfig)
     }
     return [debugConfiguration]
   }

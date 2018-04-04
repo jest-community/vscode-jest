@@ -133,19 +133,15 @@ describe('JestExt', () => {
   describe('runTest()', () => {
     const fileName = 'fileName'
     const testNamePattern = 'testNamePattern'
+    const defaultArgs = ['--runInBand', fileName, '--testNamePattern', testNamePattern]
 
-    it('should use the config if set', async () => {
-      const config = 'jest.json'
-      const expected = ['--runInBand', '--config', config, fileName, '--testNamePattern', testNamePattern]
-      const extensionSettings = {
-        pathToConfig: config,
-      } as any
-
-      projectWorkspace.pathToConfig = extensionSettings.pathToConfig
+    it('should run the supplied test', async () => {
+      const expected = defaultArgs
 
       const startDebugging = debug.startDebugging as jest.Mock<Function>
 
       startDebugging.mockImplementation(async (_folder: any, nameOrConfig: any) => {
+        // trigger fallback to default configuration
         if (typeof nameOrConfig === 'string') {
           throw null
         }
@@ -154,9 +150,10 @@ describe('JestExt', () => {
       const sut = new JestExt(projectWorkspace, channelStub, extensionSettings)
       await sut.runTest(fileName, testNamePattern)
 
-      expect(debug.startDebugging).toHaveBeenCalledTimes(2)
+      expect(debug.startDebugging).toHaveBeenCalled()
 
-      let configuration = startDebugging.mock.calls[1][1]
+      let configuration = startDebugging.mock.calls[startDebugging.mock.calls.length - 1][1]
+      expect(configuration).toBeDefined()
       expect(configuration.type).toBe('node')
 
       configuration = sut.debugConfigurationProvider.resolveDebugConfiguration(undefined, configuration)
