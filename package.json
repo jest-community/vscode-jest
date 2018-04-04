@@ -147,7 +147,7 @@
           {
             "label": "Jest: create-react-app configuration",
             "description":
-              "Running jest within apps bootstraped by create-react-app (and similar); you may have to edit `runtimeExecutable`",
+              "Running jest within apps bootstrapped by create-react-app (and similar); you may have to edit `runtimeExecutable`",
             "body": {
               "type": "node",
               "name": "vscode-jest-tests",

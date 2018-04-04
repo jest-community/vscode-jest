@@ -5,25 +5,36 @@ import { normalize, join } from 'path'
 import { IPluginSettings } from './IPluginSettings'
 
 /**
- *  Handles getting the jest runner, handling the OS and project specific work too
- *
+ * Known binary names of `react-scripts` forks
+*/
+const createReactAppBinaryNames = ['react-scripts', 'react-native-scripts', 'react-scripts-ts', 'react-app-rewired']
+
+/** 
+ * Tries to identify if the project in `rootPath` was bootstrapped by `create-react-app`.
+ * If so, returns the project's `test` command.
+ * 
  * @returns {string}
- */
-export function pathToJest(pluginSettings: IPluginSettings) {
-  const path = normalize(pluginSettings.pathToJest)
-
-  const defaultPath = normalize('node_modules/.bin/jest')
-  if (path === defaultPath && isBootstrappedWithCreateReactApp(pluginSettings.rootPath)) {
-    // If it's the default, run the script instead
-    return 'npm test --'
-  }
-
-  return path
+*/
+export function getCRATestCommand(rootPath: string): string {
+  // If possible, try to parse `package.json` and look for a known binary beeing called in `scripts.test`
+  try {
+    const packagePath = join(rootPath, 'package.json')
+    const packageJSON = JSON.parse(readFileSync(packagePath, 'utf8'))
+    if (!packageJSON || !packageJSON.scripts || !packageJSON.scripts.test) {
+      return ''
+    }
+    const testCommand = packageJSON.scripts.test as string
+    if (createReactAppBinaryNames.some(binary => testCommand.indexOf(binary + ' test') === 0)) {
+      return testCommand
+    }
+  } catch {}
+  return ''
 }
 
-function isBootstrappedWithCreateReactApp(rootPath: string): boolean {
-  // Known binary names of `react-scripts` forks:
-  const packageBinaryNames = ['react-scripts', 'react-native-scripts', 'react-scripts-ts', 'react-app-rewired']
+/**
+ * More extensive (legacy) check than `getCRATestCommand` if the project in `rootPath` was bootstrapped by `create-react-app`.
+ */
+function isBootstrappedWithCRA(rootPath: string): boolean {
   // If possible, try to parse `package.json` and look for known binary beeing called in `scripts.test`
   try {
     const packagePath = join(rootPath, 'package.json')
@@ -32,17 +43,34 @@ function isBootstrappedWithCreateReactApp(rootPath: string): boolean {
       return false
     }
     const testCommand = packageJSON.scripts.test as string
-    return packageBinaryNames.some(binary => testCommand.indexOf(binary + ' test ') === 0)
+    return createReactAppBinaryNames.some(binary => testCommand.indexOf(binary + ' test ') === 0)
   } catch {}
   // In case parsing `package.json` failed or was unconclusive,
   // fallback to checking for the presence of the binaries in `./node_modules/.bin`
-  return packageBinaryNames.some(binary => hasNodeExecutable(rootPath, binary))
+  return createReactAppBinaryNames.some(binary => hasNodeExecutable(rootPath, binary))
 }
 
 function hasNodeExecutable(rootPath: string, executable: string): boolean {
   const ext = platform() === 'win32' ? '.cmd' : ''
   const absolutePath = join(rootPath, 'node_modules', '.bin', executable + ext)
   return existsSync(absolutePath)
+}
+
+/**
+ *  Handles getting the jest runner, handling the OS and project specific work too
+ *
+ * @returns {string}
+ */
+export function pathToJest(pluginSettings: IPluginSettings) {
+  const path = normalize(pluginSettings.pathToJest)
+
+  const defaultPath = normalize('node_modules/.bin/jest')
+  if (path === defaultPath && isBootstrappedWithCRA(pluginSettings.rootPath)) {
+    // If it's the default, run the script instead
+    return 'npm test --'
+  }
+
+  return path
 }
 
 /**

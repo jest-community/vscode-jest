@@ -463,7 +463,7 @@ export class JestExt {
       await vscode.debug.startDebugging(workspaceFolder, 'vscode-jest-tests')
     } catch {
       // if that fails, there (probably) isn't any debug configuration (at least no correctly named one)
-      // therefore run the test using the default configuration
+      // therefore debug the test using the default configuration
       const debugConfiguration = this.debugConfigurationProvider.provideDebugConfigurations(workspaceFolder)[0]
       await vscode.debug.startDebugging(workspaceFolder, debugConfiguration)
     }

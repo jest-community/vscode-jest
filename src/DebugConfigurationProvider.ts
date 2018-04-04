@@ -1,29 +1,14 @@
 import * as vscode from 'vscode'
-import { join } from 'path'
-import { readFileSync } from 'fs'
-
-function tryGetCRACommand(rootPath: string): string {
-  // Known binary names of `react-scripts` forks:
-  const packageBinaryNames = ['react-scripts', 'react-native-scripts', 'react-scripts-ts', 'react-app-rewired']
-  // If possible, try to parse `package.json` and look for a known binary beeing called in `scripts.test`
-  try {
-    const packagePath = join(rootPath, 'package.json')
-    const packageJSON = JSON.parse(readFileSync(packagePath, 'utf8'))
-    if (!packageJSON || !packageJSON.scripts || !packageJSON.scripts.test) {
-      return ''
-    }
-    const testCommand = packageJSON.scripts.test as string
-    if (packageBinaryNames.some(binary => testCommand.indexOf(binary + ' test') === 0)) {
-      return testCommand
-    }
-  } catch {}
-  return ''
-}
+import { getCRATestCommand } from './helpers'
 
 export class DebugConfigurationProvider implements vscode.DebugConfigurationProvider {
   private fileNameToRun: string = ''
   private testToRun: string = ''
 
+  /**
+   * Prepares injecting the name of the test, which has to be debugged, into the `DebugConfiguration`,
+   * This function has to be called before `vscode.debug.startDebugging`.
+   */
   public prepareTestRun(fileNameToRun: string, testToRun: string) {
     this.fileNameToRun = fileNameToRun
     this.testToRun = testToRun
@@ -37,12 +22,13 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     if (debugConfiguration.name !== 'vscode-jest-tests') {
       return debugConfiguration
     }
-    // necessary for running CRA test scripts in non-watch mode
-    if (debugConfiguration.env) {
-      debugConfiguration.env.CI = 'vscode-jest-tests'
-    } else {
-      debugConfiguration.env = { CI: 'vscode-jest-tests' }
+
+    if (!debugConfiguration.env) {
+      debugConfiguration.env = {}
     }
+    // necessary for running CRA test scripts in non-watch mode
+    debugConfiguration.env.CI = 'vscode-jest-tests'
+
     if (this.fileNameToRun) {
       debugConfiguration.args.push(this.fileNameToRun)
       if (this.testToRun) {
@@ -52,6 +38,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
       this.fileNameToRun = ''
       this.testToRun = ''
     }
+
     return debugConfiguration
   }
 
@@ -65,14 +52,17 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
       console: 'integratedTerminal',
       internalConsoleOptions: 'neverOpen',
     }
-    const craCommand = folder && tryGetCRACommand(folder.uri.fsPath).split(' ')
+
+    const craCommand = folder && getCRATestCommand(folder.uri.fsPath).split(' ')
     if (craCommand && craCommand[0]) {
+      // Settings specific for projects bootstrapped with `create-react-app`
       debugConfiguration.runtimeExecutable = '${workspaceFolder}/node_modules/.bin/' + craCommand.shift()
       debugConfiguration.args = [...craCommand, ...debugConfiguration.args]
       debugConfiguration.protocol = 'inspector'
     } else {
       debugConfiguration.program = '${workspaceFolder}/node_modules/jest/bin/jest'
     }
+
     return [debugConfiguration]
   }
 }
