@@ -139,7 +139,7 @@
               "request": "launch",
               "program": "^\"\\${workspaceFolder}/node_modules/jest/bin/jest\"",
               "args": ["--runInBand"],
-              "cwd": "${workspaceFolder}",
+              "cwd": "^\"\\${workspaceFolder}\"",
               "console": "integratedTerminal",
               "internalConsoleOptions": "neverOpen"
             }
@@ -153,8 +153,8 @@
               "name": "vscode-jest-tests",
               "request": "launch",
               "runtimeExecutable": "^\"\\${workspaceFolder}/node_modules/.bin/react-scripts\"",
-              "args": ["test", "--runInBand"],
-              "cwd": "${workspaceFolder}",
+              "args": ["test", "--env=jsdom", "--runInBand"],
+              "cwd": "^\"\\${workspaceFolder}\"",
               "console": "integratedTerminal",
               "protocol": "inspector",
               "internalConsoleOptions": "neverOpen"
