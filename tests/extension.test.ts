@@ -94,9 +94,15 @@ describe('Extension', () => {
     })
 
     it('should register a DebugConfigurationProvider', () => {
+      const register = vscode.debug.registerDebugConfigurationProvider as jest.Mock<any>
+      register.mockReset()
+
       activate(context)
 
-      expect(vscode.debug.registerDebugConfigurationProvider).toBeCalled()
+      expect(register).toHaveBeenCalledTimes(2)
+      const registeredAsNode = register.mock.calls.some(parameters => parameters[0] === 'node')
+      const registeredAsJestTest = register.mock.calls.some(parameters => parameters[0] === 'vscode-jest-tests')
+      expect(registeredAsNode && registeredAsJestTest).toBeTruthy()
     })
   })
 })
