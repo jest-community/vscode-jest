@@ -41,6 +41,8 @@ The simplest use cases should be supported out-of-the-box, but at the latest whe
 
 This plugin provides blueprints for debugging plain Jest setups or projects bootstrapped by `create-react-app`. If those don't match your setup, you can modify the blueprints or create a completely new debug configuration, but keep in mind, that the `type` has to be `node` and that the configuration has to be named `"vscode-jest-tests"`.
 
+Starting with debugging is possible by clicking on the `debug` CodeLense above appendant `it` tests, but you can also debug all tests at once by starting debugging of `"vscode-jest-tests"` within the VS Code Debug Side Bar.
+
 ## Inspiration
 
 I'd like to give a shout out to [Wallaby.js](https://wallabyjs.com), which is a significantly more comprehensive and covers a lot more editors, if this extension interests you - check out that too.
