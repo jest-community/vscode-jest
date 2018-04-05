@@ -39,9 +39,13 @@ Also, you should use Jest 17+, however 16 works - it will just offer a warning. 
 
 The simplest use cases should be supported out-of-the-box, but at the latest when VS Code displays errors about the attribute `program` or `runtimeExecutable` not being available, you have to create your own debug configuration within `launch.json`.
 
-This plugin provides blueprints for debugging plain Jest setups or projects bootstrapped by `create-react-app`. If those don't match your setup, you can modify the blueprints or create a completely new debug configuration, but keep in mind, that the `type` has to be `node` and that the configuration has to be named `"vscode-jest-tests"`.
+This plugin provides blueprints for debugging plain Jest setups or projects bootstrapped by `create-react-app`. If those don't match your setup, you can modify the blueprints or create a completely new debug configuration, but keep in mind, that the `type` has to be `node` and that the configuration has to be named `"vscode-jest-tests"`. In order to learn more about debug/launch configurations in general, visit [VS Code Docs: Debugging](https://code.visualstudio.com/docs/editor/debugging#_launch-configurations).
 
 Starting with debugging is possible by clicking on the `debug` CodeLense above appendant `it` tests, but you can also debug all tests at once by starting debugging of `"vscode-jest-tests"` within the VS Code Debug Side Bar.
+
+### Notes for troubleshooting
+
+In contrast to previous versions of this plugin the debug settings are now independent from VS Code's `pathToJest` and `pathToConfig` setting. If you had to modify one of these, you pretty surely have to create a custom debug configuration and modify its path. This especially includes cases, in which `jest` isn't at its default location.
 
 ## Inspiration
 
