@@ -11,7 +11,7 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 
-* Add the ability to configure debugging of tests - stephtr
+* Add the ability to configure debugging of tests - stephtr, connectdotz
 
 ### 2.6.4
 
