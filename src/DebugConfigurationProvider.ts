@@ -1,5 +1,5 @@
 import * as vscode from 'vscode'
-import { getCRATestCommand } from './helpers'
+import { getTestCommand, isCRATestCommand } from './helpers'
 
 export class DebugConfigurationProvider implements vscode.DebugConfigurationProvider {
   private fileNameToRun: string = ''
@@ -59,13 +59,22 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
       internalConsoleOptions: 'neverOpen',
     }
 
-    const craCommand = folder && getCRATestCommand(folder.uri.fsPath).split(' ')
-    if (craCommand && craCommand[0]) {
+    const testCommand = folder && getTestCommand(folder.uri.fsPath)
+    if (isCRATestCommand(testCommand)) {
+      const craCommand = testCommand.split(' ')
       // Settings specific for projects bootstrapped with `create-react-app`
       debugConfiguration.runtimeExecutable = '${workspaceFolder}/node_modules/.bin/' + craCommand.shift()
       debugConfiguration.args = [...craCommand, ...debugConfiguration.args]
       debugConfiguration.protocol = 'inspector'
+    } else if (testCommand === 'node scripts/test.js --env=jsdom') {
+      // Settings specific for projects bootstrapped with `create-react-app` after being ejected
+      const craCommand = testCommand.split(' ')
+      craCommand.shift()
+      debugConfiguration.program = '${workspaceFolder}/' + craCommand.shift()
+      debugConfiguration.args = [...craCommand, ...debugConfiguration.args]
+      debugConfiguration.protocol = 'inspector'
     } else {
+      // Plain jest setup
       debugConfiguration.program = '${workspaceFolder}/node_modules/jest/bin/jest'
     }
 

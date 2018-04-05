@@ -131,7 +131,7 @@
         "languages": ["javascript", "javascriptreact", "typescript", "typescriptreact"],
         "configurationSnippets": [
           {
-            "label": "Jest: Default jest configuration",
+            "label": "Jest:  Default jest configuration",
             "description": "Running tests by directly running jest",
             "body": {
               "type": "node",
@@ -145,7 +145,7 @@
             }
           },
           {
-            "label": "Jest: create-react-app configuration",
+            "label": "Jest: create-react-app",
             "description":
               "Running jest within apps bootstrapped by create-react-app (and similar); you may have to edit `runtimeExecutable`",
             "body": {
@@ -154,6 +154,21 @@
               "request": "launch",
               "runtimeExecutable": "^\"\\${workspaceFolder}/node_modules/.bin/react-scripts\"",
               "args": ["test", "--env=jsdom", "--runInBand"],
+              "cwd": "^\"\\${workspaceFolder}\"",
+              "console": "integratedTerminal",
+              "protocol": "inspector",
+              "internalConsoleOptions": "neverOpen"
+            }
+          },
+          {
+            "label": "Jest: create-react-app (ejected)",
+            "description": "Running jest within apps bootstrapped by create-react-app (and similar) after ejecting",
+            "body": {
+              "type": "node",
+              "name": "vscode-jest-tests",
+              "request": "launch",
+              "program": "^\"\\${workspaceFolder}/scripts/test\"",
+              "args": ["--env=jsdom", "--runInBand"],
               "cwd": "^\"\\${workspaceFolder}\"",
               "console": "integratedTerminal",
               "protocol": "inspector",
