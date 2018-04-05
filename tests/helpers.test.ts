@@ -1,7 +1,7 @@
 jest.unmock('../src/helpers')
 jest.mock('fs')
 
-import { pathToJestPackageJSON } from '../src/helpers'
+import { pathToJestPackageJSON, isCRATestCommand } from '../src/helpers'
 import { existsSync } from 'fs'
 import * as path from 'path'
 
@@ -113,6 +113,15 @@ describe('ModuleHelpers', () => {
         }
         expect(pathToJestPackageJSON(workspace)).toBe(null)
       })
+    })
+  })
+
+  describe('isCRATestCommand', () => {
+    it('should return true for CRA', () => {
+      expect(isCRATestCommand('react-scripts test --env=jsdom')).toBeTruthy()
+    })
+    it('should return false for other scripts', () => {
+      expect(isCRATestCommand('custom-script')).toBeFalsy()
     })
   })
 })

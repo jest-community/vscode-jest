@@ -29,6 +29,9 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     // necessary for running CRA test scripts in non-watch mode
     debugConfiguration.env.CI = 'vscode-jest-tests'
 
+    if (!debugConfiguration.args) {
+      debugConfiguration.args = []
+    }
     if (this.fileNameToRun) {
       debugConfiguration.args.push(this.fileNameToRun)
       if (this.testToRun) {
