@@ -45,7 +45,7 @@ Starting with debugging is possible by clicking on the `debug` CodeLense above a
 
 ### Notes for troubleshooting
 
-In contrast to previous versions of this plugin the debug settings are now independent from VS Code's `pathToJest` and `pathToConfig` setting. If you had to modify one of these, you pretty surely have to create a custom debug configuration and modify its path. This especially includes cases, in which `jest` isn't at its default location.
+In contrast to previous versions of this plugin the debug settings are now independent from VS Code's `jest.pathToJest` and `jest.pathToConfig` setting. If you had to modify one of these, you pretty surely have to create a custom debug configuration and modify its path. This especially includes cases, in which `jest` isn't at its default location.
 
 ## Inspiration
 
