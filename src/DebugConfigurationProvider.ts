@@ -69,13 +69,6 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
       debugConfiguration.runtimeExecutable = '${workspaceFolder}/node_modules/.bin/' + craCommand.shift()
       debugConfiguration.args = [...craCommand, ...debugConfiguration.args]
       debugConfiguration.protocol = 'inspector'
-    } else if (testCommand === 'node scripts/test.js --env=jsdom') {
-      // Settings specific for projects bootstrapped with `create-react-app` after being ejected
-      const craCommand = testCommand.split(' ')
-      craCommand.shift()
-      debugConfiguration.program = '${workspaceFolder}/' + craCommand.shift()
-      debugConfiguration.args = [...craCommand, ...debugConfiguration.args]
-      debugConfiguration.protocol = 'inspector'
     } else {
       // Plain jest setup
       debugConfiguration.program = '${workspaceFolder}/node_modules/jest/bin/jest'
