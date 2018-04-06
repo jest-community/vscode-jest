@@ -33,21 +33,6 @@ describe('DebugConfigurationProvider', () => {
     expect(config.args).toContain('--env=jsdom')
     expect(config.args).toContain('--runInBand')
   })
-  it('should return a valid CRA (ejected) DebugConfiguration', () => {
-    ;(getTestCommand as jest.Mock<Function>).mockReturnValueOnce('node scripts/test.js --env=jsdom')
-
-    const folder: any = { uri: { fsPath: null } }
-    const sut = new DebugConfigurationProvider()
-    const configurations = sut.provideDebugConfigurations(folder)
-
-    expect(configurations).toHaveLength(1)
-    const config = configurations[0]
-    expect(config.name).toBe('vscode-jest-tests')
-    expect(config.type).toBe('node')
-    expect(config.program).toMatch(/\$\{workspaceFolder\}\/scripts\/test(\.js)?/)
-    expect(config.args).toContain('--env=jsdom')
-    expect(config.args).toContain('--runInBand')
-  })
 
   it('should append the specified tests', () => {
     const fileName = 'fileName'
