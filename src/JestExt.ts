@@ -78,7 +78,8 @@ export class JestExt {
     }
 
     let maxRestart = 4
-    this.jestProcess = new Runner(this.workspace)
+    const cliOptions = this.pluginSettings.cliOptions || {}
+    this.jestProcess = new Runner(this.workspace, { noColor: cliOptions.noColor })
 
     this.jestProcess
       .on('debuggerProcessExit', () => {

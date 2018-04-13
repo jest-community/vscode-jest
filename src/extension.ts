@@ -5,7 +5,7 @@ import * as path from 'path'
 import { extensionName } from './appGlobals'
 import { pathToJest, pathToConfig } from './helpers'
 import { JestExt } from './JestExt'
-import { IPluginSettings } from './IPluginSettings'
+import { IPluginSettings, CliOptions } from './IPluginSettings'
 import { registerStatusBar } from './statusBar'
 import { registerFileChangeWatchers } from './fileChangeWatchers'
 import { registerCoverageCodeLens, registerToggleCoverageOverlay } from './Coverage'
@@ -67,11 +67,19 @@ function getExtensionSettings(): IPluginSettings {
     autoEnable: config.get<boolean>('autoEnable'),
     pathToConfig: config.get<string>('pathToConfig'),
     pathToJest: config.get<string>('pathToJest'),
+    cliOptions: getJestCliSettings(),
     enableCodeLens: config.get<boolean>('enableCodeLens'),
     enableInlineErrorMessages: config.get<boolean>('enableInlineErrorMessages'),
     enableSnapshotUpdateMessages: config.get<boolean>('enableSnapshotUpdateMessages'),
     rootPath: path.join(vscode.workspace.rootPath, config.get<string>('rootPath')),
     runAllTestsFirst: config.get<boolean>('runAllTestsFirst'),
     showCoverageOnLoad: config.get<boolean>('showCoverageOnLoad'),
+  }
+}
+
+function getJestCliSettings(): CliOptions {
+  const config = vscode.workspace.getConfiguration('jest.cli')
+  return {
+    noColor: config.get<boolean>('noColor'),
   }
 }

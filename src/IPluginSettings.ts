@@ -1,3 +1,7 @@
+export interface CliOptions {
+  noColor?: boolean
+}
+
 export interface IPluginSettings {
   autoEnable?: boolean
   enableCodeLens?: boolean
@@ -5,6 +9,7 @@ export interface IPluginSettings {
   enableSnapshotUpdateMessages?: boolean
   pathToJest?: string
   pathToConfig?: string
+  cliOptions: CliOptions
   rootPath?: string
   runAllTestsFirst?: boolean
   showCoverageOnLoad: boolean
