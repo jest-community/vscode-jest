@@ -56,7 +56,12 @@ export class JestExt {
 
   private clearOnNextInput: boolean
 
-  constructor(workspace: ProjectWorkspace, outputChannel: vscode.OutputChannel, pluginSettings: IPluginSettings) {
+  constructor(
+    context: vscode.ExtensionContext,
+    workspace: ProjectWorkspace,
+    outputChannel: vscode.OutputChannel,
+    pluginSettings: IPluginSettings
+  ) {
     this.workspace = workspace
     this.channel = outputChannel
     this.failingAssertionDecorators = {}
@@ -66,7 +71,12 @@ export class JestExt {
     this.pluginSettings = pluginSettings
 
     this.coverageMapProvider = new CoverageMapProvider()
-    this.coverageOverlay = new CoverageOverlay(this.coverageMapProvider, pluginSettings.showCoverageOnLoad)
+    this.coverageOverlay = new CoverageOverlay(
+      context,
+      this.coverageMapProvider,
+      pluginSettings.showCoverageOnLoad,
+      pluginSettings.coverageFormatter
+    )
 
     this.testResultProvider = new TestResultProvider()
     this.debugCodeLensProvider = new DebugCodeLensProvider(this.testResultProvider, pluginSettings.enableCodeLens)
