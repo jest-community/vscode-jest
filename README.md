@@ -35,6 +35,18 @@ If have a more complex setup, it can probably be supported, check out the settin
 
 Also, you should use Jest 17+, however 16 works - it will just offer a warning. We're aiming to try and do current Jest version - 1, but won't specifically drop support for older versions unless we're forced into it.
 
+
+## How to start the Jest?
+
+The extension will start Jest for you when:
+
+* we find Jest configuration files in the workspace: `jest.config.js` or `jest.json`
+* we find Jest installed in the workspace: `node_modules/.bin/jest`
+* we find the workspace has been bootstrapped with create-react-app: `node_modules/react-scripts/node_modules/.bin/jest`
+  - `node_modules/react-native-scripts`
+* you run the **Jest: Start Runner** command
+
+
 ## How do I debug tests?
 
 The simplest use cases should be supported out-of-the-box, but at the latest when VS Code displays errors about the attribute `program` or `runtimeExecutable` not being available, you have to create your own debug configuration within `launch.json`.
