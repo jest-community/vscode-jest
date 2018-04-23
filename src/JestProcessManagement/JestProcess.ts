@@ -1,5 +1,6 @@
 import { platform } from 'os'
 import { Runner, ProjectWorkspace } from 'jest-editor-support'
+import { getExtensionCliSettings } from '../extension'
 
 export class JestProcess {
   static readonly keepAliveLimit = 5
@@ -19,7 +20,8 @@ export class JestProcess {
     // Use a shell to run Jest command on Windows in order to correctly spawn `.cmd` files
     // For details see https://github.com/jest-community/vscode-jest/issues/98
     const useShell = platform() === 'win32'
-    this.runner = new Runner(this.projectWorkspace, { shell: useShell })
+    const cliSettings = getExtensionCliSettings()
+    this.runner = new Runner(this.projectWorkspace, { shell: useShell, noColor: cliSettings.noColor })
 
     this.restoreJestEvents()
 

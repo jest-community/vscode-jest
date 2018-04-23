@@ -64,6 +64,11 @@
           "type": "string",
           "default": ""
         },
+        "jest.cli.noColor": {
+          "description": "add jest cli option --no-color",
+          "type": "boolean",
+          "default": true
+        },
         "jest.rootPath": {
           "description": "The path to your frontend src folder",
           "type": "string",
@@ -218,7 +223,7 @@
     "elegant-spinner": "^1.0.1",
     "istanbul-lib-coverage": "^1.1.1",
     "istanbul-lib-source-maps": "^1.1.0",
-    "jest-editor-support": "22.4.0",
+    "jest-editor-support": "^23.0.0-alpha.6r",
     "jest-snapshot": "^22.1.2",
     "jest-test-typescript-parser": "^22.1.3",
     "micromatch": "^2.3.11"

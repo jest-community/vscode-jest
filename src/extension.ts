@@ -92,3 +92,11 @@ function getExtensionSettings(): IPluginSettings {
     restartJestOnSnapshotUpdate: config.get<boolean>('restartJestOnSnapshotUpdate'),
   }
 }
+
+export function getExtensionCliSettings(): { noColor?: boolean } {
+  const config = vscode.workspace.getConfiguration('jest.cli')
+
+  return {
+    noColor: config.get<boolean>('noColor'),
+  }
+}

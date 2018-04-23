@@ -11,6 +11,10 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 
+### 2.8.0
+
+* Add option jest.cli.noColor(default: true) to disable color and show better
+
 ### 2.7.0
 
 * Add the ability to configure debugging of tests - stephtr, connectdotz
