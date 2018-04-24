@@ -59,13 +59,44 @@ Starting with debugging is possible by clicking on the `debug` CodeLense above a
 
 In contrast to previous versions of this plugin the debug settings are now independent from VS Code's `jest.pathToJest` and `jest.pathToConfig` setting. If you had to modify one of these, you pretty surely have to create a custom debug configuration and modify its path. This especially includes cases, in which `jest` isn't at its default location.
 
+
+## How do I show code coverage?
+
+To show code coverage in the VS Code, you will need to:
+
+- Configure Jest to collect coverage information using [the config](https://facebook.github.io/jest/docs/en/configuration.html#collectcoverage-boolean) or [command line options](https://facebook.github.io/jest/docs/en/cli.html#coverage)
+- Show the coverage overlay:
+  - Run the **Jest: Toggle Coverage Overlay** command to show the overlay once
+  - To configure the extension to show the coverage overlay when your workspace loads, add the following setting:
+    ```json
+    {
+        "jest.showCoverageOnLoad": true
+    }
+    ```
+
+<!--
+### TODO: Change overlay format
+Use a setting that's one of "", "", etc.
+```json
+{
+    "jest.?": ""
+}
+```
+
+Screenshots:
+* Default
+* Gutters
+-->
+
 ## Inspiration
 
 I'd like to give a shout out to [Wallaby.js](https://wallabyjs.com), which is a significantly more comprehensive and covers a lot more editors, if this extension interests you - check out that too.
 
+
 ## Wanted
 
 Someone to take responsibility for ensuring that the default setup for create-react-app is always working. All the current authors use TypeScript and React/React Native and so have very little familiarity with changes to CRA. _Apply via PRs :D_.
+
 
 ## Troubleshooting
 
@@ -83,6 +114,7 @@ These are the [activation events](https://code.visualstudio.com/docs/extensionAP
 ```
 
 These are the things that will trigger the extension loading. If one of these applies, and you're not seeing the "Jest" in the bottom bar, run the command `Open Developer Tools` and see if something has crashed, we'd love to know what that is, and ideally a project we can run against.
+
 
 ## Want to Contribute?
 
