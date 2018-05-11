@@ -1,5 +1,4 @@
 jest.unmock('../src/diagnostics')
-
 import { updateDiagnostics, resetDiagnostics, failedSuiteCount } from '../src/diagnostics'
 import * as vscode from 'vscode'
 import { TestFileAssertionStatus, TestReconcilationState, TestAssertionStatus } from 'jest-editor-support'
@@ -14,6 +13,8 @@ class MockDiagnosticCollection implements vscode.DiagnosticCollection {
   has = jest.fn()
   dispose = jest.fn()
 }
+
+vscode.window.visibleTextEditors = []
 
 describe('test diagnostics', () => {
   describe('resetDiagnostics', () => {
