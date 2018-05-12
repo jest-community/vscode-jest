@@ -11,6 +11,8 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 
+* Fixes decorators [test highlight dots] working on Windows when jest path implicit - ThomasRooney
+
 ### 2.7.0
 
 * Add the ability to configure debugging of tests - stephtr, connectdotz
