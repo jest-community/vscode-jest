@@ -149,7 +149,7 @@ export class JestExt {
     }
 
     this.jestProcess = this.jestProcessManager.startJestProcess({
-      watchAll: true,
+      watch: true,
       keepAlive: true,
       exitCallback: (jestProcess, jestProcessInWatchMode) => {
         if (jestProcessInWatchMode) {
