@@ -32,9 +32,16 @@ export function updateDiagnostics(testResults: TestFileAssertionStatus[], diagno
             `received invalid line number '${assertion.line}' for '${uri.toString()}'. (most likely due to unexpected test results... you can help fix the root cause by logging an issue with a sample project to reproduce this warning)`
           )
         }
-        const start = 0
+        let startColumn = 0
+        let endColumn = Number.MAX_SAFE_INTEGER
+        const associatedTextEditor = vscode.window.visibleTextEditors.find(e => e.document.uri.fsPath === uri.fsPath)
+        if (associatedTextEditor) {
+          const textLine = associatedTextEditor.document.lineAt(line)
+          startColumn = textLine.firstNonWhitespaceCharacterIndex
+          endColumn = textLine.text.length
+        }
         const diag = new vscode.Diagnostic(
-          new vscode.Range(line, start, line, start + 6),
+          new vscode.Range(line, startColumn, line, endColumn),
           assertion.terseMessage || assertion.shortMessage || assertion.message,
           vscode.DiagnosticSeverity.Error
         )

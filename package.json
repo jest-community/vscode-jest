@@ -2,7 +2,7 @@
   "name": "vscode-jest",
   "displayName": "Jest",
   "description": "Use Facebook's Jest With Pleasure.",
-  "version": "2.7.0",
+  "version": "2.7.1",
   "publisher": "Orta",
   "engines": {
     "vscode": "^1.18.0"
@@ -57,7 +57,7 @@
           "description":
             "The path to the Jest binary, or an npm command to run tests prefixed with `--` e.g. `npm test --`",
           "type": "string",
-          "default": "node_modules/.bin/jest"
+          "default": null
         },
         "jest.pathToConfig": {
           "description": "The path to your Jest configuration file",
