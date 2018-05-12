@@ -23,7 +23,8 @@ export class JestProcess {
 
     this.restoreJestEvents()
 
-    this.runner.start(this.watchMode)
+    // pass watchMode into watchAll parameter also
+    this.runner.start(this.watchMode, this.watchMode)
 
     this.runner.on('debuggerProcessExit', () => {
       if (!exited) {

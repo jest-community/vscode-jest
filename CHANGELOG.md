@@ -12,6 +12,7 @@ Bug-fixes within the same version aren't needed
 ## Master
 
 * Highlight the full line of the jest error, not just the first 6 characters - ThomasRooney
+* Fixes decorators [test highlight dots] working on Windows when jest path implicit - ThomasRooney
 
 ### 2.7.0
 
