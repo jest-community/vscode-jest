@@ -2,7 +2,7 @@
   "name": "vscode-jest",
   "displayName": "Jest",
   "description": "Use Facebook's Jest With Pleasure.",
-  "version": "2.7.0",
+  "version": "2.7.1",
   "publisher": "Orta",
   "engines": {
     "vscode": "^1.18.0"
