@@ -42,8 +42,10 @@ export class TestResultProvider {
     for (const test of itBlocks) {
       const assertion =
         results.filter(result => result.line >= test.start.line && result.line <= test.end.line)[0] ||
-        results.filter(result => result.title === test.name && result.status !== 'KnownFail')[0] ||
-        {}
+        results.filter(
+          result => result.title === test.name && result.status !== TestReconciliationState.KnownFail
+        )[0] ||
+        ({} as any)
 
       // Note the shift from one-based to zero-based line number and columns
       result.push({
