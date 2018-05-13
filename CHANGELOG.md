@@ -11,6 +11,7 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 
+* Fix decorators showing corrupt values when two tests of the same name in one file (e.g. in different describe blocks) exist - ThomasRooney
 * Highlight the full line of the jest error, not just the first 6 characters - ThomasRooney
 * Fixes decorators [test highlight dots] working on Windows when jest path implicit - ThomasRooney
 
