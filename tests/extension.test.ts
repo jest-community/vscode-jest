@@ -135,7 +135,7 @@ describe('Extension', () => {
         enableSnapshotPreviews: true,
         enableSnapshotUpdateMessages: true,
         pathToConfig: '',
-        pathToJest: 'node_modules/.bin/jest',
+        pathToJest: null,
         restartJestOnSnapshotUpdate: false,
         rootPath: '<rootDir>',
         runAllTestsFirst: true,
