@@ -9,6 +9,7 @@ import { IPluginSettings } from './IPluginSettings'
 import { registerStatusBar } from './statusBar'
 import { registerSnapshotCodeLens, registerSnapshotPreview } from './SnapshotCodeLens'
 import { registerCoverageCodeLens } from './Coverage'
+import { TestState } from './DebugCodeLens'
 
 let extensionInstance: JestExt
 
@@ -76,19 +77,22 @@ export function deactivate() {
   extensionInstance.deactivate()
 }
 
-function getExtensionSettings(): IPluginSettings {
+export function getExtensionSettings(): IPluginSettings {
   const config = vscode.workspace.getConfiguration('jest')
   return {
     autoEnable: config.get<boolean>('autoEnable'),
-    pathToConfig: config.get<string>('pathToConfig'),
-    pathToJest: config.get<string>('pathToJest'),
-    enableCodeLens: config.get<boolean>('enableCodeLens'),
+    debugCodeLens: {
+      enabled: config.get<boolean>('enableCodeLens'),
+      showWhenTestStateIn: config.get<TestState[]>('debugCodeLens.showWhenTestStateIn'),
+    },
     enableInlineErrorMessages: config.get<boolean>('enableInlineErrorMessages'),
     enableSnapshotPreviews: config.get<boolean>('enableSnapshotPreviews'),
     enableSnapshotUpdateMessages: config.get<boolean>('enableSnapshotUpdateMessages'),
+    pathToConfig: config.get<string>('pathToConfig'),
+    pathToJest: config.get<string>('pathToJest'),
+    restartJestOnSnapshotUpdate: config.get<boolean>('restartJestOnSnapshotUpdate'),
     rootPath: path.join(vscode.workspace.rootPath, config.get<string>('rootPath')),
     runAllTestsFirst: config.get<boolean>('runAllTestsFirst'),
     showCoverageOnLoad: config.get<boolean>('showCoverageOnLoad'),
-    restartJestOnSnapshotUpdate: config.get<boolean>('restartJestOnSnapshotUpdate'),
   }
 }

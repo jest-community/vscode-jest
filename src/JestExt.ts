@@ -69,7 +69,10 @@ export class JestExt {
     this.coverageOverlay = new CoverageOverlay(this.coverageMapProvider, pluginSettings.showCoverageOnLoad)
 
     this.testResultProvider = new TestResultProvider()
-    this.debugCodeLensProvider = new DebugCodeLensProvider(this.testResultProvider, pluginSettings.enableCodeLens)
+    this.debugCodeLensProvider = new DebugCodeLensProvider(
+      this.testResultProvider,
+      pluginSettings.debugCodeLens.enabled ? pluginSettings.debugCodeLens.showWhenTestStateIn : []
+    )
     this.debugConfigurationProvider = new DebugConfigurationProvider()
 
     this.jestProcessManager = new JestProcessManager({
@@ -244,7 +247,10 @@ export class JestExt {
     this.jestSettings = new Settings(this.workspace)
 
     this.coverageOverlay.enabled = updatedSettings.showCoverageOnLoad
-    this.debugCodeLensProvider.enabled = updatedSettings.enableCodeLens
+
+    this.debugCodeLensProvider.showWhenTestStateIn = updatedSettings.debugCodeLens.enabled
+      ? updatedSettings.debugCodeLens.showWhenTestStateIn
+      : []
 
     this.stopProcess()
 

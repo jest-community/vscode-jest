@@ -52,51 +52,55 @@ import { DebugCodeLens } from '../../src/DebugCodeLens/DebugCodeLens'
 import { extensionName } from '../../src/appGlobals'
 import { basename } from 'path'
 import * as vscode from 'vscode'
+import { TestState } from '../../src/DebugCodeLens'
 
 describe('DebugCodeLensProvider', () => {
   const testResultProvider = new TestResultProvider()
+  const allTestStates = [TestState.Fail, TestState.Pass, TestState.Skip, TestState.Unknown]
 
   describe('constructor()', () => {
     it('should set the test result provider', () => {
-      const sut = new DebugCodeLensProvider(testResultProvider, true)
+      const sut = new DebugCodeLensProvider(testResultProvider, allTestStates)
 
       expect(sut.testResultProvider).toBe(testResultProvider)
     })
 
-    it('should set the enabled value', () => {
-      expect(new DebugCodeLensProvider(testResultProvider, true).enabled).toBe(true)
-      expect(new DebugCodeLensProvider(testResultProvider, false).enabled).toBe(false)
+    it('should set which test states to show the CodeLens above', () => {
+      expect(new DebugCodeLensProvider(testResultProvider, allTestStates).showWhenTestStateIn).toBe(allTestStates)
+
+      const none = []
+      expect(new DebugCodeLensProvider(testResultProvider, none).showWhenTestStateIn).toBe(none)
     })
 
     it('should initialize the onChange event emitter', () => {
-      const sut = new DebugCodeLensProvider(testResultProvider, true)
+      const sut = new DebugCodeLensProvider(testResultProvider, allTestStates)
 
       expect(sut.onDidChange).toBeInstanceOf(vscode.EventEmitter)
     })
   })
 
-  describe('enabled', () => {
+  describe('showWhenTestStateIn', () => {
     describe('get', () => {
-      it('should return if the provider is enabled', () => {
-        expect(new DebugCodeLensProvider(testResultProvider, true).enabled).toBe(true)
-        expect(new DebugCodeLensProvider(testResultProvider, false).enabled).toBe(false)
+      it('should return which test states to show the CodeLens above', () => {
+        for (const states of [[], allTestStates]) {
+          const sut = new DebugCodeLensProvider(testResultProvider, states)
+          expect(sut.showWhenTestStateIn).toBe(states)
+        }
       })
     })
 
     describe('set', () => {
-      it('should set if the provider is enabled', () => {
-        const expected = true
-        const sut = new DebugCodeLensProvider(testResultProvider, !expected)
-        sut.enabled = expected
+      it('should set which test states to show the CodeLens above', () => {
+        const sut = new DebugCodeLensProvider(testResultProvider, [])
+        sut.showWhenTestStateIn = allTestStates
 
-        expect(sut.enabled).toBe(expected)
+        expect(sut.showWhenTestStateIn).toBe(allTestStates)
       })
 
       it('should fire an onDidChange event', () => {
-        const enabled = true
-        const sut = new DebugCodeLensProvider(testResultProvider, enabled)
+        const sut = new DebugCodeLensProvider(testResultProvider, [])
         sut.onDidChange.fire = jest.fn()
-        sut.enabled = !enabled
+        sut.showWhenTestStateIn = allTestStates
 
         expect(sut.onDidChange.fire).toBeCalled()
       })
@@ -105,7 +109,7 @@ describe('DebugCodeLensProvider', () => {
 
   describe('onDidChangeCodeLenses', () => {
     it('should return the onDidChange event', () => {
-      const sut = new DebugCodeLensProvider(testResultProvider, true)
+      const sut = new DebugCodeLensProvider(testResultProvider, allTestStates)
       const expected = {} as any
       sut.onDidChange.event = expected
 
@@ -133,43 +137,62 @@ describe('DebugCodeLensProvider', () => {
     ]
 
     it('should return an empty array when the provider is disabled', () => {
-      const sut = new DebugCodeLensProvider(testResultProvider, false)
+      const sut = new DebugCodeLensProvider(testResultProvider, [])
 
       expect(sut.provideCodeLenses(document, token)).toEqual([])
     })
 
     it('should return an empty array when the document is untitled', () => {
-      const sut = new DebugCodeLensProvider(testResultProvider, true)
+      const sut = new DebugCodeLensProvider(testResultProvider, allTestStates)
       const untitled = { isUntitled: true } as any
 
       expect(sut.provideCodeLenses(untitled, token)).toEqual([])
     })
 
     it('should get the test results for the current document', () => {
-      const sut = new DebugCodeLensProvider(testResultProvider, true)
+      const sut = new DebugCodeLensProvider(testResultProvider, allTestStates)
       getResults.mockReturnValueOnce([])
       sut.provideCodeLenses(document, token)
 
       expect(testResultProvider.getResults).toBeCalledWith(document.fileName)
     })
 
-    function expectNoDebugCodeLensesForTestStatus(status: TestReconciliationState) {
-      const sut = new DebugCodeLensProvider(testResultProvider, true)
+    it('should not show the CodeLens above failing tests unless configured', () => {
+      const testStates = allTestStates.filter(s => s !== TestState.Fail)
+      const status = TestReconciliationState.KnownFail
+      const sut = new DebugCodeLensProvider(testResultProvider, testStates)
       getResults.mockReturnValueOnce([{ status }])
 
       expect(sut.provideCodeLenses(document, token)).toEqual([])
-    }
-
-    it('should not show DebugCodeLenses for successful test results', () => {
-      expectNoDebugCodeLensesForTestStatus(TestReconciliationState.KnownSuccess)
     })
 
-    it('should not show DebugCodeLenses for skipped test results', () => {
-      expectNoDebugCodeLensesForTestStatus(TestReconciliationState.KnownSkip)
+    it('should not show the CodeLens above passing tests unless configured', () => {
+      const testStates = allTestStates.filter(s => s !== TestState.Pass)
+      const status = TestReconciliationState.KnownSuccess
+      const sut = new DebugCodeLensProvider(testResultProvider, testStates)
+      getResults.mockReturnValueOnce([{ status }])
+
+      expect(sut.provideCodeLenses(document, token)).toEqual([])
+    })
+    it('should not show the CodeLens above skipped tests unless configured', () => {
+      const testStates = allTestStates.filter(s => s !== TestState.Skip)
+      const status = TestReconciliationState.KnownSkip
+      const sut = new DebugCodeLensProvider(testResultProvider, testStates)
+      getResults.mockReturnValueOnce([{ status }])
+
+      expect(sut.provideCodeLenses(document, token)).toEqual([])
+    })
+    it('should not show the CodeLens above unknown tests unless configured', () => {
+      const testStates = allTestStates.filter(s => s !== TestState.Unknown)
+      const status = TestReconciliationState.Unknown
+      const sut = new DebugCodeLensProvider(testResultProvider, testStates)
+      getResults.mockReturnValueOnce([{ status }])
+
+      expect(sut.provideCodeLenses(document, token)).toEqual([])
     })
 
     it('should create the CodeLens at the start of the `test`/`it` block', () => {
-      const sut = new DebugCodeLensProvider(testResultProvider, true)
+      const sut = new DebugCodeLensProvider(testResultProvider, allTestStates)
       getResults.mockReturnValueOnce(testResults)
       const actual = sut.provideCodeLenses(document, token)
 
@@ -187,7 +210,7 @@ describe('DebugCodeLensProvider', () => {
     it('should create the CodeLens specifying the document filename', () => {
       const expected = 'expected'
       ;(basename as jest.Mock<Function>).mockReturnValueOnce(expected)
-      const sut = new DebugCodeLensProvider(testResultProvider, true)
+      const sut = new DebugCodeLensProvider(testResultProvider, allTestStates)
       getResults.mockReturnValueOnce(testResults)
       const actual = sut.provideCodeLenses(document, token)
 
@@ -196,7 +219,7 @@ describe('DebugCodeLensProvider', () => {
     })
 
     it('should create the CodeLens specifying the test name', () => {
-      const sut = new DebugCodeLensProvider(testResultProvider, true)
+      const sut = new DebugCodeLensProvider(testResultProvider, allTestStates)
       getResults.mockReturnValueOnce(testResults)
       const actual = sut.provideCodeLenses(document, token)
 
@@ -207,7 +230,7 @@ describe('DebugCodeLensProvider', () => {
 
   describe('resolveCodeLenses()', () => {
     it('should add the command to a DebugCodeLenses', () => {
-      const sut = new DebugCodeLensProvider(testResultProvider, true)
+      const sut = new DebugCodeLensProvider(testResultProvider, allTestStates)
       const range = {} as any
       const fileName = 'fileName'
       const testName = 'testName'
@@ -223,7 +246,7 @@ describe('DebugCodeLensProvider', () => {
     })
 
     it('should escape testName for regex', () => {
-      const sut = new DebugCodeLensProvider(testResultProvider, true)
+      const sut = new DebugCodeLensProvider(testResultProvider, allTestStates)
       const range = {} as any
       const fileName = 'fileName'
       const testName = 'testName()'
@@ -239,7 +262,7 @@ describe('DebugCodeLensProvider', () => {
     })
 
     it('should leave other CodeLenses unchanged', () => {
-      const sut = new DebugCodeLensProvider(testResultProvider, false)
+      const sut = new DebugCodeLensProvider(testResultProvider, [])
       const codeLens = {} as any
       const token = {} as any
       sut.resolveCodeLens(codeLens, token)
@@ -249,7 +272,7 @@ describe('DebugCodeLensProvider', () => {
   })
 
   describe('didChange()', () => {
-    const sut = new DebugCodeLensProvider(testResultProvider, true)
+    const sut = new DebugCodeLensProvider(testResultProvider, allTestStates)
     sut.onDidChange.fire = jest.fn()
     sut.didChange()
 
