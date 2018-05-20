@@ -35,12 +35,12 @@ export function activate(context: vscode.ExtensionContext) {
   ]
   context.subscriptions.push(
     registerStatusBar(channel),
-    vscode.commands.registerTextEditorCommand(`${extensionName}.start`, () => {
+    vscode.commands.registerCommand(`${extensionName}.start`, () => {
       vscode.window.showInformationMessage('Started Jest, press escape to hide this message.')
       extensionInstance.startProcess()
     }),
-    vscode.commands.registerTextEditorCommand(`${extensionName}.stop`, () => extensionInstance.stopProcess()),
-    vscode.commands.registerTextEditorCommand(`${extensionName}.show-channel`, () => {
+    vscode.commands.registerCommand(`${extensionName}.stop`, () => extensionInstance.stopProcess()),
+    vscode.commands.registerCommand(`${extensionName}.show-channel`, () => {
       channel.show()
     }),
     ...registerSnapshotCodeLens(pluginSettings.enableSnapshotPreviews),
