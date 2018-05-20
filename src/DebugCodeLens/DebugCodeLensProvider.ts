@@ -4,24 +4,25 @@ import { escapeRegExp } from '../helpers'
 import { basename } from 'path'
 import { DebugCodeLens } from './DebugCodeLens'
 import { TestReconciliationState, TestResultProvider } from '../TestResults'
+import { TestState, TestStateByTestReconciliationState } from './TestState'
 
 export class DebugCodeLensProvider implements vscode.CodeLensProvider {
-  private _enabled: boolean
+  private _showWhenTestStateIn: TestState[]
   onDidChange: vscode.EventEmitter<void>
   testResultProvider: TestResultProvider
 
-  constructor(testResultProvider: TestResultProvider, enabled: boolean) {
+  constructor(testResultProvider: TestResultProvider, showWhenTestStateIn: TestState[]) {
     this.testResultProvider = testResultProvider
-    this._enabled = enabled
+    this._showWhenTestStateIn = showWhenTestStateIn
     this.onDidChange = new vscode.EventEmitter()
   }
 
-  get enabled() {
-    return this._enabled
+  get showWhenTestStateIn() {
+    return this._showWhenTestStateIn
   }
 
-  set enabled(value: boolean) {
-    this._enabled = value
+  set showWhenTestStateIn(value: TestState[]) {
+    this._showWhenTestStateIn = value
     this.onDidChange.fire()
   }
 
@@ -32,15 +33,16 @@ export class DebugCodeLensProvider implements vscode.CodeLensProvider {
   provideCodeLenses(document: vscode.TextDocument, _: vscode.CancellationToken): vscode.CodeLens[] {
     const result = []
 
-    if (!this._enabled || document.isUntitled) {
+    if (this._showWhenTestStateIn.length === 0 || document.isUntitled) {
       return result
     }
 
     const filePath = document.fileName
     const testResults = this.testResultProvider.getResults(filePath)
     const fileName = basename(document.fileName)
+
     for (const test of testResults) {
-      if (test.status === TestReconciliationState.KnownSuccess || test.status === TestReconciliationState.KnownSkip) {
+      if (!this.showCodeLensAboveTest(test)) {
         continue
       }
 
@@ -51,6 +53,11 @@ export class DebugCodeLensProvider implements vscode.CodeLensProvider {
     }
 
     return result
+  }
+
+  showCodeLensAboveTest(test: { status: TestReconciliationState }) {
+    const state = TestStateByTestReconciliationState[test.status]
+    return this._showWhenTestStateIn.includes(state)
   }
 
   resolveCodeLens(codeLens: vscode.CodeLens, _: vscode.CancellationToken): vscode.ProviderResult<vscode.CodeLens> {

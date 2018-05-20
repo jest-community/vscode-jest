@@ -1,6 +1,8 @@
-out
-node_modules
 _jest-editor/
+.vscode/symbols.json
+coverage/
 integrations/create-react-example/node_modules
-/coverage/
-/.vscode/symbols.json
+node_modules/
+out/
+
+**/.DS_Store

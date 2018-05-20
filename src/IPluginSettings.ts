@@ -1,14 +1,19 @@
+import { TestState } from './DebugCodeLens'
+
 export interface IPluginSettings {
   autoEnable?: boolean
-  enableCodeLens?: boolean
+  debugCodeLens: {
+    enabled: boolean
+    showWhenTestStateIn: TestState[]
+  }
   enableInlineErrorMessages?: boolean
   enableSnapshotPreviews?: boolean
   enableSnapshotUpdateMessages?: boolean
-  pathToJest?: string
   pathToConfig?: string
+  pathToJest?: string
+  restartJestOnSnapshotUpdate?: boolean
   rootPath?: string
   runAllTestsFirst?: boolean
   showCoverageOnLoad: boolean
   coverageFormatter: string
-  restartJestOnSnapshotUpdate?: boolean
 }

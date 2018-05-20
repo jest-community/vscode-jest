@@ -4,6 +4,7 @@ import { ProjectWorkspace } from 'jest-editor-support'
 import { JestProcessManager } from '../../src/JestProcessManagement/JestProcessManager'
 import { JestProcess } from '../../src/JestProcessManagement/JestProcess'
 import { EventEmitter } from 'events'
+import { WatchMode } from '../../src/Jest'
 
 describe('JestProcessManager', () => {
   let jestProcessManager
@@ -76,7 +77,7 @@ describe('JestProcessManager', () => {
     it('passes the watchMode flag set to false', () => {
       jestProcessManager.startJestProcess()
 
-      expect(jestProcessMock.mock.calls[0][0]).toHaveProperty('watchMode', false)
+      expect(jestProcessMock.mock.calls[0][0]).toHaveProperty('watchMode', WatchMode.None)
     })
   })
 
@@ -103,33 +104,33 @@ describe('JestProcessManager', () => {
   })
 
   describe('when starting jest process in watch mode', () => {
-    it('creates two jest processes: one to run all the tests and one for the watch mode', () => {
+    it('will run all tests without watch mode then restart with --watch', () => {
       jestProcessMock.mockImplementation(() => ({
         onExit: callback => {
           eventEmitter.on('debuggerProcessExit', callback)
         },
       }))
 
-      jestProcessManager.startJestProcess({ watch: true })
+      jestProcessManager.startJestProcess({ watchMode: WatchMode.Watch })
 
       eventEmitter.emit('debuggerProcessExit')
 
-      expect(jestProcessMock.mock.instances.length).toBe(2)
-    })
-
-    it('first runs all the tests in non-watch mode and then spins jest process in watch mode', () => {
-      jestProcessMock.mockImplementation(() => ({
-        onExit: callback => {
-          eventEmitter.on('debuggerProcessExit', callback)
-        },
-      }))
-
-      jestProcessManager.startJestProcess({ watch: true })
-
-      eventEmitter.emit('debuggerProcessExit')
-
-      expect(jestProcessMock.mock.calls[0][0]).toHaveProperty('watchMode', false)
-      expect(jestProcessMock.mock.calls[1][0]).toHaveProperty('watchMode', true)
+      expect(jestProcessMock.mock.calls).toEqual([
+        [
+          {
+            keepAlive: false,
+            projectWorkspace: projectWorkspaceMock,
+            watchMode: WatchMode.None,
+          },
+        ],
+        [
+          {
+            keepAlive: false,
+            projectWorkspace: projectWorkspaceMock,
+            watchMode: WatchMode.Watch,
+          },
+        ],
+      ])
     })
 
     it('starts the process for non-watch mode with keep-alive flag set to false', () => {
@@ -139,7 +140,10 @@ describe('JestProcessManager', () => {
         },
       }))
 
-      jestProcessManager.startJestProcess({ watch: true, keepAlive: true })
+      jestProcessManager.startJestProcess({
+        keepAlive: true,
+        watchMode: WatchMode.Watch,
+      })
 
       // we need this to trigger the watch-mode process that only starts
       // after the non-watch-mode process exits
@@ -156,7 +160,7 @@ describe('JestProcessManager', () => {
         },
       }))
 
-      jestProcessManager.startJestProcess({ watch: true })
+      jestProcessManager.startJestProcess({ watchMode: WatchMode.Watch })
 
       eventEmitter.emit('debuggerProcessExit')
 
@@ -179,7 +183,10 @@ describe('JestProcessManager', () => {
         onExit: onExitMock,
       }))
 
-      jestProcessManager.startJestProcess({ watch: true, exitCallback: exitHandler })
+      jestProcessManager.startJestProcess({
+        exitCallback: exitHandler,
+        watchMode: WatchMode.Watch,
+      })
 
       eventEmitter.emit('debuggerProcessExit', { watchMode: false })
       eventEmitterForWatchMode.emit('debuggerProcessExit', { watchMode: true })
@@ -207,7 +214,10 @@ describe('JestProcessManager', () => {
 
       jestProcessMock.mockImplementation(() => mockImplementation)
 
-      jestProcessManager.startJestProcess({ watch: true, exitCallback: exitHandler })
+      jestProcessManager.startJestProcess({
+        exitCallback: exitHandler,
+        watchMode: WatchMode.Watch,
+      })
 
       eventEmitter.emit('debuggerProcessExit', mockImplementation)
       eventEmitterForWatchMode.emit('debuggerProcessExit', mockImplementation)
@@ -317,7 +327,10 @@ describe('JestProcessManager', () => {
         },
       }))
 
-      const jestProcess = jestProcessManager.startJestProcess({ watch: true, keepAlive: true })
+      const jestProcess = jestProcessManager.startJestProcess({
+        keepAlive: true,
+        watchMode: WatchMode.Watch,
+      })
 
       eventEmitter.emit('debuggerProcessExit', jestProcess)
 
@@ -412,27 +425,32 @@ describe('JestProcessManager', () => {
   })
 
   describe('when runAllTestsFirstInWatchMode is false', () => {
-    beforeEach(() => {
+    it('does not run all tests first', () => {
       jestProcessManager = new JestProcessManager({
         projectWorkspace: projectWorkspaceMock,
         runAllTestsFirstInWatchMode: false,
       })
-    })
 
-    it('does not run all tests first', () => {
       jestProcessMock.mockImplementation(() => ({
         onExit: callback => {
           eventEmitter.on('debuggerProcessExit', callback)
         },
       }))
 
-      const jestProcess = jestProcessManager.startJestProcess({ watch: true })
+      const watchMode = WatchMode.Watch
+      const jestProcess = jestProcessManager.startJestProcess({ watchMode })
 
       eventEmitter.emit('debuggerProcessExit', jestProcess)
 
       expect(jestProcessMock.mock.instances.length).toBe(1)
 
-      expect(jestProcessMock.mock.calls[0][0]).toHaveProperty('watchMode', true)
+      expect(jestProcessMock.mock.calls[0]).toEqual([
+        {
+          keepAlive: false,
+          projectWorkspace: projectWorkspaceMock,
+          watchMode,
+        },
+      ])
     })
   })
 })

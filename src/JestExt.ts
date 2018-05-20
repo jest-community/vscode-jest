@@ -22,6 +22,7 @@ import { DecorationOptions } from './types'
 import { hasDocument, isOpenInMultipleEditors } from './editor'
 import { CoverageOverlay } from './Coverage/CoverageOverlay'
 import { JestProcess, JestProcessManager } from './JestProcessManagement'
+import { isWatchNotSupported, WatchMode } from './Jest'
 
 export class JestExt {
   private workspace: ProjectWorkspace
@@ -79,7 +80,10 @@ export class JestExt {
     )
 
     this.testResultProvider = new TestResultProvider()
-    this.debugCodeLensProvider = new DebugCodeLensProvider(this.testResultProvider, pluginSettings.enableCodeLens)
+    this.debugCodeLensProvider = new DebugCodeLensProvider(
+      this.testResultProvider,
+      pluginSettings.debugCodeLens.enabled ? pluginSettings.debugCodeLens.showWhenTestStateIn : []
+    )
     this.debugConfigurationProvider = new DebugConfigurationProvider()
 
     this.jestProcessManager = new JestProcessManager({
@@ -108,6 +112,10 @@ export class JestExt {
 
     if (this.shouldIgnoreOutput(message)) {
       return
+    }
+
+    if (isWatchNotSupported(message)) {
+      this.jestProcess.watchMode = WatchMode.WatchAll
     }
 
     // The "tests are done" message comes through stdErr
@@ -159,7 +167,7 @@ export class JestExt {
     }
 
     this.jestProcess = this.jestProcessManager.startJestProcess({
-      watch: true,
+      watchMode: WatchMode.Watch,
       keepAlive: true,
       exitCallback: (jestProcess, jestProcessInWatchMode) => {
         if (jestProcessInWatchMode) {
@@ -254,7 +262,10 @@ export class JestExt {
     this.jestSettings = new Settings(this.workspace)
 
     this.coverageOverlay.enabled = updatedSettings.showCoverageOnLoad
-    this.debugCodeLensProvider.enabled = updatedSettings.enableCodeLens
+
+    this.debugCodeLensProvider.showWhenTestStateIn = updatedSettings.debugCodeLens.enabled
+      ? updatedSettings.debugCodeLens.showWhenTestStateIn
+      : []
 
     this.stopProcess()
 

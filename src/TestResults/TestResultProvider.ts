@@ -38,15 +38,14 @@ export class TestResultProvider {
     const { itBlocks } = parseTest(filePath)
     const results = this.reconciler.assertionsForTestFile(filePath) || []
 
-    const resultsByTestName = {}
-    for (const result of results) {
-      const testName = result.title
-      resultsByTestName[testName] = result
-    }
-
     const result: TestResult[] = []
     for (const test of itBlocks) {
-      const assertion = resultsByTestName[test.name] || {}
+      const assertion =
+        results.filter(result => result.line >= test.start.line && result.line <= test.end.line)[0] ||
+        results.filter(
+          result => result.title === test.name && result.status !== TestReconciliationState.KnownFail
+        )[0] ||
+        ({} as any)
 
       // Note the shift from one-based to zero-based line number and columns
       result.push({
