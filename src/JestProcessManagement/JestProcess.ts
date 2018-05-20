@@ -1,5 +1,6 @@
 import { platform } from 'os'
 import { Runner, ProjectWorkspace } from 'jest-editor-support'
+import { WatchMode } from '../Jest'
 
 export class JestProcess {
   static readonly keepAliveLimit = 5
@@ -10,21 +11,19 @@ export class JestProcess {
   private resolve: Function
   private keepAliveCounter: number
   public keepAlive: boolean
-  public watchMode: boolean
   public stopRequested: boolean
+  watchMode: WatchMode
 
   private startRunner() {
     this.stopRequested = false
     let exited = false
-    // Use a shell to run Jest command on Windows in order to correctly spawn `.cmd` files
-    // For details see https://github.com/jest-community/vscode-jest/issues/98
-    const useShell = platform() === 'win32'
-    this.runner = new Runner(this.projectWorkspace, { shell: useShell })
+
+    const options = { shell: platform() === 'win32' }
+    this.runner = new Runner(this.projectWorkspace, options)
 
     this.restoreJestEvents()
 
-    // pass watchMode into watchAll parameter also
-    this.runner.start(this.watchMode, this.watchMode)
+    this.runner.start(this.watchMode !== WatchMode.None, this.watchMode === WatchMode.WatchAll)
 
     this.runner.on('debuggerProcessExit', () => {
       if (!exited) {
@@ -50,11 +49,11 @@ export class JestProcess {
 
   constructor({
     projectWorkspace,
-    watchMode = false,
+    watchMode = WatchMode.None,
     keepAlive = false,
   }: {
     projectWorkspace: ProjectWorkspace
-    watchMode?: boolean
+    watchMode?: WatchMode
     keepAlive?: boolean
   }) {
     this.keepAlive = keepAlive

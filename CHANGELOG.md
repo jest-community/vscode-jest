@@ -8,6 +8,8 @@ Bug-fixes within the same version aren't needed
 * Adds a setting to control when the debug CodeLens appears - seanpoulter
 * Support the "Jest: Start/Stop" and "Show output" commands without an active
   text editor - seanpoulter
+* Restart Jest with --watchAll when --watch is not supported without git/hg
+  - seanpoulter
 
 -->
 
