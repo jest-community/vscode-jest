@@ -205,7 +205,7 @@
     "compile": "tsc -watch -p ./tsconfig.publish.json",
     "lint": "node scripts/lint",
     "postinstall": "node ./node_modules/vscode/bin/install",
-    "test": "jest --config jest.json",
+    "test": "tsc && jest --config jest.json",
     "watch-test": "yarn test -- --watch",
     "prettier": "prettier",
     "prettier-write":
@@ -225,7 +225,7 @@
     "rimraf": "^2.6.2",
     "tslint": "^5.7.0",
     "tslint-config-prettier": "^1.5.0",
-    "typescript": "2.5.3",
+    "typescript": "^2.8.0",
     "vscode": "^1.1.6"
   },
   "dependencies": {
