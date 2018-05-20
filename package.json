@@ -2,14 +2,14 @@
   "name": "vscode-jest",
   "displayName": "Jest",
   "description": "Use Facebook's Jest With Pleasure.",
-  "version": "2.7.2",
+  "version": "2.8.0",
   "publisher": "Orta",
   "engines": {
     "vscode": "^1.18.0"
   },
   "author": {
-    "name": "Orta Therox",
-    "url": "http://orta.io"
+    "name": "Orta Therox & Sean Poulter",
+    "url": "https://github.com/jest-community/vscode-jest"
   },
   "repository": {
     "type": "git",

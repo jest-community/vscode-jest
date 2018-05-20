@@ -13,6 +13,14 @@ Bug-fixes within the same version aren't needed
 
 -->
 
+### 2.8.0
+
+* Adds a setting to control when the debug CodeLens appears - seanpoulter
+* Support the "Jest: Start/Stop" and "Show output" commands without an active
+  text editor - seanpoulter
+* Restart Jest with --watchAll when --watch is not supported without git/hg
+  - seanpoulter
+
 ### 2.7.2
 
 * Fix decorators showing corrupt values when two tests of the same name in one file (e.g. in different describe blocks) exist - ThomasRooney
