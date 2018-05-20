@@ -1,5 +1,6 @@
 import { ProjectWorkspace } from 'jest-editor-support'
 import { JestProcess } from './JestProcess'
+import { WatchMode } from '../Jest'
 
 export class JestProcessManager {
   private projectWorkspace: ProjectWorkspace
@@ -24,11 +25,11 @@ export class JestProcessManager {
     }
   }
 
-  private runJest({ watch, keepAlive, exitCallback }) {
+  private runJest({ watchMode, keepAlive, exitCallback }) {
     const jestProcess = new JestProcess({
       projectWorkspace: this.projectWorkspace,
-      watchMode: watch,
-      keepAlive: keepAlive,
+      watchMode,
+      keepAlive,
     })
 
     this.jestProcesses.unshift(jestProcess)
@@ -37,9 +38,9 @@ export class JestProcessManager {
     return jestProcess
   }
 
-  private run({ watch, keepAlive, exitCallback }) {
+  private run({ watchMode, keepAlive, exitCallback }) {
     return this.runJest({
-      watch,
+      watchMode,
       keepAlive,
       exitCallback: exitedJestProcess => {
         exitCallback(exitedJestProcess)
@@ -52,7 +53,7 @@ export class JestProcessManager {
 
   private runAllTestsFirst(onExit) {
     return this.runJest({
-      watch: false,
+      watchMode: WatchMode.None,
       keepAlive: false,
       exitCallback: onExit,
     })
@@ -61,33 +62,29 @@ export class JestProcessManager {
   public startJestProcess(
     {
       exitCallback = () => {},
-      watch = false,
+      watchMode = WatchMode.None,
       keepAlive = false,
     }: {
       exitCallback?: Function
-      watch?: boolean
+      watchMode?: WatchMode
       keepAlive?: boolean
-    } = {
-      exitCallback: () => {},
-      watch: false,
-      keepAlive: false,
-    }
+    } = {}
   ): JestProcess {
-    if (watch && this.runAllTestsFirstInWatchMode) {
+    if (watchMode !== WatchMode.None && this.runAllTestsFirstInWatchMode) {
       return this.runAllTestsFirst(exitedJestProcess => {
         this.removeJestProcessReference(exitedJestProcess)
         const jestProcessInWatchMode = this.run({
-          watch: true,
-          keepAlive: keepAlive,
-          exitCallback: exitCallback,
+          watchMode: WatchMode.Watch,
+          keepAlive,
+          exitCallback,
         })
         exitCallback(exitedJestProcess, jestProcessInWatchMode)
       })
     } else {
       return this.run({
-        watch: watch,
-        keepAlive: keepAlive,
-        exitCallback: exitCallback,
+        watchMode,
+        keepAlive,
+        exitCallback,
       })
     }
   }

@@ -22,6 +22,7 @@ import { DecorationOptions } from './types'
 import { hasDocument, isOpenInMultipleEditors } from './editor'
 import { CoverageOverlay } from './Coverage/CoverageOverlay'
 import { JestProcess, JestProcessManager } from './JestProcessManagement'
+import { isWatchNotSupported, WatchMode } from './Jest'
 
 export class JestExt {
   private workspace: ProjectWorkspace
@@ -103,6 +104,10 @@ export class JestExt {
       return
     }
 
+    if (isWatchNotSupported(message)) {
+      this.jestProcess.watchMode = WatchMode.WatchAll
+    }
+
     // The "tests are done" message comes through stdErr
     // We want to use this as a marker that the console should
     // be cleared, as the next input will be from a new test run.
@@ -152,7 +157,7 @@ export class JestExt {
     }
 
     this.jestProcess = this.jestProcessManager.startJestProcess({
-      watch: true,
+      watchMode: WatchMode.Watch,
       keepAlive: true,
       exitCallback: (jestProcess, jestProcessInWatchMode) => {
         if (jestProcessInWatchMode) {

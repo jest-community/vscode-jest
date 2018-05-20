@@ -3,6 +3,7 @@ jest.unmock('../../src/JestProcessManagement/JestProcess')
 import { Runner, ProjectWorkspace } from 'jest-editor-support'
 import { JestProcess } from '../../src/JestProcessManagement/JestProcess'
 import { EventEmitter } from 'events'
+import { WatchMode } from '../../src/Jest'
 
 describe('JestProcess', () => {
   let projectWorkspaceMock
@@ -39,20 +40,15 @@ describe('JestProcess', () => {
       expect(jestProcess.stopRequested).toBeFalsy()
     })
 
-    it('accepts watchMode boolean argument', () => {
-      jestProcess = new JestProcess({
-        projectWorkspace: projectWorkspaceMock,
-        watchMode: true,
-      })
-      expect(jestProcess).not.toBe(null)
-    })
-
     it('records watchMode in the watchMode property', () => {
+      const expected = WatchMode.Watch
+
       jestProcess = new JestProcess({
         projectWorkspace: projectWorkspaceMock,
-        watchMode: true,
+        watchMode: expected,
       })
-      expect(jestProcess.watchMode).toBe(true)
+
+      expect(jestProcess.watchMode).toBe(expected)
     })
 
     it('creates an instance of jest-editor-support runner', () => {
@@ -69,34 +65,28 @@ describe('JestProcess', () => {
       expect(runnerMock.mock.calls[0][0]).toBe(projectWorkspaceMock)
     })
 
-    it('starts the jest-editor-support runner', () => {
+    it('starts the jest-editor-support Runner without watch mode by default', () => {
       jestProcess = new JestProcess({
         projectWorkspace: projectWorkspaceMock,
       })
       expect(runnerMockImplementation.start).toHaveBeenCalledTimes(1)
+      expect(runnerMockImplementation.start.mock.calls[0]).toEqual([false, false])
     })
 
-    it('passes the watchMode argument == false to the start command when it is not provided', () => {
+    it('starts the jest-editor-support Runner in --watch mode', () => {
       jestProcess = new JestProcess({
         projectWorkspace: projectWorkspaceMock,
+        watchMode: WatchMode.Watch,
       })
-      expect(runnerMockImplementation.start.mock.calls[0][0]).toBe(false)
+      expect(runnerMockImplementation.start.mock.calls[0]).toEqual([true, false])
     })
 
-    it('passes the watchMode argument == false to the start command when it is false', () => {
+    it('starts the jest-editor-support Runner in --watchAll mode', () => {
       jestProcess = new JestProcess({
         projectWorkspace: projectWorkspaceMock,
-        watchMode: false,
+        watchMode: WatchMode.WatchAll,
       })
-      expect(runnerMockImplementation.start.mock.calls[0][0]).toBe(false)
-    })
-
-    it('passes the watchMode argument == true to the start command when it is true', () => {
-      jestProcess = new JestProcess({
-        projectWorkspace: projectWorkspaceMock,
-        watchMode: true,
-      })
-      expect(runnerMockImplementation.start.mock.calls[0][0]).toBe(true)
+      expect(runnerMockImplementation.start.mock.calls[0]).toEqual([true, true])
     })
   })
 
@@ -241,7 +231,7 @@ describe('JestProcess', () => {
       expect(jestProcess.keepAlive).toBeFalsy()
     })
 
-    it('creates new instance of jest-editor-support runner', () => {
+    it('creates new instance of jest-editor-support Runner', () => {
       jestProcess = new JestProcess({
         projectWorkspace: projectWorkspaceMock,
         keepAlive: true,
@@ -297,26 +287,16 @@ describe('JestProcess', () => {
       expect(runnerMockImplementation.start).toHaveBeenCalledTimes(2)
     })
 
-    it('passes the watchMode argument to the new runner instance when it is false', () => {
-      jestProcess = new JestProcess({
-        projectWorkspace: projectWorkspaceMock,
-        watchMode: false,
-        keepAlive: true,
-      })
-      jestProcess.onExit(onExit)
-      eventEmitter.emit('debuggerProcessExit')
-      expect(runnerMockImplementation.start.mock.calls[1][0]).toBe(false)
-    })
-
     it('passes the watchMode argument to the new runner instance when it is true', () => {
       jestProcess = new JestProcess({
         projectWorkspace: projectWorkspaceMock,
-        watchMode: true,
+        watchMode: WatchMode.WatchAll,
         keepAlive: true,
       })
       jestProcess.onExit(onExit)
       eventEmitter.emit('debuggerProcessExit')
-      expect(runnerMockImplementation.start.mock.calls[1][0]).toBe(true)
+
+      expect(runnerMockImplementation.start.mock.calls[1]).toEqual([true, true])
     })
 
     it('removes all event listeners from the previous instance of the runner', () => {
