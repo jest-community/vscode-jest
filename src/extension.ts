@@ -25,7 +25,7 @@ export function activate(context: vscode.ExtensionContext) {
   const channel = vscode.window.createOutputChannel('Jest')
 
   // We need a singleton to represent the extension
-  extensionInstance = new JestExt(workspace, channel, pluginSettings)
+  extensionInstance = new JestExt(context, workspace, channel, pluginSettings)
 
   const languages = [
     { language: 'javascript' },
@@ -94,5 +94,6 @@ export function getExtensionSettings(): IPluginSettings {
     rootPath: path.join(vscode.workspace.rootPath, config.get<string>('rootPath')),
     runAllTestsFirst: config.get<boolean>('runAllTestsFirst'),
     showCoverageOnLoad: config.get<boolean>('showCoverageOnLoad'),
+    coverageFormatter: config.get<string>('coverageFormatter'),
   }
 }

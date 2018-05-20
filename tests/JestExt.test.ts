@@ -10,6 +10,7 @@ import { ProjectWorkspace, Settings } from 'jest-editor-support'
 import { window, workspace, debug } from 'vscode'
 import { hasDocument, isOpenInMultipleEditors } from '../src/editor'
 import { failingAssertionStyle } from '../src/decorations'
+import { POINT_CONVERSION_COMPRESSED } from 'constants'
 
 describe('JestExt', () => {
   const mockSettings = (Settings as any) as jest.Mock<any>
@@ -31,7 +32,7 @@ describe('JestExt', () => {
       getConfig: callback => callback(),
       jestVersionMajor: 17,
     }))
-    new JestExt(projectWorkspace, channelStub, extensionSettings)
+    new JestExt(null, projectWorkspace, channelStub, extensionSettings)
 
     expect(mockShowErrorMessage.mock.calls).toMatchSnapshot()
   })
@@ -41,7 +42,7 @@ describe('JestExt', () => {
       getConfig: callback => callback(),
       jestVersionMajor: 20,
     }))
-    new JestExt(projectWorkspace, channelStub, extensionSettings)
+    new JestExt(null, projectWorkspace, channelStub, extensionSettings)
     expect(window.showErrorMessage).not.toBeCalled()
   })
 
@@ -54,7 +55,7 @@ describe('JestExt', () => {
     const decorationType: any = { dispose: jest.fn() }
 
     beforeEach(() => {
-      sut = new JestExt(projectWorkspace, channelStub, extensionSettings)
+      sut = new JestExt(null, projectWorkspace, channelStub, extensionSettings)
 
       sut.canUpdateDecorators = jest.fn().mockReturnValueOnce(true)
       sut.debugCodeLensProvider.didChange = jest.fn()
@@ -107,7 +108,7 @@ describe('JestExt', () => {
         debugCodeLens: {},
         enableInlineErrorMessages: true,
       }
-      const sut = new JestExt(projectWorkspace, channelStub, settings)
+      const sut = new JestExt(null, projectWorkspace, channelStub, settings)
       const editor: any = {
         document: { fileName: 'file.js' },
         setDecorations: jest.fn(),
@@ -146,7 +147,7 @@ describe('JestExt', () => {
         }
       })
 
-      const sut = new JestExt(projectWorkspace, channelStub, extensionSettings)
+      const sut = new JestExt(null, projectWorkspace, channelStub, extensionSettings)
       ;(sut.debugConfigurationProvider.provideDebugConfigurations as jest.Mock<Function>).mockReturnValue([
         { type: 'dummyconfig' },
       ])
@@ -165,7 +166,7 @@ describe('JestExt', () => {
 
   describe('onDidCloseTextDocument()', () => {
     const projectWorkspace = new ProjectWorkspace(null, null, null, null)
-    const sut = new JestExt(projectWorkspace, channelStub, extensionSettings)
+    const sut = new JestExt(null, projectWorkspace, channelStub, extensionSettings)
     const document = {} as any
     sut.removeCachedTestResults = jest.fn()
     sut.removeCachedDecorationTypes = jest.fn()
@@ -183,7 +184,7 @@ describe('JestExt', () => {
 
   describe('removeCachedTestResults()', () => {
     const projectWorkspace = new ProjectWorkspace(null, null, null, null)
-    const sut = new JestExt(projectWorkspace, channelStub, extensionSettings)
+    const sut = new JestExt(null, projectWorkspace, channelStub, extensionSettings)
     sut.testResultProvider.removeCachedResults = jest.fn()
 
     it('should do nothing when the document is falsy', () => {
@@ -208,7 +209,7 @@ describe('JestExt', () => {
 
   describe('removeCachedAnnotations()', () => {
     const projectWorkspace = new ProjectWorkspace(null, null, null, null)
-    const sut = new JestExt(projectWorkspace, channelStub, extensionSettings)
+    const sut = new JestExt(null, projectWorkspace, channelStub, extensionSettings)
 
     beforeEach(() => {
       sut.failingAssertionDecorators = {
@@ -234,7 +235,7 @@ describe('JestExt', () => {
     let sut
     const editor: any = {}
     const projectWorkspace = new ProjectWorkspace(null, null, null, null)
-    sut = new JestExt(projectWorkspace, channelStub, extensionSettings)
+    sut = new JestExt(null, projectWorkspace, channelStub, extensionSettings)
     sut.triggerUpdateDecorations = jest.fn()
 
     beforeEach(() => {
@@ -268,7 +269,7 @@ describe('JestExt', () => {
 
     beforeEach(() => {
       const projectWorkspace = new ProjectWorkspace(null, null, null, null)
-      sut = new JestExt(projectWorkspace, channelStub, extensionSettings)
+      sut = new JestExt(null, projectWorkspace, channelStub, extensionSettings)
     })
 
     function expectItTakesNoAction(event) {
@@ -335,7 +336,7 @@ describe('JestExt', () => {
 
   describe('toggleCoverageOverlay()', () => {
     it('should toggle the coverage overlay visibility', () => {
-      const sut = new JestExt(projectWorkspace, channelStub, extensionSettings)
+      const sut = new JestExt(null, projectWorkspace, channelStub, extensionSettings)
       sut.toggleCoverageOverlay()
 
       expect(sut.coverageOverlay.toggleVisibility).toBeCalled()
@@ -346,7 +347,7 @@ describe('JestExt', () => {
     it('should update the coverage overlay in visible editors', () => {
       const editor: any = {}
 
-      const sut = new JestExt(projectWorkspace, channelStub, extensionSettings)
+      const sut = new JestExt(null, projectWorkspace, channelStub, extensionSettings)
       sut.triggerUpdateDecorations(editor)
 
       expect(sut.coverageOverlay.updateVisibleEditors).toBeCalled()

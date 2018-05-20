@@ -89,6 +89,12 @@
           "type": "boolean",
           "default": false
         },
+        "jest.coverageFormatter": {
+          "description": "Coverage formatter to use",
+          "type": "string",
+          "enum": ["DefaultFormatter", "GutterFormatter"],
+          "default": "DefaultFormatter"
+        },
         "jest.enableCodeLens": {
           "description": "Whether codelens for debugging should show",
           "type": "boolean",

@@ -19,8 +19,7 @@ Bug-fixes within the same version aren't needed
 
 ### 2.7.1
 
-* Highlight the full line of the jest error, not just the first 6 characters - ThomasRooney
-* Fixes decorators [test highlight dots] working on Windows when jest path implicit - ThomasRooney
+* Add new coverage formatter named GutterFormatter (can be used by setting jest.coverageFormatter to GutterFormatter instead of DefaultFormatter) - Guymestef
 
 ### 2.7.0
 

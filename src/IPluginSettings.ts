@@ -15,4 +15,5 @@ export interface IPluginSettings {
   rootPath?: string
   runAllTestsFirst?: boolean
   showCoverageOnLoad: boolean
+  coverageFormatter: string
 }
