@@ -84,6 +84,11 @@
           "type": "boolean",
           "default": true
         },
+        "jest.coverageCollect": {
+          "description": "Wheter jest should collect test coverage information",
+          "type": "boolean",
+          "default": null
+        },
         "jest.showCoverageOnLoad": {
           "description": "Show code coverage when extension starts (if collected)",
           "type": "boolean",
@@ -232,7 +237,7 @@
     "elegant-spinner": "^1.0.1",
     "istanbul-lib-coverage": "^1.1.1",
     "istanbul-lib-source-maps": "^1.1.0",
-    "jest-editor-support": "22.4.0",
+    "jest-editor-support": "23.0.0-charlie.2",
     "jest-snapshot": "^22.1.2",
     "jest-test-typescript-parser": "^22.1.3",
     "micromatch": "^2.3.11"

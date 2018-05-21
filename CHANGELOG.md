@@ -5,6 +5,7 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 
+* Add a setting for collecting coverage - stephtr
 * Adds a setting to control when the debug CodeLens appears - seanpoulter
 * Support the "Jest: Start/Stop" and "Show output" commands without an active
   text editor - seanpoulter

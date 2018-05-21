@@ -14,6 +14,7 @@ export interface IPluginSettings {
   restartJestOnSnapshotUpdate?: boolean
   rootPath?: string
   runAllTestsFirst?: boolean
+  coverageCollect: boolean
   showCoverageOnLoad: boolean
   coverageFormatter: string
 }
