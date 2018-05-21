@@ -1,6 +1,7 @@
 import { platform } from 'os'
 import { existsSync, readFileSync } from 'fs'
 import { normalize, join } from 'path'
+import * as vscode from 'vscode'
 
 import { IPluginSettings } from './IPluginSettings'
 
@@ -62,22 +63,19 @@ function hasNodeExecutable(rootPath: string, executable: string): boolean {
  */
 export function pathToJest(pluginSettings: IPluginSettings) {
   if (pluginSettings.pathToJest) {
-    if (isBootstrappedWithCRA(pluginSettings.rootPath)) {
-      return 'npm test --'
-    }
     return normalize(pluginSettings.pathToJest)
   }
 
-  const platform = process.platform
-  if (platform === 'win32' && existsSync(join(pluginSettings.rootPath, 'node_modules', '.bin', 'jest.cmd'))) {
-    return normalize(join(pluginSettings.rootPath, 'node_modules', '.bin', 'jest.cmd'))
-  } else if (
-    (platform === 'linux' || platform === 'darwin') &&
-    existsSync(join(pluginSettings.rootPath, 'node_modules', '.bin', 'jest'))
-  ) {
-    return normalize(join(pluginSettings.rootPath, 'node_modules', '.bin', 'jest'))
+  if (isBootstrappedWithCRA(pluginSettings.rootPath)) {
+    return 'npm test --'
   }
 
+  const defaultPath = normalize('node_modules/.bin/jest')
+  if (existsSync(join(pluginSettings.rootPath, defaultPath))) {
+    return defaultPath
+  }
+
+  vscode.window.showWarningMessage("Jest couldn't be found. Maybe you forgot to run `npm install`?")
   return 'jest'
 }
 

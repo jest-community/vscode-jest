@@ -1,4 +1,4 @@
-import { TestReconciler, FormattedTestResults } from 'jest-editor-support'
+import { TestReconciler, JestTotalResults } from 'jest-editor-support'
 import { TestFileAssertionStatus } from 'jest-editor-support'
 import { TestReconciliationState } from './TestReconciliationState'
 import { TestResult } from './TestResult'
@@ -99,7 +99,7 @@ export class TestResultProvider {
     return result
   }
 
-  updateTestResults(data: FormattedTestResults): TestFileAssertionStatus[] {
+  updateTestResults(data: JestTotalResults): TestFileAssertionStatus[] {
     this.resetCache()
     return this.reconciler.updateFileWithJestStatus(data)
   }

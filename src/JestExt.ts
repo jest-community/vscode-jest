@@ -22,6 +22,7 @@ import { DecorationOptions } from './types'
 import { hasDocument, isOpenInMultipleEditors } from './editor'
 import { CoverageOverlay } from './Coverage/CoverageOverlay'
 import { JestProcess, JestProcessManager } from './JestProcessManagement'
+import { platform } from 'os'
 import { isWatchNotSupported, WatchMode } from './Jest'
 
 export class JestExt {
@@ -68,7 +69,8 @@ export class JestExt {
     this.failingAssertionDecorators = {}
     this.failDiagnostics = vscode.languages.createDiagnosticCollection('Jest')
     this.clearOnNextInput = true
-    this.jestSettings = new Settings(workspace)
+    const useShell = platform() === 'win32'
+    this.jestSettings = new Settings(workspace, { shell: useShell })
     this.pluginSettings = pluginSettings
 
     this.coverageMapProvider = new CoverageMapProvider()
@@ -259,7 +261,8 @@ export class JestExt {
     this.workspace.pathToJest = pathToJest(updatedSettings)
     this.workspace.pathToConfig = pathToConfig(updatedSettings)
 
-    this.jestSettings = new Settings(this.workspace)
+    const useShell = platform() === 'win32'
+    this.jestSettings = new Settings(this.workspace, { shell: useShell })
 
     this.coverageOverlay.enabled = updatedSettings.showCoverageOnLoad
 
