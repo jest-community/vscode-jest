@@ -20,8 +20,7 @@ export function registerSnapshotCodeLens(enableSnapshotPreviews: boolean) {
 
 class SnapshotCodeLensProvider implements vscode.CodeLensProvider {
   public provideCodeLenses(document: vscode.TextDocument, _token: vscode.CancellationToken) {
-    // temporarily use `undefined` as parser argument, until Jest/#6212 is published
-    const snapshots = new Snapshot(undefined)
+    const snapshots = new Snapshot()
     return snapshots.getMetadata(document.uri.fsPath).map(snapshot => {
       const { line } = snapshot.node.loc.start
       const range = new vscode.Range(line - 1, 0, line - 1, 0)
