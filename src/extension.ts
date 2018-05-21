@@ -9,6 +9,7 @@ import { IPluginSettings } from './IPluginSettings'
 import { registerStatusBar } from './statusBar'
 import { registerSnapshotCodeLens, registerSnapshotPreview } from './SnapshotCodeLens'
 import { registerCoverageCodeLens } from './Coverage'
+import { TestState } from './DebugCodeLens'
 
 let extensionInstance: JestExt
 
@@ -24,7 +25,7 @@ export function activate(context: vscode.ExtensionContext) {
   const channel = vscode.window.createOutputChannel('Jest')
 
   // We need a singleton to represent the extension
-  extensionInstance = new JestExt(workspace, channel, pluginSettings)
+  extensionInstance = new JestExt(context, workspace, channel, pluginSettings)
 
   const languages = [
     { language: 'javascript' },
@@ -34,12 +35,12 @@ export function activate(context: vscode.ExtensionContext) {
   ]
   context.subscriptions.push(
     registerStatusBar(channel),
-    vscode.commands.registerTextEditorCommand(`${extensionName}.start`, () => {
+    vscode.commands.registerCommand(`${extensionName}.start`, () => {
       vscode.window.showInformationMessage('Started Jest, press escape to hide this message.')
       extensionInstance.startProcess()
     }),
-    vscode.commands.registerTextEditorCommand(`${extensionName}.stop`, () => extensionInstance.stopProcess()),
-    vscode.commands.registerTextEditorCommand(`${extensionName}.show-channel`, () => {
+    vscode.commands.registerCommand(`${extensionName}.stop`, () => extensionInstance.stopProcess()),
+    vscode.commands.registerCommand(`${extensionName}.show-channel`, () => {
       channel.show()
     }),
     ...registerSnapshotCodeLens(pluginSettings.enableSnapshotPreviews),
@@ -52,6 +53,10 @@ export function activate(context: vscode.ExtensionContext) {
     ),
     vscode.commands.registerCommand(`${extensionName}.run-test`, extensionInstance.runTest),
     vscode.languages.registerCodeLensProvider(languages, extensionInstance.debugCodeLensProvider),
+    // this provides the opportunity to inject test names into the DebugConfiguration
+    vscode.debug.registerDebugConfigurationProvider('node', extensionInstance.debugConfigurationProvider),
+    // this provides the snippets generation
+    vscode.debug.registerDebugConfigurationProvider('vscode-jest-tests', extensionInstance.debugConfigurationProvider),
     vscode.workspace.onDidChangeConfiguration(e => {
       if (e.affectsConfiguration('jest')) {
         const updatedSettings = getExtensionSettings()
@@ -72,19 +77,23 @@ export function deactivate() {
   extensionInstance.deactivate()
 }
 
-function getExtensionSettings(): IPluginSettings {
+export function getExtensionSettings(): IPluginSettings {
   const config = vscode.workspace.getConfiguration('jest')
   return {
     autoEnable: config.get<boolean>('autoEnable'),
-    pathToConfig: config.get<string>('pathToConfig'),
-    pathToJest: config.get<string>('pathToJest'),
-    enableCodeLens: config.get<boolean>('enableCodeLens'),
+    debugCodeLens: {
+      enabled: config.get<boolean>('enableCodeLens'),
+      showWhenTestStateIn: config.get<TestState[]>('debugCodeLens.showWhenTestStateIn'),
+    },
     enableInlineErrorMessages: config.get<boolean>('enableInlineErrorMessages'),
     enableSnapshotPreviews: config.get<boolean>('enableSnapshotPreviews'),
     enableSnapshotUpdateMessages: config.get<boolean>('enableSnapshotUpdateMessages'),
+    pathToConfig: config.get<string>('pathToConfig'),
+    pathToJest: config.get<string>('pathToJest'),
+    restartJestOnSnapshotUpdate: config.get<boolean>('restartJestOnSnapshotUpdate'),
     rootPath: path.join(vscode.workspace.rootPath, config.get<string>('rootPath')),
     runAllTestsFirst: config.get<boolean>('runAllTestsFirst'),
     showCoverageOnLoad: config.get<boolean>('showCoverageOnLoad'),
-    restartJestOnSnapshotUpdate: config.get<boolean>('restartJestOnSnapshotUpdate'),
+    coverageFormatter: config.get<string>('coverageFormatter'),
   }
 }

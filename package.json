@@ -2,7 +2,7 @@
   "name": "vscode-jest",
   "displayName": "Jest",
   "description": "Use Facebook's Jest With Pleasure.",
-  "version": "2.6.4",
+  "version": "2.7.2",
   "publisher": "Orta",
   "engines": {
     "vscode": "^1.18.0"
@@ -57,7 +57,7 @@
           "description":
             "The path to the Jest binary, or an npm command to run tests prefixed with `--` e.g. `npm test --`",
           "type": "string",
-          "default": "node_modules/.bin/jest"
+          "default": null
         },
         "jest.pathToConfig": {
           "description": "The path to your Jest configuration file",
@@ -89,10 +89,24 @@
           "type": "boolean",
           "default": false
         },
+        "jest.coverageFormatter": {
+          "description": "Coverage formatter to use",
+          "type": "string",
+          "enum": ["DefaultFormatter", "GutterFormatter"],
+          "default": "DefaultFormatter"
+        },
         "jest.enableCodeLens": {
           "description": "Whether codelens for debugging should show",
           "type": "boolean",
           "default": true
+        },
+        "jest.debugCodeLens.showWhenTestStateIn": {
+          "description": "Show the debug CodeLens when the it/test block state is in this collection",
+          "type": "array",
+          "items": {
+            "enum": ["fail", "pass", "skip", "unknown"]
+          },
+          "default": ["fail", "unknown"]
         },
         "jest.enableSnapshotPreviews": {
           "description": "Whether snapshot previews should show",
@@ -122,6 +136,60 @@
       {
         "command": "io.orta.jest.coverage.toggle",
         "title": "Jest: Toggle Coverage Overlay"
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "vscode-jest-tests",
+        "label": "Debug Jest tests using vscode-jest",
+        "languages": ["javascript", "javascriptreact", "typescript", "typescriptreact"],
+        "configurationSnippets": [
+          {
+            "label": "Jest:  Default jest configuration",
+            "description": "Running tests by directly running jest",
+            "body": {
+              "type": "node",
+              "name": "vscode-jest-tests",
+              "request": "launch",
+              "program": "^\"\\${workspaceFolder}/node_modules/jest/bin/jest\"",
+              "args": ["--runInBand"],
+              "cwd": "^\"\\${workspaceFolder}\"",
+              "console": "integratedTerminal",
+              "internalConsoleOptions": "neverOpen"
+            }
+          },
+          {
+            "label": "Jest: create-react-app",
+            "description":
+              "Running jest within apps bootstrapped by create-react-app (and similar); you may have to edit `runtimeExecutable`",
+            "body": {
+              "type": "node",
+              "name": "vscode-jest-tests",
+              "request": "launch",
+              "runtimeExecutable": "^\"\\${workspaceFolder}/node_modules/.bin/react-scripts\"",
+              "args": ["test", "--env=jsdom", "--runInBand"],
+              "cwd": "^\"\\${workspaceFolder}\"",
+              "console": "integratedTerminal",
+              "protocol": "inspector",
+              "internalConsoleOptions": "neverOpen"
+            }
+          },
+          {
+            "label": "Jest: create-react-app (ejected)",
+            "description": "Running jest within apps bootstrapped by create-react-app (and similar) after ejecting",
+            "body": {
+              "type": "node",
+              "name": "vscode-jest-tests",
+              "request": "launch",
+              "program": "^\"\\${workspaceFolder}/scripts/test\"",
+              "args": ["--env=jsdom", "--runInBand"],
+              "cwd": "^\"\\${workspaceFolder}\"",
+              "console": "integratedTerminal",
+              "protocol": "inspector",
+              "internalConsoleOptions": "neverOpen"
+            }
+          }
+        ]
       }
     ]
   },
@@ -153,7 +221,7 @@
     "husky": "^0.14.3",
     "jest": "^22.0.4",
     "lint-staged": "^4.2.3",
-    "prettier": "^1.7.3",
+    "prettier": "1.7.3",
     "rimraf": "^2.6.2",
     "tslint": "^5.7.0",
     "tslint-config-prettier": "^1.5.0",

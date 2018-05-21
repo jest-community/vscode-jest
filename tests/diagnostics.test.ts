@@ -1,5 +1,4 @@
 jest.unmock('../src/diagnostics')
-
 import { updateDiagnostics, resetDiagnostics, failedSuiteCount } from '../src/diagnostics'
 import * as vscode from 'vscode'
 import { TestFileAssertionStatus, TestReconcilationState, TestAssertionStatus } from 'jest-editor-support'
@@ -14,6 +13,8 @@ class MockDiagnosticCollection implements vscode.DiagnosticCollection {
   has = jest.fn()
   dispose = jest.fn()
 }
+
+vscode.window.visibleTextEditors = []
 
 describe('test diagnostics', () => {
   describe('resetDiagnostics', () => {
@@ -163,6 +164,27 @@ describe('test diagnostics', () => {
         expect(rangeCalls.length).toEqual(1)
         validateRange(rangeCalls[0], 0, 0)
       })
+    })
+
+    it('should highlight the full line', () => {
+      const mockDiagnostics = new MockDiagnosticCollection()
+      const assertion = createAssertion('a', 'KnownFail')
+      const tests = [createTestResult('f', [assertion])]
+      vscode.Uri.file = jest.fn(() => ({ fsPath: 'f' }))
+      vscode.window.visibleTextEditors = [
+        {
+          document: {
+            lineAt: jest.fn(() => ({
+              firstNonWhitespaceCharacterIndex: 2,
+              text: '  text',
+            })),
+            uri: { fsPath: 'f' },
+          },
+        },
+      ] as any[]
+      updateDiagnostics(tests, mockDiagnostics)
+      expect(vscode.window.visibleTextEditors[0].document.lineAt).toHaveBeenCalled()
+      expect(vscode.Range).toHaveBeenCalledWith(assertion.line - 1, 2, assertion.line - 1, 6)
     })
   })
 })

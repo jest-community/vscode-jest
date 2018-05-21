@@ -116,6 +116,37 @@ describe('TestResultProvider', () => {
       expect(actual[0].terseMessage).toBeUndefined()
       expect(actual[0].lineNumberOfError).toBeUndefined()
     })
+    it('should handle duplicate test names', () => {
+      const sut = new TestResultProvider()
+      ;(parseTest as jest.Mock<{}>).mockReturnValueOnce({
+        itBlocks: [
+          testBlock,
+          {
+            name: testBlock.name,
+            start: {
+              line: 5,
+              column: 3,
+            },
+            end: {
+              line: 7,
+              column: 5,
+            },
+          },
+        ],
+      })
+      assertionsForTestFile.mockReturnValueOnce([
+        assertion,
+        {
+          title: testBlock.name,
+          status: TestReconciliationState.KnownSuccess,
+        },
+      ])
+      const actual = sut.getResults(filePath)
+
+      expect(actual).toHaveLength(2)
+      expect(actual[0].status).toBe(TestReconciliationState.KnownFail)
+      expect(actual[1].status).toBe(TestReconciliationState.KnownSuccess)
+    })
   })
 
   describe('getSortedResults()', () => {

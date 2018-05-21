@@ -1,6 +1,5 @@
 import * as vscode from 'vscode'
 import * as path from 'path'
-import * as fs from 'fs'
 import { Settings, ProjectWorkspace, JestTotalResults } from 'jest-editor-support'
 import { matcher } from 'micromatch'
 
@@ -18,11 +17,13 @@ import { readFileSync } from 'fs'
 import { CoverageMapProvider } from './Coverage'
 import { updateDiagnostics, resetDiagnostics, failedSuiteCount } from './diagnostics'
 import { DebugCodeLensProvider } from './DebugCodeLens'
+import { DebugConfigurationProvider } from './DebugConfigurationProvider'
 import { DecorationOptions } from './types'
 import { hasDocument, isOpenInMultipleEditors } from './editor'
 import { CoverageOverlay } from './Coverage/CoverageOverlay'
 import { JestProcess, JestProcessManager } from './JestProcessManagement'
 import { platform } from 'os'
+import { isWatchNotSupported, WatchMode } from './Jest'
 
 export class JestExt {
   private workspace: ProjectWorkspace
@@ -34,6 +35,7 @@ export class JestExt {
 
   testResultProvider: TestResultProvider
   public debugCodeLensProvider: DebugCodeLensProvider
+  debugConfigurationProvider: DebugConfigurationProvider
 
   // So you can read what's going on
   private channel: vscode.OutputChannel
@@ -56,7 +58,12 @@ export class JestExt {
 
   private clearOnNextInput: boolean
 
-  constructor(workspace: ProjectWorkspace, outputChannel: vscode.OutputChannel, pluginSettings: IPluginSettings) {
+  constructor(
+    context: vscode.ExtensionContext,
+    workspace: ProjectWorkspace,
+    outputChannel: vscode.OutputChannel,
+    pluginSettings: IPluginSettings
+  ) {
     this.workspace = workspace
     this.channel = outputChannel
     this.failingAssertionDecorators = {}
@@ -67,10 +74,19 @@ export class JestExt {
     this.pluginSettings = pluginSettings
 
     this.coverageMapProvider = new CoverageMapProvider()
-    this.coverageOverlay = new CoverageOverlay(this.coverageMapProvider, pluginSettings.showCoverageOnLoad)
+    this.coverageOverlay = new CoverageOverlay(
+      context,
+      this.coverageMapProvider,
+      pluginSettings.showCoverageOnLoad,
+      pluginSettings.coverageFormatter
+    )
 
     this.testResultProvider = new TestResultProvider()
-    this.debugCodeLensProvider = new DebugCodeLensProvider(this.testResultProvider, pluginSettings.enableCodeLens)
+    this.debugCodeLensProvider = new DebugCodeLensProvider(
+      this.testResultProvider,
+      pluginSettings.debugCodeLens.enabled ? pluginSettings.debugCodeLens.showWhenTestStateIn : []
+    )
+    this.debugConfigurationProvider = new DebugConfigurationProvider()
 
     this.jestProcessManager = new JestProcessManager({
       projectWorkspace: workspace,
@@ -98,6 +114,10 @@ export class JestExt {
 
     if (this.shouldIgnoreOutput(message)) {
       return
+    }
+
+    if (isWatchNotSupported(message)) {
+      this.jestProcess.watchMode = WatchMode.WatchAll
     }
 
     // The "tests are done" message comes through stdErr
@@ -149,7 +169,7 @@ export class JestExt {
     }
 
     this.jestProcess = this.jestProcessManager.startJestProcess({
-      watch: true,
+      watchMode: WatchMode.Watch,
       keepAlive: true,
       exitCallback: (jestProcess, jestProcessInWatchMode) => {
         if (jestProcessInWatchMode) {
@@ -245,7 +265,10 @@ export class JestExt {
     this.jestSettings = new Settings(this.workspace, { shell: useShell })
 
     this.coverageOverlay.enabled = updatedSettings.showCoverageOnLoad
-    this.debugCodeLensProvider.enabled = updatedSettings.enableCodeLens
+
+    this.debugCodeLensProvider.showWhenTestStateIn = updatedSettings.debugCodeLens.enabled
+      ? updatedSettings.debugCodeLens.showWhenTestStateIn
+      : []
 
     this.stopProcess()
 
@@ -445,118 +468,11 @@ export class JestExt {
     version(ver)
   }
 
-  /**
-   * Primitive way to resolve path to jest.js
-   */
-  private resolvePathToJestBin() {
-    let jest = this.workspace.pathToJest
-    if (!path.isAbsolute(jest)) {
-      jest = path.join(vscode.workspace.rootPath, jest)
-    }
-
-    const basename = path.basename(jest)
-    switch (basename) {
-      case 'jest.js': {
-        return jest
-      }
-
-      case 'jest.cmd': {
-        /* i need to extract '..\jest-cli\bin\jest.js' from line 2
-
-        @IF EXIST "%~dp0\node.exe" (
-          "%~dp0\node.exe"  "%~dp0\..\jest-cli\bin\jest.js" %*
-        ) ELSE (
-          @SETLOCAL
-          @SET PATHEXT=%PATHEXT:;.JS;=;%
-          node  "%~dp0\..\jest-cli\bin\jest.js" %*
-        )
-        */
-        const line = fs.readFileSync(jest, 'utf8').split('\n')[1]
-        const match = /^\s*"[^"]+"\s+"%~dp0\\([^"]+)"/.exec(line)
-        return path.join(path.dirname(jest), match[1])
-      }
-
-      case 'jest': {
-        /* file without extension uses first line as file type
-           in case of node script i can use this file directly,
-           in case of linux shell script i need to extract path from line 9
-        #!/bin/sh
-        basedir=$(dirname "$(echo "$0" | sed -e 's,\\,/,g')")
-
-        case `uname` in
-            *CYGWIN*) basedir=`cygpath -w "$basedir"`;;
-        esac
-
-        if [ -x "$basedir/node" ]; then
-          "$basedir/node"  "$basedir/../jest-cli/bin/jest.js" "$@"
-          ret=$?
-        else
-          node  "$basedir/../jest-cli/bin/jest.js" "$@"
-          ret=$?
-        fi
-        exit $ret
-        */
-        const lines = fs.readFileSync(jest, 'utf8').split('\n')
-        switch (lines[0]) {
-          case '#!/usr/bin/env node': {
-            return jest
-          }
-
-          case '#!/bin/sh': {
-            const line = lines[8]
-            const match = /^\s*"[^"]+"\s+"\$basedir\/([^"]+)"/.exec(line)
-            if (match) {
-              return path.join(path.dirname(jest), match[1])
-            }
-
-            break
-          }
-        }
-
-        break
-      }
-
-      case 'npm test --':
-      case 'npm.cmd test --': {
-        vscode.window.showErrorMessage('Debugging of tasks is currently only available when directly running jest!')
-        return undefined
-      }
-    }
-
-    vscode.window.showErrorMessage('Cannot find jest.js file!')
-    return undefined
-  }
-
-  public runTest = (fileName: string, identifier: string) => {
+  public runTest = async (fileName: string, identifier: string) => {
     const restart = this.jestProcessManager.numberOfProcesses > 0
     this.jestProcessManager.stopAll()
-    const program = this.resolvePathToJestBin()
-    if (!program) {
-      console.log("Could not find Jest's CLI path")
-      return
-    }
 
-    const escapedIdentifier = JSON.stringify(identifier).slice(1, -1)
-
-    const args = ['--runInBand', fileName, '--testNamePattern', escapedIdentifier]
-    if (this.pluginSettings.pathToConfig.length) {
-      args.push('--config', this.pluginSettings.pathToConfig)
-    }
-
-    const port = Math.floor(Math.random() * 20000) + 10000
-    const configuration = {
-      name: 'TestRunner',
-      type: 'node',
-      request: 'launch',
-      program,
-      args,
-      runtimeArgs: ['--inspect-brk=' + port],
-      port,
-      protocol: 'inspector',
-      console: 'integratedTerminal',
-      smartStep: true,
-      sourceMaps: true,
-    }
+    this.debugConfigurationProvider.prepareTestRun(fileName, identifier)
 
     const handle = vscode.debug.onDidTerminateDebugSession(_ => {
       handle.dispose()
@@ -565,7 +481,16 @@ export class JestExt {
       }
     })
 
-    vscode.debug.startDebugging(vscode.workspace.workspaceFolders[0], configuration)
+    const workspaceFolder = vscode.workspace.workspaceFolders[0]
+    try {
+      // try to run the debug configuration from launch.json
+      await vscode.debug.startDebugging(workspaceFolder, 'vscode-jest-tests')
+    } catch {
+      // if that fails, there (probably) isn't any debug configuration (at least no correctly named one)
+      // therefore debug the test using the default configuration
+      const debugConfiguration = this.debugConfigurationProvider.provideDebugConfigurations(workspaceFolder)[0]
+      await vscode.debug.startDebugging(workspaceFolder, debugConfiguration)
+    }
   }
 
   onDidCloseTextDocument(document: vscode.TextDocument) {

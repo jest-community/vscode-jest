@@ -5,15 +5,29 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 
-* [your thing] - [you]
+* Adds a setting to control when the debug CodeLens appears - seanpoulter
+* Support the "Jest: Start/Stop" and "Show output" commands without an active
+  text editor - seanpoulter
+* Restart Jest with --watchAll when --watch is not supported without git/hg
+  - seanpoulter
 
 -->
 
-## Master
+### 2.7.2
+
+* Fix decorators showing corrupt values when two tests of the same name in one file (e.g. in different describe blocks) exist - ThomasRooney
+
+### 2.7.1
+
+* Add new coverage formatter named GutterFormatter (can be used by setting jest.coverageFormatter to GutterFormatter instead of DefaultFormatter) - Guymestef
+
+### 2.7.0
+
+* Add the ability to configure debugging of tests - stephtr, connectdotz
 
 ### 2.6.4
 
-* Fixes debugging of tasks on Windows (bug introduced in 2.6.2) - stephtr
+* Fixes debugging of tests on Windows (bug introduced in 2.6.2) - stephtr
 
 ### 2.6.3
 

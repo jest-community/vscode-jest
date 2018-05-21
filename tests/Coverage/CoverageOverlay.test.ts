@@ -29,20 +29,20 @@ describe('CoverageOverlay', () => {
 
   describe('constructor', () => {
     it('should set the default visibility', () => {
-      const sut = new CoverageOverlay(coverageMapProvider)
+      const sut = new CoverageOverlay(null, coverageMapProvider)
 
       expect(sut.enabled).toBe(CoverageOverlay.defaultVisibility)
     })
 
     it('should set the visibility if provided', () => {
       const enabled = !CoverageOverlay.defaultVisibility
-      const sut = new CoverageOverlay(coverageMapProvider, enabled)
+      const sut = new CoverageOverlay(null, coverageMapProvider, enabled)
 
       expect(sut.enabled).toBe(enabled)
     })
 
     it('should set the default overlay formatter', () => {
-      const sut = new CoverageOverlay(coverageMapProvider)
+      const sut = new CoverageOverlay(null, coverageMapProvider)
 
       expect(DefaultFormatter).toBeCalledWith(coverageMapProvider)
       expect(sut.formatter).toBeInstanceOf(DefaultFormatter)
@@ -53,7 +53,7 @@ describe('CoverageOverlay', () => {
     describe('get', () => {
       it('should return the overlay visibility', () => {
         const expected = true
-        const sut = new CoverageOverlay(coverageMapProvider, expected)
+        const sut = new CoverageOverlay(null, coverageMapProvider, expected)
 
         expect(sut.enabled).toBe(expected)
       })
@@ -62,7 +62,7 @@ describe('CoverageOverlay', () => {
     describe('set', () => {
       it('should set the overlay visibility', () => {
         const expected = true
-        const sut = new CoverageOverlay(coverageMapProvider, !expected)
+        const sut = new CoverageOverlay(null, coverageMapProvider, !expected)
         sut.updateVisibleEditors = jest.fn()
         sut.enabled = expected
 
@@ -70,7 +70,7 @@ describe('CoverageOverlay', () => {
       })
 
       it('should refresh the overlays in visible editors', () => {
-        const sut = new CoverageOverlay(coverageMapProvider)
+        const sut = new CoverageOverlay(null, coverageMapProvider)
         sut.updateVisibleEditors = jest.fn()
         sut.enabled = true
 
@@ -82,7 +82,7 @@ describe('CoverageOverlay', () => {
   describe('toggleVisibility()', () => {
     it('should enable the overlay when disabled', () => {
       const enabled = false
-      const sut = new CoverageOverlay(coverageMapProvider, enabled)
+      const sut = new CoverageOverlay(null, coverageMapProvider, enabled)
       sut.updateVisibleEditors = jest.fn()
       sut.toggleVisibility()
 
@@ -91,7 +91,7 @@ describe('CoverageOverlay', () => {
 
     it('should disable the overlay when enabled', () => {
       const enabled = true
-      const sut = new CoverageOverlay(coverageMapProvider, enabled)
+      const sut = new CoverageOverlay(null, coverageMapProvider, enabled)
       sut.updateVisibleEditors = jest.fn()
       sut.toggleVisibility()
 
@@ -99,7 +99,7 @@ describe('CoverageOverlay', () => {
     })
 
     it('should refresh the overlays in visible editors', () => {
-      const sut = new CoverageOverlay(coverageMapProvider)
+      const sut = new CoverageOverlay(null, coverageMapProvider)
       sut.updateVisibleEditors = jest.fn()
       sut.toggleVisibility()
 
@@ -112,7 +112,7 @@ describe('CoverageOverlay', () => {
       const editors = [{}, {}, {}]
       vscodeProperties.window.visibleTextEditors.mockReturnValueOnce(editors)
 
-      const sut = new CoverageOverlay(coverageMapProvider)
+      const sut = new CoverageOverlay(null, coverageMapProvider)
       sut.update = jest.fn()
       sut.updateVisibleEditors()
 
@@ -124,7 +124,7 @@ describe('CoverageOverlay', () => {
 
   describe('update()', () => {
     it('should do nothing if the editor does not have a valid document', () => {
-      const sut = new CoverageOverlay(coverageMapProvider)
+      const sut = new CoverageOverlay(null, coverageMapProvider)
       ;(hasDocument as jest.Mock<{}>).mockReturnValueOnce(false)
 
       const editor: any = {}
@@ -136,7 +136,7 @@ describe('CoverageOverlay', () => {
 
     it('should add the overlay when enabled', () => {
       const enabled = true
-      const sut = new CoverageOverlay(coverageMapProvider, enabled)
+      const sut = new CoverageOverlay(null, coverageMapProvider, enabled)
       ;(hasDocument as jest.Mock<{}>).mockReturnValueOnce(true)
 
       const editor: any = {}
@@ -147,7 +147,7 @@ describe('CoverageOverlay', () => {
 
     it('should remove the overlay when disabled', () => {
       const enabled = false
-      const sut = new CoverageOverlay(coverageMapProvider, enabled)
+      const sut = new CoverageOverlay(null, coverageMapProvider, enabled)
       ;(hasDocument as jest.Mock<{}>).mockReturnValueOnce(true)
 
       const editor: any = {}

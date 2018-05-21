@@ -1,17 +1,32 @@
 import { AbstractFormatter } from './Formatters/AbstractFormatter'
 import { CoverageMapProvider } from './CoverageMapProvider'
 import { DefaultFormatter } from './Formatters/DefaultFormatter'
+import { GutterFormatter } from './Formatters/GutterFormatter'
 import * as vscode from 'vscode'
 import { hasDocument } from '../editor'
 
 export class CoverageOverlay {
   static readonly defaultVisibility = false
+  static readonly defaultFormatter = 'DefaultFormatter'
   private _enabled: boolean
   formatter: AbstractFormatter
 
-  constructor(coverageMapProvider: CoverageMapProvider, enabled: boolean = CoverageOverlay.defaultVisibility) {
+  constructor(
+    context: vscode.ExtensionContext,
+    coverageMapProvider: CoverageMapProvider,
+    enabled: boolean = CoverageOverlay.defaultVisibility,
+    coverageFormatter: string = CoverageOverlay.defaultFormatter
+  ) {
     this._enabled = enabled
-    this.formatter = new DefaultFormatter(coverageMapProvider)
+    switch (coverageFormatter) {
+      case 'GutterFormatter':
+        this.formatter = new GutterFormatter(context, coverageMapProvider)
+        break
+
+      default:
+        this.formatter = new DefaultFormatter(coverageMapProvider)
+        break
+    }
   }
 
   get enabled() {
