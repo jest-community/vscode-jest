@@ -258,7 +258,6 @@ export class JestExt {
     this.workspace.rootPath = updatedSettings.rootPath
     this.workspace.pathToJest = pathToJest(updatedSettings)
     this.workspace.pathToConfig = pathToConfig(updatedSettings)
-    this.workspace.collectCoverage = updatedSettings.coverageCollect
 
     this.jestSettings = new Settings(this.workspace)
 
@@ -550,10 +549,5 @@ export class JestExt {
 
   toggleCoverageOverlay() {
     this.coverageOverlay.toggleVisibility()
-    if (this.coverageOverlay.enabled && !this.workspace.collectCoverage) {
-      vscode.window.showWarningMessage(
-        'In order to view the coverage overlay, collectingCoverage has to be enabled in your settings.'
-      )
-    }
   }
 }

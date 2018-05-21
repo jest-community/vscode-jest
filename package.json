@@ -84,11 +84,6 @@
           "type": "boolean",
           "default": true
         },
-        "jest.coverageCollect": {
-          "description": "Wheter jest should collect test coverage information",
-          "type": "boolean",
-          "default": false
-        },
         "jest.showCoverageOnLoad": {
           "description": "Show code coverage when extension starts (if collected)",
           "type": "boolean",
