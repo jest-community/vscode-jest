@@ -1,6 +1,7 @@
 import { platform } from 'os'
 import { existsSync, readFileSync } from 'fs'
 import { normalize, join } from 'path'
+import * as vscode from 'vscode'
 
 import { IPluginSettings } from './IPluginSettings'
 
@@ -74,6 +75,7 @@ export function pathToJest(pluginSettings: IPluginSettings) {
     return defaultPath
   }
 
+  vscode.window.showWarningMessage("Jest couldn't be found. Maybe you forgot to run `npm install`?")
   return 'jest'
 }
 

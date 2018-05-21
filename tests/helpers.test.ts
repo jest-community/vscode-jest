@@ -1,5 +1,10 @@
 jest.unmock('../src/helpers')
 jest.mock('fs')
+jest.mock('vscode', () => ({
+  window: {
+    showWarningMessage: () => {},
+  },
+}))
 
 import { pathToJestPackageJSON, isCRATestCommand, pathToJest } from '../src/helpers'
 import { existsSync, readFileSync } from 'fs'
