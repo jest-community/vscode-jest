@@ -135,7 +135,7 @@ describe('Extension', () => {
         enableSnapshotPreviews: true,
         enableSnapshotUpdateMessages: true,
         pathToConfig: '',
-        pathToJest: null,
+        pathToJest: '',
         restartJestOnSnapshotUpdate: false,
         rootPath: '<rootDir>',
         runAllTestsFirst: true,

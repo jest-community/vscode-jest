@@ -1,21 +1,63 @@
 jest.unmock('../src/helpers')
 jest.mock('fs')
 
-import { pathToJestPackageJSON, isCRATestCommand } from '../src/helpers'
-import { existsSync } from 'fs'
+import { pathToJestPackageJSON, isCRATestCommand, pathToJest } from '../src/helpers'
+import { existsSync, readFileSync } from 'fs'
 import * as path from 'path'
 
 const existsMock = existsSync as jest.Mock<boolean>
-const defaultPathToJest = 'node_modules/.bin/jest'
+const readFileMock = readFileSync as jest.Mock<string>
 
 describe('ModuleHelpers', () => {
+  describe('pathToJest', () => {
+    it('should return the set value', () => {
+      const workspace: any = {
+        pathToJest: 'abcd',
+      }
+      expect(pathToJest(workspace)).toBe(workspace.pathToJest)
+    })
+
+    it('should recognize CRA apps', () => {
+      readFileMock.mockReturnValueOnce('{"scripts":{"test":"react-scripts test"}}')
+
+      const workspace: any = {
+        rootPath: '',
+        pathToJest: '',
+      }
+      expect(pathToJest(workspace)).toBe('npm test --')
+    })
+
+    it('should default to `node_modules/.bin/jest`', () => {
+      readFileMock.mockReturnValueOnce('{}')
+      existsMock.mockReturnValueOnce(true)
+
+      const defaultPath = path.normalize('node_modules/.bin/jest')
+      const workspace: any = {
+        rootPath: '',
+        pathToJest: '',
+      }
+      expect(pathToJest(workspace)).toBe(defaultPath)
+    })
+
+    it('should fallback to `jest` if everything other fails', () => {
+      readFileMock.mockReturnValueOnce('{}')
+      existsMock.mockReturnValueOnce(false)
+
+      const workspace: any = {
+        rootPath: '',
+        pathToJest: '',
+      }
+      expect(pathToJest(workspace)).toBe('jest')
+    })
+  })
+
   describe('pathToJestPackageJSON', () => {
     it('should return null when not found', () => {
       existsMock.mockReturnValueOnce(false).mockReturnValueOnce(false)
 
       const workspace: any = {
         rootPath: '',
-        pathToJest: defaultPathToJest,
+        pathToJest: '',
       }
       expect(pathToJestPackageJSON(workspace)).toBe(null)
     })
@@ -28,7 +70,7 @@ describe('ModuleHelpers', () => {
 
           const workspace: any = {
             rootPath: '',
-            pathToJest: defaultPathToJest,
+            pathToJest: '',
           }
           expect(pathToJestPackageJSON(workspace)).toBe(expected)
         })
@@ -39,7 +81,7 @@ describe('ModuleHelpers', () => {
 
           const workspace: any = {
             rootPath: '',
-            pathToJest: defaultPathToJest,
+            pathToJest: '',
           }
           expect(pathToJestPackageJSON(workspace)).toBe(expected)
         })
@@ -52,7 +94,7 @@ describe('ModuleHelpers', () => {
 
           const workspace: any = {
             rootPath: path.join('..', '..'),
-            pathToJest: defaultPathToJest,
+            pathToJest: '',
           }
           expect(pathToJestPackageJSON(workspace)).toBe(expected)
         })
@@ -63,7 +105,7 @@ describe('ModuleHelpers', () => {
 
           const workspace: any = {
             rootPath: path.join('..', '..'),
-            pathToJest: defaultPathToJest,
+            pathToJest: '',
           }
           expect(pathToJestPackageJSON(workspace)).toBe(expected)
         })
