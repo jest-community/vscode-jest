@@ -87,19 +87,48 @@ describe('TestResultProvider', () => {
       })
     })
 
+    it('should look up the test result by line number', () => {
+      const sut = new TestResultProvider()
+      ;(parseTest as jest.Mock<{}>).mockReturnValueOnce({
+        itBlocks: [testBlock],
+      })
+      const assertionC = Object.assign({}, assertion)
+      assertionC.title = 'xxx'
+      assertionsForTestFile.mockReturnValueOnce([assertionC])
+      const actual = sut.getResults(filePath)
+
+      expect(actual).toHaveLength(1)
+      expect(actual[0].name).toBe(testBlock.name)
+      expect(actual[0].status).toBe(assertionC.status)
+      expect(actual[0].shortMessage).toBe(assertionC.shortMessage)
+      expect(actual[0].terseMessage).toBe(assertionC.terseMessage)
+      expect(actual[0].lineNumberOfError).toEqual(assertionC.line - 1)
+    })
+
     it('should look up the test result by test name', () => {
       const sut = new TestResultProvider()
       ;(parseTest as jest.Mock<{}>).mockReturnValueOnce({
         itBlocks: [testBlock],
       })
-      assertionsForTestFile.mockReturnValueOnce([assertion])
+      const assertionC = Object.assign({}, assertion)
+      assertionC.line = undefined
+      assertionsForTestFile.mockReturnValueOnce([assertionC])
       const actual = sut.getResults(filePath)
 
       expect(actual).toHaveLength(1)
       expect(actual[0].name).toBe(testBlock.name)
-      expect(actual[0].status).toBe(assertion.status)
-      expect(actual[0].shortMessage).toBe(assertion.shortMessage)
-      expect(actual[0].terseMessage).toBe(assertion.terseMessage)
+      expect(actual[0].status).toBe(assertionC.status)
+      expect(actual[0].shortMessage).toBe(assertionC.shortMessage)
+      expect(actual[0].terseMessage).toBe(assertionC.terseMessage)
+      expect(actual[0].lineNumberOfError).toEqual(testBlock.end.line - 1)
+      expect(actual[0].start).toEqual({
+        line: testBlock.start.line - 1,
+        column: testBlock.start.column - 1,
+      })
+      expect(actual[0].end).toEqual({
+        line: testBlock.end.line - 1,
+        column: testBlock.end.column - 1,
+      })
     })
 
     it('should use default values for unmatched assertions', () => {
@@ -114,25 +143,21 @@ describe('TestResultProvider', () => {
       expect(actual[0].status).toBe(TestReconciliationState.Unknown)
       expect(actual[0].shortMessage).toBeUndefined()
       expect(actual[0].terseMessage).toBeUndefined()
-      expect(actual[0].lineNumberOfError).toBeUndefined()
     })
     it('should handle duplicate test names', () => {
       const sut = new TestResultProvider()
+      const testBlock2 = Object.assign({}, testBlock, {
+        start: {
+          line: 5,
+          column: 3,
+        },
+        end: {
+          line: 7,
+          column: 5,
+        },
+      })
       ;(parseTest as jest.Mock<{}>).mockReturnValueOnce({
-        itBlocks: [
-          testBlock,
-          {
-            name: testBlock.name,
-            start: {
-              line: 5,
-              column: 3,
-            },
-            end: {
-              line: 7,
-              column: 5,
-            },
-          },
-        ],
+        itBlocks: [testBlock, testBlock2],
       })
       assertionsForTestFile.mockReturnValueOnce([
         assertion,
