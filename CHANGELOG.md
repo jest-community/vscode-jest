@@ -10,6 +10,7 @@ Bug-fixes within the same version aren't needed
   text editor - seanpoulter
 * Restart Jest with --watchAll when --watch is not supported without git/hg
   - seanpoulter
+* Highlight error of failed test when assertion was made outside of test
 
 -->
 
