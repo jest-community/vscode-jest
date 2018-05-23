@@ -30,7 +30,9 @@ export function updateDiagnostics(testResults: TestFileAssertionStatus[], diagno
         } else {
           const { itBlocks } = parseTest(result.file)
           const test = itBlocks.filter(t => t.name === assertion.title)[0]
-          if (test) line = test.end.line - 1
+          if (test) {
+            line = test.end.line - 1
+          }
         }
         if (line < 0) {
           line = 0
