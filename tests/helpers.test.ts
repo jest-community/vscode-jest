@@ -1,4 +1,5 @@
 jest.unmock('../src/helpers')
+jest.unmock('../src/Settings')
 
 const mockExistsSync = jest.fn()
 const mockReadFileSync = jest.fn()
@@ -17,7 +18,7 @@ jest.mock('path', () => ({
   normalize: mockNormalize,
 }))
 
-import { isCRATestCommand, pathToJest, pathToJestPackageJSON } from '../src/helpers'
+import { isCreateReactAppTestCommand, pathToJest, pathToJestPackageJSON } from '../src/helpers'
 import * as path from 'path'
 
 describe('ModuleHelpers', () => {
@@ -127,13 +128,13 @@ describe('ModuleHelpers', () => {
     })
   })
 
-  describe('isCRATestCommand', () => {
+  describe('isCreateReactAppTestCommand', () => {
     it('should return true for CRA', () => {
-      expect(isCRATestCommand('react-scripts test --env=jsdom')).toBe(true)
+      expect(isCreateReactAppTestCommand('react-scripts test --env=jsdom')).toBe(true)
     })
 
     it('should return false for other scripts', () => {
-      expect(isCRATestCommand('custom-script')).toBe(false)
+      expect(isCreateReactAppTestCommand('custom-script')).toBe(false)
     })
   })
 
@@ -160,7 +161,7 @@ describe('ModuleHelpers', () => {
       mockNormalize.mockReturnValueOnce(expected)
 
       const settings: any = {
-        pathToJest: 'jest',
+        pathToJest: expected,
         rootPath: '',
       }
 
