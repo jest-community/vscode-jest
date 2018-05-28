@@ -89,14 +89,19 @@ export function failingAssertionStyle(text: string) {
       before: {
         color: '#FF564B',
       },
+      after: {
+        color: '#FF564B',
+        contentText: ' // ' + text,
+      },
     },
     dark: {
       before: {
         color: '#AD322D',
       },
-    },
-    after: {
-      contentText: ' // ' + text,
+      after: {
+        color: '#AD322D',
+        contentText: ' // ' + text,
+      },
     },
   })
 }
