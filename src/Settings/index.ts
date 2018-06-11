@@ -19,7 +19,7 @@ export interface IPluginSettings {
 }
 
 export function isDefaultPathToJest(str) {
-  return str === null
+  return str === null || str === ''
 }
 
 export function hasUserSetPathToJest(str) {
