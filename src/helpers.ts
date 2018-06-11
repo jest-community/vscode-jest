@@ -2,7 +2,7 @@ import { platform } from 'os'
 import { existsSync, readFileSync } from 'fs'
 import { normalize, join } from 'path'
 
-import { IPluginSettings, isNotDefaultPathToJest } from './Settings'
+import { IPluginSettings, hasUserSetPathToJest } from './Settings'
 
 /**
  * Known binary names of `react-scripts` forks
@@ -61,7 +61,7 @@ function hasNodeExecutable(rootPath: string, executable: string): boolean {
  * @returns {string}
  */
 export function pathToJest({ pathToJest, rootPath }: IPluginSettings) {
-  if (isNotDefaultPathToJest(pathToJest)) {
+  if (hasUserSetPathToJest(pathToJest)) {
     return normalize(pathToJest)
   }
 

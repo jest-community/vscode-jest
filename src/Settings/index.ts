@@ -22,6 +22,6 @@ export function isDefaultPathToJest(str) {
   return str === null
 }
 
-export function isNotDefaultPathToJest(str) {
+export function hasUserSetPathToJest(str) {
   return !isDefaultPathToJest(str)
 }
