@@ -7,6 +7,7 @@ import { existsSync } from 'fs'
 // import { DiagnosticCollection, Uri, Diagnostic, Range, DiagnosticSeverity } from 'vscode'
 import { TestFileAssertionStatus } from 'jest-editor-support'
 import { TestReconciliationState } from './TestResults'
+import { parseTest } from './TestParser'
 
 export function updateDiagnostics(testResults: TestFileAssertionStatus[], diagnostics: vscode.DiagnosticCollection) {
   function addTestFileError(result: TestFileAssertionStatus, uri: vscode.Uri) {
@@ -23,10 +24,17 @@ export function updateDiagnostics(testResults: TestFileAssertionStatus[], diagno
     diagnostics.set(
       uri,
       asserts.map(assertion => {
-        let line: number
-        if (assertion.line >= 0) {
-          line = Math.max(assertion.line - 1, 0)
+        let line: number = -1
+        if (assertion.line > 0) {
+          line = assertion.line - 1
         } else {
+          const { itBlocks } = parseTest(result.file)
+          const test = itBlocks.filter(t => t.name === assertion.title)[0]
+          if (test) {
+            line = test.end.line - 1
+          }
+        }
+        if (line < 0) {
           line = 0
           console.warn(
             `received invalid line number '${assertion.line}' for '${uri.toString()}'. (most likely due to unexpected test results... you can help fix the root cause by logging an issue with a sample project to reproduce this warning)`
