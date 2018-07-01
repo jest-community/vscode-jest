@@ -10,6 +10,8 @@ Bug-fixes within the same version aren't needed
   text editor - seanpoulter
 * Restart Jest with --watchAll when --watch is not supported without git/hg
   - seanpoulter
+* Fix regression in handling workspaces that have been bootstrapped with
+  create-react-app - seanpoulter
 
 -->
 
