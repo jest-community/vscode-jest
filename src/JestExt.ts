@@ -12,8 +12,7 @@ import {
   TestResult,
   resultsWithLowerCaseWindowsDriveLetters,
 } from './TestResults'
-import { pathToJestPackageJSON, pathToJest, pathToConfig } from './helpers'
-import { readFileSync } from 'fs'
+import { pathToJest, pathToConfig } from './helpers'
 import { CoverageMapProvider } from './Coverage'
 import { updateDiagnostics, resetDiagnostics, failedSuiteCount } from './diagnostics'
 import { DebugCodeLensProvider } from './DebugCodeLens'
@@ -135,7 +134,7 @@ export class JestExt {
     this.channel.appendLine(noANSI)
   }
 
-  private assignHandlers(jestProcess) {
+  private assignHandlers(jestProcess: JestProcess) {
     jestProcess
       .onJestEditorSupportEvent('executableJSON', (data: JestTotalResults) => {
         this.updateWithData(data)
@@ -198,21 +197,65 @@ export class JestExt {
   }
 
   private getSettings() {
-    this.getJestVersion(jestVersionMajor => {
-      if (jestVersionMajor < 20) {
-        vscode.window.showErrorMessage(
-          'This extension relies on Jest 20+ features, it will continue to work, but some features may not work correctly.'
+    const validateJestSettings = (): boolean => {
+      // check if jest is too old
+      if (this.jestSettings.jestVersionMajor < 20) {
+        // version is just a hint, we don't really use this specifically.
+        // the main settings we care is the testMatch or testRegex, which is used to
+        // detect if a given file is a jest test suite.
+        vscode.window.showWarningMessage(
+          `Found jest version '${this.jestSettings
+            .jestVersionMajor}'. This extension relies on Jest 20+ features, some features may not work correctly.`
         )
       }
-      this.workspace.localJestMajorVersion = jestVersionMajor
-    })
 
-    // Do nothing for the minute, the above ^ can come back once
-    // https://github.com/facebook/jest/pull/3592 is deployed
+      // check if we can detect jest test patterns
+      if (
+        !this.jestSettings.settings ||
+        ((!this.jestSettings.settings.testMatch || !this.jestSettings.settings.testMatch.length) &&
+          !this.jestSettings.settings.testRegex)
+      ) {
+        console.error(`invalid settings: ${JSON.stringify(this.jestSettings.settings)}`)
+
+        vscode.window.showErrorMessage(
+          'Invalid jest config, the plugin might not be able to function properly. Please check your settings, such as jest.pathToJest'
+        )
+        return false
+      }
+
+      return true
+    }
+
+    const onError = err => {
+      console.error('failed to get get jest config from jest cli... will fallback to default setting. error:', err)
+
+      // if the default settings appear to be valid, show a warning anyway,
+      // to help user self diagnose problem later, if any
+      if (validateJestSettings()) {
+        vscode.window.showWarningMessage('Failed to retrieve jest config, will fallback to the default setting')
+        showSettings()
+      }
+    }
+
+    const showSettings = (prefix: string = 'jest settings:') => {
+      if (this.workspace.debug) {
+        console.log(`${prefix}
+        jestVersionMajor=${this.jestSettings.jestVersionMajor}
+        testMatch=${this.jestSettings.settings.testMatch} 
+        testRegex=${this.jestSettings.settings.testRegex} 
+        `)
+      }
+    }
+
     try {
-      this.jestSettings.getConfig(() => {})
+      this.jestSettings.getConfig(() => {
+        if (validateJestSettings()) {
+          this.workspace.localJestMajorVersion = this.jestSettings.jestVersionMajor
+          showSettings('Jest Settings Updated')
+        }
+      })
     } catch (error) {
-      console.log('[vscode-jest] Getting Jest config crashed, likely due to Jest version being below version 20.')
+      onError(error)
     }
   }
 
@@ -258,8 +301,10 @@ export class JestExt {
     this.workspace.rootPath = updatedSettings.rootPath
     this.workspace.pathToJest = pathToJest(updatedSettings)
     this.workspace.pathToConfig = pathToConfig(updatedSettings)
+    this.workspace.debug = updatedSettings.debugMode
 
     this.jestSettings = new Settings(this.workspace)
+    this.getSettings()
 
     this.coverageOverlay.enabled = updatedSettings.showCoverageOnLoad
 
@@ -357,8 +402,8 @@ export class JestExt {
 
   private wouldJestRunURI(uri: vscode.Uri) {
     const filePath = uri.fsPath
+    const globs = this.jestSettings.settings.testMatch
 
-    const globs: string[] = (this.jestSettings.settings as any).testMatch
     if (globs && globs.length) {
       const matchers = globs.map(each => matcher(each, { dot: true }))
       const matched = matchers.some(isMatch => isMatch(filePath))
@@ -447,22 +492,6 @@ export class JestExt {
 
   public deactivate() {
     this.jestProcessManager.stopAll()
-  }
-
-  private getJestVersion(version: (v: number) => void) {
-    let ver = 18 // default to the last pre-20 release if nothing else can be determined
-    const packageJSON = pathToJestPackageJSON(this.pluginSettings)
-
-    if (packageJSON) {
-      const contents = readFileSync(packageJSON, 'utf8')
-      const packageMetadata = JSON.parse(contents)
-
-      if (packageMetadata['version']) {
-        ver = parseInt(packageMetadata['version'])
-      }
-    }
-
-    version(ver)
   }
 
   public runTest = async (fileName: string, identifier: string) => {

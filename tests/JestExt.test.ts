@@ -17,6 +17,7 @@ describe('JestExt', () => {
   let projectWorkspace: ProjectWorkspace
   const channelStub = { appendLine: () => {} } as any
   const mockShowErrorMessage = window.showErrorMessage as jest.Mock<any>
+  const mockShowWarningMessage = window.showWarningMessage as jest.Mock<any>
   const extensionSettings = { debugCodeLens: {} } as any
 
   beforeEach(() => {
@@ -33,7 +34,10 @@ describe('JestExt', () => {
     }))
     new JestExt(null, projectWorkspace, channelStub, extensionSettings)
 
-    expect(mockShowErrorMessage.mock.calls).toMatchSnapshot()
+    // should have 1 warning message for bad version
+    expect(mockShowWarningMessage.mock.calls.length).toBe(1)
+    // should have 1 error for invalid settings
+    expect(mockShowErrorMessage.mock.calls.length).toBe(1)
   })
 
   it.skip('should not show error message if jest version is 20', () => {
@@ -42,7 +46,10 @@ describe('JestExt', () => {
       jestVersionMajor: 20,
     }))
     new JestExt(null, projectWorkspace, channelStub, extensionSettings)
-    expect(window.showErrorMessage).not.toBeCalled()
+    // should have 0 warning message for version
+    expect(mockShowWarningMessage.mock.calls.length).toBe(0)
+    // should have 1 error for invalid settings
+    expect(mockShowErrorMessage.mock.calls.length).toBe(1)
   })
 
   describe('resetInlineErrorDecorators()', () => {

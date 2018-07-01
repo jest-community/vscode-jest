@@ -9,6 +9,7 @@ const window = {
     show: jest.fn(),
   })),
   showErrorMessage: jest.fn(),
+  showWarningMessage: jest.fn(),
   createTextEditorDecorationType: jest.fn(),
 }
 

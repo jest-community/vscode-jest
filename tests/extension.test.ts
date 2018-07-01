@@ -140,6 +140,7 @@ describe('Extension', () => {
         rootPath: '<rootDir>',
         runAllTestsFirst: true,
         showCoverageOnLoad: false,
+        debugMode: false,
       })
     })
   })
