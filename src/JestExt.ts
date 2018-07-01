@@ -23,6 +23,7 @@ import { hasDocument, isOpenInMultipleEditors } from './editor'
 import { CoverageOverlay } from './Coverage/CoverageOverlay'
 import { JestProcess, JestProcessManager } from './JestProcessManagement'
 import { isWatchNotSupported, WatchMode } from './Jest'
+import { platform } from 'os'
 
 export class JestExt {
   private workspace: ProjectWorkspace
@@ -68,7 +69,7 @@ export class JestExt {
     this.failingAssertionDecorators = {}
     this.failDiagnostics = vscode.languages.createDiagnosticCollection('Jest')
     this.clearOnNextInput = true
-    this.jestSettings = new Settings(workspace)
+    this.recreateJestSettings()
     this.pluginSettings = pluginSettings
 
     this.coverageMapProvider = new CoverageMapProvider()
@@ -259,7 +260,7 @@ export class JestExt {
     this.workspace.pathToJest = pathToJest(updatedSettings)
     this.workspace.pathToConfig = pathToConfig(updatedSettings)
 
-    this.jestSettings = new Settings(this.workspace)
+    this.recreateJestSettings()
 
     this.coverageOverlay.enabled = updatedSettings.showCoverageOnLoad
 
@@ -272,6 +273,11 @@ export class JestExt {
     setTimeout(() => {
       this.startProcess()
     }, 500)
+  }
+
+  private recreateJestSettings() {
+    const useShell = platform() === 'win32'
+    this.jestSettings = new Settings(this.workspace, { shell: useShell })
   }
 
   private updateDotDecorators(editor: vscode.TextEditor) {
