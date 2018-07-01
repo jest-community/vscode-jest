@@ -1,5 +1,5 @@
 import * as vscode from 'vscode'
-import { getTestCommand, isCRATestCommand } from './helpers'
+import { getTestCommand, isCreateReactAppTestCommand } from './helpers'
 
 export class DebugConfigurationProvider implements vscode.DebugConfigurationProvider {
   private fileNameToRun: string = ''
@@ -63,7 +63,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     }
 
     const testCommand = folder && getTestCommand(folder.uri.fsPath)
-    if (isCRATestCommand(testCommand)) {
+    if (isCreateReactAppTestCommand(testCommand)) {
       const craCommand = testCommand.split(' ')
       // Settings specific for projects bootstrapped with `create-react-app`
       debugConfiguration.runtimeExecutable = '${workspaceFolder}/node_modules/.bin/' + craCommand.shift()
