@@ -12,6 +12,8 @@ Bug-fixes within the same version aren't needed
   - seanpoulter
 * Fix regression in handling workspaces that have been bootstrapped with
   create-react-app - seanpoulter
+* Run Jest on Windows in a shell when gathering settings, such that we don't
+  have to deal with the .cmd extension anymore - stephtr
 
 -->
 

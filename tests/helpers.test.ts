@@ -169,29 +169,7 @@ describe('ModuleHelpers', () => {
       expect(mockNormalize).toBeCalledWith(settings.pathToJest)
     })
 
-    it('defaults to "node_modules/.bin/jest.cmd" on Windows when Jest is locally installed', () => {
-      const expected = 'node_modules\\.bin\\jest.cmd'
-
-      mockJoin.mockImplementation(require.requireActual('path').win32.join)
-      mockPlatform.mockReturnValue('win32')
-      mockNormalize.mockImplementationOnce(arg => arg)
-      mockExistsSync.mockImplementation(path => path === expected)
-
-      expect(pathToJest(defaultSettings)).toBe(expected)
-    })
-
-    it('defaults to "jest.cmd" on Windows when Jest is not locally installed', () => {
-      const expected = 'jest.cmd'
-
-      mockJoin.mockImplementation(require.requireActual('path').win32.join)
-      mockPlatform.mockReturnValue('win32')
-      mockNormalize.mockImplementationOnce(arg => arg)
-      mockExistsSync.mockImplementation(_ => false)
-
-      expect(pathToJest(defaultSettings)).toBe(expected)
-    })
-
-    it('defaults to "node_modules/.bin/jest" on a non-Windows OS when Jest is locally installed', () => {
+    it('defaults to "node_modules/.bin/jest" when Jest is locally installed', () => {
       const expected = 'node_modules/.bin/jest'
 
       mockJoin.mockImplementation(require.requireActual('path').posix.join)
@@ -202,7 +180,7 @@ describe('ModuleHelpers', () => {
       expect(pathToJest(defaultSettings)).toBe(expected)
     })
 
-    it('defaults to "jest" on a non-Windows OS when Jest is locally installed', () => {
+    it('defaults to "jest" when Jest is locally installed', () => {
       const expected = 'jest'
 
       mockJoin.mockImplementation(require.requireActual('path').posix.join)

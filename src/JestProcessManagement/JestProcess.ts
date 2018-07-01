@@ -18,8 +18,8 @@ export class JestProcess {
     this.stopRequested = false
     let exited = false
 
-    const options = { shell: platform() === 'win32' }
-    this.runner = new Runner(this.projectWorkspace, options)
+    const useShell = platform() === 'win32'
+    this.runner = new Runner(this.projectWorkspace, { shell: useShell })
 
     this.restoreJestEvents()
 
