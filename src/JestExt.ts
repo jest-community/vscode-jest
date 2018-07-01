@@ -2,6 +2,7 @@ import * as vscode from 'vscode'
 import * as path from 'path'
 import { Settings, ProjectWorkspace, JestTotalResults } from 'jest-editor-support'
 import { matcher } from 'micromatch'
+import { platform } from 'os'
 
 import * as decorations from './decorations'
 import { IPluginSettings } from './Settings'
@@ -23,7 +24,6 @@ import { hasDocument, isOpenInMultipleEditors } from './editor'
 import { CoverageOverlay } from './Coverage/CoverageOverlay'
 import { JestProcess, JestProcessManager } from './JestProcessManagement'
 import { isWatchNotSupported, WatchMode } from './Jest'
-import { platform } from 'os'
 
 export class JestExt {
   private workspace: ProjectWorkspace
