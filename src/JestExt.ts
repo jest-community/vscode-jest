@@ -4,7 +4,7 @@ import { Settings, ProjectWorkspace, JestTotalResults } from 'jest-editor-suppor
 import { matcher } from 'micromatch'
 
 import * as decorations from './decorations'
-import { IPluginSettings } from './IPluginSettings'
+import { IPluginSettings } from './Settings'
 import * as status from './statusBar'
 import {
   TestReconciliationState,

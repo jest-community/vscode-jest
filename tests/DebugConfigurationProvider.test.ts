@@ -1,7 +1,7 @@
 jest.unmock('../src/DebugConfigurationProvider')
 
 import { DebugConfigurationProvider } from '../src/DebugConfigurationProvider'
-import { getTestCommand, isCRATestCommand } from '../src/helpers'
+import { getTestCommand, isCreateReactAppTestCommand } from '../src/helpers'
 
 describe('DebugConfigurationProvider', () => {
   it('should by default return a DebugConfiguration for Jest', () => {
@@ -18,7 +18,7 @@ describe('DebugConfigurationProvider', () => {
   })
   it('should return a valid CRA DebugConfiguration', () => {
     ;(getTestCommand as jest.Mock<Function>).mockReturnValueOnce('react-scripts test --env=jsdom')
-    ;(isCRATestCommand as jest.Mock<Function>).mockReturnValueOnce(true)
+    ;(isCreateReactAppTestCommand as jest.Mock<Function>).mockReturnValueOnce(true)
 
     const folder: any = { uri: { fsPath: null } }
     const sut = new DebugConfigurationProvider()

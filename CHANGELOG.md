@@ -11,6 +11,8 @@ Bug-fixes within the same version aren't needed
 * Restart Jest with --watchAll when --watch is not supported without git/hg
   - seanpoulter
 * Highlight error of failed test when assertion was made outside of test
+* Fix regression in handling workspaces that have been bootstrapped with
+  create-react-app - seanpoulter
 
 -->
 

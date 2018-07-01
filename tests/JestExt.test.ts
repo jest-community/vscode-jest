@@ -10,7 +10,6 @@ import { ProjectWorkspace, Settings } from 'jest-editor-support'
 import { window, workspace, debug } from 'vscode'
 import { hasDocument, isOpenInMultipleEditors } from '../src/editor'
 import { failingAssertionStyle } from '../src/decorations'
-import { POINT_CONVERSION_COMPRESSED } from 'constants'
 
 describe('JestExt', () => {
   const mockSettings = (Settings as any) as jest.Mock<any>
