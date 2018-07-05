@@ -27,6 +27,8 @@ describe('JestExt', () => {
   const mockShowWarningMessage = window.showWarningMessage as jest.Mock<any>
   const extensionSettings = { debugCodeLens: {} } as any
 
+  console.error = jest.fn()
+
   beforeEach(() => {
     jest.resetAllMocks()
 
