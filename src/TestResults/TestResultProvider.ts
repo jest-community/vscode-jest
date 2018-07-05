@@ -1,4 +1,4 @@
-import { TestReconciler, FormattedTestResults } from 'jest-editor-support'
+import { TestReconciler, JestTotalResults } from 'jest-editor-support'
 import { TestFileAssertionStatus } from 'jest-editor-support'
 import { TestReconciliationState } from './TestReconciliationState'
 import { TestResult } from './TestResult'
@@ -45,6 +45,7 @@ export class TestResultProvider {
         results.filter(
           result => result.title === test.name && result.status !== TestReconciliationState.KnownFail
         )[0] ||
+        results.filter(result => result.title === test.name)[0] ||
         ({} as any)
 
       // Note the shift from one-based to zero-based line number and columns
@@ -62,7 +63,7 @@ export class TestResultProvider {
         status: assertion.status || TestReconciliationState.Unknown,
         shortMessage: assertion.shortMessage,
         terseMessage: assertion.terseMessage,
-        lineNumberOfError: assertion.line ? assertion.line - 1 : undefined,
+        lineNumberOfError: assertion.line ? assertion.line - 1 : test.end.line - 1,
       })
     }
 
@@ -99,7 +100,7 @@ export class TestResultProvider {
     return result
   }
 
-  updateTestResults(data: FormattedTestResults): TestFileAssertionStatus[] {
+  updateTestResults(data: JestTotalResults): TestFileAssertionStatus[] {
     this.resetCache()
     return this.reconciler.updateFileWithJestStatus(data)
   }

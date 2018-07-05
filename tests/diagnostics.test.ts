@@ -2,6 +2,7 @@ jest.unmock('../src/diagnostics')
 import { updateDiagnostics, resetDiagnostics, failedSuiteCount } from '../src/diagnostics'
 import * as vscode from 'vscode'
 import { TestFileAssertionStatus, TestReconcilationState, TestAssertionStatus } from 'jest-editor-support'
+import { parseTest } from '../src/TestParser'
 
 class MockDiagnosticCollection implements vscode.DiagnosticCollection {
   name = 'test'
@@ -156,6 +157,9 @@ describe('test diagnostics', () => {
 
       invalidLine.forEach(line => {
         jest.clearAllMocks()
+        ;(parseTest as jest.Mock<{}>).mockReturnValueOnce({
+          itBlocks: [],
+        })
         assertion.line = line
         const tests = [createTestResult('f', [assertion])]
         updateDiagnostics(tests, mockDiagnostics)
@@ -163,6 +167,39 @@ describe('test diagnostics', () => {
         const rangeCalls = (vscode.Range as jest.Mock<any>).mock.calls
         expect(rangeCalls.length).toEqual(1)
         validateRange(rangeCalls[0], 0, 0)
+      })
+    })
+
+    it('should produce diagnostic range from test location when assertion line invalid', () => {
+      const mockDiagnostics = new MockDiagnosticCollection()
+      const assertion = createAssertion('a', 'KnownFail')
+      const invalidLine = [0, -1, undefined, null, NaN]
+      console.warn = jest.fn()
+
+      const testBlock = {
+        name: 'a',
+        start: {
+          line: 2,
+          column: 3,
+        },
+        end: {
+          line: 4,
+          column: 5,
+        },
+      }
+
+      invalidLine.forEach(line => {
+        jest.clearAllMocks()
+        ;(parseTest as jest.Mock<{}>).mockReturnValueOnce({
+          itBlocks: [testBlock],
+        })
+        assertion.line = line
+        const tests = [createTestResult('f', [assertion])]
+        updateDiagnostics(tests, mockDiagnostics)
+
+        const rangeCalls = (vscode.Range as jest.Mock<any>).mock.calls
+        expect(rangeCalls.length).toEqual(1)
+        validateRange(rangeCalls[0], 3, 0)
       })
     })
 

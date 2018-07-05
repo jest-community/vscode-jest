@@ -2,6 +2,7 @@ import * as vscode from 'vscode'
 import * as path from 'path'
 import { Settings, ProjectWorkspace, JestTotalResults } from 'jest-editor-support'
 import { matcher } from 'micromatch'
+import { platform } from 'os'
 
 import * as decorations from './decorations'
 import { IPluginSettings } from './Settings'
@@ -68,7 +69,7 @@ export class JestExt {
     this.failingAssertionDecorators = {}
     this.failDiagnostics = vscode.languages.createDiagnosticCollection('Jest')
     this.clearOnNextInput = true
-    this.jestSettings = new Settings(workspace)
+    this.recreateJestSettings()
     this.pluginSettings = pluginSettings
 
     this.coverageMapProvider = new CoverageMapProvider()
@@ -307,7 +308,7 @@ export class JestExt {
     this.workspace.pathToConfig = pathToConfig(updatedSettings)
     this.workspace.debug = updatedSettings.debugMode
 
-    this.jestSettings = new Settings(this.workspace)
+    this.recreateJestSettings()
     this.getSettings()
 
     this.coverageOverlay.enabled = updatedSettings.showCoverageOnLoad
@@ -321,6 +322,11 @@ export class JestExt {
     setTimeout(() => {
       this.startProcess()
     }, 500)
+  }
+
+  private recreateJestSettings() {
+    const useShell = platform() === 'win32'
+    this.jestSettings = new Settings(this.workspace, { shell: useShell })
   }
 
   private updateDotDecorators(editor: vscode.TextEditor) {

@@ -73,15 +73,11 @@ export function pathToJest({ pathToJest, rootPath }: IPluginSettings) {
   if (existsSync(localJestExecutable)) {
     return localJestExecutable
   }
-  return `jest${isWindows() ? '.cmd' : ''}`
+  return 'jest'
 }
 
 function pathToLocalJestExecutable(rootDir) {
-  return normalize(join(rootDir, `node_modules/.bin/jest${isWindows() ? '.cmd' : ''}`))
-}
-
-function isWindows() {
-  return platform() === 'win32'
+  return normalize(join(rootDir, 'node_modules/.bin/jest'))
 }
 
 /**

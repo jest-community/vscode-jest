@@ -55,7 +55,7 @@
         },
         "jest.pathToJest": {
           "description":
-            "The path to the Jest binary, or an npm command to run tests prefixed with `--` e.g. `npm test --`",
+            "The path to the Jest binary, or an npm command to run tests prefixed with `--` e.g. `node_modules/.bin/jest` or `npm test --`",
           "type": "string",
           "default": null
         },

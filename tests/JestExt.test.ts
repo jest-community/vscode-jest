@@ -5,15 +5,21 @@ jest.unmock('../src/messaging')
 jest.mock('../src/DebugCodeLens', () => ({
   DebugCodeLensProvider: class MockCodeLensProvider {},
 }))
+jest.mock('os')
 
 import { JestExt } from '../src/JestExt'
 import { ProjectWorkspace, Settings } from 'jest-editor-support'
+import { platform } from 'os'
 import { window, workspace, debug } from 'vscode'
 import { hasDocument, isOpenInMultipleEditors } from '../src/editor'
 import { failingAssertionStyle } from '../src/decorations'
 
 describe('JestExt', () => {
   const mockSettings = (Settings as any) as jest.Mock<any>
+  const mockSettingsObject = {
+    getConfig: callback => callback(),
+    jestVersionMajor: 22,
+  }
   const getConfiguration = workspace.getConfiguration as jest.Mock<any>
   let projectWorkspace: ProjectWorkspace
   const channelStub = { appendLine: () => {} } as any
@@ -29,8 +35,8 @@ describe('JestExt', () => {
   })
 
   it('should show error message if jest version i < 18', () => {
-    mockSettings.mockImplementation(() => ({
-      getConfig: callback => callback(),
+    mockSettings.mockImplementationOnce(() => ({
+      ...mockSettingsObject,
       jestVersionMajor: 17,
     }))
     new JestExt(null, projectWorkspace, channelStub, extensionSettings)
@@ -73,6 +79,15 @@ describe('JestExt', () => {
 
     expect(mockShowWarningMessage.mock.calls.length).toBe(1)
     expect(mockShowErrorMessage.mock.calls.length).toBe(0)
+  })
+
+  it('should create `Settings` with `shell` set on Windows', () => {
+    mockSettings.mockImplementationOnce((_, options) => {
+      expect(options.shell).toBe(true)
+      return mockSettingsObject
+    })
+    ;((platform as any) as jest.Mock<any>).mockReturnValueOnce('win32')
+    new JestExt(null, projectWorkspace, channelStub, extensionSettings)
   })
 
   describe('resetInlineErrorDecorators()', () => {
