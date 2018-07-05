@@ -1,5 +1,6 @@
 jest.unmock('events')
 jest.unmock('../src/JestExt')
+jest.unmock('../src/messaging')
 
 jest.mock('../src/DebugCodeLens', () => ({
   DebugCodeLensProvider: class MockCodeLensProvider {},
@@ -40,7 +41,7 @@ describe('JestExt', () => {
     expect(mockShowErrorMessage.mock.calls.length).toBe(1)
   })
 
-  it.skip('should not show error message if jest version is 20', () => {
+  it('should not show error message if jest version is 20', () => {
     mockSettings.mockImplementation(() => ({
       getConfig: callback => callback(),
       jestVersionMajor: 20,
@@ -50,6 +51,28 @@ describe('JestExt', () => {
     expect(mockShowWarningMessage.mock.calls.length).toBe(0)
     // should have 1 error for invalid settings
     expect(mockShowErrorMessage.mock.calls.length).toBe(1)
+  })
+  it('should not show error if settings is valid', () => {
+    mockSettings.mockImplementation(() => ({
+      getConfig: callback => callback(),
+      jestVersionMajor: 22,
+      settings: { testMatch: 'something' },
+    }))
+    new JestExt(null, projectWorkspace, channelStub, extensionSettings)
+    expect(mockShowWarningMessage.mock.calls.length).toBe(0)
+    expect(mockShowErrorMessage.mock.calls.length).toBe(0)
+  })
+
+  it('should show warning if version is null (getConfig failed)', () => {
+    mockSettings.mockImplementation(() => ({
+      getConfig: callback => callback(),
+      jestVersionMajor: null,
+      settings: { testMatch: 'something' },
+    }))
+    new JestExt(null, projectWorkspace, channelStub, extensionSettings)
+
+    expect(mockShowWarningMessage.mock.calls.length).toBe(1)
+    expect(mockShowErrorMessage.mock.calls.length).toBe(0)
   })
 
   describe('resetInlineErrorDecorators()', () => {

@@ -22,6 +22,7 @@ import { hasDocument, isOpenInMultipleEditors } from './editor'
 import { CoverageOverlay } from './Coverage/CoverageOverlay'
 import { JestProcess, JestProcessManager } from './JestProcessManagement'
 import { isWatchNotSupported, WatchMode } from './Jest'
+import * as messaging from './messaging'
 
 export class JestExt {
   private workspace: ProjectWorkspace
@@ -147,12 +148,15 @@ export class JestExt {
       .onJestEditorSupportEvent('executableStdErr', (error: Buffer) => this.handleStdErr(error))
       .onJestEditorSupportEvent('nonTerminalError', (error: string) => {
         this.channel.appendLine(`Received an error from Jest Runner: ${error.toString()}`)
+        this.channel.show(true)
       })
       .onJestEditorSupportEvent('exception', result => {
         this.channel.appendLine(`\nException raised: [${result.type}]: ${result.message}\n`)
+        this.channel.show(true)
       })
       .onJestEditorSupportEvent('terminalError', (error: string) => {
         this.channel.appendLine('\nException raised: ' + error)
+        this.channel.show(true)
       })
   }
 
@@ -179,9 +183,10 @@ export class JestExt {
         } else {
           status.stopped()
           if (!jestProcess.stopRequested) {
-            this.channel.appendLine(
-              'Starting Jest in Watch mode failed too many times and has been stopped. Please check your system configuration.'
-            )
+            const msg = `Starting Jest in Watch mode failed too many times and has been stopped.`
+            this.channel.appendLine(`${msg}\n see troubleshooting: ${messaging.TroubleShootingURL}`)
+            this.channel.show(true)
+            messaging.systemErrorMessage(msg, messaging.showTroubleshootingAction)
           }
         }
       },
@@ -196,66 +201,65 @@ export class JestExt {
     status.stopped()
   }
 
+  private validateJestSettings(showSettingPrefix?: string): boolean {
+    let isValid = true
+
+    // check if setting is a default: jestVersionMajor == null
+    if (!this.jestSettings.jestVersionMajor) {
+      messaging.systemWarningMessage(
+        'Failed to retrieve jest config, will fallback to default config that might not be compatible with your env.',
+        messaging.showTroubleshootingAction
+      )
+      isValid = false
+    } else if (this.jestSettings.jestVersionMajor < 20) {
+      // version is just a hint, we don't really use this specifically.
+      // the main settings we care is the testMatch or testRegex, which is used to
+      // detect if a given file is a jest test suite.
+      messaging.systemWarningMessage(
+        `Found jest version '${this.jestSettings
+          .jestVersionMajor}'. This extension relies on Jest 20+ features, some features may not work correctly.`
+      )
+    }
+
+    // check if we can detect jest test patterns
+    if (
+      !this.jestSettings.settings ||
+      ((!this.jestSettings.settings.testMatch || !this.jestSettings.settings.testMatch.length) &&
+        !this.jestSettings.settings.testRegex)
+    ) {
+      isValid = false
+      console.error(`invalid settings: ${JSON.stringify(this.jestSettings.settings)}`)
+
+      messaging.systemErrorMessage(
+        'Invalid jest config, the plugin might not be able to function properly.',
+        messaging.showTroubleshootingAction
+      )
+    }
+
+    // display settings in debug mode
+    if (this.workspace.debug && showSettingPrefix) {
+      console.log(`${showSettingPrefix}:
+                jestVersionMajor=${this.jestSettings.jestVersionMajor}
+                testMatch=${this.jestSettings.settings.testMatch} 
+                testRegex=${this.jestSettings.settings.testRegex} 
+              `)
+    }
+
+    return isValid
+  }
+
   private getSettings() {
-    const validateJestSettings = (): boolean => {
-      // check if jest is too old
-      if (this.jestSettings.jestVersionMajor < 20) {
-        // version is just a hint, we don't really use this specifically.
-        // the main settings we care is the testMatch or testRegex, which is used to
-        // detect if a given file is a jest test suite.
-        vscode.window.showWarningMessage(
-          `Found jest version '${this.jestSettings
-            .jestVersionMajor}'. This extension relies on Jest 20+ features, some features may not work correctly.`
-        )
-      }
-
-      // check if we can detect jest test patterns
-      if (
-        !this.jestSettings.settings ||
-        ((!this.jestSettings.settings.testMatch || !this.jestSettings.settings.testMatch.length) &&
-          !this.jestSettings.settings.testRegex)
-      ) {
-        console.error(`invalid settings: ${JSON.stringify(this.jestSettings.settings)}`)
-
-        vscode.window.showErrorMessage(
-          'Invalid jest config, the plugin might not be able to function properly. Please check your settings, such as jest.pathToJest'
-        )
-        return false
-      }
-
-      return true
-    }
-
-    const onError = err => {
-      console.error('failed to get get jest config from jest cli... will fallback to default setting. error:', err)
-
-      // if the default settings appear to be valid, show a warning anyway,
-      // to help user self diagnose problem later, if any
-      if (validateJestSettings()) {
-        vscode.window.showWarningMessage('Failed to retrieve jest config, will fallback to the default setting')
-        showSettings()
-      }
-    }
-
-    const showSettings = (prefix: string = 'jest settings:') => {
-      if (this.workspace.debug) {
-        console.log(`${prefix}
-        jestVersionMajor=${this.jestSettings.jestVersionMajor}
-        testMatch=${this.jestSettings.settings.testMatch} 
-        testRegex=${this.jestSettings.settings.testRegex} 
-        `)
-      }
-    }
-
     try {
       this.jestSettings.getConfig(() => {
-        if (validateJestSettings()) {
+        if (this.validateJestSettings('Jest Config Retrieved')) {
           this.workspace.localJestMajorVersion = this.jestSettings.jestVersionMajor
-          showSettings('Jest Settings Updated')
         }
       })
     } catch (error) {
-      onError(error)
+      console.error('jestSettings.getConfig() failed:', error)
+      // most likely validating the default setting, which will trigger a warning
+      // that should be fine as this is an error condition that could impact the plugin functionality
+      this.validateJestSettings('Jest Config Retrieval Failed')
     }
   }
 
@@ -474,7 +478,6 @@ export class JestExt {
       return {
         range: new vscode.Range(it.start.line, it.start.column, it.start.line, it.start.column + 1),
         hoverMessage: nameForState[state],
-
         /* ERROR: this needs to include all ancestor describe block names as well!
           in code bellow it block has identifier = 'aaa bbb ccc': but name is only 'ccc'
 
