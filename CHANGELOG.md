@@ -15,7 +15,11 @@ Bug-fixes within the same version aren't needed
   create-react-app - seanpoulter
 * Run Jest on Windows in a shell when gathering settings, such that we don't
   have to deal with the .cmd extension anymore - stephtr
-
+* upgrade to jest 23.3 - connectdotz
+* enhanced error reporting and troubleshooting assistance - connectdotz
+  * Added a `jest.debugMode` setting for self-diagnosis
+  * expand README Troubleshooting area
+  * expand issue template to include critical settings as well as debug output
 -->
 
 ### 2.7.2
