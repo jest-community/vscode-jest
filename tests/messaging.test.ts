@@ -52,4 +52,23 @@ describe('test system messaging', () => {
     expect(mockExecCommands.mock.calls.length).toBe(1)
     expect(mockUriParse.mock.calls[0][0]).toBe(messaging.TroubleShootingURL)
   })
+  it('can handle user actions', () => {
+    let a = messaging._handleMessageActions()
+    expect(a).not.toBeNull()
+    a()
+
+    let done = false
+    const action: messaging.MessageAction = {
+      title: 'action1',
+      action: () => {
+        done = true
+      },
+    }
+    a = messaging._handleMessageActions([action])
+    a()
+    expect(done).toBe(false)
+
+    a('action1')
+    expect(done).toBe(true)
+  })
 })

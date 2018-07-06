@@ -10,16 +10,16 @@ export interface MessageAction {
 }
 
 export function systemErrorMessage(message: string, ...actions: Array<MessageAction>) {
-  const msg = vscode.window.showErrorMessage(message, ...extractActionTitles(actions))
+  const msg = vscode.window.showErrorMessage(message, ..._extractActionTitles(actions))
   if (msg) {
-    msg.then(handleMessageActions(actions))
+    msg.then(_handleMessageActions(actions))
   }
 }
 
 export function systemWarningMessage(message: string, ...actions: Array<MessageAction>) {
-  const msg = vscode.window.showWarningMessage(message, ...extractActionTitles(actions))
+  const msg = vscode.window.showWarningMessage(message, ..._extractActionTitles(actions))
   if (msg) {
-    msg.then(handleMessageActions(actions))
+    msg.then(_handleMessageActions(actions))
   }
 }
 
@@ -33,13 +33,14 @@ export const TroubleShootingURL = 'https://github.com/jest-community/vscode-jest
 //
 // internal methods
 //
-function extractActionTitles(actions?: Array<MessageAction>): string[] {
+function _extractActionTitles(actions?: Array<MessageAction>): string[] {
   if (!actions || actions.length === 0) {
     return []
   }
   return actions.map(a => a.title)
 }
-function handleMessageActions(actions?: Array<MessageAction>): (action?: string) => void {
+// expose the internal function so we can unit testing it
+export function _handleMessageActions(actions?: Array<MessageAction>): (action?: string) => void {
   return (action?: string) => {
     if (!action) {
       return

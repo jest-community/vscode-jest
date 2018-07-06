@@ -82,6 +82,17 @@ describe('JestExt', () => {
     expect(mockShowWarningMessage.mock.calls.length).toBe(1)
     expect(mockShowErrorMessage.mock.calls.length).toBe(0)
   })
+  it('should not throw warning if settings contains testRegex or testMatch', () => {
+    mockSettings.mockImplementation(() => ({
+      getConfig: callback => callback(),
+      jestVersionMajor: 22,
+      settings: { testRegex: '*' },
+    }))
+    new JestExt(null, projectWorkspace, channelStub, extensionSettings)
+
+    expect(mockShowWarningMessage.mock.calls.length).toBe(0)
+    expect(mockShowErrorMessage.mock.calls.length).toBe(0)
+  })
 
   it('should create `Settings` with `shell` set on Windows', () => {
     mockSettings.mockImplementationOnce((_, options) => {
@@ -397,6 +408,30 @@ describe('JestExt', () => {
       sut.triggerUpdateDecorations(editor)
 
       expect(sut.coverageOverlay.updateVisibleEditors).toBeCalled()
+    })
+  })
+  describe('triggerUpdateSettings', () => {
+    it('will trigger getSettings()', () => {
+      mockSettings.mockImplementation(() => ({ getConfig: callback => callback(), jestVersionMajor: 20 }))
+
+      const sut = new JestExt(null, projectWorkspace, channelStub, extensionSettings)
+
+      // verify getConfig does raise error
+      expect(mockShowWarningMessage.mock.calls.length).toBe(0)
+      expect(mockShowErrorMessage.mock.calls.length).toBe(1)
+
+      mockShowWarningMessage.mockClear()
+      mockShowErrorMessage.mockClear()
+
+      // verify all mock has been reset
+      expect(mockShowWarningMessage.mock.calls.length).toBe(0)
+      expect(mockShowErrorMessage.mock.calls.length).toBe(0)
+
+      sut.triggerUpdateSettings(extensionSettings)
+
+      // the trigger update should trigger getConfig and we should see error
+      expect(mockShowWarningMessage.mock.calls.length).toBe(0)
+      expect(mockShowErrorMessage.mock.calls.length).toBe(1)
     })
   })
 })
