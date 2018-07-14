@@ -19,7 +19,7 @@ export function activate(context: vscode.ExtensionContext) {
   const jestPath = pathToJest(pluginSettings)
   const configPath = pathToConfig(pluginSettings)
   const currentJestVersion = 20
-  const debugMode = pluginSettings.debugMode // TODO: add pluginSettings.debug
+  const debugMode = pluginSettings.debugMode
   const workspace = new ProjectWorkspace(
     pluginSettings.rootPath,
     jestPath,

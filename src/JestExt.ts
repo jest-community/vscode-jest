@@ -1,8 +1,5 @@
 import * as vscode from 'vscode'
-import * as path from 'path'
-import { Settings, ProjectWorkspace, JestTotalResults } from 'jest-editor-support'
-import { matcher } from 'micromatch'
-import { platform } from 'os'
+import { ProjectWorkspace, JestTotalResults } from 'jest-editor-support'
 
 import * as decorations from './decorations'
 import { IPluginSettings } from './Settings'
@@ -12,10 +9,11 @@ import {
   TestResultProvider,
   TestResult,
   resultsWithLowerCaseWindowsDriveLetters,
+  SortedTestResults,
 } from './TestResults'
 import { pathToJest, pathToConfig } from './helpers'
 import { CoverageMapProvider } from './Coverage'
-import { updateDiagnostics, resetDiagnostics, failedSuiteCount } from './diagnostics'
+import { updateDiagnostics, updateCurrentDiagnostics, resetDiagnostics, failedSuiteCount } from './diagnostics'
 import { DebugCodeLensProvider } from './DebugCodeLens'
 import { DebugConfigurationProvider } from './DebugConfigurationProvider'
 import { DecorationOptions } from './types'
@@ -27,7 +25,6 @@ import * as messaging from './messaging'
 
 export class JestExt {
   private workspace: ProjectWorkspace
-  private jestSettings: Settings
   private pluginSettings: IPluginSettings
 
   coverageMapProvider: CoverageMapProvider
@@ -69,7 +66,6 @@ export class JestExt {
     this.failingAssertionDecorators = {}
     this.failDiagnostics = vscode.languages.createDiagnosticCollection('Jest')
     this.clearOnNextInput = true
-    this.recreateJestSettings()
     this.pluginSettings = pluginSettings
 
     this.coverageMapProvider = new CoverageMapProvider()
@@ -92,7 +88,6 @@ export class JestExt {
       runAllTestsFirstInWatchMode: this.pluginSettings.runAllTestsFirst,
     })
 
-    this.getSettings()
     // The theme stuff
     this.setupDecorators()
     // The bottom bar thing
@@ -202,68 +197,6 @@ export class JestExt {
     status.stopped()
   }
 
-  private validateJestSettings(showSettingPrefix?: string): boolean {
-    let isValid = true
-
-    // check if setting is a default: jestVersionMajor == null
-    if (!this.jestSettings.jestVersionMajor) {
-      messaging.systemWarningMessage(
-        'Failed to retrieve jest config, will fallback to default config that might not be compatible with your env.',
-        messaging.showTroubleshootingAction
-      )
-      isValid = false
-    } else if (this.jestSettings.jestVersionMajor < 20) {
-      // version is just a hint, we don't really use this specifically.
-      // the main settings we care is the testMatch or testRegex, which is used to
-      // detect if a given file is a jest test suite.
-      messaging.systemWarningMessage(
-        `Found jest version '${this.jestSettings
-          .jestVersionMajor}'. This extension relies on Jest 20+ features, some features may not work correctly.`
-      )
-    }
-
-    // check if we can detect jest test patterns
-    if (
-      !this.jestSettings.settings ||
-      ((!this.jestSettings.settings.testMatch || !this.jestSettings.settings.testMatch.length) &&
-        !this.jestSettings.settings.testRegex)
-    ) {
-      isValid = false
-      console.error(`invalid settings: ${JSON.stringify(this.jestSettings.settings)}`)
-
-      messaging.systemErrorMessage(
-        'Invalid jest config, the plugin might not be able to function properly.',
-        messaging.showTroubleshootingAction
-      )
-    }
-
-    // display settings in debug mode
-    if (this.workspace.debug && showSettingPrefix) {
-      console.log(`${showSettingPrefix}:
-                jestVersionMajor=${this.jestSettings.jestVersionMajor}
-                testMatch=${this.jestSettings.settings.testMatch} 
-                testRegex=${this.jestSettings.settings.testRegex} 
-              `)
-    }
-
-    return isValid
-  }
-
-  private getSettings() {
-    try {
-      this.jestSettings.getConfig(() => {
-        if (this.validateJestSettings('Jest Config Retrieved')) {
-          this.workspace.localJestMajorVersion = this.jestSettings.jestVersionMajor
-        }
-      })
-    } catch (error) {
-      console.error('jestSettings.getConfig() failed:', error)
-      // most likely validating the default setting, which will trigger a warning
-      // that should be fine as this is an error condition that could impact the plugin functionality
-      this.validateJestSettings('Jest Config Retrieval Failed')
-    }
-  }
-
   private detectedSnapshotErrors() {
     if (!this.pluginSettings.enableSnapshotUpdateMessages) {
       return
@@ -287,16 +220,24 @@ export class JestExt {
       })
   }
 
-  public triggerUpdateDecorations(editor: vscode.TextEditor) {
+  public triggerUpdateActiveEditor(editor: vscode.TextEditor) {
     this.coverageOverlay.updateVisibleEditors()
 
-    if (!this.canUpdateDecorators(editor)) {
+    if (!this.canUpdateActiveEditor(editor)) {
       return
     }
 
-    // OK - lets go
+    // not sure why we need to protect this block with parsingTestFile ?
+    // using an ivar as a locking mechanism has bad smell
+    // TODO: refactor maybe?
     this.parsingTestFile = true
-    this.updateDotDecorators(editor)
+
+    const filePath = editor.document.fileName
+    const testResults = this.testResultProvider.getSortedResults(filePath)
+
+    this.updateDecorators(testResults, editor)
+    updateCurrentDiagnostics(testResults.fail, this.failDiagnostics, editor)
+
     this.parsingTestFile = false
   }
 
@@ -307,9 +248,6 @@ export class JestExt {
     this.workspace.pathToJest = pathToJest(updatedSettings)
     this.workspace.pathToConfig = pathToConfig(updatedSettings)
     this.workspace.debug = updatedSettings.debugMode
-
-    this.recreateJestSettings()
-    this.getSettings()
 
     this.coverageOverlay.enabled = updatedSettings.showCoverageOnLoad
 
@@ -324,15 +262,7 @@ export class JestExt {
     }, 500)
   }
 
-  private recreateJestSettings() {
-    const useShell = platform() === 'win32'
-    this.jestSettings = new Settings(this.workspace, { shell: useShell })
-  }
-
-  private updateDotDecorators(editor: vscode.TextEditor) {
-    const filePath = editor.document.fileName
-    const testResults = this.testResultProvider.getSortedResults(filePath)
-
+  updateDecorators(testResults: SortedTestResults, editor: vscode.TextEditor) {
     // Dots
     const styleMap = [
       { data: testResults.success, decorationType: this.passingItStyle, state: TestReconciliationState.KnownSuccess },
@@ -391,12 +321,7 @@ export class JestExt {
     return { style, decorator }
   }
 
-  canUpdateDecorators(editor: vscode.TextEditor) {
-    const atEmptyScreen = !editor
-    if (atEmptyScreen) {
-      return false
-    }
-
+  canUpdateActiveEditor(editor: vscode.TextEditor) {
     const inSettings = !editor.document
     if (inSettings) {
       return false
@@ -406,29 +331,9 @@ export class JestExt {
       return false
     }
 
-    const isATestFile = this.wouldJestRunURI(editor.document.uri)
-    return isATestFile
-  }
-
-  private wouldJestRunURI(uri: vscode.Uri) {
-    const filePath = uri.fsPath
-    const globs = this.jestSettings.settings.testMatch
-
-    if (globs && globs.length) {
-      const matchers = globs.map(each => matcher(each, { dot: true }))
-      const matched = matchers.some(isMatch => isMatch(filePath))
-      return matched
-    }
-
-    const root = this.pluginSettings.rootPath
-    let relative = path.normalize(path.relative(root, filePath))
-    // replace windows path separator with normal slash
-    if (path.sep === '\\') {
-      relative = relative.replace(/\\/g, '/')
-    }
-    const testRegex = new RegExp(this.jestSettings.settings.testRegex)
-    const matches = relative.match(testRegex)
-    return matches && matches.length > 0
+    // check if file is a possible code file: js/jsx/ts/tsx
+    const codeRegex = /\.[t|j]sx?$/
+    return codeRegex.test(editor.document.uri.fsPath)
   }
 
   private setupStatusBar() {
@@ -467,7 +372,7 @@ export class JestExt {
     }
 
     for (const editor of vscode.window.visibleTextEditors) {
-      this.triggerUpdateDecorations(editor)
+      this.triggerUpdateActiveEditor(editor)
     }
     this.clearOnNextInput = true
   }
@@ -484,16 +389,6 @@ export class JestExt {
       return {
         range: new vscode.Range(it.start.line, it.start.column, it.start.line, it.start.column + 1),
         hoverMessage: nameForState[state],
-        /* ERROR: this needs to include all ancestor describe block names as well!
-          in code bellow it block has identifier = 'aaa bbb ccc': but name is only 'ccc'
-
-          describe('aaa', () => {
-            describe('bbb', () => {
-              it('ccc', () => {
-              });
-            });
-          });
-        */
         identifier: it.name,
       }
     })
@@ -555,14 +450,14 @@ export class JestExt {
       return
     }
 
-    this.triggerUpdateDecorations(editor)
+    this.triggerUpdateActiveEditor(editor)
   }
 
   /**
-   * This event is fired with the document not dirty when:
-   * - before the onDidSaveTextDocument event
-   * - the document was changed by an external editor
-   */
+* This event is fired with the document not dirty when:
+* - before the onDidSaveTextDocument event
+* - the document was changed by an external editor
+*/
   onDidChangeTextDocument(event: vscode.TextDocumentChangeEvent) {
     if (event.document.isDirty) {
       return
@@ -580,7 +475,7 @@ export class JestExt {
 
     for (const editor of vscode.window.visibleTextEditors) {
       if (editor.document === event.document) {
-        this.triggerUpdateDecorations(editor)
+        this.triggerUpdateActiveEditor(editor)
       }
     }
   }

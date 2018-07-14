@@ -20,6 +20,8 @@ Bug-fixes within the same version aren't needed
   * Added a `jest.debugMode` setting for self-diagnosis
   * expand README Troubleshooting area
   * expand issue template to include critical settings as well as debug output
+* retired jestSettings and version lookup logic - connectdotz
+* refactor diagnostics to defer some expensive operations to later when the file becomes active. This is to improve performance and correctness, especially for use cases in #349 or #334 - connectdotz
 -->
 
 ### 2.7.2

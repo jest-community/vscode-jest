@@ -10,8 +10,12 @@ describe('test system messaging', () => {
   const mockExecCommands = commands.executeCommand as jest.Mock<any>
   const mockUriParse = Uri.parse as jest.Mock<any>
 
+  const thenable = () => {}
   beforeEach(() => {
     jest.resetAllMocks()
+
+    mockShowErrorMessage.mockReturnValue({ then: thenable })
+    mockShowWarningMessage.mockReturnValue({ then: thenable })
   })
   it('can show system message without actions', () => {
     const validate = (mockF: jest.Mock<any>) => {

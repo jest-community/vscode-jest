@@ -10,22 +10,16 @@ export interface MessageAction {
 }
 
 export function systemErrorMessage(message: string, ...actions: Array<MessageAction>) {
-  const msg = vscode.window.showErrorMessage(message, ..._extractActionTitles(actions))
-  if (msg) {
-    msg.then(_handleMessageActions(actions))
-  }
+  vscode.window.showErrorMessage(message, ..._extractActionTitles(actions)).then(_handleMessageActions(actions))
 }
 
 export function systemWarningMessage(message: string, ...actions: Array<MessageAction>) {
-  const msg = vscode.window.showWarningMessage(message, ..._extractActionTitles(actions))
-  if (msg) {
-    msg.then(_handleMessageActions(actions))
-  }
+  vscode.window.showWarningMessage(message, ..._extractActionTitles(actions)).then(_handleMessageActions(actions))
 }
 
 // common actions
 export const showTroubleshootingAction: MessageAction = {
-  title: 'help',
+  title: 'Help',
   action: () => vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(TroubleShootingURL)),
 }
 
@@ -34,10 +28,7 @@ export const TroubleShootingURL = 'https://github.com/jest-community/vscode-jest
 // internal methods
 //
 function _extractActionTitles(actions?: Array<MessageAction>): string[] {
-  if (!actions || actions.length === 0) {
-    return []
-  }
-  return actions.map(a => a.title)
+  return actions ? actions.map(a => a.title) : []
 }
 // expose the internal function so we can unit testing it
 export function _handleMessageActions(actions?: Array<MessageAction>): (action?: string) => void {
@@ -49,7 +40,7 @@ export function _handleMessageActions(actions?: Array<MessageAction>): (action?:
     if (found.length === 1) {
       found[0].action()
     } else {
-      vscode.window.showWarningMessage(`unrecognized action ${action}`)
+      throw Error(`expect exactly one matched action '${action}' but found ${found.length} match(es)`)
     }
   }
 }

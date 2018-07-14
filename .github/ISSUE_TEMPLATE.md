@@ -4,7 +4,7 @@
 1. `node -v`: [fill]
 1. `npm -v`: [fill]
 1. `npm ls jest` or `npm ls react-scripts` (if you haven’t ejected): [fill]
-1. you vscode-jest settings if customized:
+1. your vscode-jest settings if customized:
     - jest.pathToJest? [fill]
     - jest.pathToConfig? [fill]
     - anything else that you think might be relevant? [fill]
@@ -23,7 +23,7 @@
 
 ### Relevant Debug Info
 
-<!-- If applicable, following self-diagnosis in  https://github.com/jest-community/vscode-jest/blob/master/README.md#troubleshooting, and include the relevant debug info here to speed up the issue resolution -->
+<!-- If applicable, following self-diagnosis in https://github.com/jest-community/vscode-jest/blob/master/README.md#troubleshooting, and include the relevant debug info here to speed up the issue resolution -->
 
 [fill]
 
