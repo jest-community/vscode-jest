@@ -147,7 +147,7 @@ However, if your repo doesn't fall into these patterns or you want to pass extra
 ### plugin not running as expect? try self-diagnosis
 If your can execute jest tests on command line but vscode-jest was not running as expected, here is what you can do to find out what it is actually doing:
 1. click on `Jest:stopped` on status bar to show Jest Output window: 
-<img src="images/output-channel.png" alt="Screenshot of the tool" width="100%">
+<img src="https://github.com/jest-community/vscode-jest/raw/master/images/output-channel.png" alt="Screenshot of the tool" width="100%">
 1. turn on the debug mode: set `"jest.debugMode": true` in `.vscode/settings.json` 
 1. restart vscode-jest or reload the window (via `Reload Window` command)
 1. open the developer tool (via `Help > Toggle Developer Tools` menu), you should see more information including how we extract jest config and spawn jest processes.
