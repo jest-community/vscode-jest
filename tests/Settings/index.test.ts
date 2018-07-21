@@ -1,5 +1,5 @@
-jest.unmock('../index')
-import { isDefaultPathToJest } from './index'
+jest.unmock('../../src/Settings')
+import { isDefaultPathToJest } from '../../src/Settings'
 
 describe('isDefaultPathToJest', () => {
   it('returns true when the value is null', () => {
@@ -11,6 +11,6 @@ describe('isDefaultPathToJest', () => {
   })
 
   it('returns false otherwise', () => {
-    expect(isDefaultPathToJest('')).toBe(false)
+    expect(isDefaultPathToJest('something')).toBe(false)
   })
 })

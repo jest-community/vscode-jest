@@ -1,60 +1,35 @@
 jest.unmock('events')
 jest.unmock('../src/JestExt')
+jest.unmock('../src/messaging')
 
 jest.mock('../src/DebugCodeLens', () => ({
   DebugCodeLensProvider: class MockCodeLensProvider {},
 }))
 jest.mock('os')
+jest.mock('../src/decorations')
 
 import { JestExt } from '../src/JestExt'
-import { ProjectWorkspace, Settings } from 'jest-editor-support'
-import { platform } from 'os'
+import { ProjectWorkspace } from 'jest-editor-support'
 import { window, workspace, debug } from 'vscode'
 import { hasDocument, isOpenInMultipleEditors } from '../src/editor'
-import { failingAssertionStyle } from '../src/decorations'
+import * as decorations from '../src/decorations'
+import { updateCurrentDiagnostics } from '../src/diagnostics'
 
 describe('JestExt', () => {
-  const mockSettings = (Settings as any) as jest.Mock<any>
-  const mockSettingsObject = {
-    getConfig: callback => callback(),
-    jestVersionMajor: 22,
-  }
   const getConfiguration = workspace.getConfiguration as jest.Mock<any>
   let projectWorkspace: ProjectWorkspace
   const channelStub = { appendLine: () => {} } as any
-  const mockShowErrorMessage = window.showErrorMessage as jest.Mock<any>
+  // const mockShowErrorMessage = window.showErrorMessage as jest.Mock<any>
+  // const mockShowWarningMessage = window.showWarningMessage as jest.Mock<any>
   const extensionSettings = { debugCodeLens: {} } as any
+
+  console.error = jest.fn()
 
   beforeEach(() => {
     jest.resetAllMocks()
 
     projectWorkspace = new ProjectWorkspace(null, null, null, null)
     getConfiguration.mockReturnValue({})
-  })
-
-  it('should show error message if jest version i < 18', () => {
-    mockSettings.mockImplementationOnce(() => ({
-      ...mockSettingsObject,
-      jestVersionMajor: 17,
-    }))
-    new JestExt(null, projectWorkspace, channelStub, extensionSettings)
-
-    expect(mockShowErrorMessage.mock.calls).toMatchSnapshot()
-  })
-
-  it.skip('should not show error message if jest version is 20', () => {
-    mockSettings.mockImplementationOnce(() => mockSettingsObject)
-    new JestExt(null, projectWorkspace, channelStub, extensionSettings)
-    expect(window.showErrorMessage).not.toBeCalled()
-  })
-
-  it('should create `Settings` with `shell` set on Windows', () => {
-    mockSettings.mockImplementationOnce((_, options) => {
-      expect(options.shell).toBe(true)
-      return mockSettingsObject
-    })
-    ;((platform as any) as jest.Mock<any>).mockReturnValueOnce('win32')
-    new JestExt(null, projectWorkspace, channelStub, extensionSettings)
   })
 
   describe('resetInlineErrorDecorators()', () => {
@@ -68,9 +43,9 @@ describe('JestExt', () => {
     beforeEach(() => {
       sut = new JestExt(null, projectWorkspace, channelStub, extensionSettings)
 
-      sut.canUpdateDecorators = jest.fn().mockReturnValueOnce(true)
+      sut.canUpdateActiveEditor = jest.fn().mockReturnValueOnce(true)
       sut.debugCodeLensProvider.didChange = jest.fn()
-      ;(failingAssertionStyle as jest.Mock<{}>).mockReturnValue({})
+      ;(decorations.failingAssertionStyle as jest.Mock<{}>).mockReturnValue({})
       ;(sut.testResultProvider.getSortedResults as jest.Mock<{}>).mockReturnValueOnce({
         success: [],
         fail: [],
@@ -81,7 +56,7 @@ describe('JestExt', () => {
 
     it('should initialize the cached decoration types as an empty array', () => {
       expect(sut.failingAssertionDecorators[editor.document.fileName]).toBeUndefined()
-      sut.triggerUpdateDecorations(editor)
+      sut.triggerUpdateActiveEditor(editor)
 
       expect(sut.failingAssertionDecorators[editor.document.fileName]).toEqual([])
       expect(isOpenInMultipleEditors).not.toBeCalled()
@@ -93,21 +68,21 @@ describe('JestExt', () => {
       sut.failingAssertionDecorators[editor.document.fileName] = {
         forEach: jest.fn(),
       } as any
-      sut.triggerUpdateDecorations(editor)
+      sut.triggerUpdateActiveEditor(editor)
 
       expect(sut.failingAssertionDecorators[editor.document.fileName].forEach).not.toBeCalled()
     })
 
     it('should dispose of each cached decoration type', () => {
       sut.failingAssertionDecorators[editor.document.fileName] = [decorationType]
-      sut.triggerUpdateDecorations(editor)
+      sut.triggerUpdateActiveEditor(editor)
 
       expect(decorationType.dispose).toBeCalled()
     })
 
     it('should reset the cached decoration types', () => {
       sut.failingAssertionDecorators[editor.document.fileName] = [decorationType]
-      sut.triggerUpdateDecorations(editor)
+      sut.triggerUpdateActiveEditor(editor)
 
       expect(sut.failingAssertionDecorators[editor.document.fileName]).toEqual([])
     })
@@ -125,8 +100,8 @@ describe('JestExt', () => {
         setDecorations: jest.fn(),
       }
       const expected = {}
-      ;(failingAssertionStyle as jest.Mock<{}>).mockReturnValueOnce(expected)
-      sut.canUpdateDecorators = jest.fn().mockReturnValueOnce(true)
+      ;(decorations.failingAssertionStyle as jest.Mock<{}>).mockReturnValueOnce(expected)
+      sut.canUpdateActiveEditor = jest.fn().mockReturnValueOnce(true)
       sut.testResultProvider.getSortedResults = jest.fn().mockReturnValueOnce({
         success: [],
         fail: [
@@ -138,7 +113,7 @@ describe('JestExt', () => {
         unknown: [],
       })
       sut.debugCodeLensProvider.didChange = jest.fn()
-      sut.triggerUpdateDecorations(editor)
+      sut.triggerUpdateActiveEditor(editor)
 
       expect(sut.failingAssertionDecorators[editor.document.fileName]).toEqual([expected])
     })
@@ -247,24 +222,24 @@ describe('JestExt', () => {
     const editor: any = {}
     const projectWorkspace = new ProjectWorkspace(null, null, null, null)
     sut = new JestExt(null, projectWorkspace, channelStub, extensionSettings)
-    sut.triggerUpdateDecorations = jest.fn()
+    sut.triggerUpdateActiveEditor = jest.fn()
 
     beforeEach(() => {
-      ;(sut.triggerUpdateDecorations as jest.Mock<{}>).mockReset()
+      ;(sut.triggerUpdateActiveEditor as jest.Mock<{}>).mockReset()
     })
 
     it('should do nothing if the editor does not have a document', () => {
       ;(hasDocument as jest.Mock<{}>).mockReturnValueOnce(false)
       sut.onDidChangeActiveTextEditor(editor)
 
-      expect(sut.triggerUpdateDecorations).not.toBeCalled()
+      expect(sut.triggerUpdateActiveEditor).not.toBeCalled()
     })
 
     it('should update the annotations when the editor has a document', () => {
       ;(hasDocument as jest.Mock<{}>).mockReturnValueOnce(true)
       sut.onDidChangeActiveTextEditor(editor)
 
-      expect(sut.triggerUpdateDecorations).toBeCalledWith(editor)
+      expect(sut.triggerUpdateActiveEditor).toBeCalledWith(editor)
     })
   })
 
@@ -285,11 +260,11 @@ describe('JestExt', () => {
 
     function expectItTakesNoAction(event) {
       sut.removeCachedTestResults = jest.fn()
-      sut.triggerUpdateDecorations = jest.fn()
+      sut.triggerUpdateActiveEditor = jest.fn()
       sut.onDidChangeTextDocument(event)
 
       expect(sut.removeCachedTestResults).not.toBeCalledWith(event.document)
-      expect(sut.triggerUpdateDecorations).not.toBeCalled()
+      expect(sut.triggerUpdateActiveEditor).not.toBeCalled()
     }
 
     it('should do nothing if the document has unsaved changes', () => {
@@ -337,11 +312,11 @@ describe('JestExt', () => {
 
     it('should update the decorations', () => {
       const editor: any = { document: event.document }
-      sut.triggerUpdateDecorations = jest.fn()
+      sut.triggerUpdateActiveEditor = jest.fn()
       window.visibleTextEditors = [editor]
       sut.onDidChangeTextDocument(event)
 
-      expect(sut.triggerUpdateDecorations).toBeCalledWith(editor)
+      expect(sut.triggerUpdateActiveEditor).toBeCalledWith(editor)
     })
   })
 
@@ -354,14 +329,143 @@ describe('JestExt', () => {
     })
   })
 
-  describe('triggerUpdateDecorations()', () => {
+  describe('triggerUpdateActiveEditor()', () => {
+    beforeEach(() => {
+      jest.resetAllMocks()
+    })
     it('should update the coverage overlay in visible editors', () => {
       const editor: any = {}
 
       const sut = new JestExt(null, projectWorkspace, channelStub, extensionSettings)
-      sut.triggerUpdateDecorations(editor)
+      sut.triggerUpdateActiveEditor(editor)
 
       expect(sut.coverageOverlay.updateVisibleEditors).toBeCalled()
+    })
+    it('should update both decorators and diagnostics for valid editor', () => {
+      const sut = new JestExt(null, projectWorkspace, channelStub, extensionSettings)
+      sut.updateDecorators = jest.fn()
+      const mockEditor: any = {
+        document: { uri: { fsPath: 'file://a/b/c.ts' } },
+      }
+      ;(sut.testResultProvider.getSortedResults as jest.Mock<{}>).mockReturnValueOnce({
+        success: [],
+        fail: [],
+        skip: [],
+        unknown: [],
+      })
+      sut.triggerUpdateActiveEditor(mockEditor)
+
+      expect(sut.updateDecorators).toBeCalled()
+      expect(updateCurrentDiagnostics).toBeCalled()
+    })
+  })
+
+  describe('canUpdateActiveEditor', () => {
+    const mockTextEditor = (ext: string): any => {
+      const extension = ext.length ? `.${ext}` : ''
+      return {
+        document: { uri: { fsPath: `file://a/b/c${extension}` } },
+      }
+    }
+
+    let sut
+    beforeEach(() => {
+      jest.resetAllMocks()
+      const projectWorkspace = new ProjectWorkspace(null, null, null, null)
+      sut = new JestExt(null, projectWorkspace, channelStub, extensionSettings)
+    })
+    it('will skip if there is no document in editor', () => {
+      const editor: any = {}
+      expect(sut.canUpdateActiveEditor(editor)).toBe(false)
+    })
+    it('can not update if file is being parsed', () => {
+      expect(sut.canUpdateActiveEditor(mockTextEditor('js'))).toBe(true)
+      sut.parsingTestFile = true
+      expect(sut.canUpdateActiveEditor(mockTextEditor('js'))).toBe(false)
+    })
+    it('can only update if document is a typescript or javascript file', () => {
+      expect(sut.canUpdateActiveEditor(mockTextEditor('json'))).toBe(false)
+      expect(sut.canUpdateActiveEditor(mockTextEditor(''))).toBe(false)
+
+      expect(sut.canUpdateActiveEditor(mockTextEditor('js'))).toBe(true)
+      expect(sut.canUpdateActiveEditor(mockTextEditor('jsx'))).toBe(true)
+      expect(sut.canUpdateActiveEditor(mockTextEditor('ts'))).toBe(true)
+      expect(sut.canUpdateActiveEditor(mockTextEditor('tsx'))).toBe(true)
+    })
+  })
+  describe('updateDecorators', () => {
+    let sut: JestExt
+    const mockEditor: any = { document: { uri: { fsPath: `file://a/b/c.js` } } }
+    const emptyTestResults = { success: [], fail: [], skip: [], unknown: [] }
+
+    const settings: any = {
+      debugCodeLens: {},
+      enableInlineErrorMessages: false,
+    }
+
+    const tr1 = {
+      start: { line: 1, column: 0 },
+    }
+    const tr2 = {
+      start: { line: 100, column: 0 },
+    }
+
+    beforeEach(() => {
+      jest.resetAllMocks()
+      ;(decorations.failingItName as jest.Mock<{}>).mockReturnValue({ key: 'fail' })
+      ;(decorations.passingItName as jest.Mock<{}>).mockReturnValue({ key: 'pass' })
+      ;(decorations.skipItName as jest.Mock<{}>).mockReturnValue({ key: 'skip' })
+      ;(decorations.notRanItName as jest.Mock<{}>).mockReturnValue({ key: 'notRan' })
+
+      const projectWorkspace = new ProjectWorkspace(null, null, null, null)
+      sut = new JestExt(null, projectWorkspace, channelStub, settings)
+
+      mockEditor.setDecorations = jest.fn()
+      sut.debugCodeLensProvider.didChange = jest.fn()
+    })
+
+    it('will reset decorator if testResults is empty', () => {
+      sut.updateDecorators(emptyTestResults, mockEditor)
+      expect(mockEditor.setDecorations).toHaveBeenCalledTimes(4)
+      for (const args of mockEditor.setDecorations.mock.calls) {
+        expect(args[1].length).toBe(0)
+      }
+    })
+    it('will generate dot dectorations for test results', () => {
+      console.log('decorations.passingItName() = ', decorations.passingItName())
+
+      const testResults2: any = { success: [tr1], fail: [tr2], skip: [], unknown: [] }
+      sut.updateDecorators(testResults2, mockEditor)
+      expect(mockEditor.setDecorations).toHaveBeenCalledTimes(4)
+      for (const args of mockEditor.setDecorations.mock.calls) {
+        switch (args[0].key) {
+          case 'fail':
+          case 'pass':
+            expect(args[1].length).toBe(1)
+            break
+          case 'skip':
+          case 'notRan':
+            expect(args[1].length).toBe(0)
+            break
+          default:
+            expect(args[0].key).toBe('never be here')
+        }
+      }
+    })
+
+    it('will update inlineError decorator only if setting is enabled', () => {
+      const testResults2: any = { success: [], fail: [tr1, tr2], skip: [], unknown: [] }
+      const expected = {}
+      ;(decorations.failingAssertionStyle as jest.Mock<{}>).mockReturnValueOnce(expected)
+      sut.updateDecorators(testResults2, mockEditor)
+      expect(decorations.failingAssertionStyle).not.toBeCalled()
+      expect(mockEditor.setDecorations).toHaveBeenCalledTimes(4)
+
+      jest.clearAllMocks()
+      settings.enableInlineErrorMessages = true
+      sut.updateDecorators(testResults2, mockEditor)
+      expect(decorations.failingAssertionStyle).toHaveBeenCalledTimes(2)
+      expect(mockEditor.setDecorations).toHaveBeenCalledTimes(6)
     })
   })
 })

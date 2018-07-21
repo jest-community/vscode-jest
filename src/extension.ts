@@ -19,7 +19,15 @@ export function activate(context: vscode.ExtensionContext) {
   const jestPath = pathToJest(pluginSettings)
   const configPath = pathToConfig(pluginSettings)
   const currentJestVersion = 20
-  const workspace = new ProjectWorkspace(pluginSettings.rootPath, jestPath, configPath, currentJestVersion)
+  const debugMode = pluginSettings.debugMode
+  const workspace = new ProjectWorkspace(
+    pluginSettings.rootPath,
+    jestPath,
+    configPath,
+    currentJestVersion,
+    null,
+    debugMode
+  )
 
   // Create our own console
   const channel = vscode.window.createOutputChannel('Jest')
@@ -95,5 +103,6 @@ export function getExtensionSettings(): IPluginSettings {
     runAllTestsFirst: config.get<boolean>('runAllTestsFirst'),
     showCoverageOnLoad: config.get<boolean>('showCoverageOnLoad'),
     coverageFormatter: config.get<string>('coverageFormatter'),
+    debugMode: config.get<boolean>('debugMode'),
   }
 }

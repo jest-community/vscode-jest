@@ -117,6 +117,11 @@
           "description": "Restart Jest runner after updating the snapshots",
           "type": "boolean",
           "default": false
+        },
+        "jest.debugMode": {
+          "description": "Enable debug mode to diagnose plugin issues. (see developer console)",
+          "type": "boolean",
+          "default": false
         }
       }
     },
@@ -219,7 +224,7 @@
     "danger": "^2",
     "glob": "^7.1.1",
     "husky": "^0.14.3",
-    "jest": "^22.0.4",
+    "jest": "^23.3.0",
     "lint-staged": "^4.2.3",
     "prettier": "1.7.3",
     "rimraf": "^2.6.2",
@@ -232,9 +237,9 @@
     "elegant-spinner": "^1.0.1",
     "istanbul-lib-coverage": "^1.1.1",
     "istanbul-lib-source-maps": "^1.1.0",
-    "jest-editor-support": "23.0.0",
-    "jest-snapshot": "^22.1.2",
-    "jest-test-typescript-parser": "^22.1.3",
+    "jest-editor-support": "23.3.0",
+    "jest-snapshot": "^23.0.1",
+    "jest-test-typescript-parser": "^23.3.0",
     "micromatch": "^2.3.11"
   }
 }
