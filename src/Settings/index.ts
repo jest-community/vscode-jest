@@ -1,4 +1,4 @@
-import { TestState } from './DebugCodeLens'
+import { TestState } from '../DebugCodeLens'
 
 export interface IPluginSettings {
   autoEnable?: boolean
@@ -15,4 +15,14 @@ export interface IPluginSettings {
   rootPath?: string
   runAllTestsFirst?: boolean
   showCoverageOnLoad: boolean
+  coverageFormatter: string
+  debugMode?: boolean
+}
+
+export function isDefaultPathToJest(str) {
+  return str === null || str === ''
+}
+
+export function hasUserSetPathToJest(str) {
+  return !isDefaultPathToJest(str)
 }

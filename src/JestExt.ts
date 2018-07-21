@@ -1,21 +1,19 @@
 import * as vscode from 'vscode'
-import * as path from 'path'
-import { Settings, ProjectWorkspace, JestTotalResults } from 'jest-editor-support'
-import { matcher } from 'micromatch'
+import { ProjectWorkspace, JestTotalResults } from 'jest-editor-support'
 
 import * as decorations from './decorations'
-import { IPluginSettings } from './IPluginSettings'
+import { IPluginSettings } from './Settings'
 import * as status from './statusBar'
 import {
   TestReconciliationState,
   TestResultProvider,
   TestResult,
   resultsWithLowerCaseWindowsDriveLetters,
+  SortedTestResults,
 } from './TestResults'
-import { pathToJestPackageJSON, pathToJest, pathToConfig } from './helpers'
-import { readFileSync } from 'fs'
+import { pathToJest, pathToConfig } from './helpers'
 import { CoverageMapProvider } from './Coverage'
-import { updateDiagnostics, resetDiagnostics, failedSuiteCount } from './diagnostics'
+import { updateDiagnostics, updateCurrentDiagnostics, resetDiagnostics, failedSuiteCount } from './diagnostics'
 import { DebugCodeLensProvider } from './DebugCodeLens'
 import { DebugConfigurationProvider } from './DebugConfigurationProvider'
 import { DecorationOptions } from './types'
@@ -23,10 +21,10 @@ import { hasDocument, isOpenInMultipleEditors } from './editor'
 import { CoverageOverlay } from './Coverage/CoverageOverlay'
 import { JestProcess, JestProcessManager } from './JestProcessManagement'
 import { isWatchNotSupported, WatchMode } from './Jest'
+import * as messaging from './messaging'
 
 export class JestExt {
   private workspace: ProjectWorkspace
-  private jestSettings: Settings
   private pluginSettings: IPluginSettings
 
   coverageMapProvider: CoverageMapProvider
@@ -57,17 +55,26 @@ export class JestExt {
 
   private clearOnNextInput: boolean
 
-  constructor(workspace: ProjectWorkspace, outputChannel: vscode.OutputChannel, pluginSettings: IPluginSettings) {
+  constructor(
+    context: vscode.ExtensionContext,
+    workspace: ProjectWorkspace,
+    outputChannel: vscode.OutputChannel,
+    pluginSettings: IPluginSettings
+  ) {
     this.workspace = workspace
     this.channel = outputChannel
     this.failingAssertionDecorators = {}
     this.failDiagnostics = vscode.languages.createDiagnosticCollection('Jest')
     this.clearOnNextInput = true
-    this.jestSettings = new Settings(workspace)
     this.pluginSettings = pluginSettings
 
     this.coverageMapProvider = new CoverageMapProvider()
-    this.coverageOverlay = new CoverageOverlay(this.coverageMapProvider, pluginSettings.showCoverageOnLoad)
+    this.coverageOverlay = new CoverageOverlay(
+      context,
+      this.coverageMapProvider,
+      pluginSettings.showCoverageOnLoad,
+      pluginSettings.coverageFormatter
+    )
 
     this.testResultProvider = new TestResultProvider()
     this.debugCodeLensProvider = new DebugCodeLensProvider(
@@ -81,7 +88,6 @@ export class JestExt {
       runAllTestsFirstInWatchMode: this.pluginSettings.runAllTestsFirst,
     })
 
-    this.getSettings()
     // The theme stuff
     this.setupDecorators()
     // The bottom bar thing
@@ -125,7 +131,7 @@ export class JestExt {
     this.channel.appendLine(noANSI)
   }
 
-  private assignHandlers(jestProcess) {
+  private assignHandlers(jestProcess: JestProcess) {
     jestProcess
       .onJestEditorSupportEvent('executableJSON', (data: JestTotalResults) => {
         this.updateWithData(data)
@@ -138,12 +144,15 @@ export class JestExt {
       .onJestEditorSupportEvent('executableStdErr', (error: Buffer) => this.handleStdErr(error))
       .onJestEditorSupportEvent('nonTerminalError', (error: string) => {
         this.channel.appendLine(`Received an error from Jest Runner: ${error.toString()}`)
+        this.channel.show(true)
       })
       .onJestEditorSupportEvent('exception', result => {
         this.channel.appendLine(`\nException raised: [${result.type}]: ${result.message}\n`)
+        this.channel.show(true)
       })
       .onJestEditorSupportEvent('terminalError', (error: string) => {
         this.channel.appendLine('\nException raised: ' + error)
+        this.channel.show(true)
       })
   }
 
@@ -170,9 +179,10 @@ export class JestExt {
         } else {
           status.stopped()
           if (!jestProcess.stopRequested) {
-            this.channel.appendLine(
-              'Starting Jest in Watch mode failed too many times and has been stopped. Please check your system configuration.'
-            )
+            const msg = `Starting Jest in Watch mode failed too many times and has been stopped.`
+            this.channel.appendLine(`${msg}\n see troubleshooting: ${messaging.TroubleShootingURL}`)
+            this.channel.show(true)
+            messaging.systemErrorMessage(msg, messaging.showTroubleshootingAction)
           }
         }
       },
@@ -185,25 +195,6 @@ export class JestExt {
     this.channel.appendLine('Closing Jest')
     this.jestProcessManager.stopAll()
     status.stopped()
-  }
-
-  private getSettings() {
-    this.getJestVersion(jestVersionMajor => {
-      if (jestVersionMajor < 20) {
-        vscode.window.showErrorMessage(
-          'This extension relies on Jest 20+ features, it will continue to work, but some features may not work correctly.'
-        )
-      }
-      this.workspace.localJestMajorVersion = jestVersionMajor
-    })
-
-    // Do nothing for the minute, the above ^ can come back once
-    // https://github.com/facebook/jest/pull/3592 is deployed
-    try {
-      this.jestSettings.getConfig(() => {})
-    } catch (error) {
-      console.log('[vscode-jest] Getting Jest config crashed, likely due to Jest version being below version 20.')
-    }
   }
 
   private detectedSnapshotErrors() {
@@ -229,16 +220,24 @@ export class JestExt {
       })
   }
 
-  public triggerUpdateDecorations(editor: vscode.TextEditor) {
+  public triggerUpdateActiveEditor(editor: vscode.TextEditor) {
     this.coverageOverlay.updateVisibleEditors()
 
-    if (!this.canUpdateDecorators(editor)) {
+    if (!this.canUpdateActiveEditor(editor)) {
       return
     }
 
-    // OK - lets go
+    // not sure why we need to protect this block with parsingTestFile ?
+    // using an ivar as a locking mechanism has bad smell
+    // TODO: refactor maybe?
     this.parsingTestFile = true
-    this.updateDotDecorators(editor)
+
+    const filePath = editor.document.fileName
+    const testResults = this.testResultProvider.getSortedResults(filePath)
+
+    this.updateDecorators(testResults, editor)
+    updateCurrentDiagnostics(testResults.fail, this.failDiagnostics, editor)
+
     this.parsingTestFile = false
   }
 
@@ -248,8 +247,7 @@ export class JestExt {
     this.workspace.rootPath = updatedSettings.rootPath
     this.workspace.pathToJest = pathToJest(updatedSettings)
     this.workspace.pathToConfig = pathToConfig(updatedSettings)
-
-    this.jestSettings = new Settings(this.workspace)
+    this.workspace.debug = updatedSettings.debugMode
 
     this.coverageOverlay.enabled = updatedSettings.showCoverageOnLoad
 
@@ -264,10 +262,7 @@ export class JestExt {
     }, 500)
   }
 
-  private updateDotDecorators(editor: vscode.TextEditor) {
-    const filePath = editor.document.fileName
-    const testResults = this.testResultProvider.getSortedResults(filePath)
-
+  updateDecorators(testResults: SortedTestResults, editor: vscode.TextEditor) {
     // Dots
     const styleMap = [
       { data: testResults.success, decorationType: this.passingItStyle, state: TestReconciliationState.KnownSuccess },
@@ -326,12 +321,7 @@ export class JestExt {
     return { style, decorator }
   }
 
-  canUpdateDecorators(editor: vscode.TextEditor) {
-    const atEmptyScreen = !editor
-    if (atEmptyScreen) {
-      return false
-    }
-
+  canUpdateActiveEditor(editor: vscode.TextEditor) {
     const inSettings = !editor.document
     if (inSettings) {
       return false
@@ -341,29 +331,9 @@ export class JestExt {
       return false
     }
 
-    const isATestFile = this.wouldJestRunURI(editor.document.uri)
-    return isATestFile
-  }
-
-  private wouldJestRunURI(uri: vscode.Uri) {
-    const filePath = uri.fsPath
-
-    const globs: string[] = (this.jestSettings.settings as any).testMatch
-    if (globs && globs.length) {
-      const matchers = globs.map(each => matcher(each, { dot: true }))
-      const matched = matchers.some(isMatch => isMatch(filePath))
-      return matched
-    }
-
-    const root = this.pluginSettings.rootPath
-    let relative = path.normalize(path.relative(root, filePath))
-    // replace windows path separator with normal slash
-    if (path.sep === '\\') {
-      relative = relative.replace(/\\/g, '/')
-    }
-    const testRegex = new RegExp(this.jestSettings.settings.testRegex)
-    const matches = relative.match(testRegex)
-    return matches && matches.length > 0
+    // check if file is a possible code file: js/jsx/ts/tsx
+    const codeRegex = /\.[t|j]sx?$/
+    return codeRegex.test(editor.document.uri.fsPath)
   }
 
   private setupStatusBar() {
@@ -402,7 +372,7 @@ export class JestExt {
     }
 
     for (const editor of vscode.window.visibleTextEditors) {
-      this.triggerUpdateDecorations(editor)
+      this.triggerUpdateActiveEditor(editor)
     }
     this.clearOnNextInput = true
   }
@@ -419,17 +389,6 @@ export class JestExt {
       return {
         range: new vscode.Range(it.start.line, it.start.column, it.start.line, it.start.column + 1),
         hoverMessage: nameForState[state],
-
-        /* ERROR: this needs to include all ancestor describe block names as well!
-          in code bellow it block has identifier = 'aaa bbb ccc': but name is only 'ccc'
-
-          describe('aaa', () => {
-            describe('bbb', () => {
-              it('ccc', () => {
-              });
-            });
-          });
-        */
         identifier: it.name,
       }
     })
@@ -437,22 +396,6 @@ export class JestExt {
 
   public deactivate() {
     this.jestProcessManager.stopAll()
-  }
-
-  private getJestVersion(version: (v: number) => void) {
-    let ver = 18 // default to the last pre-20 release if nothing else can be determined
-    const packageJSON = pathToJestPackageJSON(this.pluginSettings)
-
-    if (packageJSON) {
-      const contents = readFileSync(packageJSON, 'utf8')
-      const packageMetadata = JSON.parse(contents)
-
-      if (packageMetadata['version']) {
-        ver = parseInt(packageMetadata['version'])
-      }
-    }
-
-    version(ver)
   }
 
   public runTest = async (fileName: string, identifier: string) => {
@@ -507,14 +450,14 @@ export class JestExt {
       return
     }
 
-    this.triggerUpdateDecorations(editor)
+    this.triggerUpdateActiveEditor(editor)
   }
 
   /**
-   * This event is fired with the document not dirty when:
-   * - before the onDidSaveTextDocument event
-   * - the document was changed by an external editor
-   */
+* This event is fired with the document not dirty when:
+* - before the onDidSaveTextDocument event
+* - the document was changed by an external editor
+*/
   onDidChangeTextDocument(event: vscode.TextDocumentChangeEvent) {
     if (event.document.isDirty) {
       return
@@ -532,7 +475,7 @@ export class JestExt {
 
     for (const editor of vscode.window.visibleTextEditors) {
       if (editor.document === event.document) {
-        this.triggerUpdateDecorations(editor)
+        this.triggerUpdateActiveEditor(editor)
       }
     }
   }

@@ -56,6 +56,10 @@ describe('TestResultProvider', () => {
       line: 3,
     }
 
+    beforeEach(() => {
+      jest.resetAllMocks()
+    })
+
     it('should return the cached results if possible', () => {
       const sut = new TestResultProvider()
       ;(parseTest as jest.Mock<{}>).mockReturnValueOnce({
@@ -87,19 +91,43 @@ describe('TestResultProvider', () => {
       })
     })
 
+    it('should look up the test result by line number only if the name matches', () => {
+      const sut = new TestResultProvider()
+      ;(parseTest as jest.Mock<{}>).mockReturnValueOnce({
+        itBlocks: [testBlock],
+      })
+      const assertionC = Object.assign({}, assertion)
+      assertionC.title = 'xxx'
+      assertionsForTestFile.mockReturnValueOnce([assertionC])
+      const actual = sut.getResults(filePath)
+      expect(actual).toHaveLength(1)
+      expect(actual[0].status).toBe(TestReconciliationState.Unknown)
+    })
+
     it('should look up the test result by test name', () => {
       const sut = new TestResultProvider()
       ;(parseTest as jest.Mock<{}>).mockReturnValueOnce({
         itBlocks: [testBlock],
       })
-      assertionsForTestFile.mockReturnValueOnce([assertion])
+      const assertionC = Object.assign({}, assertion)
+      assertionC.line = undefined
+      assertionsForTestFile.mockReturnValueOnce([assertionC])
       const actual = sut.getResults(filePath)
 
       expect(actual).toHaveLength(1)
       expect(actual[0].name).toBe(testBlock.name)
-      expect(actual[0].status).toBe(assertion.status)
-      expect(actual[0].shortMessage).toBe(assertion.shortMessage)
-      expect(actual[0].terseMessage).toBe(assertion.terseMessage)
+      expect(actual[0].status).toBe(assertionC.status)
+      expect(actual[0].shortMessage).toBe(assertionC.shortMessage)
+      expect(actual[0].terseMessage).toBe(assertionC.terseMessage)
+      expect(actual[0].lineNumberOfError).toEqual(testBlock.end.line - 1)
+      expect(actual[0].start).toEqual({
+        line: testBlock.start.line - 1,
+        column: testBlock.start.column - 1,
+      })
+      expect(actual[0].end).toEqual({
+        line: testBlock.end.line - 1,
+        column: testBlock.end.column - 1,
+      })
     })
 
     it('should use default values for unmatched assertions', () => {
@@ -114,25 +142,21 @@ describe('TestResultProvider', () => {
       expect(actual[0].status).toBe(TestReconciliationState.Unknown)
       expect(actual[0].shortMessage).toBeUndefined()
       expect(actual[0].terseMessage).toBeUndefined()
-      expect(actual[0].lineNumberOfError).toBeUndefined()
     })
     it('should handle duplicate test names', () => {
       const sut = new TestResultProvider()
+      const testBlock2 = Object.assign({}, testBlock, {
+        start: {
+          line: 5,
+          column: 3,
+        },
+        end: {
+          line: 7,
+          column: 5,
+        },
+      })
       ;(parseTest as jest.Mock<{}>).mockReturnValueOnce({
-        itBlocks: [
-          testBlock,
-          {
-            name: testBlock.name,
-            start: {
-              line: 5,
-              column: 3,
-            },
-            end: {
-              line: 7,
-              column: 5,
-            },
-          },
-        ],
+        itBlocks: [testBlock, testBlock2],
       })
       assertionsForTestFile.mockReturnValueOnce([
         assertion,
@@ -146,6 +170,41 @@ describe('TestResultProvider', () => {
       expect(actual).toHaveLength(2)
       expect(actual[0].status).toBe(TestReconciliationState.KnownFail)
       expect(actual[1].status).toBe(TestReconciliationState.KnownSuccess)
+    })
+    it('should only mark error line number if it is within the right itBlock', () => {
+      const sut = new TestResultProvider()
+      const testBlock2 = {
+        name: 'test2',
+        start: {
+          line: 5,
+          column: 3,
+        },
+        end: {
+          line: 7,
+          column: 5,
+        },
+      }
+      ;(parseTest as jest.Mock<{}>).mockReturnValueOnce({
+        itBlocks: [testBlock, testBlock2],
+      })
+      assertionsForTestFile.mockReturnValueOnce([
+        {
+          title: testBlock2.name,
+          status: TestReconciliationState.KnownSuccess,
+          line: 3,
+        },
+      ])
+      const actual = sut.getResults(filePath)
+
+      expect(actual).toHaveLength(2)
+      let r = actual[0]
+      expect(r.name).toBe(testBlock.name)
+      expect(r.status).toBe(TestReconciliationState.Unknown)
+
+      r = actual[1]
+      expect(r.name).toBe(testBlock2.name)
+      expect(r.status).toBe(TestReconciliationState.KnownSuccess)
+      expect(r.lineNumberOfError).toBe(testBlock2.end.line - 1)
     })
   })
 

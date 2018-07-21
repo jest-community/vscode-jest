@@ -1,5 +1,28 @@
 # vscode-jest [![Build Status](https://travis-ci.org/jest-community/vscode-jest.svg?branch=master)](https://travis-ci.org/jest-community/vscode-jest)
 
+---
+
+
+Content
+* [The Aim](#the-aim)
+* [Maintainers](#maintainers)
+* [Features](#features)
+* [How to get it?](#how-to-get-it)
+* [How to get it set up?](#how-to-get-it-set-up)
+* [How to start the Jest?](#how-to-start-the-jest)
+* [How do I debug tests?](#how-do-i-debug-tests)
+	* [Notes for troubleshooting](#notes-for-troubleshooting)
+* [How do I show code coverage?](#how-do-i-show-code-coverage)
+* [Inspiration](#inspiration)
+* [Wanted](#wanted)
+* [Troubleshooting](#troubleshooting)
+	* [start jest from non-root folder](#start-jest-from-non-root-folder)
+	* [non-standard environments](#non-standard-environments)
+	* [plugin not running as expect? try self-diagnosis](#plugin-not-running-as-expect-try-self-diagnosis)
+* [Want to Contribute?](#want-to-contribute)
+
+---
+
 ## The Aim
 
 A comprehensive experience when using [Facebook's Jest](https://github.com/facebook/jest) within a project.
@@ -36,7 +59,7 @@ If have a more complex setup, it can probably be supported, check out the settin
 Also, you should use Jest 17+, however 16 works - it will just offer a warning. We're aiming to try and do current Jest version - 1, but won't specifically drop support for older versions unless we're forced into it.
 
 
-## How to start the Jest?
+## How do we start the Jest?
 
 The extension will start Jest for you when:
 
@@ -100,6 +123,7 @@ Someone to take responsibility for ensuring that the default setup for create-re
 
 ## Troubleshooting
 
+### start jest from non-root folder
 If you don't use the root of your project for your JS with Jest tests, do not worry, you can still use this project. You will need to use the "Start Jest Runner" command, and maybe have to configure your own `jest.pathToJest` setting inside the `.vscode/settings.json` to whatever you would use.
 
 These are the [activation events](https://code.visualstudio.com/docs/extensionAPI/activation-events) which trigger the runner to start:
@@ -113,62 +137,23 @@ These are the [activation events](https://code.visualstudio.com/docs/extensionAP
   ],
 ```
 
-These are the things that will trigger the extension loading. If one of these applies, and you're not seeing the "Jest" in the bottom bar, run the command `Open Developer Tools` and see if something has crashed, we'd love to know what that is, and ideally a project we can run against.
+These are the things that will trigger the extension loading. If one of these applies, and you're not seeing the "Jest" in the bottom bar, reference the self-diagnosis below
 
+### non-standard environments
+vscode-jest supports common jest configuration, such as when jest is in `root/node_modules/.bin/jest`, or for react-native `root/node_modules/react-native-scripts`. 
+
+However, if your repo doesn't fall into these patterns or you want to pass extra parameters, you can easily use the `jest.pathToJest` or `jest.pathToConfig` settings to instruct the plugin on how to start jest. You can even use the scripts from package.json, such as `npm run test --` or `yarn test`. Feel free to experiment and search the issues for many examples.
+
+### plugin not running as expect? try self-diagnosis
+If your can execute jest tests on command line but vscode-jest was not running as expected, here is what you can do to find out what it is actually doing:
+1. click on `Jest:stopped` on status bar to show Jest Output window: 
+<img src="images/output-channel.png" alt="Screenshot of the tool" width="100%">
+1. turn on the debug mode: set `"jest.debugMode": true` in `.vscode/settings.json` 
+1. restart vscode-jest or reload the window (via `Reload Window` command)
+1. open the developer tool (via `Help > Toggle Developer Tools` menu), you should see more information including how we extract jest config and spawn jest processes.
+
+Hopefully most issues would be pretty obvious after seeing these extra output, and you can probably fix most yourself by customizing the `jest.pathToJest` and other settings. 
 
 ## Want to Contribute?
 
-### Repository Setup
-
-The extension is in two parts, one is _this_ repo. It contains all the VS Code specific work.
-
-```js
-git clone https://github.com/jest-community/vscode-jest
-cd vscode-jest
-yarn install
-code .
-```
-
-The other part is inside the [Jest source code](http://github.com/facebook/jest/). It's a node module called "[jest-editor-support](https://github.com/facebook/jest/tree/master/packages/jest-editor-support)".
-
-It's very possible that you're going to want to make changes inside here, if you're doing something that touches the test runner process or file parsers. To get that set up to work I'd recommend doing this:
-
-```
-# set up jest
-cd ..
-git clone https://github.com/facebook/jest.git
-cd jest
-yarn install
-
-# link jest-editor-support
-cd packages/jest-editor-support
-yarn link
-
-# set up vscode-jest to use the real jest-editor-support
-cd ../../..
-cd vscode-jest
-yarn link jest-editor-support
-
-
-# go back and start the jest build watcher
-cd ..
-cd jest
-yarn watch
-```
-
-With that installed, you want to use a custom `jest-editor-support` by going into `cd packages/jest-editor-support` and running `yarn link`.
-
-Go back to vscode-jest, and do one more `yarn link "jest-editor-support"` and now you're using those files directly from master of Jest.
-
-As `jest-editor-support` requires running through Babel, you can run the Babel watcher for all Jest files by running `yarn run watch` inside the Jest root directory.
-
-Yeah, it's a bit of a process, but we'll be sharing code with the nuclide team and that's worth it IMO.
-
-
-### Debugging
-
-There are two debugging launch configurations defined in `.vscode/launch.json`:
-  * Debug Tests
-  * Launch Extension
-
-To debug the extension, [change the launch configuration](https://code.visualstudio.com/docs/editor/debugging#_launch-configurations) to **Launch Extension** and start debugging.
+Thanks for considering! Check [here](CONTRIBUTING.md) for useful tips and guidelines.

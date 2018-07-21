@@ -10,7 +10,18 @@ Bug-fixes within the same version aren't needed
   text editor - seanpoulter
 * Restart Jest with --watchAll when --watch is not supported without git/hg
   - seanpoulter
-
+* Highlight error of failed test when assertion was made outside of test
+* Fix regression in handling workspaces that have been bootstrapped with
+  create-react-app - seanpoulter
+* Run Jest on Windows in a shell when gathering settings, such that we don't
+  have to deal with the .cmd extension anymore - stephtr
+* upgrade to jest 23.3 - connectdotz
+* enhanced error reporting and troubleshooting assistance - connectdotz
+  * Added a `jest.debugMode` setting for self-diagnosis
+  * expand README Troubleshooting area
+  * expand issue template to include critical settings as well as debug output
+* retired jestSettings and version lookup logic - connectdotz
+* refactor diagnostics to defer some expensive operations to later when the file becomes active. This is to improve performance and correctness, especially for use cases in #349 or #334 - connectdotz
 -->
 
 ### 2.8.0
@@ -27,8 +38,7 @@ Bug-fixes within the same version aren't needed
 
 ### 2.7.1
 
-* Highlight the full line of the jest error, not just the first 6 characters - ThomasRooney
-* Fixes decorators [test highlight dots] working on Windows when jest path implicit - ThomasRooney
+* Add new coverage formatter named GutterFormatter (can be used by setting jest.coverageFormatter to GutterFormatter instead of DefaultFormatter) - Guymestef
 
 ### 2.7.0
 

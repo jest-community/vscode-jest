@@ -5,7 +5,7 @@ import * as path from 'path'
 import { extensionName } from './appGlobals'
 import { pathToJest, pathToConfig } from './helpers'
 import { JestExt } from './JestExt'
-import { IPluginSettings } from './IPluginSettings'
+import { IPluginSettings } from './Settings'
 import { registerStatusBar } from './statusBar'
 import { registerSnapshotCodeLens, registerSnapshotPreview } from './SnapshotCodeLens'
 import { registerCoverageCodeLens } from './Coverage'
@@ -19,13 +19,21 @@ export function activate(context: vscode.ExtensionContext) {
   const jestPath = pathToJest(pluginSettings)
   const configPath = pathToConfig(pluginSettings)
   const currentJestVersion = 20
-  const workspace = new ProjectWorkspace(pluginSettings.rootPath, jestPath, configPath, currentJestVersion)
+  const debugMode = pluginSettings.debugMode
+  const workspace = new ProjectWorkspace(
+    pluginSettings.rootPath,
+    jestPath,
+    configPath,
+    currentJestVersion,
+    null,
+    debugMode
+  )
 
   // Create our own console
   const channel = vscode.window.createOutputChannel('Jest')
 
   // We need a singleton to represent the extension
-  extensionInstance = new JestExt(workspace, channel, pluginSettings)
+  extensionInstance = new JestExt(context, workspace, channel, pluginSettings)
 
   const languages = [
     { language: 'javascript' },
@@ -94,5 +102,7 @@ export function getExtensionSettings(): IPluginSettings {
     rootPath: path.join(vscode.workspace.rootPath, config.get<string>('rootPath')),
     runAllTestsFirst: config.get<boolean>('runAllTestsFirst'),
     showCoverageOnLoad: config.get<boolean>('showCoverageOnLoad'),
+    coverageFormatter: config.get<string>('coverageFormatter'),
+    debugMode: config.get<boolean>('debugMode'),
   }
 }

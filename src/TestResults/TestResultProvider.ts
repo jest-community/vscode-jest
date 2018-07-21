@@ -1,4 +1,4 @@
-import { TestReconciler, FormattedTestResults } from 'jest-editor-support'
+import { TestReconciler, JestTotalResults } from 'jest-editor-support'
 import { TestFileAssertionStatus } from 'jest-editor-support'
 import { TestReconciliationState } from './TestReconciliationState'
 import { TestResult } from './TestResult'
@@ -41,10 +41,15 @@ export class TestResultProvider {
     const result: TestResult[] = []
     for (const test of itBlocks) {
       const assertion =
-        results.filter(result => result.line >= test.start.line && result.line <= test.end.line)[0] ||
-        results.filter(
-          result => result.title === test.name && result.status !== TestReconciliationState.KnownFail
-        )[0] ||
+        // do we ever consider marking a test when their name do not match even though
+        // the linenumber matches? Especially consider line-number could be error-prone
+        // in situations lik typescript/uglify etc. without checking test names we
+        // could end up marking the wrong test simply because its line number matched.
+        // see https://github.com/jest-community/vscode-jest/issues/349
+
+        results.filter(r => r.title === test.name && r.line >= test.start.line && r.line <= test.end.line)[0] ||
+        results.filter(r => r.title === test.name && r.status !== TestReconciliationState.KnownFail)[0] ||
+        results.filter(r => r.title === test.name)[0] ||
         ({} as any)
 
       // Note the shift from one-based to zero-based line number and columns
@@ -62,7 +67,10 @@ export class TestResultProvider {
         status: assertion.status || TestReconciliationState.Unknown,
         shortMessage: assertion.shortMessage,
         terseMessage: assertion.terseMessage,
-        lineNumberOfError: assertion.line ? assertion.line - 1 : undefined,
+        lineNumberOfError:
+          assertion.line && assertion.line >= test.start.line && assertion.line <= test.end.line
+            ? assertion.line - 1
+            : test.end.line - 1,
       })
     }
 
@@ -99,7 +107,7 @@ export class TestResultProvider {
     return result
   }
 
-  updateTestResults(data: FormattedTestResults): TestFileAssertionStatus[] {
+  updateTestResults(data: JestTotalResults): TestFileAssertionStatus[] {
     this.resetCache()
     return this.reconciler.updateFileWithJestStatus(data)
   }
