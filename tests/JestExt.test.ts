@@ -18,7 +18,7 @@ import { updateCurrentDiagnostics } from '../src/diagnostics'
 describe('JestExt', () => {
   const getConfiguration = workspace.getConfiguration as jest.Mock<any>
   let projectWorkspace: ProjectWorkspace
-  const channelStub = { appendLine: () => {} } as any
+  const channelStub = { appendLine: () => {}, clear: () => {} } as any
   // const mockShowErrorMessage = window.showErrorMessage as jest.Mock<any>
   // const mockShowWarningMessage = window.showWarningMessage as jest.Mock<any>
   const extensionSettings = { debugCodeLens: {} } as any
@@ -466,6 +466,34 @@ describe('JestExt', () => {
       sut.updateDecorators(testResults2, mockEditor)
       expect(decorations.failingAssertionStyle).toHaveBeenCalledTimes(2)
       expect(mockEditor.setDecorations).toHaveBeenCalledTimes(6)
+    })
+  })
+
+  describe('detectedSnapshotErrors()', () => {
+    let sut: JestExt
+    const mockEditor: any = { document: { uri: { fsPath: `file://a/b/c.js` } } }
+
+    const settings: any = {
+      debugCodeLens: {},
+      enableSnapshotUpdateMessages: true,
+    }
+
+    beforeEach(() => {
+      jest.resetAllMocks()
+      const projectWorkspace = new ProjectWorkspace(null, null, null, null)
+      sut = new JestExt(null, projectWorkspace, channelStub, settings)
+
+      mockEditor.setDecorations = jest.fn()
+      sut.debugCodeLensProvider.didChange = jest.fn()
+    })
+
+    it('will trigger snapshot update message when a snapshot test fails', () => {
+      window.showInformationMessage = jest.fn(async () => null)
+      const spy = jest.spyOn(sut as any, 'detectedSnapshotErrors')
+      ;(sut as any).handleStdErr(new Error('Snapshot test failed'))
+      ;(sut as any).handleStdErr(new Error('Snapshot failed'))
+      ;(sut as any).handleStdErr(new Error('Failed for some other reason'))
+      expect(spy).toHaveBeenCalledTimes(2)
     })
   })
 })

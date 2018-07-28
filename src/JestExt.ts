@@ -124,7 +124,7 @@ export class JestExt {
     }
     // thanks Qix, http://stackoverflow.com/questions/25245716/remove-all-ansi-colors-styles-from-strings
     const noANSI = message.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '')
-    if (noANSI.includes('snapshot test failed')) {
+    if (/(snapshot failed)|(snapshot test failed)/i.test(noANSI)) {
       this.detectedSnapshotErrors()
     }
 
