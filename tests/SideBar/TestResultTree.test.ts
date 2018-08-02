@@ -43,11 +43,15 @@ describe('TestResultFile', () => {
                 {
                   name: 'test2',
                   status: 'passed',
+                  filename: 'filename',
+                  line: 0,
                 },
                 {
                   name: 'test3',
                   status: 'failed',
                   failureMessages: ['failure message 1', 'failure message 2'],
+                  filename: 'filename',
+                  line: 0,
                 },
               ],
             },
@@ -56,6 +60,8 @@ describe('TestResultFile', () => {
             {
               name: 'test1',
               status: 'pending',
+              filename: 'filename',
+              line: 0,
             },
           ],
         },

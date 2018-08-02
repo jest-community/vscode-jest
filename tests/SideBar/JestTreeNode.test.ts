@@ -22,6 +22,7 @@ import {
   JestTreeNodeForTest,
 } from '../../src/SideBar/JestTreeNode'
 import { TestResultFile, TestResultSuite, TestResultTest } from '../../src/SideBar/TestResultTree'
+import { extensionName } from '../../src/appGlobals'
 
 const sidebarContext: SidebarContext = jest.fn<SidebarContext>(() => {
   return {
@@ -263,6 +264,26 @@ describe('JestTreeNodeForTest', () => {
 
     expect(node).toMatchObject({
       tooltip: 'test1 ● Failed\n\nfailure1\nfailure2',
+    })
+  })
+
+  it('should set command', () => {
+    const node = new JestTreeNodeForTest(
+      jest.fn<TestResultTest>(() => {
+        return {
+          name: 'test',
+          status: 'passed',
+          filename: 'filename',
+          line: 28,
+        }
+      })(),
+      sidebarContext
+    )
+
+    expect(node.command).toMatchObject({
+      title: 'Show test',
+      command: `${extensionName}.show-test`,
+      arguments: ['filename', 28],
     })
   })
 })

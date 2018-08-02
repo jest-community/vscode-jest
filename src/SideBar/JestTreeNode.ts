@@ -1,6 +1,6 @@
 import * as vscode from 'vscode'
 import { TestResultFile, TestResultSuite, TestResultTest } from './TestResultTree'
-// import { extensionName } from '../appGlobals';
+import { extensionName } from '../appGlobals'
 
 export type NodeStatus = 'unknown' | 'passed' | 'failed' | 'skipped'
 
@@ -120,18 +120,18 @@ export class JestTreeNodeForTest extends JestTreeNode {
     return this.terseTooltip
   }
 
-  // get command(): vscode.Command {
-  //   return {
-  //     title: 'Show test',
-  //     command: `${extensionName}.show-test`,
-  //     // arguments: [this.test., escapeRegExp(codeLens.testName)],
-  //   }
-  //   // codeLens.command = {
-  //   //   arguments: [codeLens.fileName, escapeRegExp(codeLens.testName)],
-  //   //   command: `${extensionName}.run-test`,
-  //   //   title: 'Debug',
-  //   // }
-  // }
+  get command(): vscode.Command {
+    return {
+      title: 'Show test',
+      command: `${extensionName}.show-test`,
+      arguments: [this.test.filename, this.test.line],
+    }
+    // codeLens.command = {
+    //   arguments: [codeLens.fileName, escapeRegExp(codeLens.testName)],
+    //   command: `${extensionName}.run-test`,
+    //   title: 'Debug',
+    // }
+  }
 }
 
 export interface ISidebarSettings {
