@@ -23,6 +23,7 @@ import { hasDocument, isOpenInMultipleEditors } from './editor'
 import { CoverageOverlay } from './Coverage/CoverageOverlay'
 import { JestProcess, JestProcessManager } from './JestProcessManagement'
 import { isWatchNotSupported, WatchMode } from './Jest'
+import { JestTreeProvider } from './SideBar/JestTreeProvider'
 
 export class JestExt {
   private workspace: ProjectWorkspace
@@ -35,6 +36,8 @@ export class JestExt {
   testResultProvider: TestResultProvider
   public debugCodeLensProvider: DebugCodeLensProvider
   debugConfigurationProvider: DebugConfigurationProvider
+
+  sidebarProvider: JestTreeProvider
 
   // So you can read what's going on
   private channel: vscode.OutputChannel
@@ -85,6 +88,8 @@ export class JestExt {
       pluginSettings.debugCodeLens.enabled ? pluginSettings.debugCodeLens.showWhenTestStateIn : []
     )
     this.debugConfigurationProvider = new DebugConfigurationProvider()
+
+    this.sidebarProvider = new JestTreeProvider(context, pluginSettings.sidebar)
 
     this.jestProcessManager = new JestProcessManager({
       projectWorkspace: workspace,
@@ -404,6 +409,8 @@ export class JestExt {
     const statusList = this.testResultProvider.updateTestResults(normalizedData)
     updateDiagnostics(statusList, this.failDiagnostics)
 
+    this.sidebarProvider.refresh(data)
+
     const failedFileCount = failedSuiteCount(this.failDiagnostics)
     if (failedFileCount <= 0 && normalizedData.success) {
       status.success()
@@ -488,6 +495,12 @@ export class JestExt {
       const debugConfiguration = this.debugConfigurationProvider.provideDebugConfigurations(workspaceFolder)[0]
       await vscode.debug.startDebugging(workspaceFolder, debugConfiguration)
     }
+  }
+
+  public showTest = async (fileName: string, line: number) => {
+    const textRange = new vscode.Range(line, 0, line, 0)
+    const doc = await vscode.workspace.openTextDocument(fileName)
+    await vscode.window.showTextDocument(doc, { selection: textRange })
   }
 
   onDidCloseTextDocument(document: vscode.TextDocument) {

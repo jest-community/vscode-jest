@@ -35,6 +35,7 @@ export function activate(context: vscode.ExtensionContext) {
   ]
   context.subscriptions.push(
     registerStatusBar(channel),
+    vscode.window.registerTreeDataProvider('jest', extensionInstance.sidebarProvider),
     vscode.commands.registerCommand(`${extensionName}.start`, () => {
       vscode.window.showInformationMessage('Started Jest, press escape to hide this message.')
       extensionInstance.startProcess()
@@ -52,6 +53,7 @@ export function activate(context: vscode.ExtensionContext) {
       extensionInstance
     ),
     vscode.commands.registerCommand(`${extensionName}.run-test`, extensionInstance.runTest),
+    vscode.commands.registerCommand(`${extensionName}.show-test`, extensionInstance.showTest),
     vscode.languages.registerCodeLensProvider(languages, extensionInstance.debugCodeLensProvider),
     // this provides the opportunity to inject test names into the DebugConfiguration
     vscode.debug.registerDebugConfigurationProvider('node', extensionInstance.debugConfigurationProvider),
@@ -95,5 +97,9 @@ export function getExtensionSettings(): IPluginSettings {
     runAllTestsFirst: config.get<boolean>('runAllTestsFirst'),
     showCoverageOnLoad: config.get<boolean>('showCoverageOnLoad'),
     coverageFormatter: config.get<string>('coverageFormatter'),
+    sidebar: {
+      showFiles: config.get<boolean>('showFilesInSidebar'),
+      autoExpand: config.get<boolean>('autoExpandSidebar'),
+    },
   }
 }

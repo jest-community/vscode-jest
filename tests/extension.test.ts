@@ -18,6 +18,7 @@ jest.mock('vscode', () => ({
     createTextEditorDecorationType: jest.fn(),
     createOutputChannel: jest.fn(),
     onDidChangeActiveTextEditor: jest.fn().mockReturnValue('onDidChangeActiveTextEditor'),
+    registerTreeDataProvider: jest.fn(),
   },
   workspace: {
     /** Mock getConfiguration by reading default values from package.json */
@@ -50,6 +51,7 @@ const jestInstance = {
   onDidChangeActiveTextEditor: {},
   onDidChangeTextDocument: {},
   toggleCoverageOverlay: {},
+  sidebarProvider: {},
 }
 jest.mock('../src/JestExt', () => ({
   JestExt: function() {
@@ -79,6 +81,12 @@ describe('Extension', () => {
 
     beforeEach(() => {
       context.subscriptions.push.mockReset()
+    })
+
+    it('should register tree view data provider to display tests in sidebar', () => {
+      activate(context)
+
+      expect(vscode.window.registerTreeDataProvider).toBeCalledWith('jest', thisArg.sidebarProvider)
     })
 
     it('should register an event handler to handle when the editor changes focus', () => {
@@ -140,6 +148,10 @@ describe('Extension', () => {
         rootPath: '<rootDir>',
         runAllTestsFirst: true,
         showCoverageOnLoad: false,
+        sidebar: {
+          showFiles: false,
+          autoExpand: false,
+        },
       })
     })
   })

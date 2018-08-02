@@ -5,6 +5,10 @@ jest.mock('../src/DebugCodeLens', () => ({
   DebugCodeLensProvider: class MockCodeLensProvider {},
 }))
 
+jest.mock('../src/SideBar/JestTreeProvider', () => ({
+  JestTreeProvider: class MockTreeDataProvider {},
+}))
+
 import { JestExt } from '../src/JestExt'
 import { ProjectWorkspace, Settings } from 'jest-editor-support'
 import { window, workspace, debug } from 'vscode'
@@ -17,7 +21,7 @@ describe('JestExt', () => {
   let projectWorkspace: ProjectWorkspace
   const channelStub = { appendLine: () => {} } as any
   const mockShowErrorMessage = window.showErrorMessage as jest.Mock<any>
-  const extensionSettings = { debugCodeLens: {} } as any
+  const extensionSettings = { debugCodeLens: {}, sidebar: {} } as any
 
   beforeEach(() => {
     jest.resetAllMocks()
@@ -106,6 +110,7 @@ describe('JestExt', () => {
       const settings: any = {
         debugCodeLens: {},
         enableInlineErrorMessages: true,
+        sidebar: {},
       }
       const sut = new JestExt(null, projectWorkspace, channelStub, settings)
       const editor: any = {

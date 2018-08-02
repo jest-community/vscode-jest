@@ -16,6 +16,10 @@ export interface IPluginSettings {
   runAllTestsFirst?: boolean
   showCoverageOnLoad: boolean
   coverageFormatter: string
+  sidebar: {
+    showFiles: boolean
+    autoExpand: boolean
+  }
 }
 
 export function isDefaultPathToJest(str) {

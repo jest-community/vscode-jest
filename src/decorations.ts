@@ -64,13 +64,13 @@ export function notRanItName() {
   return window.createTextEditorDecorationType({
     overviewRulerColor: 'darkgrey',
     overviewRulerLane: OverviewRulerLane.Left,
-    dark: {
+    light: {
       before: {
         color: '#3BB26B',
         contentText: '○',
       },
     },
-    light: {
+    dark: {
       before: {
         color: '#2F8F51',
         contentText: '○',
