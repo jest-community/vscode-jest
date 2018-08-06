@@ -105,10 +105,13 @@ export function getExtensionSettings(): IPluginSettings {
     runAllTestsFirst: config.get<boolean>('runAllTestsFirst'),
     showCoverageOnLoad: config.get<boolean>('showCoverageOnLoad'),
     coverageFormatter: config.get<string>('coverageFormatter'),
-    debugMode: config.get<boolean>('debugMode'),
+<<<<<<< HEAD
     sidebar: {
       showFiles: config.get<boolean>('showFilesInSidebar'),
       autoExpand: config.get<boolean>('autoExpandSidebar'),
     },
+=======
+    debugMode: config.get<boolean>('debugMode'),
+>>>>>>> upstream/master
   }
 }

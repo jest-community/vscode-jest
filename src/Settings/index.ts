@@ -16,6 +16,7 @@ export interface IPluginSettings {
   runAllTestsFirst?: boolean
   showCoverageOnLoad: boolean
   coverageFormatter: string
+  debugMode?: boolean
   sidebar: {
     showFiles: boolean
     autoExpand: boolean

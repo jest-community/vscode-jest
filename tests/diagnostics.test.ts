@@ -1,8 +1,8 @@
 jest.unmock('../src/diagnostics')
-import { updateDiagnostics, resetDiagnostics, failedSuiteCount } from '../src/diagnostics'
+import { updateDiagnostics, updateCurrentDiagnostics, resetDiagnostics, failedSuiteCount } from '../src/diagnostics'
 import * as vscode from 'vscode'
 import { TestFileAssertionStatus, TestReconcilationState, TestAssertionStatus } from 'jest-editor-support'
-import { TestResultProvider } from '../src/TestResults'
+import { TestResult, TestReconciliationState } from '../src/TestResults'
 
 class MockDiagnosticCollection implements vscode.DiagnosticCollection {
   name = 'test'
@@ -26,6 +26,12 @@ describe('test diagnostics', () => {
     })
   })
 
+  // vscode component validation helper
+  function validateRange(args: any[], startLine: number, startCharacter: number) {
+    expect(args[0]).toEqual(startLine)
+    expect(args[1]).toEqual(startCharacter)
+  }
+
   describe('updateDiagnostics', () => {
     const consoleWarn = console.warn
     let lineNumber = 17
@@ -46,17 +52,10 @@ describe('test diagnostics', () => {
       return { file: file, message: `${file}:${status}`, status, assertions: assertions }
     }
 
-    // vscode component validation helper
-    function validateRange(args: any[], startLine: number, startCharacter: number) {
-      expect(args[0]).toEqual(startLine)
-      expect(args[1]).toEqual(startCharacter)
-    }
-
     function validateDiagnostic(args: any[], message: string, severity: vscode.DiagnosticSeverity) {
       expect(args[1]).toEqual(message)
       expect(args[2]).toEqual(severity)
     }
-
     beforeEach(() => {
       jest.resetAllMocks()
       console.warn = consoleWarn
@@ -65,7 +64,7 @@ describe('test diagnostics', () => {
     it('can handle when all tests passed', () => {
       const mockDiagnostics = new MockDiagnosticCollection()
 
-      updateDiagnostics([], jest.fn<TestResultProvider>()(), mockDiagnostics)
+      updateDiagnostics([], mockDiagnostics)
       expect(mockDiagnostics.clear).not.toBeCalled()
       expect(mockDiagnostics.set).not.toBeCalled()
     })
@@ -94,7 +93,7 @@ describe('test diagnostics', () => {
         0
       )
       const mockDiagnostics = new MockDiagnosticCollection()
-      updateDiagnostics(allTests, jest.fn<TestResultProvider>()(), mockDiagnostics)
+      updateDiagnostics(allTests, mockDiagnostics)
 
       // verified diagnostics are added for all failed tests including files failed to run
       expect(mockDiagnostics.set).toHaveBeenCalledTimes(failedTestSuiteCount)
@@ -157,71 +156,60 @@ describe('test diagnostics', () => {
 
       invalidLine.forEach(line => {
         jest.clearAllMocks()
+
         assertion.line = line
         const tests = [createTestResult('f', [assertion])]
-
-        const mockTestResultProvider: TestResultProvider = jest.fn<TestResultProvider>(() => {
-          return {
-            getResults: jest.fn().mockReturnValue([]),
-          }
-        })()
-
-        updateDiagnostics(tests, mockTestResultProvider, mockDiagnostics)
+        updateDiagnostics(tests, mockDiagnostics)
 
         const rangeCalls = (vscode.Range as jest.Mock<any>).mock.calls
         expect(rangeCalls.length).toEqual(1)
         validateRange(rangeCalls[0], 0, 0)
       })
     })
+  })
 
-    it('should produce diagnostic range from test location when assertion line invalid', () => {
-      const mockDiagnostics = new MockDiagnosticCollection()
-      const assertion = createAssertion('a', 'KnownFail')
-      const invalidLine = [0, -1, undefined, null, NaN]
-      console.warn = jest.fn()
+  describe('updateCurrentDiagnostics', () => {
+    const mockLineAt = jest.fn()
+    const range = new vscode.Range(3, 0, 3, 15)
+    let mockEditor
 
-      const testBlock = {
-        name: 'a',
-        lineNumberOfError: 3,
+    beforeEach(() => {
+      jest.resetAllMocks()
+
+      mockLineAt.mockReturnValueOnce({ range: range })
+      mockEditor = {
+        document: {
+          uri: { fsPath: `file://a/b/c.ts` },
+          lineAt: mockLineAt,
+        },
       }
-
-      const mockTestResultProvider: TestResultProvider = jest.fn<TestResultProvider>(() => {
-        return {
-          getResults: jest.fn().mockReturnValue([testBlock]),
-        }
-      })()
-
-      invalidLine.forEach(line => {
-        jest.clearAllMocks()
-        assertion.line = line
-        const tests = [createTestResult('f', [assertion])]
-        updateDiagnostics(tests, mockTestResultProvider, mockDiagnostics)
-
-        const rangeCalls = (vscode.Range as jest.Mock<any>).mock.calls
-        expect(rangeCalls.length).toEqual(1)
-        validateRange(rangeCalls[0], 3, 0)
-      })
+      console.warn = jest.fn()
     })
 
-    it('should highlight the full line', () => {
+    it('will remove diagnosis if no failed test', () => {
       const mockDiagnostics = new MockDiagnosticCollection()
-      const assertion = createAssertion('a', 'KnownFail')
-      const tests = [createTestResult('f', [assertion])]
-      vscode.Uri.file = jest.fn(() => ({ fsPath: 'f' }))
-      vscode.window.visibleTextEditors = [
-        {
-          document: {
-            lineAt: jest.fn(() => ({
-              firstNonWhitespaceCharacterIndex: 2,
-              text: '  text',
-            })),
-            uri: { fsPath: 'f' },
-          },
-        },
-      ] as any[]
-      updateDiagnostics(tests, jest.fn<TestResultProvider>()(), mockDiagnostics)
-      expect(vscode.window.visibleTextEditors[0].document.lineAt).toHaveBeenCalled()
-      expect(vscode.Range).toHaveBeenCalledWith(assertion.line - 1, 2, assertion.line - 1, 6)
+      updateCurrentDiagnostics([], mockDiagnostics, mockEditor as any)
+      expect(mockDiagnostics.set).not.toHaveBeenCalled()
+      expect(mockDiagnostics.delete).toHaveBeenCalled()
+    })
+
+    it('can display diagnosis based on the current editor itBlock info', () => {
+      const mockDiagnostics = new MockDiagnosticCollection()
+      const msg = 'a short error message'
+      const testBlock: TestResult = {
+        name: 'a',
+        start: { line: 2, column: 3 },
+        end: { line: 4, column: 5 },
+        lineNumberOfError: 3,
+        shortMessage: msg,
+        status: TestReconciliationState.KnownFail,
+      }
+
+      updateCurrentDiagnostics([testBlock], mockDiagnostics, mockEditor as any)
+
+      expect(mockDiagnostics.set).toHaveBeenCalledTimes(1)
+      expect(vscode.Diagnostic).toHaveBeenCalledTimes(1)
+      expect(vscode.Diagnostic).toHaveBeenCalledWith(range, msg, vscode.DiagnosticSeverity.Error)
     })
   })
 })

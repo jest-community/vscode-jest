@@ -126,6 +126,7 @@
           "type": "boolean",
           "default": false
         },
+<<<<<<< HEAD
         "jest.showFilesInSidebar": {
           "description": "Show filenames in sidebar tree view",
           "type": "boolean",
@@ -133,11 +134,10 @@
         },
         "jest.autoExpandSidebar": {
           "description": "Automatically expand tests in sidebar tree view",
-          "type": "boolean",
-          "default": false
-        },
+=======
         "jest.debugMode": {
           "description": "Enable debug mode to diagnose plugin issues. (see developer console)",
+>>>>>>> upstream/master
           "type": "boolean",
           "default": false
         }
