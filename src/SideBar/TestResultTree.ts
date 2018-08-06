@@ -1,18 +1,25 @@
 import { JestFileResults, JestAssertionResults } from 'jest-editor-support'
+import { TestResult } from '../TestResults'
 
 export class TestResultFile {
   name: string
   suites: TestResultSuite[]
 
-  constructor(results: JestFileResults) {
+  constructor(results: JestFileResults, parsedResults: TestResult[]) {
     this.name = results.name
     this.suites = []
-    results.assertionResults.forEach(r => this.parseAssertionResults(r))
+    results.assertionResults.forEach(r => this.parseAssertionResults(r, parsedResults))
   }
 
-  private parseAssertionResults(results: JestAssertionResults) {
+  private parseAssertionResults(results: JestAssertionResults, parsedResults: TestResult[]) {
     const suite = this.getSuite((<any>results).ancestorTitles, this.suites)
-    suite.addTest(results, this.name, 0)
+    const parsedResult = parsedResults.find(pr => pr.name === results.title)
+    const line = parsedResult
+      ? results.status === 'failed' && parsedResult.lineNumberOfError
+        ? parsedResult.lineNumberOfError
+        : parsedResult.start.line
+      : 0
+    suite.addTest(results, this.name, line)
   }
 
   private getSuite(titles: string[], suites: TestResultSuite[]): TestResultSuite {

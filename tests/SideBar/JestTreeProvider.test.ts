@@ -26,6 +26,13 @@ import * as vscode from 'vscode'
 import { JestTreeProvider } from '../../src/SideBar/JestTreeProvider'
 import { JestTotalResults, JestFileResults } from '../../node_modules/jest-editor-support'
 import { JestTreeNode } from '../../src/SideBar/JestTreeNode'
+import { TestResultProvider } from '../../src/TestResults'
+
+const testResultProvider = jest.fn<TestResultProvider>(() => {
+  return {
+    getResults: jest.fn(() => []),
+  }
+})()
 
 const extensionContext = jest.fn<vscode.ExtensionContext>(() => {
   return {
@@ -37,7 +44,7 @@ describe('JestTreeProvider', () => {
   type NodeMock = { label: string; children?: NodeMock[] }
 
   it('should initialize with empty tree', () => {
-    const provider = new JestTreeProvider(extensionContext, {
+    const provider = new JestTreeProvider(testResultProvider, extensionContext, {
       autoExpand: true,
       showFiles: false,
     })
@@ -46,7 +53,7 @@ describe('JestTreeProvider', () => {
   })
 
   it('should refresh with test results', () => {
-    const provider = new JestTreeProvider(extensionContext, {
+    const provider = new JestTreeProvider(testResultProvider, extensionContext, {
       autoExpand: true,
       showFiles: false,
     })
@@ -117,7 +124,7 @@ describe('JestTreeProvider', () => {
 
   describe('getTreeItem', () => {
     it('should get tree item', () => {
-      const provider = new JestTreeProvider(extensionContext, {
+      const provider = new JestTreeProvider(testResultProvider, extensionContext, {
         autoExpand: true,
         showFiles: false,
       })

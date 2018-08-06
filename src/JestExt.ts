@@ -89,7 +89,7 @@ export class JestExt {
     )
     this.debugConfigurationProvider = new DebugConfigurationProvider()
 
-    this.sidebarProvider = new JestTreeProvider(context, pluginSettings.sidebar)
+    this.sidebarProvider = new JestTreeProvider(this.testResultProvider, context, pluginSettings.sidebar)
 
     this.jestProcessManager = new JestProcessManager({
       projectWorkspace: workspace,
@@ -407,7 +407,7 @@ export class JestExt {
     this.coverageMapProvider.update(normalizedData.coverageMap)
 
     const statusList = this.testResultProvider.updateTestResults(normalizedData)
-    updateDiagnostics(statusList, this.failDiagnostics)
+    updateDiagnostics(statusList, this.testResultProvider, this.failDiagnostics)
 
     this.sidebarProvider.refresh(data)
 

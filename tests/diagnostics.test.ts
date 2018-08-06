@@ -2,7 +2,7 @@ jest.unmock('../src/diagnostics')
 import { updateDiagnostics, resetDiagnostics, failedSuiteCount } from '../src/diagnostics'
 import * as vscode from 'vscode'
 import { TestFileAssertionStatus, TestReconcilationState, TestAssertionStatus } from 'jest-editor-support'
-import { parseTest } from '../src/TestParser'
+import { TestResultProvider } from '../src/TestResults'
 
 class MockDiagnosticCollection implements vscode.DiagnosticCollection {
   name = 'test'
@@ -65,7 +65,7 @@ describe('test diagnostics', () => {
     it('can handle when all tests passed', () => {
       const mockDiagnostics = new MockDiagnosticCollection()
 
-      updateDiagnostics([], mockDiagnostics)
+      updateDiagnostics([], jest.fn<TestResultProvider>()(), mockDiagnostics)
       expect(mockDiagnostics.clear).not.toBeCalled()
       expect(mockDiagnostics.set).not.toBeCalled()
     })
@@ -94,7 +94,7 @@ describe('test diagnostics', () => {
         0
       )
       const mockDiagnostics = new MockDiagnosticCollection()
-      updateDiagnostics(allTests, mockDiagnostics)
+      updateDiagnostics(allTests, jest.fn<TestResultProvider>()(), mockDiagnostics)
 
       // verified diagnostics are added for all failed tests including files failed to run
       expect(mockDiagnostics.set).toHaveBeenCalledTimes(failedTestSuiteCount)
@@ -157,12 +157,16 @@ describe('test diagnostics', () => {
 
       invalidLine.forEach(line => {
         jest.clearAllMocks()
-        ;(parseTest as jest.Mock<{}>).mockReturnValueOnce({
-          itBlocks: [],
-        })
         assertion.line = line
         const tests = [createTestResult('f', [assertion])]
-        updateDiagnostics(tests, mockDiagnostics)
+
+        const mockTestResultProvider: TestResultProvider = jest.fn<TestResultProvider>(() => {
+          return {
+            getResults: jest.fn().mockReturnValue([]),
+          }
+        })()
+
+        updateDiagnostics(tests, mockTestResultProvider, mockDiagnostics)
 
         const rangeCalls = (vscode.Range as jest.Mock<any>).mock.calls
         expect(rangeCalls.length).toEqual(1)
@@ -178,24 +182,20 @@ describe('test diagnostics', () => {
 
       const testBlock = {
         name: 'a',
-        start: {
-          line: 2,
-          column: 3,
-        },
-        end: {
-          line: 4,
-          column: 5,
-        },
+        lineNumberOfError: 3,
       }
+
+      const mockTestResultProvider: TestResultProvider = jest.fn<TestResultProvider>(() => {
+        return {
+          getResults: jest.fn().mockReturnValue([testBlock]),
+        }
+      })()
 
       invalidLine.forEach(line => {
         jest.clearAllMocks()
-        ;(parseTest as jest.Mock<{}>).mockReturnValueOnce({
-          itBlocks: [testBlock],
-        })
         assertion.line = line
         const tests = [createTestResult('f', [assertion])]
-        updateDiagnostics(tests, mockDiagnostics)
+        updateDiagnostics(tests, mockTestResultProvider, mockDiagnostics)
 
         const rangeCalls = (vscode.Range as jest.Mock<any>).mock.calls
         expect(rangeCalls.length).toEqual(1)
@@ -219,7 +219,7 @@ describe('test diagnostics', () => {
           },
         },
       ] as any[]
-      updateDiagnostics(tests, mockDiagnostics)
+      updateDiagnostics(tests, jest.fn<TestResultProvider>()(), mockDiagnostics)
       expect(vscode.window.visibleTextEditors[0].document.lineAt).toHaveBeenCalled()
       expect(vscode.Range).toHaveBeenCalledWith(assertion.line - 1, 2, assertion.line - 1, 6)
     })

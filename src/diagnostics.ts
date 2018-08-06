@@ -4,12 +4,14 @@
  */
 import * as vscode from 'vscode'
 import { existsSync } from 'fs'
-// import { DiagnosticCollection, Uri, Diagnostic, Range, DiagnosticSeverity } from 'vscode'
 import { TestFileAssertionStatus } from 'jest-editor-support'
-import { TestReconciliationState } from './TestResults'
-import { parseTest } from './TestParser'
+import { TestReconciliationState, TestResultProvider } from './TestResults'
 
-export function updateDiagnostics(testResults: TestFileAssertionStatus[], diagnostics: vscode.DiagnosticCollection) {
+export function updateDiagnostics(
+  testResults: TestFileAssertionStatus[],
+  testResultProvider: TestResultProvider,
+  diagnostics: vscode.DiagnosticCollection
+) {
   function addTestFileError(result: TestFileAssertionStatus, uri: vscode.Uri) {
     const diag = new vscode.Diagnostic(
       new vscode.Range(0, 0, 0, 0),
@@ -28,10 +30,9 @@ export function updateDiagnostics(testResults: TestFileAssertionStatus[], diagno
         if (assertion.line > 0) {
           line = assertion.line - 1
         } else {
-          const { itBlocks } = parseTest(result.file)
-          const test = itBlocks.filter(t => t.name === assertion.title)[0]
+          const test = testResultProvider.getResults(result.file).find(r => r.name === assertion.title)
           if (test) {
-            line = test.end.line - 1
+            line = test.lineNumberOfError
           }
         }
         if (line < 0) {
