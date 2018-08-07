@@ -39,6 +39,8 @@ const commands = {
   executeCommand: jest.fn(),
 }
 
+const TreeItem = jest.fn()
+
 export {
   languages,
   StatusBarAlignment,
@@ -51,4 +53,5 @@ export {
   DiagnosticSeverity,
   debug,
   commands,
+  TreeItem,
 }

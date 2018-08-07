@@ -367,7 +367,7 @@ export class JestExt {
     this.coverageMapProvider.update(normalizedData.coverageMap)
 
     const statusList = this.testResultProvider.updateTestResults(normalizedData)
-    updateDiagnostics(statusList, this.testResultProvider, this.failDiagnostics)
+    updateDiagnostics(statusList, this.failDiagnostics)
 
     this.sidebarProvider.refresh(data)
 
