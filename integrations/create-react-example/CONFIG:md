@@ -1,0 +1,4 @@
+# For vscode-jest you need to add setting for vscode - in this project it is in .vscode directory
+"jest.pathToJest": "npm test --"
+
+Typically you set it in your user settings instead for every project.
