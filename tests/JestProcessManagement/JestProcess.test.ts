@@ -1,13 +1,13 @@
 jest.unmock('../../src/JestProcessManagement/JestProcess')
-
+jest.unmock('path')
 import { Runner, ProjectWorkspace } from 'jest-editor-support'
 import { JestProcess } from '../../src/JestProcessManagement/JestProcess'
 import { EventEmitter } from 'events'
 import { WatchMode } from '../../src/Jest'
 
 describe('JestProcess', () => {
-  let projectWorkspaceMock
-  let jestProcess
+  let projectWorkspaceMock: ProjectWorkspace
+  let jestProcess: JestProcess
   const runnerMock = (Runner as any) as jest.Mock<any>
   let runnerMockImplementation
   let eventEmitter
@@ -23,7 +23,10 @@ describe('JestProcess', () => {
 
   describe('when creating', () => {
     beforeEach(() => {
-      runnerMock.mockImplementation(() => runnerMockImplementation)
+      runnerMock.mockImplementation((_, options) => {
+        runnerMockImplementation.options = options
+        return runnerMockImplementation
+      })
     })
 
     it('accepts a project workspace argument', () => {
@@ -87,6 +90,28 @@ describe('JestProcess', () => {
         watchMode: WatchMode.WatchAll,
       })
       expect(runnerMockImplementation.start.mock.calls[0]).toEqual([true, true])
+    })
+
+    it('should define a different createProcess function when running wsl', () => {
+      projectWorkspaceMock.pathToJest = 'wsl npm run test'
+
+      jestProcess = new JestProcess({
+        projectWorkspace: projectWorkspaceMock,
+        keepAlive: true,
+      })
+
+      expect(runnerMockImplementation.options.createProcess).toBeDefined()
+    })
+
+    it('should not define createProcess function when not running wsl', () => {
+      projectWorkspaceMock.pathToJest = 'npm run test'
+
+      jestProcess = new JestProcess({
+        projectWorkspace: projectWorkspaceMock,
+        keepAlive: true,
+      })
+
+      expect(runnerMockImplementation.options.createProcess).not.toBeDefined()
     })
   })
 

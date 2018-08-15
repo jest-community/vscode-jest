@@ -1,11 +1,16 @@
 jest.unmock('../../src/TestResults/TestResult')
-jest.mock('path', () => ({ sep: require.requireActual('path').sep }))
+
+jest.mock('path', () => ({
+  sep: require.requireActual('path').sep,
+  posix: require.requireActual('path').posix,
+  win32: require.requireActual('path').win32,
+}))
 
 import {
   resultsWithLowerCaseWindowsDriveLetters,
   coverageMapWithLowerCaseWindowsDriveLetters,
   testResultsWithLowerCaseWindowsDriveLetters,
-  withLowerCaseWindowsDriveLetter,
+  withNormalizedWindowsPath,
 } from '../../src/TestResults/TestResult'
 import * as path from 'path'
 
@@ -115,12 +120,24 @@ describe('TestResult', () => {
   describe('withLowerCaseDriveLetter', () => {
     it('should return a new file path when provided a path with an upper case drive letter', () => {
       const filePath = 'C:\\path\\file.ext'
-      expect(withLowerCaseWindowsDriveLetter(filePath)).toBe('c:\\path\\file.ext')
+      expect(withNormalizedWindowsPath(filePath)).toBe('c:\\path\\file.ext')
     })
 
-    it('should indicate no change is required otherwise', () => {
-      const filePath = 'c:\\path\\file.ext'
-      expect(withLowerCaseWindowsDriveLetter(filePath)).toBeUndefined()
+    it('should convert paths from inside wsl to absolute windows paths in win32 environments', () => {
+      const filePath = '/mnt/c/path/file.ext'
+      const expectedPath = 'c:\\path\\file.ext'
+
+      const result = withNormalizedWindowsPath(filePath, 'win32')
+
+      expect(result).toBe(expectedPath)
+    })
+
+    it('should not convert unix paths fromto absolute windows paths in non win32 environments', () => {
+      const filePath = '/mnt/c/path/file.ext'
+
+      const result = withNormalizedWindowsPath(filePath, 'linux')
+
+      expect(result).toBe(filePath)
     })
   })
 })

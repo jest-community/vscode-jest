@@ -60,7 +60,7 @@ export function coverageMapWithLowerCaseWindowsDriveLetters(data: JestTotalResul
 }
 
 function fileCoverageWithLowerCaseWindowsDriveLetter(fileCoverage: FileCoverage) {
-  const newFilePath = withLowerCaseWindowsDriveLetter(fileCoverage.path)
+  const newFilePath = withNormalizedWindowsPath(fileCoverage.path)
   if (newFilePath) {
     return {
       ...fileCoverage,
@@ -82,7 +82,7 @@ export function testResultsWithLowerCaseWindowsDriveLetters(
 }
 
 function testResultWithLowerCaseWindowsDriveLetter(testResult: JestFileResults): JestFileResults {
-  const newFilePath = withLowerCaseWindowsDriveLetter(testResult.name)
+  const newFilePath = withNormalizedWindowsPath(testResult.name)
   if (newFilePath) {
     return {
       ...testResult,
@@ -93,9 +93,24 @@ function testResultWithLowerCaseWindowsDriveLetter(testResult: JestFileResults):
   return testResult
 }
 
-export function withLowerCaseWindowsDriveLetter(filePath: string): string | undefined {
+export function withNormalizedWindowsPath(filePath: string, platform = process.platform): string | undefined {
+  if (platform === 'win32') {
+    filePath = convertWSLPathToWindows(filePath)
+  }
+
   const match = filePath.match(/^([A-Z]:\\)(.*)$/)
   if (match) {
     return `${match[1].toLowerCase()}${match[2]}`
   }
+  return filePath
+}
+
+function convertWSLPathToWindows(filePath: string) {
+  const isLinuxPath = filePath.match(/^\/mnt\/(\w)\/(.*)$/)
+  if (isLinuxPath) {
+    const normalizedPath = isLinuxPath[2].split(path.posix.sep).join(path.win32.sep)
+    const driveLetter = `${isLinuxPath[1]}:\\`
+    filePath = `${driveLetter}${normalizedPath}`
+  }
+  return filePath
 }

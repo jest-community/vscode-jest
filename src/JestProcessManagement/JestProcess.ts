@@ -1,6 +1,7 @@
 import { platform } from 'os'
-import { Runner, ProjectWorkspace } from 'jest-editor-support'
+import { Runner, ProjectWorkspace, Options } from 'jest-editor-support'
 import { WatchMode } from '../Jest'
+import { createProcessInWSL } from './WslProcess'
 
 export class JestProcess {
   static readonly keepAliveLimit = 5
@@ -18,9 +19,13 @@ export class JestProcess {
     this.stopRequested = false
     let exited = false
 
-    const options = {
+    const options: Options = {
       noColor: true,
       shell: platform() === 'win32',
+    }
+    // If Windows Subsystem for Linux is used, spawn in wsl
+    if (this.projectWorkspace.pathToJest && this.projectWorkspace.pathToJest.startsWith('wsl')) {
+      options.createProcess = createProcessInWSL
     }
     this.runner = new Runner(this.projectWorkspace, options)
 
