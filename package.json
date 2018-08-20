@@ -222,7 +222,7 @@
   },
   "scripts": {
     "precommit": "lint-staged",
-    "ci": "yarn lint && yarn test --coverage --verbose",
+    "ci": "yarn lint && yarn test --coverage",
     "clean-out": "rimraf ./out",
     "vscode:prepublish": "yarn clean-out && tsc -p ./tsconfig.publish.json",
     "compile": "tsc -watch -p ./tsconfig.publish.json",
