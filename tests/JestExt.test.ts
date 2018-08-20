@@ -432,8 +432,6 @@ describe('JestExt', () => {
       }
     })
     it('will generate dot dectorations for test results', () => {
-      console.log('decorations.passingItName() = ', decorations.passingItName())
-
       const testResults2: any = { success: [tr1], fail: [tr2], skip: [], unknown: [] }
       sut.updateDecorators(testResults2, mockEditor)
       expect(mockEditor.setDecorations).toHaveBeenCalledTimes(4)
