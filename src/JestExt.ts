@@ -402,7 +402,7 @@ export class JestExt {
     const restart = this.jestProcessManager.numberOfProcesses > 0
     this.jestProcessManager.stopAll()
 
-    this.debugConfigurationProvider.prepareTestRun(fileName, identifier)
+    this.debugConfigurationProvider.prepareTestRun(fileName, identifier, this.workspace)
 
     const handle = vscode.debug.onDidTerminateDebugSession(_ => {
       handle.dispose()

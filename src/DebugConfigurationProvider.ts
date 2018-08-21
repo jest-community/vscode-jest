@@ -1,17 +1,20 @@
 import * as vscode from 'vscode'
+import { ProjectWorkspace } from 'jest-editor-support'
 import { getTestCommand, isCreateReactAppTestCommand } from './helpers'
 
 export class DebugConfigurationProvider implements vscode.DebugConfigurationProvider {
   private fileNameToRun: string = ''
   private testToRun: string = ''
+  private workspace: ProjectWorkspace
 
   /**
    * Prepares injecting the name of the test, which has to be debugged, into the `DebugConfiguration`,
    * This function has to be called before `vscode.debug.startDebugging`.
    */
-  public prepareTestRun(fileNameToRun: string, testToRun: string) {
+  public prepareTestRun(fileNameToRun: string, testToRun: string, workspace: ProjectWorkspace) {
     this.fileNameToRun = fileNameToRun
     this.testToRun = testToRun
+    this.workspace = workspace
   }
 
   resolveDebugConfiguration(
@@ -71,6 +74,9 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
       debugConfiguration.protocol = 'inspector'
     } else {
       // Plain jest setup
+      if (this.workspace.pathToConfig) {
+        debugConfiguration.args = [...debugConfiguration.args, '--config', this.workspace.pathToConfig]
+      }
       debugConfiguration.program = '${workspaceFolder}/node_modules/jest/bin/jest'
     }
 
