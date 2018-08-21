@@ -11,7 +11,7 @@ Bug-fixes within the same version aren't needed
 -->
 
 ## Master
-* Fixes 'Debug' button ignoring configuration option 'pathToJest'.
+* Fixes 'Debug' button ignoring configuration option 'pathToConfig'.
 
 ### 2.9.0
 
