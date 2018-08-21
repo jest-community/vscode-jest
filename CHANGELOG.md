@@ -10,6 +10,9 @@ Bug-fixes within the same version aren't needed
 
 -->
 
+## Master
+* Fixes 'Debug' button ignoring configuration option 'pathToJest'.
+
 ### 2.9.0
 
 * Adds a setting to control when the debug CodeLens appears - seanpoulter

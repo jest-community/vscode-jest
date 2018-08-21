@@ -146,7 +146,7 @@ describe('JestExt', () => {
       expect(configuration).toBeDefined()
       expect(configuration.type).toBe('dummyconfig')
 
-      expect(sut.debugConfigurationProvider.prepareTestRun).toBeCalledWith(fileName, testNamePattern)
+      expect(sut.debugConfigurationProvider.prepareTestRun).toBeCalledWith(fileName, testNamePattern, projectWorkspace)
     })
   })
 
