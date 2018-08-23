@@ -129,12 +129,12 @@
         "jest.showFilesInSidebar": {
           "description": "Show filenames in sidebar tree view",
           "type": "boolean",
-          "default": false
+          "default": true
         },
         "jest.autoExpandSidebar": {
           "description": "Automatically expand tests in sidebar tree view",
           "type": "boolean",
-          "default": false
+          "default": true
         },
         "jest.debugMode": {
           "description": "Enable debug mode to diagnose plugin issues. (see developer console)",
