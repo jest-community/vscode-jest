@@ -6,6 +6,22 @@ jest.mock('vscode', () => {
       constructor(public label: string, public collapsibleState?: vscode.TreeItemCollapsibleState) {}
     },
     TreeItemCollapsibleState: jest.fn<vscode.TreeItemCollapsibleState>(),
+    workspace: {
+      getWorkspaceFolder: jest.fn<vscode.WorkspaceFolder>().mockImplementation(_ => {
+        return {
+          uri: {
+            path: '/FOLDER/PATH',
+          },
+        }
+      }),
+    },
+    Uri: {
+      file: jest.fn<vscode.Uri>().mockImplementation(filename => {
+        return {
+          path: '/FOLDER/PATH/' + filename,
+        }
+      }),
+    },
   }
 
   return vscode
@@ -16,26 +32,21 @@ import {
   SidebarContext,
   JestTreeNode,
   NodeStatus,
-  JestTreeNodeForFiles,
-  JestTreeNodeForFile,
-  JestTreeNodeForSuite,
   JestTreeNodeForTest,
+  generateTree,
 } from '../../src/SideBar/JestTreeNode'
 import { TestResultFile, TestResultSuite, TestResultTest } from '../../src/SideBar/TestResultTree'
 import { extensionName } from '../../src/appGlobals'
 
-const sidebarContext: SidebarContext = jest.fn<SidebarContext>(() => {
-  return {
-    showFiles: false,
-    autoExpand: false,
-    getIconPath: jest.fn().mockImplementation((status: string) => status + '-icon'),
-    getTreeItemCollapsibleState: jest.fn().mockReturnValue(vscode.TreeItemCollapsibleState.Collapsed),
-  }
-})()
-
 describe('JestTreeNode', () => {
+  let sidebarContext: SidebarContext
+
+  beforeEach(() => {
+    sidebarContext = mockSidebarContext()
+  })
+
   it('should accept no children', () => {
-    const node = new JestTreeNode('label', [], sidebarContext)
+    const node = new JestTreeNode('label', [], sidebarContext, 'root')
 
     expect(node).toBeInstanceOf(vscode.TreeItem)
 
@@ -46,6 +57,7 @@ describe('JestTreeNode', () => {
       status: 'unknown',
       iconPath: 'unknown-icon',
       tooltip: 'label ● Unknown',
+      contextValue: 'root',
     })
   })
 
@@ -115,6 +127,224 @@ describe('JestTreeNode', () => {
   })
 })
 
+describe('generateTree', () => {
+  let sidebarContext: SidebarContext
+
+  beforeEach(() => {
+    sidebarContext = mockSidebarContext()
+  })
+
+  it('should accept no files', () => {
+    const node = generateTree(undefined, sidebarContext)
+
+    expect(node).toMatchObject({
+      label: 'Tests',
+      collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+      children: [],
+      contextValue: 'root',
+    })
+  })
+
+  it('should accept files', () => {
+    const node = generateTree([mockFile('filename1', [mockSuite('suite1', [], [])], [])], sidebarContext)
+
+    expect(node).toMatchObject({
+      label: 'Tests',
+      collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+      children: [{ label: 'suite1' }],
+      contextValue: 'root',
+    })
+  })
+
+  it('should accept files when files are shown in sidebar', () => {
+    sidebarContext.showFiles = true
+
+    const node = generateTree([mockFile('filename1', [mockSuite('suite1', [], [])], [])], sidebarContext)
+
+    expect(node).toMatchObject({
+      label: 'Tests',
+      collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+      children: [
+        {
+          label: 'filename1',
+          children: [{ label: 'suite1' }],
+        },
+      ],
+    })
+  })
+
+  it('should accept files with multiple root suites', () => {
+    const node = generateTree(
+      [mockFile('filename1', [mockSuite('suite1', [], []), mockSuite('suite2', [], [])], [])],
+      sidebarContext
+    )
+
+    expect(node).toMatchObject({
+      label: 'Tests',
+      collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+      children: [{ label: 'suite1' }, { label: 'suite2' }],
+    })
+  })
+
+  it('should accept files with multiple root suites when files are shown in sidebar', () => {
+    sidebarContext.showFiles = true
+
+    const node = generateTree(
+      [mockFile('filename1', [mockSuite('suite1', [], []), mockSuite('suite2', [], [])], [])],
+      sidebarContext
+    )
+
+    expect(node).toMatchObject({
+      label: 'Tests',
+      collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+      children: [
+        {
+          label: 'filename1',
+          children: [{ label: 'suite1' }, { label: 'suite2' }],
+        },
+      ],
+    })
+  })
+
+  it('should accept files with root tests', () => {
+    const node = generateTree([mockFile('filename1', [], [mockTest('test1')])], sidebarContext)
+
+    expect(node).toMatchObject({
+      label: 'Tests',
+      collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+      children: [
+        {
+          label: 'filename1',
+          children: [{ label: 'test1' }],
+        },
+      ],
+    })
+  })
+
+  it('should accept files with root tests when files are shown in sidebar', () => {
+    sidebarContext.showFiles = true
+
+    const node = generateTree([mockFile('filename1', [], [mockTest('test1')])], sidebarContext)
+
+    expect(node).toMatchObject({
+      label: 'Tests',
+      collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+      children: [
+        {
+          label: 'filename1',
+          children: [{ label: 'test1' }],
+        },
+      ],
+    })
+  })
+
+  it('should accept files with root tests and suites', () => {
+    const node = generateTree(
+      [
+        mockFile(
+          'filename1',
+          [
+            mockSuite(
+              'suite1',
+              [
+                mockSuite('suite1-1', [], [mockTest('test1-1-1'), mockTest('test1-1-2')]),
+                mockSuite('suite1-2', [], []),
+              ],
+              [mockTest('test1-1'), mockTest('test1-2'), mockTest('test1-3')]
+            ),
+            mockSuite('suite2', [], [mockTest('test2-1')]),
+          ],
+          [mockTest('test1')]
+        ),
+      ],
+      sidebarContext
+    )
+
+    expect(node).toMatchObject({
+      label: 'Tests',
+      collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+      children: [
+        {
+          label: 'suite1',
+          children: [
+            {
+              label: 'suite1-1',
+              children: [{ label: 'test1-1-1' }, { label: 'test1-1-2' }],
+            },
+            { label: 'suite1-2', children: [] },
+            { label: 'test1-1' },
+            { label: 'test1-2' },
+            { label: 'test1-3' },
+          ],
+        },
+        {
+          label: 'suite2',
+          children: [{ label: 'test2-1' }],
+        },
+        {
+          label: 'filename1',
+          children: [{ label: 'test1' }],
+        },
+      ],
+    })
+  })
+
+  it('should accept files with root tests and suites when files are shown in sidebar', () => {
+    sidebarContext.showFiles = true
+
+    const node = generateTree(
+      [
+        mockFile(
+          'filename1',
+          [
+            mockSuite(
+              'suite1',
+              [
+                mockSuite('suite1-1', [], [mockTest('test1-1-1'), mockTest('test1-1-2')]),
+                mockSuite('suite1-2', [], []),
+              ],
+              [mockTest('test1-1'), mockTest('test1-2'), mockTest('test1-3')]
+            ),
+            mockSuite('suite2', [], [mockTest('test2-1')]),
+          ],
+          [mockTest('test1')]
+        ),
+      ],
+      sidebarContext
+    )
+
+    expect(node).toMatchObject({
+      label: 'Tests',
+      collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+      children: [
+        {
+          label: 'filename1',
+          children: [
+            {
+              label: 'suite1',
+              children: [
+                {
+                  label: 'suite1-1',
+                  children: [{ label: 'test1-1-1' }, { label: 'test1-1-2' }],
+                },
+                { label: 'suite1-2', children: [] },
+                { label: 'test1-1' },
+                { label: 'test1-2' },
+                { label: 'test1-3' },
+              ],
+            },
+            {
+              label: 'suite2',
+              children: [{ label: 'test2-1' }],
+            },
+            { label: 'test1' },
+          ],
+        },
+      ],
+    })
+  })
+})
+
 const mockTest = (name: string, status: string = 'unknown', failureMessages: string[] = []): TestResultTest => {
   return jest.fn<TestResultTest>(() => {
     return {
@@ -135,110 +365,22 @@ const mockSuite = (name: string, suites: TestResultSuite[], tests: TestResultTes
   })()
 }
 
-const mockFile = (filename: string, suites: TestResultSuite[]): TestResultFile => {
+const mockFile = (filename: string, suites: TestResultSuite[], tests: TestResultTest[]): TestResultFile => {
   return jest.fn<TestResultFile>(() => {
     return {
       name: filename,
-      suites: suites,
+      suite: mockSuite('', suites, tests),
     }
   })()
 }
 
-describe('JestTreeNodeForFiles', () => {
-  it('should accept no files', () => {
-    const node = new JestTreeNodeForFiles(undefined, sidebarContext)
-
-    expect(node).toMatchObject({
-      label: 'Tests',
-      collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
-      children: [],
-      contextValue: 'suite',
-    })
-  })
-
-  it('should accept files', () => {
-    const node = new JestTreeNodeForFiles([mockFile('filename1', [mockSuite('suite1', [], [])])], sidebarContext)
-
-    expect(node).toMatchObject({
-      label: 'Tests',
-      collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
-      children: [{ label: 'suite1' }],
-    })
-  })
-
-  it('should accept files when files are shown in sidebar', () => {
-    sidebarContext.showFiles = true
-
-    const node = new JestTreeNodeForFiles([mockFile('filename1', [mockSuite('suite1', [], [])])], sidebarContext)
-
-    expect(node).toMatchObject({
-      label: 'Tests',
-      collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
-      children: [
-        {
-          label: 'filename1',
-          children: [{ label: 'suite1' }],
-        },
-      ],
-    })
-  })
-})
-
-describe('JestTreeNodeForFile', () => {
-  it('should accept suites', () => {
-    const node = new JestTreeNodeForFile(mockFile('filename1', [mockSuite('suite1', [], [])]), sidebarContext)
-
-    expect(node).toMatchObject({
-      label: 'filename1',
-      collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
-      children: [{ label: 'suite1' }],
-      contextValue: 'suite',
-    })
-  })
-})
-
-describe('JestTreeNodeForSuite', () => {
-  it('should accept no suites or tests', () => {
-    const node = new JestTreeNodeForSuite(mockSuite('suite1', [], []), sidebarContext)
-
-    expect(node).toMatchObject({
-      label: 'suite1',
-      collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
-      children: [],
-      contextValue: 'suite',
-    })
-  })
-
-  it('should accept suites', () => {
-    const node = new JestTreeNodeForSuite(mockSuite('suite1', [mockSuite('suite2', [], [])], []), sidebarContext)
-
-    expect(node).toMatchObject({
-      label: 'suite1',
-      collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
-      children: [
-        {
-          label: 'suite2',
-        },
-      ],
-    })
-  })
-
-  it('should accept tests', () => {
-    const node = new JestTreeNodeForSuite(mockSuite('suite1', [], [mockTest('test1')]), sidebarContext)
-
-    expect(node).toMatchObject({
-      label: 'suite1',
-      collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
-      children: [
-        {
-          label: 'test1',
-        },
-      ],
-    })
-  })
-})
-
 describe('JestTreeNodeForTest', () => {
+  let sidebarContext: SidebarContext
+
+  beforeEach(() => {
+    sidebarContext = mockSidebarContext()
+  })
+
   it('should accept test', () => {
     const node = new JestTreeNodeForTest(mockTest('test1'), sidebarContext)
 
@@ -323,3 +465,13 @@ describe('SidebarContext', () => {
     })
   })
 })
+
+const mockSidebarContext = () =>
+  jest.fn<SidebarContext>(() => {
+    return {
+      showFiles: false,
+      autoExpand: false,
+      getIconPath: jest.fn().mockImplementation((status: string) => status + '-icon'),
+      getTreeItemCollapsibleState: jest.fn().mockReturnValue(vscode.TreeItemCollapsibleState.Collapsed),
+    }
+  })()

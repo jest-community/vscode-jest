@@ -1,6 +1,6 @@
 import * as vscode from 'vscode'
 import { JestTotalResults, JestFileResults } from 'jest-editor-support'
-import { JestTreeNode, SidebarContext, ISidebarSettings, JestTreeNodeForFiles } from './JestTreeNode'
+import { JestTreeNode, SidebarContext, ISidebarSettings, generateTree } from './JestTreeNode'
 import { TestResultFile } from './TestResultTree'
 import { TestResultProvider } from '../TestResults'
 
@@ -19,7 +19,7 @@ export class JestTreeProvider implements vscode.TreeDataProvider<JestTreeNode> {
     settings: ISidebarSettings
   ) {
     this.context = new SidebarContext(extensionContext, settings)
-    this.rootNode = new JestTreeNodeForFiles(undefined, this.context)
+    this.rootNode = generateTree(undefined, this.context)
   }
 
   refresh(data: JestTotalResults): void {
@@ -41,7 +41,7 @@ export class JestTreeProvider implements vscode.TreeDataProvider<JestTreeNode> {
 
   private loadTestResults(data: JestTotalResults) {
     const testFiles = data.testResults.map(r => this.loadTestResultsForFile(r))
-    this.rootNode = new JestTreeNodeForFiles(testFiles, this.context)
+    this.rootNode = generateTree(testFiles, this.context)
   }
 
   private loadTestResultsForFile(data: JestFileResults): TestResultFile {

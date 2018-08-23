@@ -9,6 +9,7 @@ export class JestTreeNode extends vscode.TreeItem {
     label: string,
     public readonly children: JestTreeNode[],
     context: SidebarContext,
+    public contextValue: string = '',
     public readonly status: NodeStatus = 'unknown'
   ) {
     super(label, children.length > 0 ? context.getTreeItemCollapsibleState() : vscode.TreeItemCollapsibleState.None)
@@ -49,68 +50,9 @@ export class JestTreeNode extends vscode.TreeItem {
   }
 }
 
-export class JestTreeNodeForFileBase extends JestTreeNode {
-  protected static getChildrenFromFile(file: TestResultFile, context: SidebarContext) {
-    return file.suites.map(s => new JestTreeNodeForSuite(s, context))
-  }
-}
-
-export class JestTreeNodeForFiles extends JestTreeNodeForFileBase {
-  constructor(files: undefined | TestResultFile[], context: SidebarContext) {
-    super('Tests', files === undefined ? [] : JestTreeNodeForFiles.getChildrenFromFiles(files, context), context)
-    this.collapsibleState = vscode.TreeItemCollapsibleState.Expanded
-  }
-
-  get contextValue() {
-    return 'suite'
-  }
-
-  private static getChildrenFromFiles(files: TestResultFile[], context: SidebarContext) {
-    if (context.showFiles) {
-      return files.map(f => new JestTreeNodeForFile(f, context))
-    } else {
-      return [].concat(...files.map(f => this.getChildrenFromFile(f, context)))
-    }
-  }
-}
-
-export class JestTreeNodeForFile extends JestTreeNodeForFileBase {
-  constructor(file: TestResultFile, context: SidebarContext) {
-    super(file.name, JestTreeNodeForFile.getChildrenFromFile(file, context), context)
-  }
-
-  get contextValue() {
-    return 'suite'
-  }
-}
-
-export class JestTreeNodeForSuite extends JestTreeNode {
-  constructor(suite: TestResultSuite, context: SidebarContext) {
-    super(suite.name, JestTreeNodeForSuite.getChildrenFromSuite(suite, context), context)
-  }
-
-  get contextValue() {
-    return 'suite'
-  }
-
-  private static getChildrenFromSuite(suite: TestResultSuite, context: SidebarContext) {
-    return suite.suites
-      .map(s => <JestTreeNode>new JestTreeNodeForSuite(s, context))
-      .concat(suite.tests.map(t => new JestTreeNodeForTest(t, context)))
-  }
-}
-
 export class JestTreeNodeForTest extends JestTreeNode {
   constructor(private test: TestResultTest, context: SidebarContext) {
-    super(test.name, [], context, JestTreeNodeForTest.convertTestStatus(test.status))
-  }
-
-  get contextValue() {
-    return 'test'
-  }
-
-  private static convertTestStatus(testStatus: 'failed' | 'passed' | 'pending'): NodeStatus {
-    return testStatus === 'pending' ? 'skipped' : testStatus
+    super(test.name, [], context, 'test', convertTestStatus(test.status))
   }
 
   get tooltip(): string {
@@ -160,4 +102,59 @@ export class SidebarContext {
       dark: this.extensionContext.asAbsolutePath('./src/SideBar/dark-' + iconColor + '.svg'),
     }
   }
+}
+
+function convertTestStatus(testStatus: 'failed' | 'passed' | 'pending'): NodeStatus {
+  return testStatus === 'pending' ? 'skipped' : testStatus
+}
+
+export function generateTree(files: undefined | TestResultFile[], context: SidebarContext): JestTreeNode {
+  const rootNode = new JestTreeNode(
+    'Tests',
+    files === undefined ? [] : getNodesFromFiles(files, context),
+    context,
+    'root'
+  )
+  rootNode.collapsibleState = vscode.TreeItemCollapsibleState.Expanded
+  return rootNode
+}
+
+function getNodesFromFiles(files: TestResultFile[], context: SidebarContext): JestTreeNode[] {
+  return [].concat(...files.map(f => getNodesFromFile(f, context)))
+}
+
+function getNodesFromFile(file: TestResultFile, context: SidebarContext): JestTreeNode[] {
+  if (context.showFiles) {
+    return [new JestTreeNode(cleanFilename(file.name), getNodesFromSuite(file.suite, context), context, 'file')]
+  } else {
+    if (file.suite.tests.length === 0) {
+      return getNodesFromSuite(file.suite, context)
+    } else {
+      return file.suite.suites
+        .map(s => new JestTreeNode(s.name, getNodesFromSuite(s, context), context, 'suite'))
+        .concat([
+          new JestTreeNode(
+            cleanFilename(file.name),
+            file.suite.tests.map(t => new JestTreeNodeForTest(t, context)),
+            context,
+            'file'
+          ),
+        ])
+    }
+  }
+}
+
+function cleanFilename(filename: string): string {
+  const file = vscode.Uri.file(filename)
+  const folder = vscode.workspace.getWorkspaceFolder(file)
+  if (folder && folder.uri && file.path.toLowerCase().startsWith(folder.uri.path.toLowerCase())) {
+    return file.path.substring(folder.uri.path.length + 1)
+  }
+  return filename
+}
+
+function getNodesFromSuite(suite: TestResultSuite, context: SidebarContext): JestTreeNode[] {
+  return suite.suites
+    .map(s => new JestTreeNode(s.name, getNodesFromSuite(s, context), context, 'suite'))
+    .concat(suite.tests.map(t => new JestTreeNodeForTest(t, context)))
 }

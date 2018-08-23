@@ -3,16 +3,16 @@ import { TestResult } from '../TestResults'
 
 export class TestResultFile {
   name: string
-  suites: TestResultSuite[]
+  suite: TestResultSuite
 
   constructor(results: JestFileResults, parsedResults: TestResult[]) {
     this.name = results.name
-    this.suites = []
+    this.suite = new TestResultSuite()
     results.assertionResults.forEach(r => this.parseAssertionResults(r, parsedResults))
   }
 
   private parseAssertionResults(results: JestAssertionResults, parsedResults: TestResult[]) {
-    const suite = this.getSuite((<any>results).ancestorTitles, this.suites)
+    const suite = this.getSuite((<any>results).ancestorTitles)
     const parsedResult = parsedResults.find(pr => pr.name === results.title)
     const line = parsedResult
       ? results.status === 'failed' && parsedResult.lineNumberOfError
@@ -22,21 +22,19 @@ export class TestResultFile {
     suite.addTest(results, this.name, line)
   }
 
-  private getSuite(titles: string[], suites: TestResultSuite[]): TestResultSuite {
-    let suite = suites.find(s => s.name === titles[0])
+  private getSuite(titles: string[] | undefined, parentSuite: TestResultSuite = this.suite): TestResultSuite {
+    if (titles === undefined || titles.length === 0) {
+      return parentSuite
+    }
+    const suite = parentSuite.suites.find(s => s.name === titles[0])
     if (suite !== undefined) {
-      if (titles.length > 1) {
-        return this.getSuite(titles.slice(1), suite.suites)
-      }
-      return suite
+      return this.getSuite(titles.slice(1), suite)
     }
 
-    titles.forEach(t => {
-      suite = new TestResultSuite(t)
-      suites.push(suite)
-      suites = suite.suites
-    })
-    return suite
+    return titles.map(t => new TestResultSuite(t)).reduce((a, s) => {
+      a.suites.push(s)
+      return s
+    }, parentSuite)
   }
 }
 
@@ -44,7 +42,7 @@ export class TestResultSuite {
   suites: TestResultSuite[]
   tests: TestResultTest[]
 
-  constructor(public name: string) {
+  constructor(public name: string = '') {
     this.suites = []
     this.tests = []
   }
