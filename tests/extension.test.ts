@@ -150,8 +150,8 @@ describe('Extension', () => {
         showCoverageOnLoad: false,
         debugMode: false,
         sidebar: {
-          showFiles: false,
-          autoExpand: false,
+          showFiles: true,
+          autoExpand: true,
         },
       })
     })
