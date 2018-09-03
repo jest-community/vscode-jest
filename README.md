@@ -17,6 +17,7 @@ Content
 * [Wanted](#wanted)
 * [Troubleshooting](#troubleshooting)
 	* [start jest from non-root folder](#start-jest-from-non-root-folder)
+  * [run jest in Windows Subsystem for Linux](#run-jest-in-windows-subsystem-for-linux)
 	* [non-standard environments](#non-standard-environments)
 	* [plugin not running as expect? try self-diagnosis](#plugin-not-running-as-expect-try-self-diagnosis)
 * [Want to Contribute?](#want-to-contribute)
@@ -139,20 +140,29 @@ These are the [activation events](https://code.visualstudio.com/docs/extensionAP
 
 These are the things that will trigger the extension loading. If one of these applies, and you're not seeing the "Jest" in the bottom bar, reference the self-diagnosis below
 
+### run jest in Windows Subsystem for Linux
+
+In order to execute jest in WSL (Window Subsystem for Linux), enable the useWsl flag in your workspace settings.
+
+```json
+    "jest.pathToJest": "npm run test -- --coverage",
+    "jest.useWsl": true,
+```
+
 ### non-standard environments
-vscode-jest supports common jest configuration, such as when jest is in `root/node_modules/.bin/jest`, or for react-native `root/node_modules/react-native-scripts`. 
+vscode-jest supports common jest configuration, such as when jest is in `root/node_modules/.bin/jest`, or for react-native `root/node_modules/react-native-scripts`.
 
 However, if your repo doesn't fall into these patterns or you want to pass extra parameters, you can easily use the `jest.pathToJest` or `jest.pathToConfig` settings to instruct the plugin on how to start jest. You can even use the scripts from package.json, such as `npm run test --` or `yarn test`. Feel free to experiment and search the issues for many examples.
 
 ### plugin not running as expect? try self-diagnosis
 If your can execute jest tests on command line but vscode-jest was not running as expected, here is what you can do to find out what it is actually doing:
-1. click on `Jest:stopped` on status bar to show Jest Output window: 
+1. click on `Jest:stopped` on status bar to show Jest Output window:
    <img src="https://github.com/jest-community/vscode-jest/raw/master/images/output-channel.png" alt="Screenshot of the tool" width="100%">
-1. turn on the debug mode: set `"jest.debugMode": true` in `.vscode/settings.json` 
+1. turn on the debug mode: set `"jest.debugMode": true` in `.vscode/settings.json`
 1. restart vscode-jest or reload the window (via `Reload Window` command)
 1. open the developer tool (via `Help > Toggle Developer Tools` menu), you should see more information including how we extract jest config and spawn jest processes.
 
-Hopefully most issues would be pretty obvious after seeing these extra output, and you can probably fix most yourself by customizing the `jest.pathToJest` and other settings. 
+Hopefully most issues would be pretty obvious after seeing these extra output, and you can probably fix most yourself by customizing the `jest.pathToJest` and other settings.
 
 ## Want to Contribute?
 

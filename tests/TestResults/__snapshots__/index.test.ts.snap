@@ -11,5 +11,6 @@ Object {
   "TestResult": undefined,
   "TestResultProvider": [Function],
   "resultsWithLowerCaseWindowsDriveLetters": [Function],
+  "translateWslPathsToWindowsPaths": [Function],
 }
 `;
