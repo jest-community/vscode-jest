@@ -9,6 +9,7 @@ import {
   TestResultProvider,
   TestResult,
   resultsWithLowerCaseWindowsDriveLetters,
+  translateWslPathsToWindowsPaths,
   SortedTestResults,
 } from './TestResults'
 import { pathToJest, pathToConfig } from './helpers'
@@ -358,7 +359,9 @@ export class JestExt {
   }
 
   private updateWithData(data: JestTotalResults) {
-    const normalizedData = resultsWithLowerCaseWindowsDriveLetters(data)
+    const translatedData = this.workspace.useWsl ? translateWslPathsToWindowsPaths(data) : data
+
+    const normalizedData = resultsWithLowerCaseWindowsDriveLetters(translatedData)
     this.coverageMapProvider.update(normalizedData.coverageMap)
 
     const statusList = this.testResultProvider.updateTestResults(normalizedData)

@@ -1,3 +1,3 @@
 export * from './TestReconciliationState'
-export { TestResult, resultsWithLowerCaseWindowsDriveLetters } from './TestResult'
+export { TestResult, resultsWithLowerCaseWindowsDriveLetters, translateWslPathsToWindowsPaths } from './TestResult'
 export * from './TestResultProvider'

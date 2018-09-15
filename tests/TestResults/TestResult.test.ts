@@ -1,15 +1,48 @@
 jest.unmock('../../src/TestResults/TestResult')
-jest.mock('path', () => ({ sep: require.requireActual('path').sep }))
+jest.mock('path', () => ({
+  sep: require.requireActual('path').sep,
+  win32: require.requireActual('path').win32,
+}))
+jest.mock('wsl-path', () => ({
+  wslToWindowsSync: path => {
+    return path.replace(/\/mnt\/c\//, 'C:\\')
+  },
+}))
 
 import {
   resultsWithLowerCaseWindowsDriveLetters,
   coverageMapWithLowerCaseWindowsDriveLetters,
   testResultsWithLowerCaseWindowsDriveLetters,
   withLowerCaseWindowsDriveLetter,
+  translateWslPathsToWindowsPaths,
 } from '../../src/TestResults/TestResult'
 import * as path from 'path'
+import { JestTotalResults } from 'jest-editor-support'
 
 describe('TestResult', () => {
+  describe('translateWslPathsToWindowsPaths', () => {
+    it('should translate testresults from posix to windows paths', () => {
+      const result = translateWslPathsToWindowsPaths({
+        testResults: [{ name: '/mnt/c/file1' }, { name: '/mnt/c/file2' }],
+      } as MockedTestResult)
+
+      expect(result.testResults[0].name).toEqual('C:\\file1')
+      expect(result.testResults[1].name).toEqual('C:\\file2')
+    })
+
+    it('should translate coverage maps from posi to windows paths', () => {
+      const result = translateWslPathsToWindowsPaths({
+        coverageMap: {
+          '/mnt/c/file1': { path: '/mnt/c/file1' },
+          '/mnt/c/file2': { path: '/mnt/c/file2' },
+        },
+      } as MockedTestResult)
+
+      expect(result.coverageMap['C:\\file1'].path).toEqual('C:\\file1')
+      expect(result.coverageMap['C:\\file2'].path).toEqual('C:\\file2')
+    })
+  })
+
   describe('resultsWithLowerCaseWindowsDriveLetters', () => {
     describe('on POSIX systems', () => {
       it('should return the results unchanged', () => {
@@ -124,3 +157,5 @@ describe('TestResult', () => {
     })
   })
 })
+
+type MockedTestResult = JestTotalResults | any

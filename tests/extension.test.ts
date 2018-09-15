@@ -141,6 +141,7 @@ describe('Extension', () => {
         runAllTestsFirst: true,
         showCoverageOnLoad: false,
         debugMode: false,
+        useWsl: false,
       })
     })
   })
