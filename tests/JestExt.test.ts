@@ -17,6 +17,7 @@ import { updateCurrentDiagnostics } from '../src/diagnostics'
 
 describe('JestExt', () => {
   const getConfiguration = workspace.getConfiguration as jest.Mock<any>
+  const workspaceFolder = {} as any
   let projectWorkspace: ProjectWorkspace
   const channelStub = { appendLine: () => {}, clear: () => {} } as any
   // const mockShowErrorMessage = window.showErrorMessage as jest.Mock<any>
@@ -48,6 +49,7 @@ describe('JestExt', () => {
     beforeEach(() => {
       sut = new JestExt(
         null,
+        workspaceFolder,
         projectWorkspace,
         channelStub,
         extensionSettings,
@@ -108,6 +110,7 @@ describe('JestExt', () => {
       }
       const sut = new JestExt(
         null,
+        workspaceFolder,
         projectWorkspace,
         channelStub,
         settings,
@@ -156,6 +159,7 @@ describe('JestExt', () => {
       const debugConfiguration = { type: 'dummyconfig' }
       const sut = new JestExt(
         null,
+        workspaceFolder,
         projectWorkspace,
         channelStub,
         extensionSettings,
@@ -182,6 +186,7 @@ describe('JestExt', () => {
     const projectWorkspace = new ProjectWorkspace(null, null, null, null)
     const sut = new JestExt(
       null,
+      workspaceFolder,
       projectWorkspace,
       channelStub,
       extensionSettings,
@@ -207,6 +212,7 @@ describe('JestExt', () => {
     const projectWorkspace = new ProjectWorkspace(null, null, null, null)
     const sut = new JestExt(
       null,
+      workspaceFolder,
       projectWorkspace,
       channelStub,
       extensionSettings,
@@ -239,6 +245,7 @@ describe('JestExt', () => {
     const projectWorkspace = new ProjectWorkspace(null, null, null, null)
     const sut = new JestExt(
       null,
+      workspaceFolder,
       projectWorkspace,
       channelStub,
       extensionSettings,
@@ -272,6 +279,7 @@ describe('JestExt', () => {
     const projectWorkspace = new ProjectWorkspace(null, null, null, null)
     sut = new JestExt(
       null,
+      workspaceFolder,
       projectWorkspace,
       channelStub,
       extensionSettings,
@@ -306,6 +314,7 @@ describe('JestExt', () => {
       const projectWorkspace = new ProjectWorkspace(null, null, null, null)
       sut = new JestExt(
         null,
+        workspaceFolder,
         projectWorkspace,
         channelStub,
         extensionSettings,
@@ -380,6 +389,7 @@ describe('JestExt', () => {
     it('should toggle the coverage overlay visibility', () => {
       const sut = new JestExt(
         null,
+        workspaceFolder,
         projectWorkspace,
         channelStub,
         extensionSettings,
@@ -401,6 +411,7 @@ describe('JestExt', () => {
 
       const sut = new JestExt(
         null,
+        workspaceFolder,
         projectWorkspace,
         channelStub,
         extensionSettings,
@@ -414,6 +425,7 @@ describe('JestExt', () => {
     it('should update both decorators and diagnostics for valid editor', () => {
       const sut = new JestExt(
         null,
+        workspaceFolder,
         projectWorkspace,
         channelStub,
         extensionSettings,
@@ -451,6 +463,7 @@ describe('JestExt', () => {
       const projectWorkspace = new ProjectWorkspace(null, null, null, null)
       sut = new JestExt(
         null,
+        workspaceFolder,
         projectWorkspace,
         channelStub,
         extensionSettings,
@@ -504,6 +517,7 @@ describe('JestExt', () => {
       const projectWorkspace = new ProjectWorkspace(null, null, null, null)
       sut = new JestExt(
         null,
+        workspaceFolder,
         projectWorkspace,
         channelStub,
         settings,
@@ -574,6 +588,7 @@ describe('JestExt', () => {
       const projectWorkspace = new ProjectWorkspace(null, null, null, null)
       sut = new JestExt(
         null,
+        workspaceFolder,
         projectWorkspace,
         channelStub,
         settings,

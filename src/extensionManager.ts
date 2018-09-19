@@ -32,7 +32,7 @@ export class ExtensionManager {
     const configPath = pathToConfig(pluginSettings)
     const currentJestVersion = 20
     const debugMode = pluginSettings.debugMode
-    const workspace = new ProjectWorkspace(
+    const jestWorkspace = new ProjectWorkspace(
       pluginSettings.rootPath,
       jestPath,
       configPath,
@@ -46,7 +46,8 @@ export class ExtensionManager {
 
     this.extByWorkspace[workspaceFolder.name] = new JestExt(
       this.context,
-      workspace,
+      workspaceFolder,
+      jestWorkspace,
       channel,
       pluginSettings,
       this.debugCodeLensProvider,

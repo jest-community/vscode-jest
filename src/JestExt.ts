@@ -24,8 +24,9 @@ import { isWatchNotSupported, WatchMode } from './Jest'
 import * as messaging from './messaging'
 
 export class JestExt {
-  private workspace: ProjectWorkspace
+  private jestWorkspace: ProjectWorkspace
   private pluginSettings: IPluginResourceSettings
+  private workspaceFolder: vscode.WorkspaceFolder
 
   coverageMapProvider: CoverageMapProvider
   coverageOverlay: CoverageOverlay
@@ -57,13 +58,15 @@ export class JestExt {
 
   constructor(
     context: vscode.ExtensionContext,
-    workspace: ProjectWorkspace,
+    workspaceFolder: vscode.WorkspaceFolder,
+    jestWorkspace: ProjectWorkspace,
     outputChannel: vscode.OutputChannel,
     pluginSettings: IPluginResourceSettings,
     debugCodeLensProvider: DebugCodeLensProvider,
     debugConfigurationProvider: DebugConfigurationProvider
   ) {
-    this.workspace = workspace
+    this.workspaceFolder = workspaceFolder
+    this.jestWorkspace = jestWorkspace
     this.channel = outputChannel
     this.failingAssertionDecorators = {}
     this.failDiagnostics = vscode.languages.createDiagnosticCollection('Jest')
@@ -83,7 +86,7 @@ export class JestExt {
     this.debugConfigurationProvider = debugConfigurationProvider
 
     this.jestProcessManager = new JestProcessManager({
-      projectWorkspace: workspace,
+      projectWorkspace: jestWorkspace,
       runAllTestsFirstInWatchMode: this.pluginSettings.runAllTestsFirst,
     })
 
@@ -243,10 +246,10 @@ export class JestExt {
   public triggerUpdateSettings(updatedSettings: IPluginResourceSettings) {
     this.pluginSettings = updatedSettings
 
-    this.workspace.rootPath = updatedSettings.rootPath
-    this.workspace.pathToJest = pathToJest(updatedSettings)
-    this.workspace.pathToConfig = pathToConfig(updatedSettings)
-    this.workspace.debug = updatedSettings.debugMode
+    this.jestWorkspace.rootPath = updatedSettings.rootPath
+    this.jestWorkspace.pathToJest = pathToJest(updatedSettings)
+    this.jestWorkspace.pathToConfig = pathToConfig(updatedSettings)
+    this.jestWorkspace.debug = updatedSettings.debugMode
 
     this.coverageOverlay.enabled = updatedSettings.showCoverageOnLoad
 
@@ -367,7 +370,9 @@ export class JestExt {
     }
 
     for (const editor of vscode.window.visibleTextEditors) {
-      this.triggerUpdateActiveEditor(editor)
+      if (vscode.workspace.getWorkspaceFolder(editor.document.uri) === this.workspaceFolder) {
+        this.triggerUpdateActiveEditor(editor)
+      }
     }
     this.clearOnNextInput = true
   }
