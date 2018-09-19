@@ -2,7 +2,7 @@ import { platform } from 'os'
 import { existsSync, readFileSync } from 'fs'
 import { normalize, join } from 'path'
 
-import { IPluginSettings, hasUserSetPathToJest } from './Settings'
+import { IPluginResourceSettings, hasUserSetPathToJest } from './Settings'
 
 /**
  * Known binary names of `react-scripts` forks
@@ -60,7 +60,7 @@ function hasNodeExecutable(rootPath: string, executable: string): boolean {
  *
  * @returns {string}
  */
-export function pathToJest({ pathToJest, rootPath }: IPluginSettings) {
+export function pathToJest({ pathToJest, rootPath }: IPluginResourceSettings) {
   if (hasUserSetPathToJest(pathToJest)) {
     return normalize(pathToJest)
   }
@@ -85,7 +85,7 @@ function pathToLocalJestExecutable(rootDir) {
  *
  * @returns {string}
  */
-export function pathToConfig(pluginSettings: IPluginSettings) {
+export function pathToConfig(pluginSettings: IPluginResourceSettings) {
   if (pluginSettings.pathToConfig !== '') {
     return normalize(pluginSettings.pathToConfig)
   }
@@ -93,7 +93,7 @@ export function pathToConfig(pluginSettings: IPluginSettings) {
   return ''
 }
 
-export function pathToJestPackageJSON(pluginSettings: IPluginSettings): string | null {
+export function pathToJestPackageJSON(pluginSettings: IPluginResourceSettings): string | null {
   let pathToNodeModules = join(pluginSettings.rootPath, 'node_modules')
 
   if (pluginSettings.pathToJest) {
