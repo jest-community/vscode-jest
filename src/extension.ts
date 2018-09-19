@@ -1,7 +1,7 @@
 import * as vscode from 'vscode'
 
 import { extensionName } from './appGlobals'
-import { registerStatusBar } from './statusBar'
+import { statusBar } from './StatusBar'
 import { CoverageCodeLensProvider } from './Coverage'
 import { ExtensionManager, getExtensionWindowSettings } from './extensionManager'
 import { registerSnapshotCodeLens, registerSnapshotPreview } from './SnapshotCodeLens'
@@ -18,7 +18,7 @@ export function activate(context: vscode.ExtensionContext) {
     { language: 'typescriptreact' },
   ]
 
-  registerStatusBar(`${extensionName}.show-output`)
+  statusBar.registerCommand(`${extensionName}.show-output`)
 
   context.subscriptions.push(
     extensionManager.registerCommand(`${extensionName}.show-output`, extension => extension.channel.show()),

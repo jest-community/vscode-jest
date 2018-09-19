@@ -29,9 +29,9 @@ jest.mock('../src/appGlobals', () => ({
 }))
 
 const statusBar = {
-  registerStatusBar: jest.fn(),
+  registerCommand: jest.fn(),
 }
-jest.mock('../src/statusBar', () => statusBar)
+jest.mock('../src/StatusBar', () => ({ statusBar }))
 
 jest.mock('../src/Coverage', () => ({
   registerCoverageCodeLens: jest.fn().mockReturnValue([]),
@@ -86,9 +86,9 @@ describe('Extension', () => {
     })
 
     it('should register statusBar', () => {
-      statusBar.registerStatusBar.mockReset()
+      statusBar.registerCommand.mockReset()
       activate(context)
-      expect(statusBar.registerStatusBar).toHaveBeenCalled()
+      expect(statusBar.registerCommand).toHaveBeenCalled()
     })
 
     it('should register an event handler to handle when the editor changes focus', () => {

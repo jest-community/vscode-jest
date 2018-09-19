@@ -8,6 +8,17 @@ jest.mock('../src/DebugCodeLens', () => ({
 jest.mock('os')
 jest.mock('../src/decorations')
 
+const statusBar = {
+  bind: () => ({
+    initial: jest.fn(),
+    running: jest.fn(),
+    success: jest.fn(),
+    failed: jest.fn(),
+    stopped: jest.fn(),
+  }),
+}
+jest.mock('../src/StatusBar', () => ({ statusBar }))
+
 import { JestExt } from '../src/JestExt'
 import { ProjectWorkspace } from 'jest-editor-support'
 import { window, workspace, debug } from 'vscode'

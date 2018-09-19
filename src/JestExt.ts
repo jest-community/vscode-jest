@@ -3,7 +3,7 @@ import { ProjectWorkspace, JestTotalResults } from 'jest-editor-support'
 
 import * as decorations from './decorations'
 import { IPluginResourceSettings } from './Settings'
-import * as status from './statusBar'
+import { statusBar, StatusBar } from './StatusBar'
 import {
   TestReconciliationState,
   TestResultProvider,
@@ -55,6 +55,7 @@ export class JestExt {
   private jestProcess: JestProcess
 
   private clearOnNextInput: boolean
+  private status: ReturnType<StatusBar['bind']>
 
   constructor(
     context: vscode.ExtensionContext,
@@ -89,6 +90,8 @@ export class JestExt {
       projectWorkspace: jestWorkspace,
       runAllTestsFirstInWatchMode: this.pluginSettings.runAllTestsFirst,
     })
+
+    this.status = statusBar.bind(workspaceFolder.name)
 
     // The theme stuff
     this.setupDecorators()
@@ -175,11 +178,11 @@ export class JestExt {
           this.jestProcess = jestProcessInWatchMode
 
           this.channel.appendLine('Finished running all tests. Starting watch mode.')
-          status.running('Starting watch mode')
+          this.status.running('Starting watch mode')
 
           this.assignHandlers(this.jestProcess)
         } else {
-          status.stopped()
+          this.status.stopped()
           if (!jestProcess.stopRequested) {
             const msg = `Starting Jest in Watch mode failed too many times and has been stopped.`
             this.channel.appendLine(`${msg}\n see troubleshooting: ${messaging.TroubleShootingURL}`)
@@ -196,7 +199,7 @@ export class JestExt {
   public stopProcess() {
     this.channel.appendLine('Closing Jest')
     this.jestProcessManager.stopAll()
-    status.stopped()
+    this.status.stopped()
   }
 
   private detectedSnapshotErrors() {
@@ -335,7 +338,7 @@ export class JestExt {
   }
 
   private setupStatusBar() {
-    status.initial()
+    this.status.initial()
   }
 
   private setupDecorators() {
@@ -352,7 +355,7 @@ export class JestExt {
 
   private testsHaveStartedRunning() {
     this.channel.clear()
-    status.running('initial full test run')
+    this.status.running('initial full test run')
   }
 
   private updateWithData(data: JestTotalResults) {
@@ -364,9 +367,9 @@ export class JestExt {
 
     const failedFileCount = failedSuiteCount(this.failDiagnostics)
     if (failedFileCount <= 0 && normalizedData.success) {
-      status.success()
+      this.status.success()
     } else {
-      status.failed(` (${failedFileCount} test suite${failedFileCount > 1 ? 's' : ''} failed)`)
+      this.status.failed(` (${failedFileCount} test suite${failedFileCount > 1 ? 's' : ''} failed)`)
     }
 
     for (const editor of vscode.window.visibleTextEditors) {
