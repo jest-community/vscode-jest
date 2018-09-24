@@ -44,6 +44,8 @@ export class ExtensionManager {
     // Create our own console
     const channel = vscode.window.createOutputChannel(`Jest (${workspaceFolder.name})`)
 
+    const failDiagnostics = vscode.languages.createDiagnosticCollection(`Jest (${workspaceFolder.name})`)
+
     this.extByWorkspace[workspaceFolder.name] = new JestExt(
       this.context,
       workspaceFolder,
@@ -51,7 +53,8 @@ export class ExtensionManager {
       channel,
       pluginSettings,
       this.debugCodeLensProvider,
-      this.debugConfigurationProvider
+      this.debugConfigurationProvider,
+      failDiagnostics
     )
   }
   unregister(workspaceFolder: vscode.WorkspaceFolder) {

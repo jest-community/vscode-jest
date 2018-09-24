@@ -65,7 +65,8 @@ describe('JestExt', () => {
         channelStub,
         extensionSettings,
         debugCodeLensProvider,
-        debugConfigurationProvider
+        debugConfigurationProvider,
+        null
       )
 
       sut.canUpdateActiveEditor = jest.fn().mockReturnValueOnce(true)
@@ -126,7 +127,8 @@ describe('JestExt', () => {
         channelStub,
         settings,
         debugCodeLensProvider,
-        debugConfigurationProvider
+        debugConfigurationProvider,
+        null
       )
       const editor: any = {
         document: { fileName: 'file.js' },
@@ -175,7 +177,8 @@ describe('JestExt', () => {
         channelStub,
         extensionSettings,
         debugCodeLensProvider,
-        debugConfigurationProvider
+        debugConfigurationProvider,
+        null
       )
       ;(sut.debugConfigurationProvider.provideDebugConfigurations as jest.Mock<Function>).mockReturnValue([
         debugConfiguration,
@@ -202,7 +205,8 @@ describe('JestExt', () => {
       channelStub,
       extensionSettings,
       debugCodeLensProvider,
-      debugConfigurationProvider
+      debugConfigurationProvider,
+      null
     )
     const document = {} as any
     sut.removeCachedTestResults = jest.fn()
@@ -228,7 +232,8 @@ describe('JestExt', () => {
       channelStub,
       extensionSettings,
       debugCodeLensProvider,
-      debugConfigurationProvider
+      debugConfigurationProvider,
+      null
     )
     sut.testResultProvider.removeCachedResults = jest.fn()
 
@@ -261,7 +266,8 @@ describe('JestExt', () => {
       channelStub,
       extensionSettings,
       debugCodeLensProvider,
-      debugConfigurationProvider
+      debugConfigurationProvider,
+      null
     )
 
     beforeEach(() => {
@@ -295,7 +301,8 @@ describe('JestExt', () => {
       channelStub,
       extensionSettings,
       debugCodeLensProvider,
-      debugConfigurationProvider
+      debugConfigurationProvider,
+      null
     )
     sut.triggerUpdateActiveEditor = jest.fn()
 
@@ -330,7 +337,8 @@ describe('JestExt', () => {
         channelStub,
         extensionSettings,
         debugCodeLensProvider,
-        debugConfigurationProvider
+        debugConfigurationProvider,
+        null
       )
     })
 
@@ -405,7 +413,8 @@ describe('JestExt', () => {
         channelStub,
         extensionSettings,
         debugCodeLensProvider,
-        debugConfigurationProvider
+        debugConfigurationProvider,
+        null
       )
       sut.toggleCoverageOverlay()
 
@@ -427,7 +436,8 @@ describe('JestExt', () => {
         channelStub,
         extensionSettings,
         debugCodeLensProvider,
-        debugConfigurationProvider
+        debugConfigurationProvider,
+        null
       )
       sut.triggerUpdateActiveEditor(editor)
 
@@ -441,7 +451,8 @@ describe('JestExt', () => {
         channelStub,
         extensionSettings,
         debugCodeLensProvider,
-        debugConfigurationProvider
+        debugConfigurationProvider,
+        null
       )
       sut.updateDecorators = jest.fn()
       const mockEditor: any = {
@@ -479,7 +490,8 @@ describe('JestExt', () => {
         channelStub,
         extensionSettings,
         debugCodeLensProvider,
-        debugConfigurationProvider
+        debugConfigurationProvider,
+        null
       )
     })
     it('will skip if there is no document in editor', () => {
@@ -533,7 +545,8 @@ describe('JestExt', () => {
         channelStub,
         settings,
         debugCodeLensProvider,
-        debugConfigurationProvider
+        debugConfigurationProvider,
+        null
       )
 
       mockEditor.setDecorations = jest.fn()
@@ -604,7 +617,8 @@ describe('JestExt', () => {
         channelStub,
         settings,
         debugCodeLensProvider,
-        debugConfigurationProvider
+        debugConfigurationProvider,
+        null
       )
 
       mockEditor.setDecorations = jest.fn()

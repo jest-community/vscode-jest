@@ -44,6 +44,9 @@ jest.mock('vscode', () => ({
   commands: {
     registerCommand: jest.fn(),
   },
+  languages: {
+    createDiagnosticCollection: jest.fn(),
+  },
 }))
 
 import * as vscode from 'vscode'

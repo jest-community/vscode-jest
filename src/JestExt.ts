@@ -64,13 +64,14 @@ export class JestExt {
     outputChannel: vscode.OutputChannel,
     pluginSettings: IPluginResourceSettings,
     debugCodeLensProvider: DebugCodeLensProvider,
-    debugConfigurationProvider: DebugConfigurationProvider
+    debugConfigurationProvider: DebugConfigurationProvider,
+    failDiagnostics: vscode.DiagnosticCollection
   ) {
     this.workspaceFolder = workspaceFolder
     this.jestWorkspace = jestWorkspace
     this.channel = outputChannel
     this.failingAssertionDecorators = {}
-    this.failDiagnostics = vscode.languages.createDiagnosticCollection('Jest')
+    this.failDiagnostics = failDiagnostics
     this.clearOnNextInput = true
     this.pluginSettings = pluginSettings
     this.debugCodeLensProvider = debugCodeLensProvider
