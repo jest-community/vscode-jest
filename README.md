@@ -59,7 +59,7 @@ If have a more complex setup, it can probably be supported, check out the settin
 Also, you should use Jest 17+, however 16 works - it will just offer a warning. We're aiming to try and do current Jest version - 1, but won't specifically drop support for older versions unless we're forced into it.
 
 
-## How do we start the Jest?
+## How to start the Jest?
 
 The extension will start Jest for you when:
 

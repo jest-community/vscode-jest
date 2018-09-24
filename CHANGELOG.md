@@ -5,11 +5,14 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 
-* Prevent ANSI escape codes from appearing in test messages - seanpoulter
 * Added preliminary support for test sidebar - gstamac
 * Your message here - name
 
 -->
+
+### 2.9.1
+
+* Prevent ANSI escape codes from appearing in test messages - seanpoulter
 
 ### 2.9.0
 
