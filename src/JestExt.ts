@@ -359,6 +359,7 @@ export class JestExt {
 
   private testsHaveStartedRunning() {
     this.channel.clear()
+    this.sidebarProvider.clear()
     status.running('initial full test run')
   }
 

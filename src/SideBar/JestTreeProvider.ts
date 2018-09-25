@@ -12,6 +12,7 @@ export class JestTreeProvider implements vscode.TreeDataProvider<JestTreeNode> {
 
   private context: SidebarContext
   private rootNode: JestTreeNode
+  private allResults: JestFileResults[]
 
   constructor(
     private testResultProvider: TestResultProvider,
@@ -19,7 +20,13 @@ export class JestTreeProvider implements vscode.TreeDataProvider<JestTreeNode> {
     settings: ISidebarSettings
   ) {
     this.context = new SidebarContext(extensionContext, settings)
+    this.clear()
+  }
+
+  clear(): void {
+    this.allResults = []
     this.rootNode = generateTree(undefined, this.context)
+    this._onDidChangeTreeData.fire()
   }
 
   refresh(data: JestTotalResults): void {
@@ -40,7 +47,11 @@ export class JestTreeProvider implements vscode.TreeDataProvider<JestTreeNode> {
   }
 
   private loadTestResults(data: JestTotalResults) {
-    const testFiles = data.testResults.map(r => this.loadTestResultsForFile(r))
+    this.allResults = this.allResults
+      .filter(r => !data.testResults.find(r1 => r1.name == r.name))
+      .concat(data.testResults)
+      .sort((a, b) => a.name.localeCompare(b.name))
+    const testFiles = this.allResults.map(r => this.loadTestResultsForFile(r))
     this.rootNode = generateTree(testFiles, this.context)
   }
 
