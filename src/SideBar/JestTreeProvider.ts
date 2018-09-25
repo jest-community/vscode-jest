@@ -48,7 +48,7 @@ export class JestTreeProvider implements vscode.TreeDataProvider<JestTreeNode> {
 
   private loadTestResults(data: JestTotalResults) {
     this.allResults = this.allResults
-      .filter(r => !data.testResults.find(r1 => r1.name == r.name))
+      .filter(r => !data.testResults.find(r1 => r1.name === r.name))
       .concat(data.testResults)
       .sort((a, b) => a.name.localeCompare(b.name))
     const testFiles = this.allResults.map(r => this.loadTestResultsForFile(r))
