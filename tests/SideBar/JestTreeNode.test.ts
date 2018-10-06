@@ -447,6 +447,30 @@ describe('SidebarContext', () => {
     expect(context.getTreeItemCollapsibleState()).toBe(vscode.TreeItemCollapsibleState.Collapsed)
   })
 
+  it('should get TreeItemCollapsibleState when auto expand is enabled and settings are updated', () => {
+    const context = new SidebarContext(jest.fn<vscode.ExtensionContext>()(), {
+      autoExpand: false,
+      showFiles: false,
+    })
+    context.updateSettings({
+      autoExpand: true,
+      showFiles: false,
+    })
+    expect(context.getTreeItemCollapsibleState()).toBe(vscode.TreeItemCollapsibleState.Collapsed)
+  })
+
+  it('should get TreeItemCollapsibleState when auto expand is disabled and settings are updated', () => {
+    const context = new SidebarContext(jest.fn<vscode.ExtensionContext>()(), {
+      autoExpand: true,
+      showFiles: false,
+    })
+    context.updateSettings({
+      autoExpand: false,
+      showFiles: false,
+    })
+    expect(context.getTreeItemCollapsibleState()).toBe(vscode.TreeItemCollapsibleState.Collapsed)
+  })
+
   it('should get icon path based on color', () => {
     const context = new SidebarContext(
       jest.fn<vscode.ExtensionContext>(() => {

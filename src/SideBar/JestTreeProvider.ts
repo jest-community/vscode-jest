@@ -23,6 +23,10 @@ export class JestTreeProvider implements vscode.TreeDataProvider<JestTreeNode> {
     this.clear()
   }
 
+  updateSettings(settings: ISidebarSettings): void {
+    this.context.updateSettings(settings)
+  }
+
   clear(): void {
     this.allResults = []
     this.rootNode = generateTree(undefined, this.context)

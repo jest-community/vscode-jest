@@ -260,6 +260,8 @@ export class JestExt {
       ? updatedSettings.debugCodeLens.showWhenTestStateIn
       : []
 
+    this.sidebarProvider.updateSettings(updatedSettings.sidebar)
+
     this.stopProcess()
 
     setTimeout(() => {

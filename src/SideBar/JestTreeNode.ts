@@ -85,15 +85,17 @@ export class SidebarContext {
   showFiles: boolean
   autoExpand: boolean
 
-  constructor(private extensionContext: vscode.ExtensionContext, private settings: ISidebarSettings) {
-    this.showFiles = settings.showFiles
+  constructor(private extensionContext: vscode.ExtensionContext, settings: ISidebarSettings) {
+    this.updateSettings(settings)
+  }
+
+  updateSettings(settings: ISidebarSettings): void {
     this.autoExpand = settings.autoExpand
+    this.showFiles = settings.showFiles
   }
 
   getTreeItemCollapsibleState() {
-    return this.settings.autoExpand
-      ? vscode.TreeItemCollapsibleState.Expanded
-      : vscode.TreeItemCollapsibleState.Collapsed
+    return this.autoExpand ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed
   }
 
   getIconPath(iconColor: string) {
