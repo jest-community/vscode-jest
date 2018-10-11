@@ -23,10 +23,15 @@ import { JestProcess, JestProcessManager } from './JestProcessManagement'
 import { isWatchNotSupported, WatchMode } from './Jest'
 import * as messaging from './messaging'
 
+type InstanceSettings = {
+  multirootEnv: boolean
+}
+
 export class JestExt {
   private jestWorkspace: ProjectWorkspace
   private pluginSettings: IPluginResourceSettings
   private workspaceFolder: vscode.WorkspaceFolder
+  private instanceSettings: InstanceSettings
 
   coverageMapProvider: CoverageMapProvider
   coverageOverlay: CoverageOverlay
@@ -65,7 +70,8 @@ export class JestExt {
     pluginSettings: IPluginResourceSettings,
     debugCodeLensProvider: DebugCodeLensProvider,
     debugConfigurationProvider: DebugConfigurationProvider,
-    failDiagnostics: vscode.DiagnosticCollection
+    failDiagnostics: vscode.DiagnosticCollection,
+    instanceSettings: InstanceSettings
   ) {
     this.workspaceFolder = workspaceFolder
     this.jestWorkspace = jestWorkspace
@@ -75,6 +81,7 @@ export class JestExt {
     this.clearOnNextInput = true
     this.pluginSettings = pluginSettings
     this.debugCodeLensProvider = debugCodeLensProvider
+    this.instanceSettings = instanceSettings
 
     this.coverageMapProvider = new CoverageMapProvider()
     this.coverageOverlay = new CoverageOverlay(
@@ -185,7 +192,10 @@ export class JestExt {
         } else {
           this.status.stopped()
           if (!jestProcess.stopRequested) {
-            const msg = `Starting Jest in Watch mode failed too many times and has been stopped.`
+            let msg = `Starting Jest in Watch mode failed too many times and has been stopped.`
+            if (this.instanceSettings.multirootEnv) {
+              msg += `\nConsider either add this workspace folder to disabledWorkspaceFolders setting or add needed folders to enabledWorkspaceFolders`
+            }
             this.channel.appendLine(`${msg}\n see troubleshooting: ${messaging.TroubleShootingURL}`)
             this.channel.show(true)
             messaging.systemErrorMessage(msg, messaging.showTroubleshootingAction)

@@ -20,6 +20,8 @@ export interface IPluginWindowSettings {
     showWhenTestStateIn: TestState[]
   }
   enableSnapshotPreviews?: boolean
+  enabledWorkspaceFolders: string[]
+  disabledWorkspaceFolders: string[]
 }
 
 export function isDefaultPathToJest(str) {

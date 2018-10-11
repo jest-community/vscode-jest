@@ -66,6 +66,7 @@ describe('JestExt', () => {
         extensionSettings,
         debugCodeLensProvider,
         debugConfigurationProvider,
+        null,
         null
       )
 
@@ -128,6 +129,7 @@ describe('JestExt', () => {
         settings,
         debugCodeLensProvider,
         debugConfigurationProvider,
+        null,
         null
       )
       const editor: any = {
@@ -178,6 +180,7 @@ describe('JestExt', () => {
         extensionSettings,
         debugCodeLensProvider,
         debugConfigurationProvider,
+        null,
         null
       )
       ;(sut.debugConfigurationProvider.provideDebugConfigurations as jest.Mock<Function>).mockReturnValue([
@@ -206,6 +209,7 @@ describe('JestExt', () => {
       extensionSettings,
       debugCodeLensProvider,
       debugConfigurationProvider,
+      null,
       null
     )
     const document = {} as any
@@ -233,6 +237,7 @@ describe('JestExt', () => {
       extensionSettings,
       debugCodeLensProvider,
       debugConfigurationProvider,
+      null,
       null
     )
     sut.testResultProvider.removeCachedResults = jest.fn()
@@ -267,6 +272,7 @@ describe('JestExt', () => {
       extensionSettings,
       debugCodeLensProvider,
       debugConfigurationProvider,
+      null,
       null
     )
 
@@ -302,6 +308,7 @@ describe('JestExt', () => {
       extensionSettings,
       debugCodeLensProvider,
       debugConfigurationProvider,
+      null,
       null
     )
     sut.triggerUpdateActiveEditor = jest.fn()
@@ -338,6 +345,7 @@ describe('JestExt', () => {
         extensionSettings,
         debugCodeLensProvider,
         debugConfigurationProvider,
+        null,
         null
       )
     })
@@ -414,6 +422,7 @@ describe('JestExt', () => {
         extensionSettings,
         debugCodeLensProvider,
         debugConfigurationProvider,
+        null,
         null
       )
       sut.toggleCoverageOverlay()
@@ -437,6 +446,7 @@ describe('JestExt', () => {
         extensionSettings,
         debugCodeLensProvider,
         debugConfigurationProvider,
+        null,
         null
       )
       sut.triggerUpdateActiveEditor(editor)
@@ -452,6 +462,7 @@ describe('JestExt', () => {
         extensionSettings,
         debugCodeLensProvider,
         debugConfigurationProvider,
+        null,
         null
       )
       sut.updateDecorators = jest.fn()
@@ -491,6 +502,7 @@ describe('JestExt', () => {
         extensionSettings,
         debugCodeLensProvider,
         debugConfigurationProvider,
+        null,
         null
       )
     })
@@ -546,6 +558,7 @@ describe('JestExt', () => {
         settings,
         debugCodeLensProvider,
         debugConfigurationProvider,
+        null,
         null
       )
 
@@ -618,6 +631,7 @@ describe('JestExt', () => {
         settings,
         debugCodeLensProvider,
         debugConfigurationProvider,
+        null,
         null
       )
 

@@ -321,6 +321,8 @@ describe('InstancesManager', () => {
           showWhenTestStateIn: [TestState.Fail, TestState.Unknown],
         },
         enableSnapshotPreviews: true,
+        enabledWorkspaceFolders: [],
+        disabledWorkspaceFolders: [],
       })
     })
   })

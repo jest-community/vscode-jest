@@ -137,6 +137,20 @@
           "type": "boolean",
           "default": false,
           "scope": "resource"
+        },
+        "jest.enabledWorkspaceFolders": {
+          "description": "Enabled workspace folders names in multiroot environment",
+          "type": "array",
+          "items": "string",
+          "default": [],
+          "scope": "window"
+        },
+        "jest.disabledWorkspaceFolders": {
+          "description": "Disabled workspace folders names in multiroot environment",
+          "type": "array",
+          "items": "string",
+          "default": [],
+          "scope": "window"
         }
       }
     },

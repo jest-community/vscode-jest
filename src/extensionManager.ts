@@ -10,28 +10,35 @@ import { IPluginResourceSettings, IPluginWindowSettings } from './Settings'
 export class ExtensionManager {
   private extByWorkspace: { [key: string]: JestExt } = {}
   private context: vscode.ExtensionContext
+  private commonPluginSettings: IPluginWindowSettings
   debugCodeLensProvider: DebugCodeLensProvider
   debugConfigurationProvider: DebugConfigurationProvider
 
   constructor(context: vscode.ExtensionContext) {
     this.context = context
 
-    const commonPluginSettings = getExtensionWindowSettings()
+    this.commonPluginSettings = getExtensionWindowSettings()
 
     this.debugCodeLensProvider = new DebugCodeLensProvider(
       uri => this.getByDocUri(uri),
-      commonPluginSettings.debugCodeLens.enabled ? commonPluginSettings.debugCodeLens.showWhenTestStateIn : []
+      this.commonPluginSettings.debugCodeLens.enabled ? this.commonPluginSettings.debugCodeLens.showWhenTestStateIn : []
     )
     this.debugConfigurationProvider = new DebugConfigurationProvider()
 
     vscode.workspace.workspaceFolders.forEach(this.register, this)
   }
   register(workspaceFolder: vscode.WorkspaceFolder) {
+    if (!this.shouldStart(workspaceFolder.name)) {
+      return
+    }
     const pluginSettings = getExtensionResourceSettings(workspaceFolder.uri)
     const jestPath = pathToJest(pluginSettings)
     const configPath = pathToConfig(pluginSettings)
     const currentJestVersion = 20
     const debugMode = pluginSettings.debugMode
+    const instanceSettings = {
+      multirootEnv: vscode.workspace.workspaceFolders.length > 1,
+    }
     const jestWorkspace = new ProjectWorkspace(
       pluginSettings.rootPath,
       jestPath,
@@ -54,7 +61,8 @@ export class ExtensionManager {
       pluginSettings,
       this.debugCodeLensProvider,
       this.debugConfigurationProvider,
-      failDiagnostics
+      failDiagnostics,
+      instanceSettings
     )
   }
   unregister(workspaceFolder: vscode.WorkspaceFolder) {
@@ -69,6 +77,15 @@ export class ExtensionManager {
   }
   unregisterAll() {
     Object.keys(this.extByWorkspace).forEach(key => this.unregisterByName(key))
+  }
+  shouldStart(workspaceFolderName: string): boolean {
+    const { commonPluginSettings: { enabledWorkspaceFolders, disabledWorkspaceFolders } } = this
+    return (
+      // start if enabledWorkspaceFolders contains current workspace
+      enabledWorkspaceFolders.includes(workspaceFolderName) ||
+      // dont start if disabledWorkspaceFolders doesn't contain current workspace
+      !disabledWorkspaceFolders.includes(workspaceFolderName)
+    )
   }
   getByName(workspaceFolderName: string) {
     return this.extByWorkspace[workspaceFolderName]
@@ -166,5 +183,7 @@ export function getExtensionWindowSettings(): IPluginWindowSettings {
       showWhenTestStateIn: config.get<TestState[]>('debugCodeLens.showWhenTestStateIn'),
     },
     enableSnapshotPreviews: config.get<boolean>('enableSnapshotPreviews'),
+    enabledWorkspaceFolders: config.get<string[]>('enabledWorkspaceFolders'),
+    disabledWorkspaceFolders: config.get<string[]>('disabledWorkspaceFolders'),
   }
 }
