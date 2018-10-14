@@ -26,7 +26,8 @@ export function activate(context: vscode.ExtensionContext) {
     configPath,
     currentJestVersion,
     null,
-    debugMode
+    debugMode,
+    pluginSettings.useWsl
   )
 
   // Create our own console
@@ -104,5 +105,6 @@ export function getExtensionSettings(): IPluginSettings {
     showCoverageOnLoad: config.get<boolean>('showCoverageOnLoad'),
     coverageFormatter: config.get<string>('coverageFormatter'),
     debugMode: config.get<boolean>('debugMode'),
+    useWsl: config.get<boolean>('useWsl'),
   }
 }

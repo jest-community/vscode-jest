@@ -17,6 +17,7 @@ export interface IPluginSettings {
   showCoverageOnLoad: boolean
   coverageFormatter: string
   debugMode?: boolean
+  useWsl?: boolean | string
 }
 
 export function isDefaultPathToJest(str) {

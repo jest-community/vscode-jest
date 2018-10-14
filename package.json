@@ -122,6 +122,12 @@
           "description": "Enable debug mode to diagnose plugin issues. (see developer console)",
           "type": "boolean",
           "default": false
+        },
+        "jest.useWsl": {
+          "description":
+            "Execute jest in a wsl environment (use true for 'wsl' or enter the wsl command you want to use).",
+          "type": ["boolean", "string"],
+          "default": false
         }
       }
     },
