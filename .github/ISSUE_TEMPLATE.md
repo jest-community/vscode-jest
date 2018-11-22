@@ -13,7 +13,7 @@
 
 ### Prerequisite
 - are you able to run jest test from command line? [fill]
-- how do yo run your tests from command line? (for example: `npm run test` or `node_modules/.bin/jest`) [fill]
+- how do you run your tests from command line? (for example: `npm run test` or `node_modules/.bin/jest`) [fill]
 
 ### Steps to Reproduce
 
