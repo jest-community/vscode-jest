@@ -158,7 +158,7 @@ Bug-fixes within the same version aren't needed
 * Use "jest-test-typescript-parser" for our TypeScript parser - orta
 * Bumps min VS code release - orta
 
-Note: This release consolidates a lot of code with the Jest project, and so if you have a custom `testRegex` and use 
+Note: This release consolidates a lot of code with the Jest project, and so if you have a custom `testRegex` and use
       Jest below v20, chances are the decorators will not show. Everything else should be 👍 - orta
 
 ### 2.0.4
@@ -182,9 +182,9 @@ Note: This release consolidates a lot of code with the Jest project, and so if y
 
 * Move all of the Jest specific code into a new repo: [jest-editor-support](https://github.com/facebook/jest/tree/master/packages/jest-editor-support) where
   we can share the code with a nuclide implementation. This brings some changes to the development process (see the README) but should only affect users
-  if we've missed something in moving over. 
+  if we've missed something in moving over.
 
-  - orta / bookman25 / cpojer 
+  - orta / bookman25 / cpojer
 
 * Significant improvements to JavaScript parsers - bookman25
 * Introduction of TypeScript support - bookman25
@@ -208,14 +208,14 @@ Note: This release consolidates a lot of code with the Jest project, and so if y
 
 ### 1.6.1
 
-* More windows improvements - KalleOtt 
+* More windows improvements - KalleOtt
 
 ### 1.6.0
 
-* Separation of VS Code specific code from the extension by creating a lib directory, 
+* Separation of VS Code specific code from the extension by creating a lib directory,
   in preparation for moving to the Jest repo - https://github.com/facebook/jest/issues/2183 - orta
 * Minor improvements for create-react users - orta
-* Support for running Jest even in repos where Jest is not a direct dependency via the command `Start Jest Runner` - you will definitely need to set the per-project `.vscode/settings.json` to whatever would normally trigger a jest run - orta 
+* Support for running Jest even in repos where Jest is not a direct dependency via the command `Start Jest Runner` - you will definitely need to set the per-project `.vscode/settings.json` to whatever would normally trigger a jest run - orta
 
 ### 1.5.1
 
@@ -224,7 +224,7 @@ Note: This release consolidates a lot of code with the Jest project, and so if y
 
 ### 1.5.0
 
-* Adds support for running the tests inside `create react` apps - orta 
+* Adds support for running the tests inside `create react` apps - orta
 
 ### 1.4.0
 
@@ -240,7 +240,7 @@ Note: This release consolidates a lot of code with the Jest project, and so if y
 
 ### 1.2.0
 
-* Adds syntax highlights for the JSX in `.js.snap` files - orta 
+* Adds syntax highlights for the JSX in `.js.snap` files - orta
 
 ### 1.1.0
 
@@ -250,7 +250,7 @@ Note: This release consolidates a lot of code with the Jest project, and so if y
 * You can define your own path to the Jest test runner - orta
 * Not a feature, but the code has been thoroughly commented - orta
 * Improvements to parsing passing test files - orta
-* Only run JS parser on files that match the Jest tesRegex - orta 
+* Only run JS parser on files that match the Jest tesRegex - orta
 
 ### 1.0.3
 
@@ -267,7 +267,7 @@ Note: This release consolidates a lot of code with the Jest project, and so if y
 * Starts Jest automatically when you're in a project with Jest installed.
 * Show individual fail / passes inline.
 * Show fails inside the problem inspector.
-* Highlights the errors next to the `expect` functions 
+* Highlights the errors next to the `expect` functions
 
 - orta
 
@@ -286,6 +286,6 @@ Note: This release consolidates a lot of code with the Jest project, and so if y
 * Adds statusbar support - orta
 * Adds fails to the problems section - orta
 
-### 0.0.3 
+### 0.0.3
 
 * Parses current file for it/test blocks - orta
