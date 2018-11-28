@@ -243,7 +243,7 @@
     "elegant-spinner": "^1.0.1",
     "istanbul-lib-coverage": "^1.1.1",
     "istanbul-lib-source-maps": "^1.1.0",
-    "jest-editor-support": "23.3.0",
+    "jest-editor-support": "mojadev/jest-editor-support#WSL_Support",
     "jest-snapshot": "^23.0.1",
     "jest-test-typescript-parser": "^23.3.0",
     "micromatch": "^2.3.11"
