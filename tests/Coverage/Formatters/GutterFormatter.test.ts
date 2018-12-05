@@ -30,8 +30,24 @@ jest.mock('vscode', () => {
 import { GutterFormatter } from '../../../src/Coverage/Formatters/GutterFormatter'
 import * as vscode from 'vscode'
 import { isValidLocation } from '../../../src/Coverage/Formatters/helpers'
+import { IGutterFormatterSettings } from '../../../src/Settings'
 
 describe('GutterFormatter', () => {
+  const settings: IGutterFormatterSettings = {
+    uncoveredLine: {
+      backgroundColor: '',
+      gutterIconPath: './images/GutterFormatter/uncovered-gutter-icon.svg',
+    },
+    partiallyCoveredLine: {
+      backgroundColor: '',
+      gutterIconPath: './images/GutterFormatter/partially-covered-gutter-icon.svg',
+    },
+    coveredLine: {
+      backgroundColor: '',
+      gutterIconPath: './images/GutterFormatter/covered-gutter-icon.svg',
+    },
+  }
+
   describe('format()', () => {
     const fileCoverage: any = {}
     const coverageMapProvider: any = {
@@ -50,7 +66,7 @@ describe('GutterFormatter', () => {
 
     let sut
     beforeEach(() => {
-      sut = new GutterFormatter(context, coverageMapProvider)
+      sut = new GutterFormatter(context, coverageMapProvider, settings)
       sut.computeFormatting = jest.fn().mockReturnValue({
         covered: [],
         partiallyCovered: [],
@@ -86,7 +102,7 @@ describe('GutterFormatter', () => {
       const context: any = {
         asAbsolutePath: (path: string) => path,
       }
-      const sut = new GutterFormatter(context, coverageMapProvider)
+      const sut = new GutterFormatter(context, coverageMapProvider, settings)
 
       const editor: any = {
         setDecorations: jest.fn(),
@@ -117,7 +133,7 @@ describe('GutterFormatter', () => {
       const context: any = {
         asAbsolutePath: (path: string) => path,
       }
-      const sut = new GutterFormatter(context, coverageMapProvider)
+      const sut = new GutterFormatter(context, coverageMapProvider, settings)
 
       const editor: any = {
         setDecorations: jest.fn(),
@@ -178,7 +194,7 @@ describe('GutterFormatter', () => {
         },
       }
 
-      const sut = new GutterFormatter(context, coverageMapProvider)
+      const sut = new GutterFormatter(context, coverageMapProvider, settings)
       const actual = sut.computeFormatting(editor, fileCoverage)
 
       expect(actual.partiallyCovered).toEqual([new vscode.Range(1, 2, 5, 3)])
@@ -220,7 +236,7 @@ describe('GutterFormatter', () => {
         },
       }
 
-      const sut = new GutterFormatter(context, coverageMapProvider)
+      const sut = new GutterFormatter(context, coverageMapProvider, settings)
       const actual = sut.computeFormatting(editor, fileCoverage)
 
       expect(actual.partiallyCovered).toEqual([new vscode.Range(1, 2, 5, 3)])
@@ -243,7 +259,7 @@ describe('GutterFormatter', () => {
         branchMap: {},
       }
 
-      const sut = new GutterFormatter(context, coverageMapProvider)
+      const sut = new GutterFormatter(context, coverageMapProvider, settings)
       const actual = sut.computeFormatting(editor, fileCoverage)
 
       expect(actual.uncovered).toEqual([new vscode.Range(0, 0, 0, 0), new vscode.Range(9, 0, 9, 0)])
@@ -263,7 +279,7 @@ describe('GutterFormatter', () => {
         asAbsolutePath: (path: string) => path,
       }
 
-      const sut = new GutterFormatter(context, coverageMapProvider)
+      const sut = new GutterFormatter(context, coverageMapProvider, settings)
       sut.clear(editor)
 
       // All decoration types are removed by calling setDecorations with an

@@ -95,6 +95,36 @@
           "enum": ["DefaultFormatter", "GutterFormatter"],
           "default": "DefaultFormatter"
         },
+        "jest.coverageFormatterSettings.gutterFormatter.uncoveredLine.backgroundColor": {
+          "description": "Background color for uncovered lines",
+          "type": "string",
+          "default": ""
+        },
+        "jest.coverageFormatterSettings.gutterFormatter.uncoveredLine.gutterIconPath": {
+          "description": "Gutter icon for uncovered lines",
+          "type": "string",
+          "default": "./images/GutterFormatter/uncovered-gutter-icon.svg"
+        },
+        "jest.coverageFormatterSettings.gutterFormatter.partiallyCoveredLine.backgroundColor": {
+          "description": "Background color for partially covered lines",
+          "type": "string",
+          "default": "rgba(121, 86, 10, 0.75)"
+        },
+        "jest.coverageFormatterSettings.gutterFormatter.partiallyCoveredLine.gutterIconPath": {
+          "description": "Gutter icon for partially covered lines",
+          "type": "string",
+          "default": "./images/GutterFormatter/partially-covered-gutter-icon.svg"
+        },
+        "jest.coverageFormatterSettings.gutterFormatter.coveredLine.backgroundColor": {
+          "description": "Background color for covered lines",
+          "type": "string",
+          "default": ""
+        },
+        "jest.coverageFormatterSettings.gutterFormatter.coveredLine.gutterIconPath": {
+          "description": "Gutter icon for covered lines",
+          "type": "string",
+          "default": "./images/GutterFormatter/covered-gutter-icon.svg"
+        },
         "jest.enableCodeLens": {
           "description": "Whether codelens for debugging should show",
           "type": "boolean",

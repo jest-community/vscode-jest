@@ -127,6 +127,22 @@ describe('Extension', () => {
       expect(getExtensionSettings()).toEqual({
         autoEnable: true,
         coverageFormatter: 'DefaultFormatter',
+        coverageFormatterSettings: {
+          gutterFormatter: {
+            uncoveredLine: {
+              backgroundColor: '',
+              gutterIconPath: './images/GutterFormatter/uncovered-gutter-icon.svg',
+            },
+            partiallyCoveredLine: {
+              backgroundColor: 'rgba(121, 86, 10, 0.75)',
+              gutterIconPath: './images/GutterFormatter/partially-covered-gutter-icon.svg',
+            },
+            coveredLine: {
+              backgroundColor: '',
+              gutterIconPath: './images/GutterFormatter/covered-gutter-icon.svg',
+            },
+          },
+        },
         debugCodeLens: {
           enabled: true,
           showWhenTestStateIn: [TestState.Fail, TestState.Unknown],

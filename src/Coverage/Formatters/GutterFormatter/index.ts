@@ -3,6 +3,7 @@ import { AbstractFormatter } from '../AbstractFormatter'
 import * as vscode from 'vscode'
 import { FileCoverage } from 'istanbul-lib-coverage'
 import { isValidLocation } from '../helpers'
+import { IGutterFormatterSettings } from '../../../Settings'
 
 export interface ICoverageLines {
   covered: vscode.Range[]
@@ -15,32 +16,40 @@ export class GutterFormatter extends AbstractFormatter {
   private partiallyCoveredLine: vscode.TextEditorDecorationType
   private coveredLine: vscode.TextEditorDecorationType
 
-  constructor(context: vscode.ExtensionContext, coverageMapProvider: CoverageMapProvider) {
+  constructor(
+    context: vscode.ExtensionContext,
+    coverageMapProvider: CoverageMapProvider,
+    settings: IGutterFormatterSettings
+  ) {
     super(coverageMapProvider)
 
     this.uncoveredLine = vscode.window.createTextEditorDecorationType({
       isWholeLine: true,
-      backgroundColor: '',
-      overviewRulerColor: 'rgba(121, 31, 10, 0.75)',
+      backgroundColor: settings.uncoveredLine.backgroundColor,
+      overviewRulerColor: '',
       overviewRulerLane: vscode.OverviewRulerLane.Left,
-      gutterIconPath: context.asAbsolutePath('./src/Coverage/Formatters/GutterFormatter/uncovered-gutter-icon.svg'),
+      gutterIconPath: settings.uncoveredLine.gutterIconPath.startsWith('.')
+        ? context.asAbsolutePath(settings.uncoveredLine.gutterIconPath)
+        : settings.uncoveredLine.gutterIconPath,
     })
 
     this.partiallyCoveredLine = vscode.window.createTextEditorDecorationType({
-      backgroundColor: 'rgba(121, 86, 10, 0.75)',
-      overviewRulerColor: 'rgba(121, 86, 10, 0.75)',
+      backgroundColor: settings.partiallyCoveredLine.backgroundColor,
+      overviewRulerColor: '',
       overviewRulerLane: vscode.OverviewRulerLane.Left,
-      gutterIconPath: context.asAbsolutePath(
-        './src/Coverage/Formatters/GutterFormatter/partially-covered-gutter-icon.svg'
-      ),
+      gutterIconPath: settings.partiallyCoveredLine.gutterIconPath.startsWith('.')
+        ? context.asAbsolutePath(settings.partiallyCoveredLine.gutterIconPath)
+        : settings.partiallyCoveredLine.gutterIconPath,
     })
 
     this.coveredLine = vscode.window.createTextEditorDecorationType({
       isWholeLine: true,
-      backgroundColor: '',
+      backgroundColor: settings.coveredLine.backgroundColor,
       overviewRulerColor: '',
       overviewRulerLane: vscode.OverviewRulerLane.Left,
-      gutterIconPath: context.asAbsolutePath('./src/Coverage/Formatters/GutterFormatter/covered-gutter-icon.svg'),
+      gutterIconPath: settings.coveredLine.gutterIconPath.startsWith('.')
+        ? context.asAbsolutePath(settings.coveredLine.gutterIconPath)
+        : settings.coveredLine.gutterIconPath,
     })
   }
 

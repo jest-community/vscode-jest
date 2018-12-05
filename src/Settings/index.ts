@@ -1,5 +1,24 @@
 import { TestState } from '../DebugCodeLens'
 
+export interface IGutterFormatterSettings {
+  uncoveredLine: {
+    backgroundColor: string
+    gutterIconPath: string
+  }
+  partiallyCoveredLine: {
+    backgroundColor: string
+    gutterIconPath: string
+  }
+  coveredLine: {
+    backgroundColor: string
+    gutterIconPath: string
+  }
+}
+
+export interface ICoverageFormatterSettings {
+  gutterFormatter: IGutterFormatterSettings
+}
+
 export interface IPluginSettings {
   autoEnable?: boolean
   debugCodeLens: {
@@ -16,6 +35,7 @@ export interface IPluginSettings {
   runAllTestsFirst?: boolean
   showCoverageOnLoad: boolean
   coverageFormatter: string
+  coverageFormatterSettings: ICoverageFormatterSettings
   debugMode?: boolean
 }
 

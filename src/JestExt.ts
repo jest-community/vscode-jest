@@ -72,6 +72,7 @@ export class JestExt {
     this.coverageOverlay = new CoverageOverlay(
       context,
       this.coverageMapProvider,
+      pluginSettings.coverageFormatterSettings,
       pluginSettings.showCoverageOnLoad,
       pluginSettings.coverageFormatter
     )

@@ -6,6 +6,8 @@ Bug-fixes within the same version aren't needed
 ## Master
 
 * Your message here - name
+* Add GutterFormatter settings + move GutterFormatter images to images folder - Guymestef
+
 
 -->
 

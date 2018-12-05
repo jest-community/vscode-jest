@@ -103,6 +103,28 @@ export function getExtensionSettings(): IPluginSettings {
     runAllTestsFirst: config.get<boolean>('runAllTestsFirst'),
     showCoverageOnLoad: config.get<boolean>('showCoverageOnLoad'),
     coverageFormatter: config.get<string>('coverageFormatter'),
+    coverageFormatterSettings: {
+      gutterFormatter: {
+        uncoveredLine: {
+          backgroundColor: config.get<string>(
+            'coverageFormatterSettings.gutterFormatter.uncoveredLine.backgroundColor'
+          ),
+          gutterIconPath: config.get<string>('coverageFormatterSettings.gutterFormatter.uncoveredLine.gutterIconPath'),
+        },
+        partiallyCoveredLine: {
+          backgroundColor: config.get<string>(
+            'coverageFormatterSettings.gutterFormatter.partiallyCoveredLine.backgroundColor'
+          ),
+          gutterIconPath: config.get<string>(
+            'coverageFormatterSettings.gutterFormatter.partiallyCoveredLine.gutterIconPath'
+          ),
+        },
+        coveredLine: {
+          backgroundColor: config.get<string>('coverageFormatterSettings.gutterFormatter.coveredLine.backgroundColor'),
+          gutterIconPath: config.get<string>('coverageFormatterSettings.gutterFormatter.coveredLine.gutterIconPath'),
+        },
+      },
+    },
     debugMode: config.get<boolean>('debugMode'),
   }
 }

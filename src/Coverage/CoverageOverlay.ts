@@ -4,6 +4,7 @@ import { DefaultFormatter } from './Formatters/DefaultFormatter'
 import { GutterFormatter } from './Formatters/GutterFormatter'
 import * as vscode from 'vscode'
 import { hasDocument } from '../editor'
+import { ICoverageFormatterSettings } from '../Settings'
 
 export class CoverageOverlay {
   static readonly defaultVisibility = false
@@ -14,13 +15,14 @@ export class CoverageOverlay {
   constructor(
     context: vscode.ExtensionContext,
     coverageMapProvider: CoverageMapProvider,
+    coverageFormatterSettings: ICoverageFormatterSettings,
     enabled: boolean = CoverageOverlay.defaultVisibility,
     coverageFormatter: string = CoverageOverlay.defaultFormatter
   ) {
     this._enabled = enabled
     switch (coverageFormatter) {
       case 'GutterFormatter':
-        this.formatter = new GutterFormatter(context, coverageMapProvider)
+        this.formatter = new GutterFormatter(context, coverageMapProvider, coverageFormatterSettings.gutterFormatter)
         break
 
       default:
