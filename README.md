@@ -139,6 +139,10 @@ These are the [activation events](https://code.visualstudio.com/docs/extensionAP
 
 These are the things that will trigger the extension loading. If one of these applies, and you're not seeing the "Jest" in the bottom bar, reference the self-diagnosis below
 
+### use extension in multiroot environment
+vscode-jest supports multiroot feature, but if not all roots need jest, you can tune extension with `jest.enabledWorkspaceFolders` or `jest.disabledWorkspaceFolders` settings.
+Both are arrays of strings with folder names.
+
 ### non-standard environments
 vscode-jest supports common jest configuration, such as when jest is in `root/node_modules/.bin/jest`, or for react-native `root/node_modules/react-native-scripts`. 
 
