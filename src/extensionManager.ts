@@ -8,7 +8,7 @@ import { DebugConfigurationProvider } from './DebugConfigurationProvider'
 import { IPluginResourceSettings, IPluginWindowSettings } from './Settings'
 
 export class ExtensionManager {
-  private extByWorkspace: { [key: string]: JestExt } = {}
+  private extByWorkspace: Map<string, JestExt> = new Map()
   private context: vscode.ExtensionContext
   private commonPluginSettings: IPluginWindowSettings
   debugCodeLensProvider: DebugCodeLensProvider
@@ -53,30 +53,36 @@ export class ExtensionManager {
 
     const failDiagnostics = vscode.languages.createDiagnosticCollection(`Jest (${workspaceFolder.name})`)
 
-    this.extByWorkspace[workspaceFolder.name] = new JestExt(
-      this.context,
-      workspaceFolder,
-      jestWorkspace,
-      channel,
-      pluginSettings,
-      this.debugCodeLensProvider,
-      this.debugConfigurationProvider,
-      failDiagnostics,
-      instanceSettings
+    this.extByWorkspace.set(
+      workspaceFolder.name,
+      new JestExt(
+        this.context,
+        workspaceFolder,
+        jestWorkspace,
+        channel,
+        pluginSettings,
+        this.debugCodeLensProvider,
+        this.debugConfigurationProvider,
+        failDiagnostics,
+        instanceSettings
+      )
     )
   }
   unregister(workspaceFolder: vscode.WorkspaceFolder) {
     this.unregisterByName(workspaceFolder.name)
   }
   unregisterByName(name: string) {
-    const extension = this.extByWorkspace[name]
+    const extension = this.extByWorkspace.get(name)
     if (extension) {
       extension.deactivate()
-      delete this.extByWorkspace[name]
+      this.extByWorkspace.delete(name)
     }
   }
   unregisterAll() {
-    Object.keys(this.extByWorkspace).forEach(key => this.unregisterByName(key))
+    const keys = this.extByWorkspace.keys()
+    for (const key of keys) {
+      this.unregisterByName(key)
+    }
   }
   shouldStart(workspaceFolderName: string): boolean {
     const { commonPluginSettings: { enabledWorkspaceFolders, disabledWorkspaceFolders } } = this
@@ -88,7 +94,7 @@ export class ExtensionManager {
     )
   }
   getByName(workspaceFolderName: string) {
-    return this.extByWorkspace[workspaceFolderName]
+    return this.extByWorkspace.get(workspaceFolderName)
   }
   getByDocUri(uri: vscode.Uri) {
     const workspace = vscode.workspace.getWorkspaceFolder(uri)
