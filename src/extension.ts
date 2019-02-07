@@ -107,8 +107,8 @@ export function getExtensionSettings(): IPluginSettings {
     coverageFormatter: config.get<string>('coverageFormatter'),
     debugMode: config.get<boolean>('debugMode'),
     sidebar: {
-      showFiles: config.get<boolean>('showFilesInSidebar'),
-      autoExpand: config.get<boolean>('autoExpandSidebar'),
+      showFiles: config.get<boolean>('sidebar.showFiles'),
+      autoExpand: config.get<boolean>('sidebar.autoExpand'),
     },
   }
 }
