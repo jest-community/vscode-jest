@@ -92,9 +92,7 @@ export class JestProcessManager {
   public stopAll() {
     const processesToRemove = [...this.jestProcesses]
     this.jestProcesses = []
-    processesToRemove.forEach(jestProcess => {
-      jestProcess.stop()
-    })
+    return Promise.all(processesToRemove.map(jestProcess => jestProcess.stop()))
   }
 
   public stopJestProcess(jestProcess) {

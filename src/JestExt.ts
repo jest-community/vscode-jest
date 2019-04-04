@@ -209,16 +209,15 @@ export class JestExt {
 
   public stopProcess() {
     this.channel.appendLine('Closing Jest')
-    this.jestProcessManager.stopAll()
-    this.status.stopped()
+    return this.jestProcessManager.stopAll().then(() => {
+      this.status.stopped()
+    })
   }
 
   public restartProcess() {
-    this.stopProcess()
-
-    setTimeout(() => {
+    this.stopProcess().then(() => {
       this.startProcess()
-    }, 500)
+    })
   }
 
   private detectedSnapshotErrors() {
