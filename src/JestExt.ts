@@ -213,6 +213,14 @@ export class JestExt {
     this.status.stopped()
   }
 
+  public restartProcess() {
+    this.stopProcess()
+
+    setTimeout(() => {
+      this.startProcess()
+    }, 500)
+  }
+
   private detectedSnapshotErrors() {
     if (!this.pluginSettings.enableSnapshotUpdateMessages) {
       return
@@ -267,11 +275,7 @@ export class JestExt {
 
     this.coverageOverlay.enabled = updatedSettings.showCoverageOnLoad
 
-    this.stopProcess()
-
-    setTimeout(() => {
-      this.startProcess()
-    }, 500)
+    this.restartProcess()
   }
 
   updateDecorators(testResults: SortedTestResults, editor: vscode.TextEditor) {
