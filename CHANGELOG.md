@@ -8,6 +8,9 @@ Bug-fixes within the same version aren't needed
 * Your message here - name
 
 -->
+## Master
+
+* Adds "Jest: Restart Runner" command - vdh
 
 ### 2.10.0
 

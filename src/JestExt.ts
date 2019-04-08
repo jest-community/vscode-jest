@@ -215,7 +215,7 @@ export class JestExt {
   }
 
   public restartProcess() {
-    this.stopProcess().then(() => {
+    return this.stopProcess().then(() => {
       this.startProcess()
     })
   }
