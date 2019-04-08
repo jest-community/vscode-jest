@@ -82,9 +82,9 @@ export class JestProcess {
     this.stopRequested = true
     this.keepAliveCounter = 1
     this.jestSupportEvents.clear()
-    this.runner.closeProcess()
     return new Promise(resolve => {
       this.resolve = resolve
+      this.runner.closeProcess()
     })
   }
 
