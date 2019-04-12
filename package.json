@@ -2,7 +2,7 @@
   "name": "vscode-jest",
   "displayName": "Jest",
   "description": "Use Facebook's Jest With Pleasure.",
-  "version": "2.9.1",
+  "version": "2.9.2",
   "publisher": "Orta",
   "engines": {
     "vscode": "^1.18.0"
@@ -270,5 +270,10 @@
     "jest-snapshot": "^23.0.1",
     "jest-test-typescript-parser": "^23.3.0",
     "micromatch": "^2.3.11"
+  },
+  "__metadata": {
+    "id": "7997a8ae-1fae-4022-b834-12f6318aeffd",
+    "publisherDisplayName": "Orta",
+    "publisherId": "c22b4001-1af3-48d1-87ed-490c6c3b747f"
   }
 }
