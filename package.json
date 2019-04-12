@@ -20,6 +20,7 @@
     "color": "#ca461a"
   },
   "categories": ["Other"],
+  "keywords": ["multi-root ready"],
   "activationEvents": [
     "workspaceContains:jest.config.js",
     "workspaceContains:jest.json",
@@ -51,54 +52,64 @@
         "jest.autoEnable": {
           "description": "Automatically start Jest for this project",
           "type": "boolean",
-          "default": true
+          "default": true,
+          "scope": "resource"
         },
         "jest.pathToJest": {
           "description":
             "The path to the Jest binary, or an npm command to run tests suffixed with `--` e.g. `node_modules/.bin/jest` or `npm test --`",
           "type": "string",
-          "default": null
+          "default": null,
+          "scope": "resource"
         },
         "jest.pathToConfig": {
           "description": "The path to your Jest configuration file",
           "type": "string",
-          "default": ""
+          "default": "",
+          "scope": "resource"
         },
         "jest.rootPath": {
           "description": "The path to your frontend src folder",
           "type": "string",
-          "default": ""
+          "default": "",
+          "scope": "resource"
         },
         "jest.enableInlineErrorMessages": {
           "description": "Whether errors should be reported inline on a file",
           "type": "boolean",
-          "default": true
+          "default": true,
+          "scope": "resource"
         },
         "jest.enableSnapshotUpdateMessages": {
           "description": "Whether snapshot update messages should show",
           "type": "boolean",
-          "default": true
+          "default": true,
+          "scope": "resource"
         },
         "jest.runAllTestsFirst": {
           "description": "Run all tests before starting Jest in watch mode",
           "type": "boolean",
-          "default": true
+          "default": true,
+          "scope": "resource"
         },
         "jest.showCoverageOnLoad": {
           "description": "Show code coverage when extension starts (if collected)",
           "type": "boolean",
-          "default": false
+          "default": false,
+          "scope": "resource"
         },
         "jest.coverageFormatter": {
           "description": "Coverage formatter to use",
           "type": "string",
           "enum": ["DefaultFormatter", "GutterFormatter"],
-          "default": "DefaultFormatter"
+          "default": "DefaultFormatter",
+          "scope": "resource"
         },
         "jest.enableCodeLens": {
           "description": "Whether codelens for debugging should show",
           "type": "boolean",
-          "default": true
+          "default": true,
+          "scope": "window"
         },
         "jest.debugCodeLens.showWhenTestStateIn": {
           "description": "Show the debug CodeLens when the it/test block state is in this collection",
@@ -106,22 +117,40 @@
           "items": {
             "enum": ["fail", "pass", "skip", "unknown"]
           },
-          "default": ["fail", "unknown"]
+          "default": ["fail", "unknown"],
+          "scope": "window"
         },
         "jest.enableSnapshotPreviews": {
           "description": "Whether snapshot previews should show",
           "type": "boolean",
-          "default": true
+          "default": true,
+          "scope": "window"
         },
         "jest.restartJestOnSnapshotUpdate": {
           "description": "Restart Jest runner after updating the snapshots",
           "type": "boolean",
-          "default": false
+          "default": false,
+          "scope": "resource"
         },
         "jest.debugMode": {
           "description": "Enable debug mode to diagnose plugin issues. (see developer console)",
           "type": "boolean",
-          "default": false
+          "default": false,
+          "scope": "resource"
+        },
+        "jest.enabledWorkspaceFolders": {
+          "description": "Enabled workspace folders names in multiroot environment",
+          "type": "array",
+          "items": "string",
+          "default": [],
+          "scope": "window"
+        },
+        "jest.disabledWorkspaceFolders": {
+          "description": "Disabled workspace folders names in multiroot environment",
+          "type": "array",
+          "items": "string",
+          "default": [],
+          "scope": "window"
         }
       }
     },

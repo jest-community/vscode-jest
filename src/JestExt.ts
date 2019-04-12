@@ -2,8 +2,8 @@ import * as vscode from 'vscode'
 import { ProjectWorkspace, JestTotalResults } from 'jest-editor-support'
 
 import * as decorations from './decorations'
-import { IPluginSettings } from './Settings'
-import * as status from './statusBar'
+import { IPluginResourceSettings } from './Settings'
+import { statusBar, StatusBar } from './StatusBar'
 import {
   TestReconciliationState,
   TestResultProvider,
@@ -17,25 +17,31 @@ import { updateDiagnostics, updateCurrentDiagnostics, resetDiagnostics, failedSu
 import { DebugCodeLensProvider } from './DebugCodeLens'
 import { DebugConfigurationProvider } from './DebugConfigurationProvider'
 import { DecorationOptions } from './types'
-import { hasDocument, isOpenInMultipleEditors } from './editor'
+import { isOpenInMultipleEditors } from './editor'
 import { CoverageOverlay } from './Coverage/CoverageOverlay'
 import { JestProcess, JestProcessManager } from './JestProcessManagement'
 import { isWatchNotSupported, WatchMode } from './Jest'
 import * as messaging from './messaging'
 
+type InstanceSettings = {
+  multirootEnv: boolean
+}
+
 export class JestExt {
-  private workspace: ProjectWorkspace
-  private pluginSettings: IPluginSettings
+  private jestWorkspace: ProjectWorkspace
+  private pluginSettings: IPluginResourceSettings
+  private workspaceFolder: vscode.WorkspaceFolder
+  private instanceSettings: InstanceSettings
 
   coverageMapProvider: CoverageMapProvider
   coverageOverlay: CoverageOverlay
 
   testResultProvider: TestResultProvider
-  public debugCodeLensProvider: DebugCodeLensProvider
+  debugCodeLensProvider: DebugCodeLensProvider
   debugConfigurationProvider: DebugConfigurationProvider
 
   // So you can read what's going on
-  private channel: vscode.OutputChannel
+  channel: vscode.OutputChannel
 
   // The ability to show fails in the problems section
   private failDiagnostics: vscode.DiagnosticCollection
@@ -54,19 +60,28 @@ export class JestExt {
   private jestProcess: JestProcess
 
   private clearOnNextInput: boolean
+  private status: ReturnType<StatusBar['bind']>
 
   constructor(
     context: vscode.ExtensionContext,
-    workspace: ProjectWorkspace,
+    workspaceFolder: vscode.WorkspaceFolder,
+    jestWorkspace: ProjectWorkspace,
     outputChannel: vscode.OutputChannel,
-    pluginSettings: IPluginSettings
+    pluginSettings: IPluginResourceSettings,
+    debugCodeLensProvider: DebugCodeLensProvider,
+    debugConfigurationProvider: DebugConfigurationProvider,
+    failDiagnostics: vscode.DiagnosticCollection,
+    instanceSettings: InstanceSettings
   ) {
-    this.workspace = workspace
+    this.workspaceFolder = workspaceFolder
+    this.jestWorkspace = jestWorkspace
     this.channel = outputChannel
     this.failingAssertionDecorators = {}
-    this.failDiagnostics = vscode.languages.createDiagnosticCollection('Jest')
+    this.failDiagnostics = failDiagnostics
     this.clearOnNextInput = true
     this.pluginSettings = pluginSettings
+    this.debugCodeLensProvider = debugCodeLensProvider
+    this.instanceSettings = instanceSettings
 
     this.coverageMapProvider = new CoverageMapProvider()
     this.coverageOverlay = new CoverageOverlay(
@@ -77,16 +92,14 @@ export class JestExt {
     )
 
     this.testResultProvider = new TestResultProvider()
-    this.debugCodeLensProvider = new DebugCodeLensProvider(
-      this.testResultProvider,
-      pluginSettings.debugCodeLens.enabled ? pluginSettings.debugCodeLens.showWhenTestStateIn : []
-    )
-    this.debugConfigurationProvider = new DebugConfigurationProvider()
+    this.debugConfigurationProvider = debugConfigurationProvider
 
     this.jestProcessManager = new JestProcessManager({
-      projectWorkspace: workspace,
+      projectWorkspace: jestWorkspace,
       runAllTestsFirstInWatchMode: this.pluginSettings.runAllTestsFirst,
     })
+
+    this.status = statusBar.bind(workspaceFolder.name)
 
     // The theme stuff
     this.setupDecorators()
@@ -173,13 +186,16 @@ export class JestExt {
           this.jestProcess = jestProcessInWatchMode
 
           this.channel.appendLine('Finished running all tests. Starting watch mode.')
-          status.running('Starting watch mode')
+          this.status.running('Starting watch mode')
 
           this.assignHandlers(this.jestProcess)
         } else {
-          status.stopped()
+          this.status.stopped()
           if (!jestProcess.stopRequested) {
-            const msg = `Starting Jest in Watch mode failed too many times and has been stopped.`
+            let msg = `Starting Jest in Watch mode failed too many times and has been stopped.`
+            if (this.instanceSettings.multirootEnv) {
+              msg += `\nConsider either add this workspace folder to disabledWorkspaceFolders setting or add needed folders to enabledWorkspaceFolders`
+            }
             this.channel.appendLine(`${msg}\n see troubleshooting: ${messaging.TroubleShootingURL}`)
             this.channel.show(true)
             messaging.systemErrorMessage(msg, messaging.showTroubleshootingAction)
@@ -194,7 +210,7 @@ export class JestExt {
   public stopProcess() {
     this.channel.appendLine('Closing Jest')
     this.jestProcessManager.stopAll()
-    status.stopped()
+    this.status.stopped()
   }
 
   private detectedSnapshotErrors() {
@@ -241,19 +257,15 @@ export class JestExt {
     this.parsingTestFile = false
   }
 
-  public triggerUpdateSettings(updatedSettings: IPluginSettings) {
+  public triggerUpdateSettings(updatedSettings: IPluginResourceSettings) {
     this.pluginSettings = updatedSettings
 
-    this.workspace.rootPath = updatedSettings.rootPath
-    this.workspace.pathToJest = pathToJest(updatedSettings)
-    this.workspace.pathToConfig = pathToConfig(updatedSettings)
-    this.workspace.debug = updatedSettings.debugMode
+    this.jestWorkspace.rootPath = updatedSettings.rootPath
+    this.jestWorkspace.pathToJest = pathToJest(updatedSettings)
+    this.jestWorkspace.pathToConfig = pathToConfig(updatedSettings)
+    this.jestWorkspace.debug = updatedSettings.debugMode
 
     this.coverageOverlay.enabled = updatedSettings.showCoverageOnLoad
-
-    this.debugCodeLensProvider.showWhenTestStateIn = updatedSettings.debugCodeLens.enabled
-      ? updatedSettings.debugCodeLens.showWhenTestStateIn
-      : []
 
     this.stopProcess()
 
@@ -337,7 +349,7 @@ export class JestExt {
   }
 
   private setupStatusBar() {
-    status.initial()
+    this.status.initial()
   }
 
   private setupDecorators() {
@@ -354,7 +366,7 @@ export class JestExt {
 
   private testsHaveStartedRunning() {
     this.channel.clear()
-    status.running('initial full test run')
+    this.status.running('initial full test run')
   }
 
   private updateWithData(data: JestTotalResults) {
@@ -366,13 +378,15 @@ export class JestExt {
 
     const failedFileCount = failedSuiteCount(this.failDiagnostics)
     if (failedFileCount <= 0 && normalizedData.success) {
-      status.success()
+      this.status.success()
     } else {
-      status.failed(` (${failedFileCount} test suite${failedFileCount > 1 ? 's' : ''} failed)`)
+      this.status.failed(` (${failedFileCount} test suite${failedFileCount > 1 ? 's' : ''} failed)`)
     }
 
     for (const editor of vscode.window.visibleTextEditors) {
-      this.triggerUpdateActiveEditor(editor)
+      if (vscode.workspace.getWorkspaceFolder(editor.document.uri) === this.workspaceFolder) {
+        this.triggerUpdateActiveEditor(editor)
+      }
     }
     this.clearOnNextInput = true
   }
@@ -398,7 +412,7 @@ export class JestExt {
     this.jestProcessManager.stopAll()
   }
 
-  public runTest = async (fileName: string, identifier: string) => {
+  public runTest = async (workspaceFolder: vscode.WorkspaceFolder, fileName: string, identifier: string) => {
     const restart = this.jestProcessManager.numberOfProcesses > 0
     this.jestProcessManager.stopAll()
 
@@ -411,7 +425,6 @@ export class JestExt {
       }
     })
 
-    const workspaceFolder = vscode.workspace.workspaceFolders[0]
     try {
       // try to run the debug configuration from launch.json
       await vscode.debug.startDebugging(workspaceFolder, 'vscode-jest-tests')
@@ -446,10 +459,6 @@ export class JestExt {
   }
 
   onDidChangeActiveTextEditor(editor: vscode.TextEditor) {
-    if (!hasDocument(editor)) {
-      return
-    }
-
     this.triggerUpdateActiveEditor(editor)
   }
 

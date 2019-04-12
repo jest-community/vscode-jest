@@ -3,16 +3,17 @@ import { extensionName } from '../appGlobals'
 import { escapeRegExp } from '../helpers'
 import { basename } from 'path'
 import { DebugCodeLens } from './DebugCodeLens'
-import { TestReconciliationState, TestResultProvider } from '../TestResults'
+import { TestReconciliationState } from '../TestResults'
 import { TestState, TestStateByTestReconciliationState } from './TestState'
+import { JestExt } from '../JestExt'
 
 export class DebugCodeLensProvider implements vscode.CodeLensProvider {
   private _showWhenTestStateIn: TestState[]
+  private getJestExt: (uri: vscode.Uri) => JestExt
   onDidChange: vscode.EventEmitter<void>
-  testResultProvider: TestResultProvider
 
-  constructor(testResultProvider: TestResultProvider, showWhenTestStateIn: TestState[]) {
-    this.testResultProvider = testResultProvider
+  constructor(getJestExt: (uri: vscode.Uri) => JestExt, showWhenTestStateIn: TestState[]) {
+    this.getJestExt = getJestExt
     this._showWhenTestStateIn = showWhenTestStateIn
     this.onDidChange = new vscode.EventEmitter()
   }
@@ -38,7 +39,7 @@ export class DebugCodeLensProvider implements vscode.CodeLensProvider {
     }
 
     const filePath = document.fileName
-    const testResults = this.testResultProvider.getResults(filePath)
+    const testResults = this.getJestExt(document.uri).testResultProvider.getResults(filePath)
     const fileName = basename(document.fileName)
 
     for (const test of testResults) {
@@ -49,7 +50,7 @@ export class DebugCodeLensProvider implements vscode.CodeLensProvider {
       const start = new vscode.Position(test.start.line, test.start.column)
       const end = new vscode.Position(test.end.line, test.start.column + 5)
       const range = new vscode.Range(start, end)
-      result.push(new DebugCodeLens(range, fileName, test.name))
+      result.push(new DebugCodeLens(document, range, fileName, test.name))
     }
 
     return result
@@ -63,7 +64,7 @@ export class DebugCodeLensProvider implements vscode.CodeLensProvider {
   resolveCodeLens(codeLens: vscode.CodeLens, _: vscode.CancellationToken): vscode.ProviderResult<vscode.CodeLens> {
     if (codeLens instanceof DebugCodeLens) {
       codeLens.command = {
-        arguments: [codeLens.fileName, escapeRegExp(codeLens.testName)],
+        arguments: [codeLens.document, codeLens.fileName, escapeRegExp(codeLens.testName)],
         command: `${extensionName}.run-test`,
         title: 'Debug',
       }

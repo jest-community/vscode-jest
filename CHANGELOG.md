@@ -9,6 +9,10 @@ Bug-fixes within the same version aren't needed
 
 -->
 
+### 2.10.0
+
+* Support multi-root workspaces - escaton
+
 ### 2.9.1
 
 * Prevent ANSI escape codes from appearing in test messages - seanpoulter
