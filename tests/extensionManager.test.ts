@@ -13,46 +13,26 @@ jest.mock('../src/JestExt', () => ({
   },
 }))
 
-jest.mock('vscode', () => ({
-  CodeLens: function CodeLens() {},
-  window: {
-    createOutputChannel: jest.fn(),
-    showWorkspaceFolderPick: jest.fn(),
-    // createStatusBarItem: jest.fn().mockReturnValue({ show: jest.fn() }),
-    // createTextEditorDecorationType: jest.fn(),
-  },
-  workspace: {
-    getWorkspaceFolder: jest.fn(),
-    workspaceFolders: [],
-    /** Mock getConfiguration by reading default values from package.json */
-    getConfiguration: jest.fn().mockImplementation(section => {
-      const data = readFileSync('./package.json')
-      const config = JSON.parse(data.toString()).contributes.configuration.properties
-
-      const defaults = {}
-      for (const key of Object.keys(config)) {
-        if (section.length === 0 || key.startsWith(`${section}.`)) {
-          defaults[key] = config[key].default
-        }
-      }
-
-      return {
-        get: jest.fn().mockImplementation(key => defaults[`${section}.${key}`]),
-      }
-    }),
-  },
-  commands: {
-    registerCommand: jest.fn(),
-  },
-  languages: {
-    createDiagnosticCollection: jest.fn(),
-  },
-}))
-
 import * as vscode from 'vscode'
 import { ExtensionManager, getExtensionResourceSettings, getExtensionWindowSettings } from '../src/extensionManager'
 import { TestState } from '../src/DebugCodeLens'
 import { readFileSync } from 'fs'
+
+vscode.workspace.getConfiguration = jest.fn().mockImplementation(section => {
+  const data = readFileSync('./package.json')
+  const config = JSON.parse(data.toString()).contributes.configuration.properties
+
+  const defaults = {}
+  for (const key of Object.keys(config)) {
+    if (section.length === 0 || key.startsWith(`${section}.`)) {
+      defaults[key] = config[key].default
+    }
+  }
+
+  return {
+    get: jest.fn().mockImplementation(key => defaults[`${section}.${key}`]),
+  }
+})
 
 describe('InstancesManager', () => {
   let extensionManager: ExtensionManager

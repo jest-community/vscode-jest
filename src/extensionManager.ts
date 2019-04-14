@@ -6,6 +6,7 @@ import { JestExt } from './JestExt'
 import { DebugCodeLensProvider, TestState } from './DebugCodeLens'
 import { DebugConfigurationProvider } from './DebugConfigurationProvider'
 import { IPluginResourceSettings, IPluginWindowSettings } from './Settings'
+import { statusBar } from './StatusBar'
 
 export class ExtensionManager {
   private extByWorkspace: { [key: string]: JestExt } = {}
@@ -87,7 +88,7 @@ export class ExtensionManager {
       !disabledWorkspaceFolders.includes(workspaceFolderName)
     )
   }
-  getByName(workspaceFolderName: string) {
+  public getByName = (workspaceFolderName: string) => {
     return this.extByWorkspace[workspaceFolderName]
   }
   getByDocUri(uri: vscode.Uri) {
@@ -146,6 +147,7 @@ export class ExtensionManager {
     if (editor && editor.document) {
       const ext = this.getByDocUri(editor.document.uri)
       if (ext) {
+        statusBar.onDidChangeActiveTextEditor(editor)
         ext.onDidChangeActiveTextEditor(editor)
       }
     }
