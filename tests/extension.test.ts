@@ -48,6 +48,7 @@ const jestInstance = {
   runTest: jest.fn(),
   startProcess: jest.fn(),
   stopProcess: jest.fn(),
+  restartProcess: jest.fn(),
 }
 
 const extensionManager = {
@@ -139,6 +140,17 @@ describe('Extension', () => {
       expect(callArg).toBeDefined()
       callArg[1](jestInstance)
       expect(jestInstance.stopProcess).toHaveBeenCalled()
+    })
+
+    it('should register a command to restart extension', () => {
+      activate(context)
+      const callArg = context.subscriptions.push.mock.calls[0].find(args => {
+        return args[0] === `${extensionName}.restart`
+      })
+
+      expect(callArg).toBeDefined()
+      callArg[1](jestInstance)
+      expect(jestInstance.startProcess).toHaveBeenCalled()
     })
 
     it('should register a command to toggle the coverage overlay visibility', () => {
