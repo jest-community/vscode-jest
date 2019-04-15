@@ -150,7 +150,9 @@ describe('Extension', () => {
 
       expect(callArg).toBeDefined()
       callArg[1](jestInstance)
+      expect(jestInstance.restartProcess).toHaveBeenCalled()
       expect(jestInstance.startProcess).toHaveBeenCalled()
+      expect(jestInstance.stopProcess).toHaveBeenCalled()
     })
 
     it('should register a command to toggle the coverage overlay visibility', () => {
