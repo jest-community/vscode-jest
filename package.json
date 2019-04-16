@@ -5,7 +5,7 @@
   "version": "2.9.2",
   "publisher": "Orta",
   "engines": {
-    "vscode": "^1.18.0"
+    "vscode": "^1.23.0"
   },
   "author": {
     "name": "Orta Therox, ConnectDotz & Sean Poulter",
