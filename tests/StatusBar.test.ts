@@ -19,7 +19,7 @@ jest.mock('elegant-spinner', () => () => jest.fn())
 import * as vscode from 'vscode'
 import { StatusBar } from '../src/StatusBar'
 
-vscode.window.createStatusBarItem = jest.fn(() => statusBarItem)
+;((vscode.window.createStatusBarItem as unknown) as jest.Mock<{}>).mockImplementation(() => statusBarItem)
 const mockedChannel = { append: () => {}, clear: () => {} } as any
 vscode.window.createOutputChannel = jest.fn(() => mockedChannel)
 
@@ -76,17 +76,14 @@ describe('StatusBar', () => {
 
   describe('updateStatus()', () => {
     it('should pick most relevant status', () => {
-      console.log('1')
       // first instance failed, display it as folder status
       statusBar.bind('testSource1').failed()
       expect(renderSpy).toHaveBeenLastCalledWith({ source: 'testSource1', status: 'failed' }, 0)
 
-      console.log('2')
       // then second is running, this status is more important then previous, will display as workspace status
       statusBar.bind('testSource2').running()
       expect(renderSpy).toHaveBeenLastCalledWith({ source: 'testSource2', status: 'running' }, 1)
 
-      console.log('3')
       // second is ok, display first instance fail as it is more important, will display as workspace status
       statusBar.bind('testSource2').success()
       expect(renderSpy).toHaveBeenLastCalledWith({ source: 'testSource1', status: 'failed' }, 1)

@@ -1,4 +1,4 @@
-import { TestReconciler, JestTotalResults } from 'jest-editor-support'
+import { TestReconciler, JestTotalResults, TestAssertionStatus, ItBlock } from 'jest-editor-support'
 import { TestFileAssertionStatus } from 'jest-editor-support'
 import { TestReconciliationState } from './TestReconciliationState'
 import { TestResult } from './TestResult'
@@ -19,10 +19,12 @@ export class TestResultProvider {
   private reconciler: TestReconciler
   private resultsByFilePath: TestResultsMap
   private sortedResultsByFilePath: SortedTestResultsMap
+  private verbose: boolean
 
-  constructor() {
+  constructor(verbose = false) {
     this.reconciler = new TestReconciler()
     this.resetCache()
+    this.verbose = verbose
   }
 
   resetCache() {
@@ -31,26 +33,62 @@ export class TestResultProvider {
   }
 
   getResults(filePath: string): TestResult[] {
+    const maybeTempalteLiteral = (s: string) => s.indexOf('$') > -1
+
+    const findAssertionByLocation = (testBlock: ItBlock, assertions: TestAssertionStatus[]) => {
+      return assertions.find(
+        a =>
+          (a.line >= testBlock.start.line && a.line <= testBlock.end.line) ||
+          (a.location && a.location.line >= testBlock.start.line && a.location.line <= testBlock.end.line)
+      )
+    }
+
     if (this.resultsByFilePath[filePath]) {
       return this.resultsByFilePath[filePath]
     }
 
     const { itBlocks } = parseTest(filePath)
-    const results = this.reconciler.assertionsForTestFile(filePath) || []
+
+    const assertions = this.reconciler.assertionsForTestFile(filePath) || []
 
     const result: TestResult[] = []
     for (const test of itBlocks) {
-      const assertion =
-        // do we ever consider marking a test when their name do not match even though
-        // the linenumber matches? Especially consider line-number could be error-prone
-        // in situations lik typescript/uglify etc. without checking test names we
-        // could end up marking the wrong test simply because its line number matched.
-        // see https://github.com/jest-community/vscode-jest/issues/349
+      let assertion: TestAssertionStatus | undefined
+      let err: string | undefined
 
-        results.filter(r => r.title === test.name && r.line >= test.start.line && r.line <= test.end.line)[0] ||
-        results.filter(r => r.title === test.name && r.status !== TestReconciliationState.KnownFail)[0] ||
-        results.filter(r => r.title === test.name)[0] ||
-        ({} as any)
+      const match = assertions.filter(a => a.title === test.name)
+      switch (match.length) {
+        case 1:
+          assertion = match[0]
+          break
+        case 0:
+          if (maybeTempalteLiteral(test.name)) {
+            assertion = findAssertionByLocation(test, assertions)
+            if (this.verbose) {
+              console.log(
+                `not able to match test block by name, possible due to template-iteral? matching by line number instead.`
+              )
+            }
+            if (!assertion) {
+              err = 'failed to match test result, might be caused by template-literal test name?'
+            }
+          }
+          break
+        default:
+          //multiple matches, select according to the following criteria
+          assertion = findAssertionByLocation(test, match)
+          if (!assertion) {
+            //can't find the match, it could due to sourcemap related issue, let's try our best to locate one then
+            assertion = match.find(a => a.status !== TestReconciliationState.KnownFail) || match[0]
+            if (this.verbose) {
+              console.log(`assertion might not be correct, best effort from:`, assertions)
+            }
+          }
+      }
+
+      if (!assertion && this.verbose) {
+        console.log(`failed to find assertion for ite block:`, test)
+      }
 
       // Note the shift from one-based to zero-based line number and columns
       result.push({
@@ -64,11 +102,11 @@ export class TestResultProvider {
           line: test.end.line - 1,
         },
 
-        status: assertion.status || TestReconciliationState.Unknown,
-        shortMessage: assertion.shortMessage,
-        terseMessage: assertion.terseMessage,
+        status: assertion ? assertion.status : TestReconciliationState.Unknown,
+        shortMessage: assertion ? assertion.shortMessage : err,
+        terseMessage: assertion ? assertion.terseMessage : undefined,
         lineNumberOfError:
-          assertion.line && assertion.line >= test.start.line && assertion.line <= test.end.line
+          assertion && assertion.line && assertion.line >= test.start.line && assertion.line <= test.end.line
             ? assertion.line - 1
             : test.end.line - 1,
       })

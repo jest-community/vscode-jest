@@ -62,7 +62,7 @@ describe('TestResultProvider', () => {
 
     it('should return the cached results if possible', () => {
       const sut = new TestResultProvider()
-      ;(parseTest as jest.Mock<{}>).mockReturnValueOnce({
+      ;((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
         itBlocks: [],
       })
       assertionsForTestFile.mockReturnValueOnce([])
@@ -73,7 +73,7 @@ describe('TestResultProvider', () => {
 
     it('should re-index the line and column number to zero-based', () => {
       const sut = new TestResultProvider()
-      ;(parseTest as jest.Mock<{}>).mockReturnValueOnce({
+      ;((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
         itBlocks: [testBlock],
       })
       assertionsForTestFile.mockReturnValueOnce([assertion])
@@ -93,7 +93,7 @@ describe('TestResultProvider', () => {
 
     it('should look up the test result by line number only if the name matches', () => {
       const sut = new TestResultProvider()
-      ;(parseTest as jest.Mock<{}>).mockReturnValueOnce({
+      ;((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
         itBlocks: [testBlock],
       })
       const assertionC = Object.assign({}, assertion)
@@ -106,7 +106,7 @@ describe('TestResultProvider', () => {
 
     it('should look up the test result by test name', () => {
       const sut = new TestResultProvider()
-      ;(parseTest as jest.Mock<{}>).mockReturnValueOnce({
+      ;((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
         itBlocks: [testBlock],
       })
       const assertionC = Object.assign({}, assertion)
@@ -132,7 +132,7 @@ describe('TestResultProvider', () => {
 
     it('should use default values for unmatched assertions', () => {
       const sut = new TestResultProvider()
-      ;(parseTest as jest.Mock<{}>).mockReturnValueOnce({
+      ;((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
         itBlocks: [testBlock],
       })
       assertionsForTestFile.mockReturnValueOnce([])
@@ -155,7 +155,7 @@ describe('TestResultProvider', () => {
           column: 5,
         },
       })
-      ;(parseTest as jest.Mock<{}>).mockReturnValueOnce({
+      ;((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
         itBlocks: [testBlock, testBlock2],
       })
       assertionsForTestFile.mockReturnValueOnce([
@@ -184,7 +184,7 @@ describe('TestResultProvider', () => {
           column: 5,
         },
       }
-      ;(parseTest as jest.Mock<{}>).mockReturnValueOnce({
+      ;((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
         itBlocks: [testBlock, testBlock2],
       })
       assertionsForTestFile.mockReturnValueOnce([
@@ -205,6 +205,76 @@ describe('TestResultProvider', () => {
       expect(r.name).toBe(testBlock2.name)
       expect(r.status).toBe(TestReconciliationState.KnownSuccess)
       expect(r.lineNumberOfError).toBe(testBlock2.end.line - 1)
+    })
+
+    describe('template literal handling', () => {
+      const testBlock2 = Object.assign({}, testBlock, {
+        name: 'template literal ${num}',
+        start: {
+          line: 5,
+          column: 3,
+        },
+        end: {
+          line: 7,
+          column: 5,
+        },
+      })
+      beforeEach(() => {
+        jest.resetAllMocks()
+      })
+      it(`find test by assertion error line`, () => {
+        const sut = new TestResultProvider()
+        ;((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
+          itBlocks: [testBlock, testBlock2],
+        })
+        assertionsForTestFile.mockReturnValueOnce([
+          {
+            title: 'template literal 2',
+            status: TestReconciliationState.KnownFail,
+            line: 6,
+          },
+        ])
+        const actual = sut.getResults(filePath)
+
+        expect(actual).toHaveLength(2)
+        expect(actual[0].status).toBe(TestReconciliationState.Unknown)
+        expect(actual[1].status).toBe(TestReconciliationState.KnownFail)
+      })
+      it(`find test by assertion location`, () => {
+        const sut = new TestResultProvider()
+        ;((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
+          itBlocks: [testBlock, testBlock2],
+        })
+        assertionsForTestFile.mockReturnValueOnce([
+          {
+            title: 'template literal 2',
+            status: TestReconciliationState.KnownSuccess,
+            location: { colum: 3, line: 6 },
+          },
+        ])
+        const actual = sut.getResults(filePath)
+
+        expect(actual).toHaveLength(2)
+        expect(actual[0].status).toBe(TestReconciliationState.Unknown)
+        expect(actual[1].status).toBe(TestReconciliationState.KnownSuccess)
+      })
+      it(`will report template literal assertion match error`, () => {
+        const sut = new TestResultProvider()
+        ;((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
+          itBlocks: [testBlock2],
+        })
+        assertionsForTestFile.mockReturnValueOnce([
+          {
+            title: 'template literal 2',
+            status: TestReconciliationState.KnownSuccess,
+          },
+        ])
+        const actual = sut.getResults(filePath)
+
+        expect(actual).toHaveLength(1)
+        expect(actual[0].status).toBe(TestReconciliationState.Unknown)
+        expect(actual[0].shortMessage).not.toBeUndefined()
+      })
     })
   })
 

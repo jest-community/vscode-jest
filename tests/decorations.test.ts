@@ -34,7 +34,7 @@ describe('Test Result Annotations', () => {
 
 function testRangeBehavior(factoryMethod: Function) {
   it('should set the range behavior', () => {
-    const mock = vscode.window.createTextEditorDecorationType as jest.Mock<{}>
+    const mock = (vscode.window.createTextEditorDecorationType as unknown) as jest.Mock<{}>
     mock.mockReset()
     factoryMethod()
 

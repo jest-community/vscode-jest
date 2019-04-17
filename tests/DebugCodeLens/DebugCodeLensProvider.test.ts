@@ -121,7 +121,7 @@ describe('DebugCodeLensProvider', () => {
   describe('provideCodeLenses()', () => {
     const document = { fileName: 'file.js' } as any
     const token = {} as any
-    const getResults = testResultProvider.getResults as jest.Mock<Function>
+    const getResults = (testResultProvider.getResults as unknown) as jest.Mock<{}>
     const testResults = [
       {
         name: 'should fail',
@@ -210,7 +210,7 @@ describe('DebugCodeLensProvider', () => {
 
     it('should create the CodeLens specifying the document filename', () => {
       const expected = 'expected'
-      ;(basename as jest.Mock<Function>).mockReturnValueOnce(expected)
+      ;((basename as unknown) as jest.Mock<{}>).mockReturnValueOnce(expected)
       const sut = new DebugCodeLensProvider(provideJestExt, allTestStates)
       getResults.mockReturnValueOnce(testResults)
       const actual = sut.provideCodeLenses(document, token)

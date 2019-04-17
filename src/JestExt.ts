@@ -118,7 +118,6 @@ export class JestExt {
 
   private handleStdErr(error: Buffer) {
     const message = error.toString()
-
     if (this.shouldIgnoreOutput(message)) {
       return
     }

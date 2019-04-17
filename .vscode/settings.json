@@ -12,7 +12,6 @@
   "typescript.tsdk": "./node_modules/typescript/lib",
   "eslint.enable": false,
   "tslint.autoFixOnSave": true,
-  "jest.pathToConfig": "./jest.json",
   "prettier.semi": false,
   "prettier.printWidth": 120,
   "prettier.trailingComma": "es5",

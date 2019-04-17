@@ -72,8 +72,8 @@ describe('JestExt', () => {
 
       sut.canUpdateActiveEditor = jest.fn().mockReturnValueOnce(true)
       sut.debugCodeLensProvider.didChange = jest.fn()
-      ;(decorations.failingAssertionStyle as jest.Mock<{}>).mockReturnValue({})
-      ;(sut.testResultProvider.getSortedResults as jest.Mock<{}>).mockReturnValueOnce({
+      ;((decorations.failingAssertionStyle as unknown) as jest.Mock<{}>).mockReturnValue({})
+      ;((sut.testResultProvider.getSortedResults as unknown) as jest.Mock<{}>).mockReturnValueOnce({
         success: [],
         fail: [],
         skip: [],
@@ -90,7 +90,7 @@ describe('JestExt', () => {
     })
 
     it('should not clear the cached decorations types when the document is open more than once', () => {
-      ;(isOpenInMultipleEditors as jest.Mock<{}>).mockReturnValueOnce(true)
+      ;((isOpenInMultipleEditors as unknown) as jest.Mock<{}>).mockReturnValueOnce(true)
 
       sut.failingAssertionDecorators[editor.document.fileName] = {
         forEach: jest.fn(),
@@ -137,7 +137,7 @@ describe('JestExt', () => {
         setDecorations: jest.fn(),
       }
       const expected = {}
-      ;(decorations.failingAssertionStyle as jest.Mock<{}>).mockReturnValueOnce(expected)
+      ;((decorations.failingAssertionStyle as unknown) as jest.Mock<{}>).mockReturnValueOnce(expected)
       sut.canUpdateActiveEditor = jest.fn().mockReturnValueOnce(true)
       sut.testResultProvider.getSortedResults = jest.fn().mockReturnValueOnce({
         success: [],
@@ -162,9 +162,9 @@ describe('JestExt', () => {
     const testNamePattern = 'testNamePattern'
 
     it('should run the supplied test', async () => {
-      const startDebugging = debug.startDebugging as jest.Mock<Function>
+      const startDebugging = (debug.startDebugging as unknown) as jest.Mock<Function>
 
-      startDebugging.mockImplementation(async (_folder: any, nameOrConfig: any) => {
+      ;((startDebugging as unknown) as jest.Mock<{}>).mockImplementation(async (_folder: any, nameOrConfig: any) => {
         // trigger fallback to default configuration
         if (typeof nameOrConfig === 'string') {
           throw null
@@ -183,7 +183,7 @@ describe('JestExt', () => {
         null,
         null
       )
-      ;(sut.debugConfigurationProvider.provideDebugConfigurations as jest.Mock<Function>).mockReturnValue([
+      ;((sut.debugConfigurationProvider.provideDebugConfigurations as unknown) as jest.Mock<{}>).mockReturnValue([
         debugConfiguration,
       ])
 
@@ -318,7 +318,7 @@ describe('JestExt', () => {
     })
 
     it('should update the annotations when the editor has a document', () => {
-      ;(hasDocument as jest.Mock<{}>).mockReturnValueOnce(true)
+      ;((hasDocument as unknown) as jest.Mock<{}>).mockReturnValueOnce(true)
       sut.onDidChangeActiveTextEditor(editor)
 
       expect(sut.triggerUpdateActiveEditor).toBeCalledWith(editor)
@@ -469,7 +469,7 @@ describe('JestExt', () => {
       const mockEditor: any = {
         document: { uri: { fsPath: 'file://a/b/c.ts' } },
       }
-      ;(sut.testResultProvider.getSortedResults as jest.Mock<{}>).mockReturnValueOnce({
+      ;((sut.testResultProvider.getSortedResults as unknown) as jest.Mock<{}>).mockReturnValueOnce({
         success: [],
         fail: [],
         skip: [],
@@ -544,10 +544,10 @@ describe('JestExt', () => {
 
     beforeEach(() => {
       jest.resetAllMocks()
-      ;(decorations.failingItName as jest.Mock<{}>).mockReturnValue({ key: 'fail' })
-      ;(decorations.passingItName as jest.Mock<{}>).mockReturnValue({ key: 'pass' })
-      ;(decorations.skipItName as jest.Mock<{}>).mockReturnValue({ key: 'skip' })
-      ;(decorations.notRanItName as jest.Mock<{}>).mockReturnValue({ key: 'notRan' })
+      ;((decorations.failingItName as unknown) as jest.Mock<{}>).mockReturnValue({ key: 'fail' })
+      ;((decorations.passingItName as unknown) as jest.Mock<{}>).mockReturnValue({ key: 'pass' })
+      ;((decorations.skipItName as unknown) as jest.Mock<{}>).mockReturnValue({ key: 'skip' })
+      ;((decorations.notRanItName as unknown) as jest.Mock<{}>).mockReturnValue({ key: 'notRan' })
 
       const projectWorkspace = new ProjectWorkspace(null, null, null, null)
       sut = new JestExt(
@@ -574,8 +574,6 @@ describe('JestExt', () => {
       }
     })
     it('will generate dot dectorations for test results', () => {
-      console.log('decorations.passingItName() = ', decorations.passingItName())
-
       const testResults2: any = { success: [tr1], fail: [tr2], skip: [], unknown: [] }
       sut.updateDecorators(testResults2, mockEditor)
       expect(mockEditor.setDecorations).toHaveBeenCalledTimes(4)
@@ -598,7 +596,7 @@ describe('JestExt', () => {
     it('will update inlineError decorator only if setting is enabled', () => {
       const testResults2: any = { success: [], fail: [tr1, tr2], skip: [], unknown: [] }
       const expected = {}
-      ;(decorations.failingAssertionStyle as jest.Mock<{}>).mockReturnValueOnce(expected)
+      ;((decorations.failingAssertionStyle as unknown) as jest.Mock<{}>).mockReturnValueOnce(expected)
       sut.updateDecorators(testResults2, mockEditor)
       expect(decorations.failingAssertionStyle).not.toBeCalled()
       expect(mockEditor.setDecorations).toHaveBeenCalledTimes(4)

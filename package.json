@@ -239,7 +239,7 @@
     "compile": "tsc -watch -p ./tsconfig.publish.json",
     "lint": "node scripts/lint",
     "postinstall": "node ./node_modules/vscode/bin/install",
-    "test": "tsc && jest --config jest.json",
+    "test": "tsc && jest",
     "watch-test": "yarn test -- --watch",
     "prettier": "prettier",
     "prettier-write":
@@ -247,28 +247,28 @@
     "prettier-project": "yarn prettier-write -- '?(__mocks__|src|tests)/**/*.ts'"
   },
   "devDependencies": {
-    "@types/jest": "^21.1.1",
+    "@types/jest": "^24.0.11",
     "@types/node": "^8.0.31",
     "coveralls": "^3.0.0",
     "danger": "^2",
     "glob": "^7.1.1",
     "husky": "^0.14.3",
-    "jest": "^23.3.0",
+    "jest": "^24.7.0",
     "lint-staged": "^4.2.3",
     "prettier": "1.7.3",
     "rimraf": "^2.6.2",
+    "ts-jest": "^24.0.2",
     "tslint": "^5.7.0",
     "tslint-config-prettier": "^1.5.0",
-    "typescript": "^2.8.0",
+    "typescript": "^3.1.6",
     "vscode": "^1.1.6"
   },
   "dependencies": {
     "elegant-spinner": "^1.0.1",
     "istanbul-lib-coverage": "^1.1.1",
     "istanbul-lib-source-maps": "^1.1.0",
-    "jest-editor-support": "23.3.0",
-    "jest-snapshot": "^23.0.1",
-    "jest-test-typescript-parser": "^23.3.0",
+    "jest-editor-support": "^25.0.1",
+    "jest-snapshot": "^24.7.0",
     "micromatch": "^2.3.11"
   },
   "__metadata": {

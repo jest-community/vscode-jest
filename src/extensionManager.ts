@@ -45,6 +45,7 @@ export class ExtensionManager {
       jestPath,
       configPath,
       currentJestVersion,
+      workspaceFolder.name,
       null,
       debugMode
     )

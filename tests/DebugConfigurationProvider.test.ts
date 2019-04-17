@@ -17,8 +17,8 @@ describe('DebugConfigurationProvider', () => {
     expect(config.program).toMatch('jest')
   })
   it('should return a valid CRA DebugConfiguration', () => {
-    ;(getTestCommand as jest.Mock<Function>).mockReturnValueOnce('react-scripts test --env=jsdom')
-    ;(isCreateReactAppTestCommand as jest.Mock<Function>).mockReturnValueOnce(true)
+    ;((getTestCommand as unknown) as jest.Mock<{}>).mockReturnValueOnce('react-scripts test --env=jsdom')
+    ;((isCreateReactAppTestCommand as unknown) as jest.Mock<{}>).mockReturnValueOnce(true)
 
     const folder: any = { uri: { fsPath: null } }
     const sut = new DebugConfigurationProvider()
