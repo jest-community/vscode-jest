@@ -5,7 +5,7 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 
-* Your message here - name
+* replaced deprecated vscode.previewHtml command with webview - qalex
 
 -->
 
