@@ -9,29 +9,29 @@ export interface MessageAction {
   action: () => void
 }
 
-export function systemErrorMessage(message: string, ...actions: Array<MessageAction>) {
+export function systemErrorMessage(message: string, ...actions: MessageAction[]) {
   vscode.window.showErrorMessage(message, ..._extractActionTitles(actions)).then(_handleMessageActions(actions))
 }
 
-export function systemWarningMessage(message: string, ...actions: Array<MessageAction>) {
+export function systemWarningMessage(message: string, ...actions: MessageAction[]) {
   vscode.window.showWarningMessage(message, ..._extractActionTitles(actions)).then(_handleMessageActions(actions))
 }
 
 // common actions
 export const showTroubleshootingAction: MessageAction = {
   title: 'Help',
-  action: () => vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(TroubleShootingURL)),
+  action: () => vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(TROUBLESHOOTING_URL)),
 }
 
-export const TroubleShootingURL = 'https://github.com/jest-community/vscode-jest/blob/master/README.md#troubleshooting'
+export const TROUBLESHOOTING_URL = 'https://github.com/jest-community/vscode-jest/blob/master/README.md#troubleshooting'
 //
 // internal methods
 //
-function _extractActionTitles(actions?: Array<MessageAction>): string[] {
+function _extractActionTitles(actions?: MessageAction[]): string[] {
   return actions ? actions.map(a => a.title) : []
 }
 // expose the internal function so we can unit testing it
-export function _handleMessageActions(actions?: Array<MessageAction>): (action?: string) => void {
+export function _handleMessageActions(actions?: MessageAction[]): (action?: string) => void {
   return (action?: string) => {
     if (!action) {
       return

@@ -4,23 +4,27 @@ import { extensionName } from './appGlobals'
 import { JestExt } from './JestExt'
 
 enum StatusType {
-  folder,
-  workspace,
+  active,
+  summary,
 }
 
 type Status = 'running' | 'failed' | 'success' | 'stopped' | 'initial'
-type QueueItem = {
+interface QueueItem {
   source: string
   status: Status
   details: string | undefined
 }
 
+interface StatusBarSpinner {
+  active?: NodeJS.Timer
+  summary?: NodeJS.Timer
+}
+
 // The bottom status bar
 export class StatusBar {
-  private statusBarSpinner: NodeJS.Timer
-  private folderStatus = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 2)
-  private workspaceStatus = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 1)
-  private statusKey = 'Jest:'
+  private statusBarSpinner: StatusBarSpinner = {}
+  private activeStatusItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 2)
+  private summaryStatusItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 1)
   private frame = elegantSpinner()
   private priorities: Status[] = ['running', 'failed', 'success', 'stopped', 'initial']
   private queue: QueueItem[] = []
@@ -28,25 +32,23 @@ export class StatusBar {
   private workspaceOutput?: vscode.OutputChannel
 
   constructor() {
-    this.workspaceStatus.tooltip = 'Jest status of the workspace'
-    this.folderStatus.tooltip = 'Jest status of the current folder'
-    this.workspaceStatus.show()
-    this.folderStatus.show()
+    this.summaryStatusItem.tooltip = 'Jest status summary of the workspace'
+    this.activeStatusItem.tooltip = 'Jest status of the active folder'
   }
 
   register(getExtension: (name: string) => JestExt | undefined) {
-    const showWorkspaceOutput = `${extensionName}.show-ws-output`
-    const showFolderOutput = `${extensionName}.show-folder-output`
-    this.workspaceStatus.command = showWorkspaceOutput
-    this.folderStatus.command = showFolderOutput
+    const showSummaryOutput = `${extensionName}.show-summary-output`
+    const showAciiveOutput = `${extensionName}.show-active-output`
+    this.summaryStatusItem.command = showSummaryOutput
+    this.activeStatusItem.command = showAciiveOutput
 
     return [
-      vscode.commands.registerCommand(showWorkspaceOutput, () => {
+      vscode.commands.registerCommand(showSummaryOutput, () => {
         if (this.workspaceOutput) {
           this.workspaceOutput.show()
         }
       }),
-      vscode.commands.registerCommand(showFolderOutput, () => {
+      vscode.commands.registerCommand(showAciiveOutput, () => {
         if (this.activeFolder) {
           const ext = getExtension(this.activeFolder)
           if (ext) {
@@ -81,23 +83,24 @@ export class StatusBar {
       const folder = vscode.workspace.getWorkspaceFolder(editor.document.uri)
       if (folder && folder.name !== this.activeFolder) {
         this._activeFolder = folder.name
-        this.updateFolderStatus()
+        this.updateActiveStatusItem()
       }
     }
   }
 
   private enqueue(source: string, status: Status, details?: string) {
     this.queue = this.queue.filter(x => x.source !== source)
-    this.queue.unshift({
+    const item: QueueItem = {
       source,
       status,
       details,
-    })
-    this.updateStatus()
+    }
+    this.queue.unshift(item)
+    this.updateStatus(item)
   }
-  private updateStatus() {
-    this.updateFolderStatus()
-    this.updateWorkspaceStatus()
+  private updateStatus(item: QueueItem) {
+    this.updateActiveStatusItem(item)
+    this.updateSummaryStatus()
   }
 
   private get activeFolder() {
@@ -110,47 +113,100 @@ export class StatusBar {
     return this._activeFolder
   }
 
-  private updateFolderStatus() {
+  private updateActiveStatusItem(item?: QueueItem) {
+    if (item && this.activeFolder) {
+      if (item.source === this.activeFolder) {
+        this.render(item, StatusType.active)
+      }
+      return
+    }
+
+    // find the active item from the queue
     const queueItem = this.activeFolder
-      ? this.queue.find(item => item.source === this.activeFolder)
-      : this.queue.length === 1 ? this.queue[0] : undefined
+      ? this.queue.find(_item => _item.source === this.activeFolder)
+      : this.queue.length === 1
+      ? this.queue[0]
+      : undefined
 
     if (queueItem) {
-      this.render(queueItem, StatusType.folder)
+      this.render(queueItem, StatusType.active)
+    } else {
+      this.hideStatusBarItem(StatusType.active)
     }
   }
 
-  private updateWorkspaceStatus() {
-    if (this.isWorkspace()) {
+  private updateSummaryStatus() {
+    if (this.isMultiroot()) {
       this.updateWorkspaceOutput()
 
       for (const status of this.priorities) {
         const queueItem = this.queue.find(item => item.status === status)
         if (queueItem) {
-          this.render(queueItem, StatusType.workspace)
-          break
+          this.render(queueItem, StatusType.summary)
+          return
         }
       }
     }
+    this.hideStatusBarItem(StatusType.summary)
   }
-
+  private hideStatusBarItem(statusType: StatusType) {
+    clearInterval(this.getSpinner(statusType))
+    switch (statusType) {
+      case StatusType.active:
+        this.activeStatusItem.hide()
+        break
+      case StatusType.summary:
+        this.summaryStatusItem.hide()
+        break
+      default:
+        throw new Error(`unexpected statusType: ${statusType}`)
+    }
+  }
   private render(queueItem: QueueItem, statusType: StatusType) {
-    clearInterval(this.statusBarSpinner)
+    clearInterval(this.getSpinner(statusType))
 
     const message = this.getMessageByStatus(queueItem.status)
     if (queueItem.status === 'running') {
-      this.statusBarSpinner = setInterval(() => this.render(queueItem, statusType), 100)
+      this.setSpinner(statusType, () => this.render(queueItem, statusType))
     }
-    // this.folderStatus.text = `${this.statusKey} ${message} ${queueItem.details || ''}||`
+
     switch (statusType) {
-      case StatusType.folder:
-        const details = !this.isWorkspace() && queueItem.details ? queueItem.details : ''
-        this.folderStatus.text = `${this.statusKey} ${message} ${details}`
-        this.folderStatus.tooltip = `Jest status of '${this.activeFolder}'`
+      case StatusType.active:
+        const details = !this.isMultiroot() && queueItem.details ? queueItem.details : ''
+        this.activeStatusItem.text = `Jest: ${message} ${details}`
+        this.activeStatusItem.tooltip = `Jest status of '${this.activeFolder}'`
+        this.activeStatusItem.show()
         break
-      case StatusType.workspace:
-        this.workspaceStatus.text = `$(file-submodule) ${message}`
+      case StatusType.summary:
+        this.summaryStatusItem.text = `Jest-WS: ${message}`
+        this.summaryStatusItem.show()
         break
+      default:
+        throw new Error(`unexpected statusType: ${statusType}`)
+    }
+  }
+
+  private getSpinner(type: StatusType) {
+    switch (type) {
+      case StatusType.active:
+        return this.statusBarSpinner.active
+      case StatusType.summary:
+        return this.statusBarSpinner.summary
+      default:
+        throw new Error(`unexpected statusType: ${type}`)
+    }
+  }
+  private setSpinner(type: StatusType, callback: () => void) {
+    const timer = setInterval(callback, 100)
+    switch (type) {
+      case StatusType.active:
+        this.statusBarSpinner.active = timer
+        break
+      case StatusType.summary:
+        this.statusBarSpinner.summary = timer
+        break
+      default:
+        throw new Error(`unexpected statusType: ${type}`)
     }
   }
 
@@ -167,7 +223,7 @@ export class StatusBar {
     this.workspaceOutput.append(messages.join('\n'))
   }
 
-  private isWorkspace() {
+  private isMultiroot() {
     return this.queue.length > 1
   }
 

@@ -35,6 +35,7 @@ const extensionManager = {
   registerCommand: jest.fn().mockImplementation((...args) => args),
 }
 
+// tslint:disable-next-line: variable-name
 const ExtensionManager = jest.fn().mockImplementation(() => extensionManager)
 
 jest.mock('../src/extensionManager', () => ({

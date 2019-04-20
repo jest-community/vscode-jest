@@ -4,8 +4,8 @@ const updateFileWithJestStatus = jest.fn()
 const assertionsForTestFile = jest.fn()
 jest.mock('jest-editor-support', () => {
   class TestReconciler {
-    assertionsForTestFile: Function
-    updateFileWithJestStatus: Function
+    assertionsForTestFile: jest.Mock
+    updateFileWithJestStatus: jest.Mock
 
     constructor() {
       this.assertionsForTestFile = assertionsForTestFile
@@ -96,7 +96,7 @@ describe('TestResultProvider', () => {
       ;((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
         itBlocks: [testBlock],
       })
-      const assertionC = Object.assign({}, assertion)
+      const assertionC = { ...assertion }
       assertionC.title = 'xxx'
       assertionsForTestFile.mockReturnValueOnce([assertionC])
       const actual = sut.getResults(filePath)
@@ -109,7 +109,7 @@ describe('TestResultProvider', () => {
       ;((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
         itBlocks: [testBlock],
       })
-      const assertionC = Object.assign({}, assertion)
+      const assertionC = { ...assertion }
       assertionC.line = undefined
       assertionsForTestFile.mockReturnValueOnce([assertionC])
       const actual = sut.getResults(filePath)
@@ -145,7 +145,8 @@ describe('TestResultProvider', () => {
     })
     it('should handle duplicate test names', () => {
       const sut = new TestResultProvider()
-      const testBlock2 = Object.assign({}, testBlock, {
+      const testBlock2 = {
+        ...testBlock,
         start: {
           line: 5,
           column: 3,
@@ -154,7 +155,7 @@ describe('TestResultProvider', () => {
           line: 7,
           column: 5,
         },
-      })
+      }
       ;((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
         itBlocks: [testBlock, testBlock2],
       })
@@ -208,7 +209,9 @@ describe('TestResultProvider', () => {
     })
 
     describe('template literal handling', () => {
-      const testBlock2 = Object.assign({}, testBlock, {
+      const testBlock2 = {
+        ...testBlock,
+        // tslint:disable-next-line no-invalid-template-strings
         name: 'template literal ${num}',
         start: {
           line: 5,
@@ -218,7 +221,7 @@ describe('TestResultProvider', () => {
           line: 7,
           column: 5,
         },
-      })
+      }
       beforeEach(() => {
         jest.resetAllMocks()
       })

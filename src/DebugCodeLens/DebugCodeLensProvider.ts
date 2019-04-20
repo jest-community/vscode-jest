@@ -8,9 +8,9 @@ import { TestState, TestStateByTestReconciliationState } from './TestState'
 import { JestExt } from '../JestExt'
 
 export class DebugCodeLensProvider implements vscode.CodeLensProvider {
+  onDidChange: vscode.EventEmitter<void>
   private _showWhenTestStateIn: TestState[]
   private getJestExt: (uri: vscode.Uri) => JestExt
-  onDidChange: vscode.EventEmitter<void>
 
   constructor(getJestExt: (uri: vscode.Uri) => JestExt, showWhenTestStateIn: TestState[]) {
     this.getJestExt = getJestExt

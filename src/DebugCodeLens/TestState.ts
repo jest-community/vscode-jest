@@ -7,6 +7,7 @@ export enum TestState {
   Unknown = 'unknown',
 }
 
+// tslint:disable-next-line variable-name
 export const TestStateByTestReconciliationState = {
   [TestReconciliationState.KnownFail]: TestState.Fail,
   [TestReconciliationState.KnownSkip]: TestState.Skip,

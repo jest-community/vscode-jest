@@ -52,6 +52,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     // create-react-app config according to:
     // https://github.com/facebook/create-react-app/blob/master/packages/react-scripts/template/README.md#debugging-tests-in-visual-studio-code
 
+    // tslint:disable no-invalid-template-strings
     const debugConfiguration: vscode.DebugConfiguration = {
       type: 'node',
       name: 'vscode-jest-tests',

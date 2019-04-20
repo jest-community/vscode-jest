@@ -20,6 +20,7 @@ describe('TestResult', () => {
       })
     })
 
+    // tslint:disable no-shadowed-variable
     describe('on Windows systems', () => {
       beforeEach(() => {
         jest.doMock('../../src/TestResults/TestResult', () => ({

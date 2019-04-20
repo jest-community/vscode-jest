@@ -359,7 +359,7 @@ describe('JestProcess', () => {
             count = jestEvents.get(event).count
           }
           jestEvents.set(event, {
-            callback: callback,
+            callback,
             count: count + 1,
           })
         },
@@ -375,7 +375,7 @@ describe('JestProcess', () => {
         keepAlive: true,
       })
 
-      const handler = () => {}
+      const handler = () => jestProcess
 
       jestProcess.onJestEditorSupportEvent('event', handler)
       eventEmitter.emit('debuggerProcessExit')
@@ -391,8 +391,8 @@ describe('JestProcess', () => {
         keepAlive: true,
       })
 
-      const handler1 = () => {}
-      const handler2 = () => {}
+      const handler1 = () => jestProcess
+      const handler2 = () => jestProcess
 
       jestProcess.onJestEditorSupportEvent('event1', handler1)
       jestProcess.onJestEditorSupportEvent('event2', handler2)
@@ -413,7 +413,7 @@ describe('JestProcess', () => {
         keepAlive: false,
       })
 
-      const handler = () => {}
+      const handler = () => jestProcess
 
       jestProcess.onJestEditorSupportEvent('event', handler)
       eventEmitter.emit('debuggerProcessExit')
@@ -427,7 +427,7 @@ describe('JestProcess', () => {
         keepAlive: true,
       })
 
-      const handler = () => {}
+      const handler = () => jestProcess
 
       jestProcess.onJestEditorSupportEvent('event', handler)
       jestProcess.stop()

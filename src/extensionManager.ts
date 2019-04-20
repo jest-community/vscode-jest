@@ -9,11 +9,12 @@ import { IPluginResourceSettings, IPluginWindowSettings } from './Settings'
 import { statusBar } from './StatusBar'
 
 export class ExtensionManager {
+  debugCodeLensProvider: DebugCodeLensProvider
+  debugConfigurationProvider: DebugConfigurationProvider
+
   private extByWorkspace: { [key: string]: JestExt } = {}
   private context: vscode.ExtensionContext
   private commonPluginSettings: IPluginWindowSettings
-  debugCodeLensProvider: DebugCodeLensProvider
-  debugConfigurationProvider: DebugConfigurationProvider
 
   constructor(context: vscode.ExtensionContext) {
     this.context = context
@@ -81,11 +82,14 @@ export class ExtensionManager {
     Object.keys(this.extByWorkspace).forEach(key => this.unregisterByName(key))
   }
   shouldStart(workspaceFolderName: string): boolean {
-    const { commonPluginSettings: { enabledWorkspaceFolders, disabledWorkspaceFolders } } = this
+    // tslint:disable-next-line: no-this-assignment
+    const {
+      commonPluginSettings: { enabledWorkspaceFolders, disabledWorkspaceFolders },
+    } = this
     return (
       // start if enabledWorkspaceFolders contains current workspace
       enabledWorkspaceFolders.includes(workspaceFolderName) ||
-      // dont start if disabledWorkspaceFolders doesn't contain current workspace
+      // don't start if disabledWorkspaceFolders doesn't contain current workspace
       !disabledWorkspaceFolders.includes(workspaceFolderName)
     )
   }
@@ -146,9 +150,9 @@ export class ExtensionManager {
   }
   onDidChangeActiveTextEditor(editor: vscode.TextEditor) {
     if (editor && editor.document) {
+      statusBar.onDidChangeActiveTextEditor(editor)
       const ext = this.getByDocUri(editor.document.uri)
       if (ext) {
-        statusBar.onDidChangeActiveTextEditor(editor)
         ext.onDidChangeActiveTextEditor(editor)
       }
     }

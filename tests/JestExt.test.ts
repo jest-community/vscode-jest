@@ -40,6 +40,7 @@ describe('JestExt', () => {
     prepareTestRun: jest.fn(),
   } as any
 
+  // tslint:disable-next-line no-console
   console.error = jest.fn()
 
   beforeEach(() => {
@@ -156,14 +157,14 @@ describe('JestExt', () => {
     })
   })
 
+  // tslint:disable no-shadowed-variable
   describe('runTest()', () => {
     const workspaceFolder = {} as any
     const fileName = 'fileName'
     const testNamePattern = 'testNamePattern'
 
     it('should run the supplied test', async () => {
-      const startDebugging = (debug.startDebugging as unknown) as jest.Mock<Function>
-
+      const startDebugging = (debug.startDebugging as unknown) as jest.Mock<{}>
       ;((startDebugging as unknown) as jest.Mock<{}>).mockImplementation(async (_folder: any, nameOrConfig: any) => {
         // trigger fallback to default configuration
         if (typeof nameOrConfig === 'string') {

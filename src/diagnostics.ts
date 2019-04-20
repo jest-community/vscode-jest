@@ -18,6 +18,7 @@ function createDiagnostic(
   let line = lineNumber
   if (line < 0) {
     line = 0
+    // tslint:disable-next-line no-console
     console.warn(
       `received invalid line number '${line}' for '${uri.toString()}'. (most likely due to unexpected test results... you can help fix the root cause by logging an issue with a sample project to reproduce this warning)`
     )

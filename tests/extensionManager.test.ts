@@ -8,9 +8,7 @@ const jestInstance = {
 }
 
 jest.mock('../src/JestExt', () => ({
-  JestExt: function() {
-    return jestInstance
-  },
+  JestExt: jest.fn().mockImplementation(() => jestInstance),
 }))
 
 import * as vscode from 'vscode'

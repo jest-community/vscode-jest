@@ -3,6 +3,7 @@ jest.unmock('../../src/DebugCodeLens/DebugCodeLens')
 jest.unmock('../../src/helpers')
 jest.mock('path')
 
+// tslint:disable max-classes-per-file
 const rangeConstructor = jest.fn()
 jest.mock('vscode', () => {
   class CodeLens {
@@ -123,7 +124,7 @@ describe('DebugCodeLensProvider', () => {
     const token = {} as any
     const getResults = (testResultProvider.getResults as unknown) as jest.Mock<{}>
     const testResults = [
-      {
+      ({
         name: 'should fail',
         start: {
           line: 1,
@@ -134,7 +135,7 @@ describe('DebugCodeLensProvider', () => {
           column: 4,
         },
         status: TestReconciliationState.KnownFail,
-      } as TestResult,
+      } as any) as TestResult,
     ]
 
     it('should return an empty array when the provider is disabled', () => {
@@ -216,7 +217,7 @@ describe('DebugCodeLensProvider', () => {
       const actual = sut.provideCodeLenses(document, token)
 
       expect(actual).toHaveLength(1)
-      expect((<DebugCodeLens>actual[0]).fileName).toBe(expected)
+      expect((actual[0] as DebugCodeLens).fileName).toBe(expected)
     })
 
     it('should create the CodeLens specifying the test name', () => {
@@ -225,7 +226,7 @@ describe('DebugCodeLensProvider', () => {
       const actual = sut.provideCodeLenses(document, token)
 
       expect(actual).toHaveLength(1)
-      expect((<DebugCodeLens>actual[0]).testName).toBe(testResults[0].name)
+      expect((actual[0] as DebugCodeLens).testName).toBe(testResults[0].name)
     })
   })
 

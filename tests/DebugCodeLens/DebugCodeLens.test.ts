@@ -1,6 +1,7 @@
 jest.unmock('../../src/DebugCodeLens/DebugCodeLens')
 jest.mock('vscode', () => ({
   CodeLens: class {
+    // tslint:disable-next-line no-empty
     constructor() {}
   },
 }))

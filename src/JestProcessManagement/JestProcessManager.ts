@@ -4,7 +4,7 @@ import { WatchMode } from '../Jest'
 
 export class JestProcessManager {
   private projectWorkspace: ProjectWorkspace
-  private jestProcesses: Array<JestProcess> = []
+  private jestProcesses: JestProcess[] = []
   private runAllTestsFirstInWatchMode: boolean
 
   constructor({
@@ -16,6 +16,51 @@ export class JestProcessManager {
   }) {
     this.projectWorkspace = projectWorkspace
     this.runAllTestsFirstInWatchMode = runAllTestsFirstInWatchMode
+  }
+
+  public startJestProcess({
+    exitCallback = () => {},
+    watchMode = WatchMode.None,
+    keepAlive = false,
+  }: {
+    exitCallback?: (...args: any) => void
+    watchMode?: WatchMode
+    keepAlive?: boolean
+  } = {}): JestProcess {
+    if (watchMode !== WatchMode.None && this.runAllTestsFirstInWatchMode) {
+      return this.runAllTestsFirst(exitedJestProcess => {
+        this.removeJestProcessReference(exitedJestProcess)
+        const jestProcessInWatchMode = this.run({
+          watchMode: WatchMode.Watch,
+          keepAlive,
+          exitCallback,
+        })
+        exitCallback(exitedJestProcess, jestProcessInWatchMode)
+      })
+    } else {
+      return this.run({
+        watchMode,
+        keepAlive,
+        exitCallback,
+      })
+    }
+  }
+
+  public stopAll() {
+    const processesToRemove = [...this.jestProcesses]
+    this.jestProcesses = []
+    processesToRemove.forEach(jestProcess => {
+      jestProcess.stop()
+    })
+  }
+
+  public stopJestProcess(jestProcess) {
+    this.removeJestProcessReference(jestProcess)
+    return jestProcess.stop()
+  }
+
+  public get numberOfProcesses() {
+    return this.jestProcesses.length
   }
 
   private removeJestProcessReference(jestProcess) {
@@ -57,52 +102,5 @@ export class JestProcessManager {
       keepAlive: false,
       exitCallback: onExit,
     })
-  }
-
-  public startJestProcess(
-    {
-      exitCallback = () => {},
-      watchMode = WatchMode.None,
-      keepAlive = false,
-    }: {
-      exitCallback?: Function
-      watchMode?: WatchMode
-      keepAlive?: boolean
-    } = {}
-  ): JestProcess {
-    if (watchMode !== WatchMode.None && this.runAllTestsFirstInWatchMode) {
-      return this.runAllTestsFirst(exitedJestProcess => {
-        this.removeJestProcessReference(exitedJestProcess)
-        const jestProcessInWatchMode = this.run({
-          watchMode: WatchMode.Watch,
-          keepAlive,
-          exitCallback,
-        })
-        exitCallback(exitedJestProcess, jestProcessInWatchMode)
-      })
-    } else {
-      return this.run({
-        watchMode,
-        keepAlive,
-        exitCallback,
-      })
-    }
-  }
-
-  public stopAll() {
-    const processesToRemove = [...this.jestProcesses]
-    this.jestProcesses = []
-    processesToRemove.forEach(jestProcess => {
-      jestProcess.stop()
-    })
-  }
-
-  public stopJestProcess(jestProcess) {
-    this.removeJestProcessReference(jestProcess)
-    return jestProcess.stop()
-  }
-
-  public get numberOfProcesses() {
-    return this.jestProcesses.length
   }
 }

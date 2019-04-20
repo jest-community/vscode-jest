@@ -1,25 +1,34 @@
-import { TestReconciler, JestTotalResults, TestAssertionStatus, ItBlock } from 'jest-editor-support'
-import { TestFileAssertionStatus } from 'jest-editor-support'
+import {
+  TestReconciler,
+  JestTotalResults,
+  TestAssertionStatus,
+  TestFileAssertionStatus,
+  ItBlock,
+} from 'jest-editor-support'
 import { TestReconciliationState } from './TestReconciliationState'
 import { TestResult } from './TestResult'
 import { parseTest } from '../TestParser'
 
-type TestResultsMap = { [filePath: string]: TestResult[] }
+interface TestResultsMap {
+  [filePath: string]: TestResult[]
+}
 
-export type SortedTestResults = {
+export interface SortedTestResults {
   fail: TestResult[]
   skip: TestResult[]
   success: TestResult[]
   unknown: TestResult[]
 }
 
-type SortedTestResultsMap = { [filePath: string]: SortedTestResults }
+interface SortedTestResultsMap {
+  [filePath: string]: SortedTestResults
+}
 
 export class TestResultProvider {
+  verbose: boolean
   private reconciler: TestReconciler
   private resultsByFilePath: TestResultsMap
   private sortedResultsByFilePath: SortedTestResultsMap
-  private verbose: boolean
 
   constructor(verbose = false) {
     this.reconciler = new TestReconciler()
@@ -33,10 +42,10 @@ export class TestResultProvider {
   }
 
   getResults(filePath: string): TestResult[] {
-    const maybeTempalteLiteral = (s: string) => s.indexOf('$') > -1
+    const maybeTemplateLiteral = (s: string) => s.indexOf('$') > -1
 
-    const findAssertionByLocation = (testBlock: ItBlock, assertions: TestAssertionStatus[]) => {
-      return assertions.find(
+    const findAssertionByLocation = (testBlock: ItBlock, _assertions: TestAssertionStatus[]) => {
+      return _assertions.find(
         a =>
           (a.line >= testBlock.start.line && a.line <= testBlock.end.line) ||
           (a.location && a.location.line >= testBlock.start.line && a.location.line <= testBlock.end.line)
@@ -62,9 +71,10 @@ export class TestResultProvider {
           assertion = match[0]
           break
         case 0:
-          if (maybeTempalteLiteral(test.name)) {
+          if (maybeTemplateLiteral(test.name)) {
             assertion = findAssertionByLocation(test, assertions)
             if (this.verbose) {
+              // tslint:disable-next-line no-console
               console.log(
                 `not able to match test block by name, possible due to template-iteral? matching by line number instead.`
               )
@@ -75,18 +85,20 @@ export class TestResultProvider {
           }
           break
         default:
-          //multiple matches, select according to the following criteria
+          // multiple matches, select according to the following criteria
           assertion = findAssertionByLocation(test, match)
           if (!assertion) {
-            //can't find the match, it could due to sourcemap related issue, let's try our best to locate one then
+            // can't find the match, it could due to sourceMap related issue, let's try our best to locate one then
             assertion = match.find(a => a.status !== TestReconciliationState.KnownFail) || match[0]
             if (this.verbose) {
+              // tslint:disable-next-line no-console
               console.log(`assertion might not be correct, best effort from:`, assertions)
             }
           }
       }
 
       if (!assertion && this.verbose) {
+        // tslint:disable-next-line no-console
         console.log(`failed to find assertion for ite block:`, test)
       }
 

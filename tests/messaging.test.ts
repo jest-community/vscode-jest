@@ -54,7 +54,7 @@ describe('test system messaging', () => {
   it('can open troubleshooting url via action', () => {
     messaging.showTroubleshootingAction.action()
     expect(mockExecCommands.mock.calls.length).toBe(1)
-    expect(mockUriParse.mock.calls[0][0]).toBe(messaging.TroubleShootingURL)
+    expect(mockUriParse.mock.calls[0][0]).toBe(messaging.TROUBLESHOOTING_URL)
   })
   it('can handle user actions', () => {
     let a = messaging._handleMessageActions()

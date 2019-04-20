@@ -28,6 +28,7 @@ describe('DebugConfigurationProvider', () => {
     const config = configurations[0]
     expect(config.name).toBe('vscode-jest-tests')
     expect(config.type).toBe('node')
+    // tslint:disable-next-line no-invalid-template-strings
     expect(config.runtimeExecutable).toBe('${workspaceFolder}/node_modules/.bin/react-scripts')
     expect(config.args[0]).toBe('test')
     expect(config.args).toContain('--env=jsdom')
