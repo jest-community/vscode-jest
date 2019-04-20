@@ -5,13 +5,14 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 
+* support template-literal-string test names by matching with location info from jest result - connectdotz
+
 * replaced deprecated vscode.previewHtml command with webview - qalex
 
--->
-
-### 2.10.0
-
 * Support multi-root workspaces - escaton
+  * multiroot workspace statusBar displays both active folder and workspace summary info - connectdotz
+
+-->
 
 ### 2.9.1
 
