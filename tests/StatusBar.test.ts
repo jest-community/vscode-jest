@@ -178,5 +178,28 @@ describe('StatusBar', () => {
       })
       expect(found).toEqual(3)
     })
+    it('when hiding status, spinner should be stopped too', () => {
+      const { active, summary } = getStatusBarItems()
+
+      // sending 2 request without activeFolder should disable the active status
+      statusBar.bind('testSource1').running()
+      expect(active.show).toBeCalledTimes(1)
+      expect(summary.show).toBeCalledTimes(0)
+      expect(setInterval).toBeCalledTimes(1)
+      expect(clearInterval).toBeCalledTimes(0)
+
+      jest.clearAllMocks()
+      jest.clearAllTimers()
+
+      statusBar.bind('testSource2').initial()
+      expect(active.show).toBeCalledTimes(0)
+      expect(summary.show).toBeCalledTimes(1)
+
+      // from summary status only
+      expect(setInterval).toBeCalledTimes(1)
+
+      expect(active.hide).toBeCalledTimes(1)
+      expect(clearInterval).toBeCalledTimes(1)
+    })
   })
 })

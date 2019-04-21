@@ -30,19 +30,23 @@ interface SpinnableStatusBarItem {
 const createStatusBarItem = (type: StatusType, priority: number): SpinnableStatusBarItem => {
   let spinner: NodeJS.Timer | undefined
   const item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, priority)
+  const clearSpinner = () => {
+    if (spinner) {
+      clearInterval(spinner)
+    }
+  }
 
   return {
     type,
-    clearSpinner: () => {
-      if (spinner) {
-        clearInterval(spinner)
-      }
-    },
+    clearSpinner,
     startSpinner: (callback: () => void, interval = 100) => {
       spinner = setInterval(callback, interval)
     },
     show: () => item.show(),
-    hide: () => item.hide(),
+    hide: () => {
+      item.hide()
+      clearSpinner()
+    },
 
     get command() {
       return item.command
@@ -127,7 +131,7 @@ export class StatusBar {
   onDidChangeActiveTextEditor(editor: vscode.TextEditor) {
     if (editor && editor.document) {
       const folder = vscode.workspace.getWorkspaceFolder(editor.document.uri)
-      if (folder && folder.name !== this.activeFolder) {
+      if (folder && folder.name !== this._activeFolder) {
         this._activeFolder = folder.name
         this.updateActiveStatus()
       }
