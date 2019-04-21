@@ -91,7 +91,8 @@ export class ExtensionManager {
     const { commonPluginSettings: { disabledWorkspaceFolders } } = this
     if (this.extByWorkspace.has(workspaceFolderName)) {
       return false
-    } else if (disabledWorkspaceFolders.includes(workspaceFolderName)) {
+    }
+    if (disabledWorkspaceFolders.includes(workspaceFolderName)) {
       return false
     }
     return true
