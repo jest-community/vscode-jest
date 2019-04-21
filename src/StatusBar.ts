@@ -3,33 +3,79 @@ import * as elegantSpinner from 'elegant-spinner'
 import { extensionName } from './appGlobals'
 import { JestExt } from './JestExt'
 
-enum StatusType {
+export enum StatusType {
   active,
   summary,
 }
 
 type Status = 'running' | 'failed' | 'success' | 'stopped' | 'initial'
-interface QueueItem {
+interface StatusUpdateRequest {
   source: string
   status: Status
   details: string | undefined
 }
 
-interface StatusBarSpinner {
-  active?: NodeJS.Timer
-  summary?: NodeJS.Timer
+interface SpinnableStatusBarItem {
+  readonly type: StatusType
+  command: string | undefined
+  text: string | undefined
+  tooltip: string | undefined
+
+  show(): void
+  hide(): void
+  clearSpinner(): void
+  startSpinner(callback: () => void): void
+}
+
+const createStatusBarItem = (type: StatusType, priority: number): SpinnableStatusBarItem => {
+  let spinner: NodeJS.Timer | undefined
+  const item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, priority)
+
+  return {
+    type,
+    clearSpinner: () => {
+      if (spinner) {
+        clearInterval(spinner)
+      }
+    },
+    startSpinner: (callback: () => void, interval = 100) => {
+      spinner = setInterval(callback, interval)
+    },
+    show: () => item.show(),
+    hide: () => item.hide(),
+
+    get command() {
+      return item.command
+    },
+    get text() {
+      return item.text
+    },
+    get tooltip() {
+      return item.tooltip
+    },
+
+    set command(_command: string) {
+      item.command = _command
+    },
+    set text(_text: string) {
+      item.text = _text
+    },
+    set tooltip(_tooltip: string) {
+      item.tooltip = _tooltip
+    },
+  }
 }
 
 // The bottom status bar
 export class StatusBar {
-  private statusBarSpinner: StatusBarSpinner = {}
-  private activeStatusItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 2)
-  private summaryStatusItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 1)
+  private activeStatusItem = createStatusBarItem(StatusType.active, 2)
+  private summaryStatusItem = createStatusBarItem(StatusType.summary, 1)
+
   private frame = elegantSpinner()
   private priorities: Status[] = ['running', 'failed', 'success', 'stopped', 'initial']
-  private queue: QueueItem[] = []
+  private requests = new Map<string, StatusUpdateRequest>()
   private _activeFolder?: string
-  private workspaceOutput?: vscode.OutputChannel
+  private summaryOutput?: vscode.OutputChannel
 
   constructor() {
     this.summaryStatusItem.tooltip = 'Jest status summary of the workspace'
@@ -38,17 +84,17 @@ export class StatusBar {
 
   register(getExtension: (name: string) => JestExt | undefined) {
     const showSummaryOutput = `${extensionName}.show-summary-output`
-    const showAciiveOutput = `${extensionName}.show-active-output`
+    const showActiveOutput = `${extensionName}.show-active-output`
     this.summaryStatusItem.command = showSummaryOutput
-    this.activeStatusItem.command = showAciiveOutput
+    this.activeStatusItem.command = showActiveOutput
 
     return [
       vscode.commands.registerCommand(showSummaryOutput, () => {
-        if (this.workspaceOutput) {
-          this.workspaceOutput.show()
+        if (this.summaryOutput) {
+          this.summaryOutput.show()
         }
       }),
-      vscode.commands.registerCommand(showAciiveOutput, () => {
+      vscode.commands.registerCommand(showActiveOutput, () => {
         if (this.activeFolder) {
           const ext = getExtension(this.activeFolder)
           if (ext) {
@@ -61,19 +107,19 @@ export class StatusBar {
   bind(source: string) {
     return {
       initial: () => {
-        this.enqueue(source, 'initial')
+        this.request(source, 'initial')
       },
       running: (details?: string) => {
-        this.enqueue(source, 'running', details)
+        this.request(source, 'running', details)
       },
       success: (details?: string) => {
-        this.enqueue(source, 'success', details)
+        this.request(source, 'success', details)
       },
       failed: (details?: string) => {
-        this.enqueue(source, 'failed', details)
+        this.request(source, 'failed', details)
       },
       stopped: (details?: string) => {
-        this.enqueue(source, 'stopped', details)
+        this.request(source, 'stopped', details)
       },
     }
   }
@@ -83,23 +129,22 @@ export class StatusBar {
       const folder = vscode.workspace.getWorkspaceFolder(editor.document.uri)
       if (folder && folder.name !== this.activeFolder) {
         this._activeFolder = folder.name
-        this.updateActiveStatusItem()
+        this.updateActiveStatus()
       }
     }
   }
 
-  private enqueue(source: string, status: Status, details?: string) {
-    this.queue = this.queue.filter(x => x.source !== source)
-    const item: QueueItem = {
+  private request(source: string, status: Status, details?: string) {
+    const request: StatusUpdateRequest = {
       source,
       status,
       details,
     }
-    this.queue.unshift(item)
-    this.updateStatus(item)
+    this.requests.set(source, request)
+    this.updateStatus(request)
   }
-  private updateStatus(item: QueueItem) {
-    this.updateActiveStatusItem(item)
+  private updateStatus(request: StatusUpdateRequest) {
+    this.updateActiveStatus(request)
     this.updateSummaryStatus()
   }
 
@@ -113,118 +158,91 @@ export class StatusBar {
     return this._activeFolder
   }
 
-  private updateActiveStatusItem(item?: QueueItem) {
-    if (item && this.activeFolder) {
-      if (item.source === this.activeFolder) {
-        this.render(item, StatusType.active)
+  private updateActiveStatus(request?: StatusUpdateRequest) {
+    if (request && this.activeFolder) {
+      if (request.source === this.activeFolder) {
+        this.render(request, this.activeStatusItem)
       }
       return
     }
 
-    // find the active item from the queue
-    const queueItem = this.activeFolder
-      ? this.queue.find(_item => _item.source === this.activeFolder)
-      : this.queue.length === 1
-      ? this.queue[0]
-      : undefined
+    // find the active item from requests
+    let _request = null
+    if (this.activeFolder) {
+      _request = this.requests.get(this.activeFolder)
+    }
+    if (!_request && this.requests.size === 1) {
+      _request = this.requests.values().next().value
+    }
 
-    if (queueItem) {
-      this.render(queueItem, StatusType.active)
+    if (_request) {
+      this.render(_request, this.activeStatusItem)
     } else {
-      this.hideStatusBarItem(StatusType.active)
+      this.activeStatusItem.hide()
     }
   }
 
   private updateSummaryStatus() {
-    if (this.isMultiroot()) {
-      this.updateWorkspaceOutput()
+    if (this.needsSummaryStatus()) {
+      this.updateSummaryOutput()
 
-      for (const status of this.priorities) {
-        const queueItem = this.queue.find(item => item.status === status)
-        if (queueItem) {
-          this.render(queueItem, StatusType.summary)
-          return
+      let summaryStatus: StatusUpdateRequest | undefined
+      let prev = 99
+      for (const r of this.requests.values()) {
+        const idx = this.priorities.indexOf(r.status)
+        if (idx >= 0 && idx < prev) {
+          summaryStatus = r
+          prev = idx
         }
       }
+
+      if (summaryStatus) {
+        this.render(summaryStatus, this.summaryStatusItem)
+        return
+      }
     }
-    this.hideStatusBarItem(StatusType.summary)
+    this.summaryStatusItem.hide()
   }
-  private hideStatusBarItem(statusType: StatusType) {
-    clearInterval(this.getSpinner(statusType))
-    switch (statusType) {
+
+  private render(request: StatusUpdateRequest, statusBarItem: SpinnableStatusBarItem) {
+    statusBarItem.clearSpinner()
+
+    const message = this.getMessageByStatus(request.status)
+    if (request.status === 'running') {
+      statusBarItem.startSpinner(() => this.render(request, statusBarItem))
+    }
+
+    switch (statusBarItem.type) {
       case StatusType.active:
-        this.activeStatusItem.hide()
+        const details = !this.needsSummaryStatus() && request.details ? request.details : ''
+        statusBarItem.text = `Jest: ${message} ${details}`
+        statusBarItem.tooltip = `Jest status of '${this.activeFolder}'`
         break
       case StatusType.summary:
-        this.summaryStatusItem.hide()
+        statusBarItem.text = `Jest-WS: ${message}`
         break
       default:
-        throw new Error(`unexpected statusType: ${statusType}`)
+        throw new Error(`unexpected statusType: ${statusBarItem.type}`)
     }
-  }
-  private render(queueItem: QueueItem, statusType: StatusType) {
-    clearInterval(this.getSpinner(statusType))
-
-    const message = this.getMessageByStatus(queueItem.status)
-    if (queueItem.status === 'running') {
-      this.setSpinner(statusType, () => this.render(queueItem, statusType))
-    }
-
-    switch (statusType) {
-      case StatusType.active:
-        const details = !this.isMultiroot() && queueItem.details ? queueItem.details : ''
-        this.activeStatusItem.text = `Jest: ${message} ${details}`
-        this.activeStatusItem.tooltip = `Jest status of '${this.activeFolder}'`
-        this.activeStatusItem.show()
-        break
-      case StatusType.summary:
-        this.summaryStatusItem.text = `Jest-WS: ${message}`
-        this.summaryStatusItem.show()
-        break
-      default:
-        throw new Error(`unexpected statusType: ${statusType}`)
-    }
+    statusBarItem.show()
   }
 
-  private getSpinner(type: StatusType) {
-    switch (type) {
-      case StatusType.active:
-        return this.statusBarSpinner.active
-      case StatusType.summary:
-        return this.statusBarSpinner.summary
-      default:
-        throw new Error(`unexpected statusType: ${type}`)
+  private updateSummaryOutput() {
+    if (!this.summaryOutput) {
+      this.summaryOutput = vscode.window.createOutputChannel('Jest (Workspace)')
     }
-  }
-  private setSpinner(type: StatusType, callback: () => void) {
-    const timer = setInterval(callback, 100)
-    switch (type) {
-      case StatusType.active:
-        this.statusBarSpinner.active = timer
-        break
-      case StatusType.summary:
-        this.statusBarSpinner.summary = timer
-        break
-      default:
-        throw new Error(`unexpected statusType: ${type}`)
-    }
-  }
+    this.summaryOutput.clear()
 
-  private updateWorkspaceOutput() {
-    if (!this.workspaceOutput) {
-      this.workspaceOutput = vscode.window.createOutputChannel('Jest (Workspace)')
-    }
-    this.workspaceOutput.clear()
-
-    const messages = this.queue.map(item => {
+    const messages = []
+    this.requests.forEach(item => {
       const details = item.details ? `: ${item.details}` : ''
-      return `${item.source}: ${item.status} ${details}`
+      messages.push(`${item.source}: ${item.status} ${details}`)
     })
-    this.workspaceOutput.append(messages.join('\n'))
+    this.summaryOutput.append(messages.join('\n'))
   }
 
-  private isMultiroot() {
-    return this.queue.length > 1
+  private needsSummaryStatus() {
+    return this.requests.size > 1
   }
 
   private getMessageByStatus(status: Status) {

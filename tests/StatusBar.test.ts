@@ -14,7 +14,7 @@ const statusBarItem = newStatusBarItem()
 jest.mock('elegant-spinner', () => () => jest.fn())
 
 import * as vscode from 'vscode'
-import { StatusBar } from '../src/StatusBar'
+import { StatusBar, StatusType } from '../src/StatusBar'
 
 const createStatusBarItem = jest.fn().mockReturnValue(statusBarItem)
 
@@ -32,6 +32,14 @@ describe('StatusBar', () => {
     renderSpy.mockClear()
     statusBarItem.text = ''
   })
+
+  const assertRender = (nth: number, request: any, type: StatusType) => {
+    const n = nth < 0 ? renderSpy.mock.calls.length - 1 : nth
+    const args = renderSpy.mock.calls[n]
+
+    expect(args[0]).toEqual(request)
+    expect((args[1] as any).type).toEqual(type)
+  }
 
   describe('register', () => {
     it('should add 2 commands', () => {
@@ -59,26 +67,12 @@ describe('StatusBar', () => {
       const helpers = statusBar.bind(source)
       ;['initial', 'running', 'success', 'failed', 'stopped'].forEach(status => {
         helpers[status]()
-        expect((statusBar as any).queue).toContainEqual({ source, status })
+        expect(updateStatusSpy).toHaveBeenCalledWith({ source, status })
       })
     })
   })
 
-  describe('enqueue()', () => {
-    it('should unshift queue with new item', () => {
-      statusBar.bind('testSource1').initial()
-      statusBar.bind('testSource2').initial()
-
-      expect((statusBar as any).queue[0]).toEqual({ source: 'testSource2', status: 'initial' })
-    })
-
-    it('should filter all previous items in queue with same source', () => {
-      statusBar.bind('testSource1').initial()
-      statusBar.bind('testSource1').running()
-
-      expect((statusBar as any).queue).not.toContainEqual({ source: 'testSource1', status: 'initial' })
-    })
-
+  describe('request()', () => {
     it('should update status', () => {
       statusBar.bind('testSource1').initial()
 
@@ -90,24 +84,18 @@ describe('StatusBar', () => {
     it('should pick most relevant status', () => {
       // first instance failed, display it as folder status
       statusBar.bind('testSource1').failed()
-      expect(renderSpy).toHaveBeenLastCalledWith({ source: 'testSource1', status: 'failed' }, 0)
+      assertRender(0, { source: 'testSource1', status: 'failed' }, StatusType.active)
 
       // then second is running, this status is more important then previous, will display as workspace status
       statusBar.bind('testSource2').running()
-      expect(renderSpy).toHaveBeenLastCalledWith({ source: 'testSource2', status: 'running' }, 1)
+      assertRender(1, { source: 'testSource2', status: 'running' }, StatusType.summary)
 
       // second is ok, display first instance fail as it is more important, will display as workspace status
       statusBar.bind('testSource2').success()
-      expect(renderSpy).toHaveBeenLastCalledWith({ source: 'testSource1', status: 'failed' }, 1)
+      assertRender(2, { source: 'testSource1', status: 'failed' }, StatusType.summary)
     })
   })
 
-  describe('render()', () => {
-    it('should update statusBarItem.text', () => {
-      ;(statusBar as any).render({ source: 'testSource1', status: 'initial' }, 0)
-      expect(statusBarItem.text).toBe('Jest: ... ')
-    })
-  })
   describe('multiroot status', () => {
     const statusBarItem2 = newStatusBarItem()
     const editor: any = {
@@ -174,9 +162,7 @@ describe('StatusBar', () => {
       statusBar.onDidChangeActiveTextEditor(editor)
 
       statusBar.bind('testSource1').running()
-      expect(renderSpy).toHaveBeenLastCalledWith({ source: 'testSource1', status: 'running' }, 0)
       statusBar.bind('testSource2').running()
-      expect(renderSpy).toHaveBeenLastCalledWith({ source: 'testSource2', status: 'running' }, 1)
 
       expect(renderSpy).toHaveBeenCalledTimes(2)
 
@@ -185,14 +171,12 @@ describe('StatusBar', () => {
       jest.advanceTimersByTime(150)
 
       expect(renderSpy).toHaveBeenCalledTimes(2)
+      let found = 0
       renderSpy.mock.calls.forEach((c: any) => {
         expect(c[0].status).toEqual('running')
-        if (c[0].source === 'testSource1') {
-          expect(c[1]).toEqual(0)
-        } else {
-          expect(c[1]).toEqual(1)
-        }
+        found |= (c[1] as any).type === StatusType.active ? 0x1 : 0x2
       })
+      expect(found).toEqual(3)
     })
   })
 })
