@@ -72,13 +72,13 @@ export class JestProcess {
     this.onExitCallback = callback
   }
 
-  public onJestEditorSupportEvent(event, callback) {
+  public onJestEditorSupportEvent(event: string, callback: (...args: any) => void) {
     this.jestSupportEvents.set(event, callback)
     this.runner.on(event, callback)
     return this
   }
 
-  public stop() {
+  public stop(): Promise<undefined> {
     this.stopRequested = true
     this.keepAliveCounter = 1
     this.jestSupportEvents.clear()
@@ -88,7 +88,7 @@ export class JestProcess {
     })
   }
 
-  public runJestWithUpdateForSnapshots(callback) {
+  public runJestWithUpdateForSnapshots(callback: Function) {
     this.runner.runJestWithUpdateForSnapshots(callback)
   }
 }
