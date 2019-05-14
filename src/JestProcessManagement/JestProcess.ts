@@ -4,6 +4,7 @@ import { WatchMode } from '../Jest'
 
 export class JestProcess {
   static readonly keepAliveLimit = 5
+  static readonly stopHangTimeout = 500
   private runner: Runner
   private projectWorkspace: ProjectWorkspace
   private onExitCallback: Function
@@ -79,12 +80,14 @@ export class JestProcess {
   }
 
   public stop(): Promise<void> {
-    this.stopRequested = true
-    this.keepAliveCounter = 1
-    this.jestSupportEvents.clear()
     return new Promise(resolve => {
+      this.stopRequested = true
+      this.keepAliveCounter = 1
       this.resolve = resolve
+      this.jestSupportEvents.clear()
       this.runner.closeProcess()
+
+      setTimeout(resolve, JestProcess.stopHangTimeout)
     })
   }
 
