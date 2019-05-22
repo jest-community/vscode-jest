@@ -417,7 +417,7 @@ export class JestExt {
 
   public runTest = async (workspaceFolder: vscode.WorkspaceFolder, fileName: string, identifier: string) => {
     const restart = this.jestProcessManager.numberOfProcesses > 0
-    await this.jestProcessManager.stopAll()
+    this.jestProcessManager.stopAll()
 
     this.debugConfigurationProvider.prepareTestRun(fileName, identifier)
 
