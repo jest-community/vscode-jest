@@ -39,6 +39,7 @@ export class JestProcess {
           this.onExitCallback(this)
           if (this.stopRequested) {
             this.resolve()
+            this.resolve = null
           }
         }
       }
@@ -87,7 +88,13 @@ export class JestProcess {
       this.jestSupportEvents.clear()
       this.runner.closeProcess()
 
-      setTimeout(resolve, JestProcess.stopHangTimeout)
+      // As a safety fallback to prevent the stop from hanging, resolve after a timeout
+      // TODO: If `closeProcess` can be guarenteed to always resolve, remove this
+      setTimeout(() => {
+        if (this.resolve === resolve) {
+          resolve()
+        }
+      }, JestProcess.stopHangTimeout)
     })
   }
 
