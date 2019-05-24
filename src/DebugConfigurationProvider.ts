@@ -60,6 +60,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
       cwd: '${workspaceFolder}',
       console: 'integratedTerminal',
       internalConsoleOptions: 'neverOpen',
+      disableOptimisticBPs: true,
     }
 
     const testCommand = folder && getTestCommand(folder.uri.fsPath)

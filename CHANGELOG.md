@@ -6,6 +6,7 @@ Bug-fixes within the same version aren't needed
 ## Master
 
 * replaced deprecated vscode.previewHtml command with webview - qalex
+* Add disableOptimisticBPs option to debug configuration. Fixes #400 - blikblum
 
 -->
 
