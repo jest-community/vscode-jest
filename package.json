@@ -189,7 +189,8 @@
               "args": ["--runInBand"],
               "cwd": "^\"\\${workspaceFolder}\"",
               "console": "integratedTerminal",
-              "internalConsoleOptions": "neverOpen"
+              "internalConsoleOptions": "neverOpen",
+              "disableOptimisticBPs": true
             }
           },
           {
@@ -205,7 +206,8 @@
               "cwd": "^\"\\${workspaceFolder}\"",
               "console": "integratedTerminal",
               "protocol": "inspector",
-              "internalConsoleOptions": "neverOpen"
+              "internalConsoleOptions": "neverOpen",
+              "disableOptimisticBPs": true
             }
           },
           {
@@ -220,7 +222,8 @@
               "cwd": "^\"\\${workspaceFolder}\"",
               "console": "integratedTerminal",
               "protocol": "inspector",
-              "internalConsoleOptions": "neverOpen"
+              "internalConsoleOptions": "neverOpen",
+              "disableOptimisticBPs": true
             }
           }
         ]
