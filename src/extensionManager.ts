@@ -22,7 +22,7 @@ export class ExtensionManager {
     this.commonPluginSettings = getExtensionWindowSettings()
 
     this.debugCodeLensProvider = new DebugCodeLensProvider(
-      uri => this.getByDocUri(uri),
+      this.getByDocUri,
       this.commonPluginSettings.debugCodeLens.enabled ? this.commonPluginSettings.debugCodeLens.showWhenTestStateIn : []
     )
     this.debugConfigurationProvider = new DebugConfigurationProvider()
@@ -96,7 +96,7 @@ export class ExtensionManager {
   public getByName = (workspaceFolderName: string) => {
     return this.extByWorkspace[workspaceFolderName]
   }
-  getByDocUri(uri: vscode.Uri) {
+  public getByDocUri = (uri: vscode.Uri) => {
     const workspace = vscode.workspace.getWorkspaceFolder(uri)
     if (workspace) {
       return this.getByName(workspace.name)

@@ -264,7 +264,7 @@
     "elegant-spinner": "^1.0.1",
     "istanbul-lib-coverage": "^1.1.1",
     "istanbul-lib-source-maps": "^1.1.0",
-    "jest-editor-support": "^25.0.1",
+    "jest-editor-support": "^26.0.0-beta",
     "jest-snapshot": "^24.7.0",
     "micromatch": "^2.3.11",
     "vscode": "^1.1.33"

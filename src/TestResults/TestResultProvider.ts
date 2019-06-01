@@ -42,7 +42,7 @@ export class TestResultProvider {
   }
 
   getResults(filePath: string): TestResult[] {
-    const maybeTemplateLiteral = (s: string) => s.indexOf('$') > -1
+    const maybeTemplateLiteral = (s: string) => s.indexOf('${') > -1
 
     const findAssertionByLocation = (testBlock: ItBlock, _assertions: TestAssertionStatus[]) => {
       return _assertions.find(

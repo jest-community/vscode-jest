@@ -47,17 +47,9 @@ describe('StatusBar', () => {
       expect(vscode.commands.registerCommand).toBeCalledTimes(2)
 
       const registerCommand = (vscode.commands.registerCommand as unknown) as jest.Mock<{}>
-      let found = 0
-      registerCommand.mock.calls.forEach(c => {
-        // tslint:disable no-bitwise
-        if (c[0].includes('show-summary-output')) {
-          found |= 0x1
-        }
-        if (c[0].includes('show-active-output')) {
-          found |= 0x2
-        }
-      })
-      expect(found).toEqual(3)
+      const calls = registerCommand.mock.calls
+      expect(calls.some(c => c[0].includes('show-summary-output'))).toBe(true)
+      expect(calls.some(c => c[0].includes('show-active-output'))).toBe(true)
     })
   })
 
@@ -171,12 +163,10 @@ describe('StatusBar', () => {
       jest.advanceTimersByTime(150)
 
       expect(renderSpy).toHaveBeenCalledTimes(2)
-      let found = 0
-      renderSpy.mock.calls.forEach((c: any) => {
-        expect(c[0].status).toEqual('running')
-        found |= (c[1] as any).type === StatusType.active ? 0x1 : 0x2
-      })
-      expect(found).toEqual(3)
+      const calls: any[][] = renderSpy.mock.calls
+      expect(calls.every(c => c[0].status === 'running')).toBe(true)
+      expect(calls.some(c => c[1].type === StatusType.active)).toBe(true)
+      expect(calls.some(c => c[1].type !== StatusType.active)).toBe(true)
     })
     it('when hiding status, spinner should be stopped too', () => {
       const { active, summary } = getStatusBarItems()
