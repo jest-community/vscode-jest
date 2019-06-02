@@ -40,6 +40,7 @@ const createStatusBarItem = (type: StatusType, priority: number): SpinnableStatu
     type,
     clearSpinner,
     startSpinner: (callback: () => void, interval = 100) => {
+      clearSpinner()
       spinner = setInterval(callback, interval)
     },
     show: () => item.show(),
