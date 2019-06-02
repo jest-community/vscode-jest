@@ -8,6 +8,8 @@ import { DebugConfigurationProvider } from './DebugConfigurationProvider'
 import { IPluginResourceSettings, IPluginWindowSettings } from './Settings'
 import { statusBar } from './StatusBar'
 
+export type GetJestExtByURI = (uri: vscode.Uri) => JestExt | undefined
+
 export class ExtensionManager {
   debugCodeLensProvider: DebugCodeLensProvider
   debugConfigurationProvider: DebugConfigurationProvider
@@ -96,7 +98,7 @@ export class ExtensionManager {
   public getByName = (workspaceFolderName: string) => {
     return this.extByWorkspace[workspaceFolderName]
   }
-  public getByDocUri = (uri: vscode.Uri) => {
+  public getByDocUri: GetJestExtByURI = (uri: vscode.Uri) => {
     const workspace = vscode.workspace.getWorkspaceFolder(uri)
     if (workspace) {
       return this.getByName(workspace.name)

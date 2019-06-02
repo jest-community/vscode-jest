@@ -1,19 +1,17 @@
 import * as vscode from 'vscode'
 
-import { JestExt } from '../JestExt'
-
-type GetJestExt = (uri: vscode.Uri) => JestExt | undefined
+import { GetJestExtByURI } from '../extensionManager'
 
 export class CoverageCodeLensProvider implements vscode.CodeLensProvider {
-  private getJestExt: GetJestExt
+  private getJestExt: GetJestExtByURI
 
-  constructor(getJestExt: GetJestExt) {
+  constructor(getJestExt: GetJestExtByURI) {
     this.getJestExt = getJestExt
   }
 
   public provideCodeLenses(document: vscode.TextDocument, _token: vscode.CancellationToken) {
     const ext = this.getJestExt(document.uri)
-    const coverage = ext ? ext.coverageMapProvider.getFileCoverage(document.fileName) : undefined
+    const coverage = ext && ext.coverageMapProvider.getFileCoverage(document.fileName)
     if (!coverage) {
       return
     }
