@@ -35,8 +35,10 @@ export class JestProcess {
         if (--this.keepAliveCounter > 0) {
           this.runner.removeAllListeners()
           this.startRunner()
-        } else if (this.onExitCallback) {
-          this.onExitCallback(this)
+        } else {
+          if (this.onExitCallback) {
+            this.onExitCallback(this)
+          }
           if (this.stopRequested) {
             this.resolve()
             this.resolve = null

@@ -18,6 +18,7 @@ describe('JestProcess', () => {
     runnerMockImplementation = {
       on: jest.fn(() => this),
       start: jest.fn(),
+      runJestWithUpdateForSnapshots: jest.fn(),
     }
   })
 
@@ -175,14 +176,19 @@ describe('JestProcess', () => {
     const closeProcessMock = jest.fn()
 
     beforeEach(() => {
+      eventEmitter = new EventEmitter()
       runnerMockImplementation = {
         ...runnerMockImplementation,
+        on: (event, callback) => {
+          eventEmitter.on(event, callback)
+        },
         closeProcess: closeProcessMock,
       }
       runnerMock.mockImplementation(() => runnerMockImplementation)
       jestProcess = new JestProcess({
         projectWorkspace: projectWorkspaceMock,
       })
+      jest.useFakeTimers()
     })
 
     it('calls closeProcess on the underlying runner from jest-editor-support', () => {
@@ -195,6 +201,20 @@ describe('JestProcess', () => {
       jestProcess.stop()
 
       expect(jestProcess.stopRequested).toBeTruthy()
+    })
+
+    it('resolves promise when recieving debuggerProcessExit event', async () => {
+      const promise = jestProcess.stop()
+      eventEmitter.emit('debuggerProcessExit')
+      await promise
+      expect(promise).resolves.toBeUndefined()
+    })
+
+    it('resolves promise by timeout', async () => {
+      const promise = jestProcess.stop()
+      jest.runAllTimers()
+      await promise
+      expect(promise).resolves.toBeUndefined()
     })
   })
 
@@ -434,6 +454,21 @@ describe('JestProcess', () => {
       eventEmitter.emit('debuggerProcessExit')
 
       expect(jestEvents.get('event').count).toBe(1)
+    })
+  })
+
+  describe('updating snapshots', () => {
+    beforeEach(() => {
+      runnerMock.mockImplementation(() => runnerMockImplementation)
+      jestProcess = new JestProcess({
+        projectWorkspace: projectWorkspaceMock,
+      })
+    })
+
+    it('calls runJestWithUpdateForSnapshots on the underlying runner from jest-editor-support', () => {
+      const callback = () => {}
+      jestProcess.runJestWithUpdateForSnapshots(callback)
+      expect(runnerMockImplementation.runJestWithUpdateForSnapshots).toHaveBeenCalledWith(callback)
     })
   })
 })
