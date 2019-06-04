@@ -81,7 +81,7 @@ export class JestProcessManager {
       watchMode = WatchMode.None,
       keepAlive = false,
     }: {
-      exitCallback?: Function
+      exitCallback?: (exitedJestProcess: JestProcess, jestProcessInWatchMode: JestProcess) => void
       watchMode?: WatchMode
       keepAlive?: boolean
     } = {}

@@ -9,7 +9,7 @@ export class JestProcess {
   private projectWorkspace: ProjectWorkspace
   private onExitCallback: Function
   private jestSupportEvents: Map<string, (...args: any[]) => void>
-  private resolve: Function
+  private resolve: Function | null
   private keepAliveCounter: number
   public keepAlive: boolean
   public stopRequested: boolean
@@ -17,6 +17,7 @@ export class JestProcess {
 
   private startRunner() {
     this.stopRequested = false
+    this.resolve = null
     let exited = false
 
     const options = {
@@ -39,7 +40,7 @@ export class JestProcess {
           if (this.onExitCallback) {
             this.onExitCallback(this)
           }
-          if (this.stopRequested) {
+          if (this.resolve) {
             this.resolve()
             this.resolve = null
           }
