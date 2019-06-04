@@ -9,15 +9,13 @@ export class JestProcess {
   private projectWorkspace: ProjectWorkspace
   private onExitCallback: Function
   private jestSupportEvents: Map<string, (...args: any[]) => void>
-  private resolve: Function | null
+  private stopResolveCallback: Function | null
   private keepAliveCounter: number
   public keepAlive: boolean
-  public stopRequested: boolean
   watchMode: WatchMode
 
   private startRunner() {
-    this.stopRequested = false
-    this.resolve = null
+    this.stopResolveCallback = null
     let exited = false
 
     const options = {
@@ -40,9 +38,9 @@ export class JestProcess {
           if (this.onExitCallback) {
             this.onExitCallback(this)
           }
-          if (this.resolve) {
-            this.resolve()
-            this.resolve = null
+          if (this.stopResolveCallback) {
+            this.stopResolveCallback()
+            this.stopResolveCallback = null
           }
         }
       }
@@ -85,16 +83,15 @@ export class JestProcess {
 
   public stop(): Promise<void> {
     return new Promise(resolve => {
-      this.stopRequested = true
       this.keepAliveCounter = 1
-      this.resolve = resolve
+      this.stopResolveCallback = resolve
       this.jestSupportEvents.clear()
       this.runner.closeProcess()
 
       // As a safety fallback to prevent the stop from hanging, resolve after a timeout
       // TODO: If `closeProcess` can be guarenteed to always resolve, remove this
       setTimeout(() => {
-        if (this.resolve === resolve) {
+        if (this.stopResolveCallback === resolve) {
           resolve()
         }
       }, JestProcess.stopHangTimeout)
@@ -103,5 +100,9 @@ export class JestProcess {
 
   public runJestWithUpdateForSnapshots(callback: () => void) {
     this.runner.runJestWithUpdateForSnapshots(callback)
+  }
+
+  public stopRequested(): boolean {
+    return Boolean(this.stopResolveCallback)
   }
 }

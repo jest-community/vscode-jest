@@ -38,7 +38,7 @@ describe('JestProcess', () => {
       jestProcess = new JestProcess({
         projectWorkspace: projectWorkspaceMock,
       })
-      expect(jestProcess.stopRequested).toBeFalsy()
+      expect(jestProcess.stopRequested()).toBeFalsy()
     })
 
     it('records watchMode in the watchMode property', () => {
@@ -119,7 +119,7 @@ describe('JestProcess', () => {
     it('does not set the stopRequested flag', () => {
       eventEmitter.emit('debuggerProcessExit')
 
-      expect(jestProcess.stopRequested).toBeFalsy()
+      expect(jestProcess.stopRequested()).toBeFalsy()
     })
 
     it('calls the callback with the argument being the instance of the jest process', () => {
@@ -200,7 +200,7 @@ describe('JestProcess', () => {
     it('sets the stopRequested flag', () => {
       jestProcess.stop()
 
-      expect(jestProcess.stopRequested).toBeTruthy()
+      expect(jestProcess.stopRequested()).toBeTruthy()
     })
 
     it('resolves promise when recieving debuggerProcessExit event', async () => {
