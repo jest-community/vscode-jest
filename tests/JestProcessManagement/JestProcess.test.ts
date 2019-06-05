@@ -216,6 +216,14 @@ describe('JestProcess', () => {
       await promise
       expect(promise).resolves.toBeUndefined()
     })
+
+    it('do not hangs on multiple stop() calls', async () => {
+      const promise = jestProcess.stop()
+      jestProcess.stop()
+      jest.runAllTimers()
+      await promise
+      expect(promise).resolves.toBeUndefined()
+    })
   })
 
   describe('when process is created with keepAlive set to true', () => {
