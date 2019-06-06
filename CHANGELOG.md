@@ -8,6 +8,9 @@ Bug-fixes within the same version aren't needed
 * replaced deprecated vscode.previewHtml command with webview - qalex
 
 -->
+## Master
+
+* Adds "Jest: Restart Runner" command - vdh
 
 ### 2.10.0
 
