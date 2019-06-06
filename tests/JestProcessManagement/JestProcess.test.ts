@@ -204,6 +204,7 @@ describe('JestProcess', () => {
     })
 
     it('resolves promise when recieving debuggerProcessExit event', async () => {
+      expect.assertions(1)
       const promise = jestProcess.stop()
       eventEmitter.emit('debuggerProcessExit')
       await promise
@@ -211,6 +212,7 @@ describe('JestProcess', () => {
     })
 
     it('resolves promise by timeout', async () => {
+      expect.assertions(1)
       const promise = jestProcess.stop()
       jest.runAllTimers()
       await promise
@@ -218,6 +220,7 @@ describe('JestProcess', () => {
     })
 
     it('do not hangs on multiple stop() calls', async () => {
+      expect.assertions(1)
       const promise = jestProcess.stop()
       jestProcess.stop()
       jest.runAllTimers()
