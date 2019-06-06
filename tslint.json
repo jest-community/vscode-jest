@@ -5,7 +5,6 @@
     "curly": true,
     "eofline": true,
     "no-duplicate-variable": true,
-    "no-unused-expression": true,
     "no-var-keyword": true,
     "prefer-const": true,
     "triple-equals": true,

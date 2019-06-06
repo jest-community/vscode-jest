@@ -48,6 +48,7 @@ const jestInstance = {
   runTest: jest.fn(),
   startProcess: jest.fn(),
   stopProcess: jest.fn(),
+  restartProcess: jest.fn(),
 }
 
 const extensionManager = {
@@ -119,48 +120,69 @@ describe('Extension', () => {
       expect(context.subscriptions.push.mock.calls[0]).toContain('onDidChangeWorkspaceFolders')
     })
 
-    it('should register a command to start extension', () => {
-      activate(context)
-      const callArg = context.subscriptions.push.mock.calls[0].find(args => {
-        return args[0] === `${extensionName}.start`
+    describe('should register a command', () => {
+      beforeEach(() => {
+        jestInstance.toggleCoverageOverlay.mockReset()
+        jestInstance.runTest.mockReset()
+        jestInstance.startProcess.mockReset()
+        jestInstance.stopProcess.mockReset()
+        jestInstance.restartProcess.mockReset()
       })
 
-      expect(callArg).toBeDefined()
-      callArg[1](jestInstance)
-      expect(jestInstance.startProcess).toHaveBeenCalled()
-    })
+      it('to start extension', () => {
+        activate(context)
+        const callArg = context.subscriptions.push.mock.calls[0].find(args => {
+          return args[0] === `${extensionName}.start`
+        })
 
-    it('should register a command to stop extension', () => {
-      activate(context)
-      const callArg = context.subscriptions.push.mock.calls[0].find(args => {
-        return args[0] === `${extensionName}.stop`
+        expect(callArg).toBeDefined()
+        callArg[1](jestInstance)
+        expect(jestInstance.startProcess).toHaveBeenCalled()
       })
 
-      expect(callArg).toBeDefined()
-      callArg[1](jestInstance)
-      expect(jestInstance.stopProcess).toHaveBeenCalled()
-    })
+      it('to stop extension', () => {
+        activate(context)
+        const callArg = context.subscriptions.push.mock.calls[0].find(args => {
+          return args[0] === `${extensionName}.stop`
+        })
 
-    it('should register a command to toggle the coverage overlay visibility', () => {
-      activate(context)
-      const callArg = context.subscriptions.push.mock.calls[0].find(args => {
-        return args[0] === `${extensionName}.coverage.toggle`
+        expect(callArg).toBeDefined()
+        callArg[1](jestInstance)
+        expect(jestInstance.stopProcess).toHaveBeenCalled()
       })
 
-      expect(callArg).toBeDefined()
-      callArg[1](jestInstance)
-      expect(jestInstance.toggleCoverageOverlay).toHaveBeenCalled()
-    })
+      it('to restart extension', () => {
+        activate(context)
+        const callArg = context.subscriptions.push.mock.calls[0].find(args => {
+          return args[0] === `${extensionName}.restart`
+        })
 
-    it('should register a command to run specific test', () => {
-      activate(context)
-      const callArg = context.subscriptions.push.mock.calls[0].find(args => {
-        return args[0] === `${extensionName}.run-test`
+        expect(callArg).toBeDefined()
+        callArg[1](jestInstance)
+        expect(jestInstance.restartProcess).toHaveBeenCalled()
       })
 
-      expect(callArg).toBeDefined()
-      callArg[1]({ uri: '' })
-      expect(jestInstance.runTest).toHaveBeenCalled()
+      it('to toggle the coverage overlay visibility', () => {
+        activate(context)
+        const callArg = context.subscriptions.push.mock.calls[0].find(args => {
+          return args[0] === `${extensionName}.coverage.toggle`
+        })
+
+        expect(callArg).toBeDefined()
+        callArg[1](jestInstance)
+        expect(jestInstance.toggleCoverageOverlay).toHaveBeenCalled()
+      })
+
+      it('to run specific test', () => {
+        activate(context)
+        const callArg = context.subscriptions.push.mock.calls[0].find(args => {
+          return args[0] === `${extensionName}.run-test`
+        })
+
+        expect(callArg).toBeDefined()
+        callArg[1]({ uri: '' })
+        expect(jestInstance.runTest).toHaveBeenCalled()
+      })
     })
 
     it('should register a DebugConfigurationProvider', () => {
