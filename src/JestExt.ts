@@ -194,7 +194,7 @@ export class JestExt {
           if (!jestProcess.stopRequested()) {
             let msg = `Starting Jest in Watch mode failed too many times and has been stopped.`
             if (this.instanceSettings.multirootEnv) {
-              msg += `\nConsider either add this workspace folder to disabledWorkspaceFolders setting or add needed folders to enabledWorkspaceFolders`
+              msg += `\nConsider add this workspace folder to disabledWorkspaceFolders`
             }
             this.channel.appendLine(`${msg}\n see troubleshooting: ${messaging.TroubleShootingURL}`)
             this.channel.show(true)
