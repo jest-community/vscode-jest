@@ -19,13 +19,14 @@ export function activate(context: vscode.ExtensionContext) {
   ]
 
   context.subscriptions.push(
-    ...statusBar.register(extensionManager.getByName),
+    ...statusBar.register((folder: string) => extensionManager.getByName(folder)),
 
     extensionManager.registerCommand(`${extensionName}.start`, extension => {
       vscode.window.showInformationMessage('Started Jest, press escape to hide this message.')
       extension.startProcess()
     }),
     extensionManager.registerCommand(`${extensionName}.stop`, extension => extension.stopProcess()),
+    extensionManager.registerCommand(`${extensionName}.restart`, extension => extension.restartProcess()),
     // dublicate of "show-output" maybe remove?
     extensionManager.registerCommand(`${extensionName}.show-channel`, extension => extension.channel.show()),
     extensionManager.registerCommand(`${extensionName}.coverage.toggle`, extension =>

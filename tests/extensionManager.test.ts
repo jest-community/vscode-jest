@@ -15,6 +15,7 @@ import * as vscode from 'vscode'
 import { ExtensionManager, getExtensionResourceSettings, getExtensionWindowSettings } from '../src/extensionManager'
 import { TestState } from '../src/DebugCodeLens'
 import { readFileSync } from 'fs'
+import { IPluginWindowSettings } from '../src/Settings'
 
 vscode.workspace.getConfiguration = jest.fn().mockImplementation(section => {
   const data = readFileSync('./package.json')
@@ -57,6 +58,51 @@ describe('InstancesManager', () => {
     })
   })
 
+  describe('applySettings()', () => {
+    it('should save settings to instance', () => {
+      const newSettings: IPluginWindowSettings = {
+        debugCodeLens: {
+          enabled: true,
+          showWhenTestStateIn: [],
+        },
+        disabledWorkspaceFolders: [],
+      }
+      extensionManager.applySettings(newSettings)
+      expect((extensionManager as any).commonPluginSettings).toEqual(newSettings)
+    })
+    it('should update debugCodeLensProvider instance', () => {
+      const newSettings: IPluginWindowSettings = {
+        debugCodeLens: {
+          enabled: true,
+          showWhenTestStateIn: [TestState.Fail],
+        },
+        disabledWorkspaceFolders: ['workspaceFolder1'],
+      }
+      extensionManager.applySettings(newSettings)
+      expect((extensionManager as any).debugCodeLensProvider.showWhenTestStateIn).toEqual(
+        newSettings.debugCodeLens.showWhenTestStateIn
+      )
+    })
+
+    it('should respect disabledWorkspaceFolders', () => {
+      registerInstance('workspaceFolder1')
+      registerInstance('workspaceFolder2')
+
+      expect(extensionManager.getByName('workspaceFolder1')).toBeDefined()
+      expect(extensionManager.getByName('workspaceFolder2')).toBeDefined()
+      const newSettings: IPluginWindowSettings = {
+        debugCodeLens: {
+          enabled: true,
+          showWhenTestStateIn: [],
+        },
+        disabledWorkspaceFolders: ['workspaceFolder1'],
+      }
+      extensionManager.applySettings(newSettings)
+      expect(extensionManager.getByName('workspaceFolder1')).toBeUndefined()
+      expect(extensionManager.getByName('workspaceFolder2')).toBeDefined()
+    })
+  })
+
   describe('register()', () => {
     it('should register an instance', () => {
       registerInstance('workspaceFolder1')
@@ -90,6 +136,19 @@ describe('InstancesManager', () => {
       expect(extensionManager.getByName('workspaceFolder1')).toBeUndefined()
       expect(extensionManager.getByName('workspaceFolder2')).toBeUndefined()
       expect(jestInstance.deactivate).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  describe('shouldStart()', () => {
+    it('should check whether instance already started', () => {
+      registerInstance('workspaceFolder1')
+      expect(extensionManager.shouldStart('workspaceFolder1')).toEqual(false)
+      expect(extensionManager.shouldStart('workspaceFolder2')).toEqual(true)
+    })
+    it('should check if folder is in disabledFolderNames', () => {
+      ;(extensionManager as any).commonPluginSettings.disabledWorkspaceFolders = ['workspaceFolder2']
+      expect(extensionManager.shouldStart('workspaceFolder2')).toEqual(false)
+      expect(extensionManager.shouldStart('workspaceFolder3')).toEqual(true)
     })
   })
 
@@ -299,7 +358,6 @@ describe('InstancesManager', () => {
           showWhenTestStateIn: [TestState.Fail, TestState.Unknown],
         },
         enableSnapshotPreviews: true,
-        enabledWorkspaceFolders: [],
         disabledWorkspaceFolders: [],
       })
     })

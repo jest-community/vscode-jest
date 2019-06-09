@@ -139,10 +139,10 @@ export class JestExt {
           this.assignHandlers(this.jestProcess)
         } else {
           this.status.stopped()
-          if (!jestProcess.stopRequested) {
+          if (!jestProcess.stopRequested()) {
             let msg = `Starting Jest in Watch mode failed too many times and has been stopped.`
             if (this.instanceSettings.multirootEnv) {
-              msg += `\nConsider either add this workspace folder to disabledWorkspaceFolders setting or add needed folders to enabledWorkspaceFolders`
+              msg += `\nConsider add this workspace folder to disabledWorkspaceFolders`
             }
             this.channel.appendLine(`${msg}\n see troubleshooting: ${messaging.TROUBLESHOOTING_URL}`)
             this.channel.show(true)
@@ -157,8 +157,15 @@ export class JestExt {
 
   public stopProcess() {
     this.channel.appendLine('Closing Jest')
-    this.jestProcessManager.stopAll()
-    this.status.stopped()
+    return this.jestProcessManager.stopAll().then(() => {
+      this.status.stopped()
+    })
+  }
+
+  public restartProcess() {
+    return this.stopProcess().then(() => {
+      this.startProcess()
+    })
   }
 
   public triggerUpdateActiveEditor(editor: vscode.TextEditor) {
@@ -193,11 +200,7 @@ export class JestExt {
 
     this.coverageOverlay.enabled = updatedSettings.showCoverageOnLoad
 
-    this.stopProcess()
-
-    setTimeout(() => {
-      this.startProcess()
-    }, 500)
+    this.restartProcess()
   }
 
   updateDecorators(testResults: SortedTestResults, editor: vscode.TextEditor) {

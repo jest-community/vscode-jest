@@ -6,6 +6,12 @@ Bug-fixes within the same version aren't needed
 ## Master
 
 * support template-literal-string test names by matching with location info from jest result - connectdotz
+* fix race condition in multi-root projects - connectdotz
+* add folder status bar support for multi-root projects - connectdotz
+* paying down some tech debt, see PR#447 for detail.
+
+
+* Adds "Jest: Restart Runner" command - vdh
 
 * replaced deprecated vscode.previewHtml command with webview - qalex
 

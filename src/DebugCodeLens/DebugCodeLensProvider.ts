@@ -6,13 +6,14 @@ import { DebugCodeLens } from './DebugCodeLens'
 import { TestReconciliationState } from '../TestResults'
 import { TestState, TestStateByTestReconciliationState } from './TestState'
 import { GetJestExtByURI } from '../extensionManager'
+import { JestExt } from '../JestExt'
 
 export class DebugCodeLensProvider implements vscode.CodeLensProvider {
   onDidChange: vscode.EventEmitter<void>
   private _showWhenTestStateIn: TestState[]
   private getJestExt: GetJestExtByURI
 
-  constructor(getJestExt: GetJestExtByURI, showWhenTestStateIn: TestState[]) {
+  constructor(getJestExt: (uri: vscode.Uri) => JestExt, showWhenTestStateIn: TestState[] = []) {
     this.getJestExt = getJestExt
     this._showWhenTestStateIn = showWhenTestStateIn
     this.onDidChange = new vscode.EventEmitter()

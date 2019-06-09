@@ -137,13 +137,6 @@
           "default": false,
           "scope": "resource"
         },
-        "jest.enabledWorkspaceFolders": {
-          "description": "Enabled workspace folders names in multiroot environment",
-          "type": "array",
-          "items": "string",
-          "default": [],
-          "scope": "window"
-        },
         "jest.disabledWorkspaceFolders": {
           "description": "Disabled workspace folders names in multiroot environment",
           "type": "array",
@@ -161,6 +154,10 @@
       {
         "command": "io.orta.jest.stop",
         "title": "Jest: Stop Runner"
+      },
+      {
+        "command": "io.orta.jest.restart",
+        "title": "Jest: Restart Runner"
       },
       {
         "command": "io.orta.jest.show-channel",

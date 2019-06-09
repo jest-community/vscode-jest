@@ -2,6 +2,8 @@ import { ProjectWorkspace } from 'jest-editor-support'
 import { JestProcess } from './JestProcess'
 import { WatchMode } from '../Jest'
 
+export type ExitCallback = (exitedJestProcess: JestProcess, jestProcessInWatchMode?: JestProcess) => void
+
 export class JestProcessManager {
   private projectWorkspace: ProjectWorkspace
   private jestProcesses: JestProcess[] = []
@@ -23,7 +25,7 @@ export class JestProcessManager {
     watchMode = WatchMode.None,
     keepAlive = false,
   }: {
-    exitCallback?: (...args: any) => void
+    exitCallback?: ExitCallback
     watchMode?: WatchMode
     keepAlive?: boolean
   } = {}): JestProcess {
@@ -49,12 +51,10 @@ export class JestProcessManager {
   public stopAll() {
     const processesToRemove = [...this.jestProcesses]
     this.jestProcesses = []
-    processesToRemove.forEach(jestProcess => {
-      jestProcess.stop()
-    })
+    return Promise.all(processesToRemove.map(jestProcess => jestProcess.stop()))
   }
 
-  public stopJestProcess(jestProcess) {
+  public stopJestProcess(jestProcess: JestProcess) {
     this.removeJestProcessReference(jestProcess)
     return jestProcess.stop()
   }
@@ -62,15 +62,22 @@ export class JestProcessManager {
   public get numberOfProcesses() {
     return this.jestProcesses.length
   }
-
-  private removeJestProcessReference(jestProcess) {
+  private removeJestProcessReference(jestProcess: JestProcess) {
     const index = this.jestProcesses.indexOf(jestProcess)
     if (index !== -1) {
       this.jestProcesses.splice(index, 1)
     }
   }
 
-  private runJest({ watchMode, keepAlive, exitCallback }) {
+  private runJest({
+    watchMode,
+    keepAlive,
+    exitCallback,
+  }: {
+    watchMode: WatchMode
+    keepAlive: boolean
+    exitCallback: ExitCallback
+  }) {
     const jestProcess = new JestProcess({
       projectWorkspace: this.projectWorkspace,
       watchMode,
@@ -83,11 +90,19 @@ export class JestProcessManager {
     return jestProcess
   }
 
-  private run({ watchMode, keepAlive, exitCallback }) {
+  private run({
+    watchMode,
+    keepAlive,
+    exitCallback,
+  }: {
+    watchMode: WatchMode
+    keepAlive: boolean
+    exitCallback: ExitCallback
+  }) {
     return this.runJest({
       watchMode,
       keepAlive,
-      exitCallback: exitedJestProcess => {
+      exitCallback: (exitedJestProcess: JestProcess) => {
         exitCallback(exitedJestProcess)
         if (!exitedJestProcess.keepAlive) {
           this.removeJestProcessReference(exitedJestProcess)
@@ -96,7 +111,7 @@ export class JestProcessManager {
     })
   }
 
-  private runAllTestsFirst(onExit) {
+  private runAllTestsFirst(onExit: ExitCallback) {
     return this.runJest({
       watchMode: WatchMode.None,
       keepAlive: false,
