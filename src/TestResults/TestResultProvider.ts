@@ -99,7 +99,7 @@ export class TestResultProvider {
 
       if (!assertion && this.verbose) {
         // tslint:disable-next-line no-console
-        console.log(`failed to find assertion for ite block:`, test)
+        console.log(`failed to find assertion for it block=`, test, `in assertions=`, assertions)
       }
 
       // Note the shift from one-based to zero-based line number and columns
