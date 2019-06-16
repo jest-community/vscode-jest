@@ -50,7 +50,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     // https://github.com/Microsoft/vscode-recipes/tree/master/debugging-jest-tests#configure-launchjson-file-for-your-test-framework
 
     // create-react-app config according to:
-    // https://github.com/facebook/create-react-app/blob/master/packages/react-scripts/template/README.md#debugging-tests-in-visual-studio-code
+    // https://facebook.github.io/create-react-app/docs/debugging-tests#debugging-tests-in-visual-studio-code
 
     // tslint:disable no-invalid-template-strings
     const debugConfiguration: vscode.DebugConfiguration = {
@@ -61,6 +61,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
       cwd: '${workspaceFolder}',
       console: 'integratedTerminal',
       internalConsoleOptions: 'neverOpen',
+      disableOptimisticBPs: true,
     }
 
     const testCommand = folder && getTestCommand(folder.uri.fsPath)

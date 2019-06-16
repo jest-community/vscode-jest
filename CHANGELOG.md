@@ -10,6 +10,7 @@ Bug-fixes within the same version aren't needed
 * add folder status bar support for multi-root projects - connectdotz
 * paying down some tech debt, see PR#447 for detail.
 
+* Add disableOptimisticBPs option to debug configuration. Fixes #400 - blikblum
 
 * Adds "Jest: Restart Runner" command - vdh
 
