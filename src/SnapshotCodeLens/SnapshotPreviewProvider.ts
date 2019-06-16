@@ -10,6 +10,7 @@ export function registerSnapshotPreview() {
 
   const escaped = (snapshot: string) => {
     if (snapshot) {
+      // tslint:disable-next-line no-shadowed-variable
       const escaped = snapshot
         .replace(/&/g, '&amp;')
         .replace(/"/g, '&quot;')

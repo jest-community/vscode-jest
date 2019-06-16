@@ -4,8 +4,8 @@ const updateFileWithJestStatus = jest.fn()
 const assertionsForTestFile = jest.fn()
 jest.mock('jest-editor-support', () => {
   class TestReconciler {
-    assertionsForTestFile: Function
-    updateFileWithJestStatus: Function
+    assertionsForTestFile: jest.Mock
+    updateFileWithJestStatus: jest.Mock
 
     constructor() {
       this.assertionsForTestFile = assertionsForTestFile
@@ -62,7 +62,7 @@ describe('TestResultProvider', () => {
 
     it('should return the cached results if possible', () => {
       const sut = new TestResultProvider()
-      ;(parseTest as jest.Mock<{}>).mockReturnValueOnce({
+      ;((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
         itBlocks: [],
       })
       assertionsForTestFile.mockReturnValueOnce([])
@@ -73,7 +73,7 @@ describe('TestResultProvider', () => {
 
     it('should re-index the line and column number to zero-based', () => {
       const sut = new TestResultProvider()
-      ;(parseTest as jest.Mock<{}>).mockReturnValueOnce({
+      ;((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
         itBlocks: [testBlock],
       })
       assertionsForTestFile.mockReturnValueOnce([assertion])
@@ -93,10 +93,10 @@ describe('TestResultProvider', () => {
 
     it('should look up the test result by line number only if the name matches', () => {
       const sut = new TestResultProvider()
-      ;(parseTest as jest.Mock<{}>).mockReturnValueOnce({
+      ;((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
         itBlocks: [testBlock],
       })
-      const assertionC = Object.assign({}, assertion)
+      const assertionC = { ...assertion }
       assertionC.title = 'xxx'
       assertionsForTestFile.mockReturnValueOnce([assertionC])
       const actual = sut.getResults(filePath)
@@ -106,10 +106,10 @@ describe('TestResultProvider', () => {
 
     it('should look up the test result by test name', () => {
       const sut = new TestResultProvider()
-      ;(parseTest as jest.Mock<{}>).mockReturnValueOnce({
+      ;((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
         itBlocks: [testBlock],
       })
-      const assertionC = Object.assign({}, assertion)
+      const assertionC = { ...assertion }
       assertionC.line = undefined
       assertionsForTestFile.mockReturnValueOnce([assertionC])
       const actual = sut.getResults(filePath)
@@ -132,7 +132,7 @@ describe('TestResultProvider', () => {
 
     it('should use default values for unmatched assertions', () => {
       const sut = new TestResultProvider()
-      ;(parseTest as jest.Mock<{}>).mockReturnValueOnce({
+      ;((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
         itBlocks: [testBlock],
       })
       assertionsForTestFile.mockReturnValueOnce([])
@@ -143,9 +143,9 @@ describe('TestResultProvider', () => {
       expect(actual[0].shortMessage).toBeUndefined()
       expect(actual[0].terseMessage).toBeUndefined()
     })
-    it('should handle duplicate test names', () => {
-      const sut = new TestResultProvider()
-      const testBlock2 = Object.assign({}, testBlock, {
+    describe('duplicate test names', () => {
+      const testBlock2 = {
+        ...testBlock,
         start: {
           line: 5,
           column: 3,
@@ -154,22 +154,82 @@ describe('TestResultProvider', () => {
           line: 7,
           column: 5,
         },
-      })
-      ;(parseTest as jest.Mock<{}>).mockReturnValueOnce({
-        itBlocks: [testBlock, testBlock2],
-      })
-      assertionsForTestFile.mockReturnValueOnce([
-        assertion,
-        {
-          title: testBlock.name,
-          status: TestReconciliationState.KnownSuccess,
+      }
+      const testBlock3 = {
+        ...testBlock,
+        start: {
+          line: 20,
+          column: 3,
         },
-      ])
-      const actual = sut.getResults(filePath)
+        end: {
+          line: 25,
+          column: 5,
+        },
+      }
+      beforeEach(() => {})
+      it('can resolve by matching error line', () => {
+        ;((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
+          itBlocks: [testBlock, testBlock2],
+        })
 
-      expect(actual).toHaveLength(2)
-      expect(actual[0].status).toBe(TestReconciliationState.KnownFail)
-      expect(actual[1].status).toBe(TestReconciliationState.KnownSuccess)
+        const sut = new TestResultProvider()
+        assertionsForTestFile.mockReturnValueOnce([
+          assertion,
+          {
+            title: testBlock.name,
+            status: TestReconciliationState.KnownSuccess,
+          },
+        ])
+        const actual = sut.getResults(filePath)
+
+        expect(actual).toHaveLength(2)
+        expect(actual[0].status).toBe(TestReconciliationState.KnownFail)
+        expect(actual[1].status).toBe(TestReconciliationState.KnownSuccess)
+      })
+      it('can resolve even if these tests pass, i.e. no line number', () => {
+        ;((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
+          itBlocks: [testBlock2, testBlock3],
+        })
+
+        const sut = new TestResultProvider()
+        assertionsForTestFile.mockReturnValueOnce([
+          {
+            title: testBlock.name,
+            status: TestReconciliationState.KnownSuccess,
+          },
+          {
+            title: testBlock.name,
+            status: TestReconciliationState.KnownSuccess,
+            location: { colum: 3, line: 22 },
+          },
+        ])
+        const actual = sut.getResults(filePath)
+
+        expect(actual).toHaveLength(2)
+        expect(actual.every(r => r.status === TestReconciliationState.KnownSuccess)).toEqual(true)
+      })
+      it('default to unknown if failed to match by line or location', () => {
+        ;((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
+          itBlocks: [testBlock2, testBlock3],
+        })
+
+        const sut = new TestResultProvider()
+        assertionsForTestFile.mockReturnValueOnce([
+          {
+            title: testBlock.name,
+            status: TestReconciliationState.KnownSuccess,
+          },
+          {
+            title: testBlock.name,
+            status: TestReconciliationState.KnownSuccess,
+          },
+        ])
+        const actual = sut.getResults(filePath)
+
+        expect(actual).toHaveLength(2)
+        expect(actual.every(r => r.status === TestReconciliationState.Unknown)).toEqual(true)
+        expect(actual.every(r => r.shortMessage && r.shortMessage.includes('duplicate test names'))).toEqual(true)
+      })
     })
     it('should only mark error line number if it is within the right itBlock', () => {
       const sut = new TestResultProvider()
@@ -184,7 +244,7 @@ describe('TestResultProvider', () => {
           column: 5,
         },
       }
-      ;(parseTest as jest.Mock<{}>).mockReturnValueOnce({
+      ;((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
         itBlocks: [testBlock, testBlock2],
       })
       assertionsForTestFile.mockReturnValueOnce([
@@ -197,14 +257,161 @@ describe('TestResultProvider', () => {
       const actual = sut.getResults(filePath)
 
       expect(actual).toHaveLength(2)
-      let r = actual[0]
-      expect(r.name).toBe(testBlock.name)
-      expect(r.status).toBe(TestReconciliationState.Unknown)
+      expect(actual.some(a => a.name === testBlock.name && a.status === TestReconciliationState.Unknown)).toEqual(true)
+      expect(
+        actual.some(
+          a =>
+            a.name === testBlock2.name &&
+            a.status === TestReconciliationState.KnownSuccess &&
+            a.lineNumberOfError === testBlock2.end.line - 1
+        )
+      ).toEqual(true)
+    })
 
-      r = actual[1]
-      expect(r.name).toBe(testBlock2.name)
-      expect(r.status).toBe(TestReconciliationState.KnownSuccess)
-      expect(r.lineNumberOfError).toBe(testBlock2.end.line - 1)
+    describe('template literal handling', () => {
+      const testBlock2 = {
+        ...testBlock,
+        // tslint:disable-next-line no-invalid-template-strings
+        name: 'template literal ${num}',
+        start: {
+          line: 5,
+          column: 3,
+        },
+        end: {
+          line: 7,
+          column: 5,
+        },
+      }
+      const useTests = (itBlocks = [testBlock, testBlock2]) => {
+        ;((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
+          itBlocks,
+        })
+      }
+      beforeEach(() => {
+        jest.resetAllMocks()
+      })
+      it(`find test by assertion error line`, () => {
+        const sut = new TestResultProvider()
+
+        useTests()
+        assertionsForTestFile.mockReturnValueOnce([
+          {
+            title: 'template literal 2',
+            status: TestReconciliationState.KnownFail,
+            line: 6,
+          },
+        ])
+        const actual = sut.getResults(filePath)
+
+        expect(actual).toHaveLength(2)
+        expect(actual.some(a => a.status === TestReconciliationState.Unknown && a.name === testBlock.name)).toEqual(
+          true
+        )
+        expect(actual.some(a => a.status === TestReconciliationState.KnownFail && a.name === testBlock2.name)).toEqual(
+          true
+        )
+      })
+      it(`find test by assertion location`, () => {
+        const sut = new TestResultProvider()
+
+        useTests()
+        assertionsForTestFile.mockReturnValueOnce([
+          {
+            title: 'template literal 2',
+            status: TestReconciliationState.KnownSuccess,
+            location: { colum: 3, line: 6 },
+          },
+        ])
+        const actual = sut.getResults(filePath)
+
+        expect(actual).toHaveLength(2)
+        expect(actual.some(a => a.status === TestReconciliationState.Unknown && a.name === testBlock.name)).toEqual(
+          true
+        )
+        expect(
+          actual.some(a => a.status === TestReconciliationState.KnownSuccess && a.name === testBlock2.name)
+        ).toEqual(true)
+      })
+      it(`find test by partial name match`, () => {
+        const sut = new TestResultProvider()
+        useTests()
+
+        assertionsForTestFile.mockReturnValueOnce([
+          {
+            title: 'template literals ok',
+            status: TestReconciliationState.KnownFail,
+          },
+          {
+            title: 'template literal 2',
+            status: TestReconciliationState.KnownSuccess,
+          },
+        ])
+        const actual = sut.getResults(filePath)
+        expect(actual).toHaveLength(2)
+        expect(actual.some(a => a.status === TestReconciliationState.Unknown && a.name === testBlock.name)).toEqual(
+          true
+        )
+        expect(
+          actual.some(a => a.status === TestReconciliationState.KnownSuccess && a.name === testBlock2.name)
+        ).toEqual(true)
+      })
+      it(`multiple template literals`, () => {
+        const sut = new TestResultProvider()
+        // tslint:disable-next-line: no-invalid-template-strings
+        const testBlock3 = { ...testBlock2, name: 'template literal ${i}, ${k}: {something}' }
+        useTests([testBlock3, testBlock2])
+        assertionsForTestFile.mockReturnValueOnce([
+          {
+            title: 'template literal I got something like this',
+            status: TestReconciliationState.KnownFail,
+          },
+          {
+            title: 'template literal 1, 2: {something}',
+            status: TestReconciliationState.KnownSuccess,
+          },
+        ])
+        const actual = sut.getResults(filePath)
+        expect(actual).toHaveLength(2)
+        expect(
+          actual.some(a => a.status === TestReconciliationState.KnownSuccess && a.name === testBlock3.name)
+        ).toEqual(true)
+        expect(actual.some(a => a.status === TestReconciliationState.KnownFail && a.name === testBlock2.name)).toEqual(
+          true
+        )
+      })
+
+      describe('when match failed', () => {
+        const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {})
+        beforeEach(() => {
+          jest.resetAllMocks()
+          useTests([testBlock2])
+          assertionsForTestFile.mockReturnValueOnce([
+            {
+              title: 'template literals 2',
+              status: TestReconciliationState.KnownSuccess,
+            },
+          ])
+        })
+
+        it(`will report error`, () => {
+          const sut = new TestResultProvider()
+          const actual = sut.getResults(filePath)
+
+          expect(actual).toHaveLength(1)
+          expect(actual[0].status).toBe(TestReconciliationState.Unknown)
+          expect(actual[0].shortMessage).not.toBeUndefined()
+          expect(consoleSpy).not.toHaveBeenCalled()
+        })
+        it('will also output to console in verbose mode', () => {
+          const sut = new TestResultProvider(true)
+          const actual = sut.getResults(filePath)
+
+          expect(actual).toHaveLength(1)
+          expect(actual[0].status).toBe(TestReconciliationState.Unknown)
+          expect(actual[0].shortMessage).not.toBeUndefined()
+          expect(consoleSpy).toHaveBeenCalled()
+        })
+      })
     })
   })
 

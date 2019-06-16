@@ -5,16 +5,20 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 
-* replaced deprecated vscode.previewHtml command with webview - qalex
+* support template-literal-string test names by matching with location info from jest result - connectdotz
+* fix race condition in multi-root projects - connectdotz
+* add folder status bar support for multi-root projects - connectdotz
+* paying down some tech debt, see PR#447 for detail.
 
--->
-## Master
 
 * Adds "Jest: Restart Runner" command - vdh
 
-### 2.10.0
+* replaced deprecated vscode.previewHtml command with webview - qalex
 
 * Support multi-root workspaces - escaton
+  * multiroot workspace statusBar displays both active folder and workspace summary info - connectdotz
+
+-->
 
 ### 2.9.1
 

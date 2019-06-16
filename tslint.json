@@ -1,5 +1,5 @@
 {
-  "extends": ["tslint-config-prettier"],
+  "extends": ["tslint:latest", "tslint-config-prettier"],
   "rules": {
     "class-name": true,
     "curly": true,
@@ -8,6 +8,13 @@
     "no-var-keyword": true,
     "prefer-const": true,
     "triple-equals": true,
-    "no-unused-expression": [true, "allow-new"]
+    "no-unused-expression": [true, "allow-new"],
+    "variable-name": [true, "ban-keywords", "check-format", "allow-leading-underscore"],
+    "object-literal-sort-keys": false,
+    "ordered-imports": false,
+    "member-access": false,
+    "interface-name": false,
+    "no-empty": [true, "allow-empty-catch", "allow-empty-functions"],
+    "no-this-assignment": [true, { "allow-destructuring": true }]
   }
 }

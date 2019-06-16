@@ -24,11 +24,13 @@ describe('JestProcessManager', () => {
 
   describe('when creating', () => {
     it('accepts Project Workspace as the argument', () => {
+      // tslint:disable-next-line no-shadowed-variable
       const jestProcessManager = new JestProcessManager({ projectWorkspace: projectWorkspaceMock })
       expect(jestProcessManager).not.toBe(null)
     })
 
     it('accepts runAllTestsFirstInWatchMode argument (true if not provided)', () => {
+      // tslint:disable-next-line no-shadowed-variable
       const jestProcessManager = new JestProcessManager({
         projectWorkspace: projectWorkspaceMock,
         runAllTestsFirstInWatchMode: false,

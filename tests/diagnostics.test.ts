@@ -6,17 +6,18 @@ import { TestResult, TestReconciliationState } from '../src/TestResults'
 
 class MockDiagnosticCollection implements vscode.DiagnosticCollection {
   name = 'test'
-  set = jest.fn();
+  set = jest.fn()
   delete = jest.fn()
   clear = jest.fn()
   forEach = jest.fn()
-  get = jest.fn();
+  get = jest.fn()
   has = jest.fn()
   dispose = jest.fn()
 }
 
 vscode.window.visibleTextEditors = []
 
+// tslint:disable no-console
 describe('test diagnostics', () => {
   describe('resetDiagnostics', () => {
     it('will clear given diagnostics', () => {
@@ -49,7 +50,7 @@ describe('test diagnostics', () => {
       assertions: TestAssertionStatus[],
       status: TestReconcilationState = 'KnownFail'
     ): TestFileAssertionStatus {
-      return { file: file, message: `${file}:${status}`, status, assertions: assertions }
+      return { file, message: `${file}:${status}`, status, assertions }
     }
 
     function validateDiagnostic(args: any[], message: string, severity: vscode.DiagnosticSeverity) {
@@ -100,12 +101,12 @@ describe('test diagnostics', () => {
       expect(vscode.Range).toHaveBeenCalledTimes(failedAssertionCount + failedTestWithoutAssertionCount)
       expect(vscode.Diagnostic).toHaveBeenCalledTimes(failedAssertionCount + failedTestWithoutAssertionCount)
 
-      //verify correctly reported error content
+      // verify correctly reported error content
       const setCalls = mockDiagnostics.set.mock.calls
       const rangeCalls = (vscode.Range as jest.Mock<any>).mock.calls
       const diagCalls = (vscode.Diagnostic as jest.Mock<any>).mock.calls
 
-      //validate the diagnosis produced
+      // validate the diagnosis produced
       let assertion = 0
       for (let i = 0; i < allTests.length; i++) {
         const f = allTests[i]
@@ -176,7 +177,7 @@ describe('test diagnostics', () => {
     beforeEach(() => {
       jest.resetAllMocks()
 
-      mockLineAt.mockReturnValueOnce({ range: range })
+      mockLineAt.mockReturnValueOnce({ range })
       mockEditor = {
         document: {
           uri: { fsPath: `file://a/b/c.ts` },

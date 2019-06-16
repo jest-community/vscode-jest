@@ -56,8 +56,7 @@
           "scope": "resource"
         },
         "jest.pathToJest": {
-          "description":
-            "The path to the Jest binary, or an npm command to run tests suffixed with `--` e.g. `node_modules/.bin/jest` or `npm test --`",
+          "description": "The path to the Jest binary, or an npm command to run tests suffixed with `--` e.g. `node_modules/.bin/jest` or `npm test --`",
           "type": "string",
           "default": null,
           "scope": "resource"
@@ -191,8 +190,7 @@
           },
           {
             "label": "Jest: create-react-app",
-            "description":
-              "Running jest within apps bootstrapped by create-react-app (and similar); you may have to edit `runtimeExecutable`",
+            "description": "Running jest within apps bootstrapped by create-react-app (and similar); you may have to edit `runtimeExecutable`",
             "body": {
               "type": "node",
               "name": "vscode-jest-tests",
@@ -225,8 +223,8 @@
     ]
   },
   "lint-staged": {
-    "*.json": ["yarn prettier-write --", "git add"],
-    "*.ts": ["yarn prettier-write --", "git add"]
+    "*.json": ["yarn prettier-write --parser json", "git add"],
+    "*.ts": ["yarn prettier-write --parser typescript", "git add"]
   },
   "scripts": {
     "precommit": "lint-staged",
@@ -234,39 +232,39 @@
     "clean-out": "rimraf ./out",
     "vscode:prepublish": "yarn clean-out && tsc -p ./tsconfig.publish.json",
     "compile": "tsc -watch -p ./tsconfig.publish.json",
-    "lint": "node scripts/lint",
+    "lint": "tslint -c tslint.json 'src/**/*.ts' 'tests/**/*.ts'",
     "postinstall": "node ./node_modules/vscode/bin/install",
-    "test": "tsc && jest --config jest.json",
+    "test": "tsc && jest",
     "watch-test": "yarn test -- --watch",
     "prettier": "prettier",
-    "prettier-write":
-      "yarn prettier -- --parser typescript --no-semi --single-quote --trailing-comma es5 --write --print-width 120",
+    "prettier-write": "yarn prettier --parser typescript --no-semi --single-quote --trailing-comma es5 --write --print-width 120",
     "prettier-project": "yarn prettier-write -- '?(__mocks__|src|tests)/**/*.ts'"
   },
   "devDependencies": {
-    "@types/jest": "^21.1.1",
+    "@types/jest": "^24.0.11",
     "@types/node": "^8.0.31",
     "coveralls": "^3.0.0",
     "danger": "^2",
     "glob": "^7.1.1",
     "husky": "^0.14.3",
-    "jest": "^23.3.0",
+    "jest": "^24.7.0",
     "lint-staged": "^4.2.3",
-    "prettier": "1.7.3",
+    "prettier": "^1.17.0",
     "rimraf": "^2.6.2",
-    "tslint": "^5.7.0",
-    "tslint-config-prettier": "^1.5.0",
-    "typescript": "^2.8.0",
-    "vscode": "^1.1.6"
+    "ts-jest": "^24.0.2",
+    "tslint": "^5.16.0",
+    "tslint-config-prettier": "^1.18.0",
+    "typescript": "^3.4.3",
+    "typescript-tslint-plugin": "^0.3.1"
   },
   "dependencies": {
     "elegant-spinner": "^1.0.1",
     "istanbul-lib-coverage": "^1.1.1",
     "istanbul-lib-source-maps": "^1.1.0",
-    "jest-editor-support": "23.3.0",
-    "jest-snapshot": "^23.0.1",
-    "jest-test-typescript-parser": "^23.3.0",
-    "micromatch": "^2.3.11"
+    "jest-editor-support": "^26.0.0-beta",
+    "jest-snapshot": "^24.7.0",
+    "micromatch": "^2.3.11",
+    "vscode": "^1.1.33"
   },
   "__metadata": {
     "id": "7997a8ae-1fae-4022-b834-12f6318aeffd",

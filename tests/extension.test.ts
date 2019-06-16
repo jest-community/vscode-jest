@@ -1,35 +1,12 @@
 jest.unmock('../src/extension')
 
-jest.mock('vscode', () => ({
-  commands: {
-    registerCommand: jest.fn().mockImplementation((...args) => args),
-  },
-  window: {
-    showInformationMessage: jest.fn(),
-    onDidChangeActiveTextEditor: jest.fn().mockReturnValue('onDidChangeActiveTextEditor'),
-  },
-  workspace: {
-    getWorkspaceFolder: jest.fn().mockReturnValue({ name: 'workspaceFolder1' }),
-    onDidChangeConfiguration: jest.fn().mockReturnValue('onDidChangeConfiguration'),
-    onDidCloseTextDocument: jest.fn(),
-    onDidChangeTextDocument: jest.fn().mockReturnValue('onDidChangeTextDocument'),
-    onDidChangeWorkspaceFolders: jest.fn().mockReturnValue('onDidChangeWorkspaceFolders'),
-  },
-  languages: {
-    registerCodeLensProvider: jest.fn(),
-  },
-  debug: {
-    registerDebugConfigurationProvider: jest.fn(),
-  },
-}))
-
 const extensionName = 'jest'
 jest.mock('../src/appGlobals', () => ({
   extensionName,
 }))
 
 const statusBar = {
-  registerCommand: jest.fn(),
+  register: jest.fn(() => []),
 }
 jest.mock('../src/StatusBar', () => ({ statusBar }))
 
@@ -59,6 +36,7 @@ const extensionManager = {
   registerCommand: jest.fn().mockImplementation((...args) => args),
 }
 
+// tslint:disable-next-line: variable-name
 const ExtensionManager = jest.fn().mockImplementation(() => extensionManager)
 
 jest.mock('../src/extensionManager', () => ({
@@ -66,8 +44,15 @@ jest.mock('../src/extensionManager', () => ({
   getExtensionWindowSettings: jest.fn(() => ({})),
 }))
 
-import { activate, deactivate } from '../src/extension'
 import * as vscode from 'vscode'
+import { activate, deactivate } from '../src/extension'
+;(vscode.commands as any).registerCommand = jest.fn().mockImplementation((...args) => args)
+;(vscode.window as any).onDidChangeActiveTextEditor = jest.fn().mockReturnValue('onDidChangeActiveTextEditor')
+vscode.workspace.getWorkspaceFolder = jest.fn().mockReturnValue({ name: 'workspaceFolder1' })
+;(vscode.workspace as any).onDidChangeConfiguration = jest.fn().mockReturnValue('onDidChangeConfiguration')
+;(vscode.workspace as any).onDidChangeTextDocument = jest.fn().mockReturnValue('onDidChangeTextDocument')
+;(vscode.workspace as any).onDidChangeWorkspaceFolders = jest.fn().mockReturnValue('onDidChangeWorkspaceFolders')
+;(vscode.workspace as any).onDidCloseTextDocument = jest.fn().mockReturnValue('onDidCloseTextDocument')
 
 describe('Extension', () => {
   describe('activate()', () => {
@@ -87,9 +72,9 @@ describe('Extension', () => {
     })
 
     it('should register statusBar', () => {
-      statusBar.registerCommand.mockReset()
+      statusBar.register.mockClear()
       activate(context)
-      expect(statusBar.registerCommand).toHaveBeenCalled()
+      expect(statusBar.register).toHaveBeenCalled()
     })
 
     it('should register an event handler to handle when the editor changes focus', () => {

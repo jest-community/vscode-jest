@@ -8,7 +8,6 @@ Object {
     "KnownSuccess": "KnownSuccess",
     "Unknown": "Unknown",
   },
-  "TestResult": undefined,
   "TestResultProvider": [Function],
   "resultsWithLowerCaseWindowsDriveLetters": [Function],
 }

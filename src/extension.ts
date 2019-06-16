@@ -18,10 +18,9 @@ export function activate(context: vscode.ExtensionContext) {
     { language: 'typescriptreact' },
   ]
 
-  statusBar.registerCommand(`${extensionName}.show-output`)
-
   context.subscriptions.push(
-    extensionManager.registerCommand(`${extensionName}.show-output`, extension => extension.channel.show()),
+    ...statusBar.register((folder: string) => extensionManager.getByName(folder)),
+
     extensionManager.registerCommand(`${extensionName}.start`, extension => {
       vscode.window.showInformationMessage('Started Jest, press escape to hide this message.')
       extension.startProcess()

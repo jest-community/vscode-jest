@@ -8,45 +8,7 @@ const jestInstance = {
 }
 
 jest.mock('../src/JestExt', () => ({
-  JestExt: function() {
-    return jestInstance
-  },
-}))
-
-jest.mock('vscode', () => ({
-  CodeLens: function CodeLens() {},
-  window: {
-    createOutputChannel: jest.fn(),
-    showWorkspaceFolderPick: jest.fn(),
-    // createStatusBarItem: jest.fn().mockReturnValue({ show: jest.fn() }),
-    // createTextEditorDecorationType: jest.fn(),
-  },
-  workspace: {
-    getWorkspaceFolder: jest.fn(),
-    workspaceFolders: [],
-    /** Mock getConfiguration by reading default values from package.json */
-    getConfiguration: jest.fn().mockImplementation(section => {
-      const data = readFileSync('./package.json')
-      const config = JSON.parse(data.toString()).contributes.configuration.properties
-
-      const defaults = {}
-      for (const key of Object.keys(config)) {
-        if (section.length === 0 || key.startsWith(`${section}.`)) {
-          defaults[key] = config[key].default
-        }
-      }
-
-      return {
-        get: jest.fn().mockImplementation(key => defaults[`${section}.${key}`]),
-      }
-    }),
-  },
-  commands: {
-    registerCommand: jest.fn(),
-  },
-  languages: {
-    createDiagnosticCollection: jest.fn(),
-  },
+  JestExt: jest.fn().mockImplementation(() => jestInstance),
 }))
 
 import * as vscode from 'vscode'
@@ -54,6 +16,22 @@ import { ExtensionManager, getExtensionResourceSettings, getExtensionWindowSetti
 import { TestState } from '../src/DebugCodeLens'
 import { readFileSync } from 'fs'
 import { IPluginWindowSettings } from '../src/Settings'
+
+vscode.workspace.getConfiguration = jest.fn().mockImplementation(section => {
+  const data = readFileSync('./package.json')
+  const config = JSON.parse(data.toString()).contributes.configuration.properties
+
+  const defaults = {}
+  for (const key of Object.keys(config)) {
+    if (section.length === 0 || key.startsWith(`${section}.`)) {
+      defaults[key] = config[key].default
+    }
+  }
+
+  return {
+    get: jest.fn().mockImplementation(key => defaults[`${section}.${key}`]),
+  }
+})
 
 describe('InstancesManager', () => {
   let extensionManager: ExtensionManager

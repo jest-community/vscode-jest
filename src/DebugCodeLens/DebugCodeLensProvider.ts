@@ -5,14 +5,14 @@ import { basename } from 'path'
 import { DebugCodeLens } from './DebugCodeLens'
 import { TestReconciliationState } from '../TestResults'
 import { TestState, TestStateByTestReconciliationState } from './TestState'
-import { JestExt } from '../JestExt'
+import { GetJestExtByURI } from '../extensionManager'
 
 export class DebugCodeLensProvider implements vscode.CodeLensProvider {
-  private _showWhenTestStateIn: TestState[]
-  private getJestExt: (uri: vscode.Uri) => JestExt
   onDidChange: vscode.EventEmitter<void>
+  private _showWhenTestStateIn: TestState[]
+  private getJestExt: GetJestExtByURI
 
-  constructor(getJestExt: (uri: vscode.Uri) => JestExt, showWhenTestStateIn: TestState[] = []) {
+  constructor(getJestExt: GetJestExtByURI, showWhenTestStateIn: TestState[] = []) {
     this.getJestExt = getJestExt
     this._showWhenTestStateIn = showWhenTestStateIn
     this.onDidChange = new vscode.EventEmitter()
@@ -33,13 +33,13 @@ export class DebugCodeLensProvider implements vscode.CodeLensProvider {
 
   provideCodeLenses(document: vscode.TextDocument, _: vscode.CancellationToken): vscode.CodeLens[] {
     const result = []
-
-    if (this._showWhenTestStateIn.length === 0 || document.isUntitled) {
+    const ext = this.getJestExt(document.uri)
+    if (!ext || this._showWhenTestStateIn.length === 0 || document.isUntitled) {
       return result
     }
 
     const filePath = document.fileName
-    const testResults = this.getJestExt(document.uri).testResultProvider.getResults(filePath)
+    const testResults = ext.testResultProvider.getResults(filePath)
     const fileName = basename(document.fileName)
 
     for (const test of testResults) {

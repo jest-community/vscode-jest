@@ -6,16 +6,23 @@ import { JestExt } from './JestExt'
 import { DebugCodeLensProvider, TestState } from './DebugCodeLens'
 import { DebugConfigurationProvider } from './DebugConfigurationProvider'
 import { IPluginResourceSettings, IPluginWindowSettings } from './Settings'
+import { statusBar } from './StatusBar'
+
+export type GetJestExtByURI = (uri: vscode.Uri) => JestExt | undefined
 
 export class ExtensionManager {
-  private extByWorkspace: Map<string, JestExt> = new Map()
-  private context: vscode.ExtensionContext
-  private commonPluginSettings: IPluginWindowSettings
   debugCodeLensProvider: DebugCodeLensProvider
   debugConfigurationProvider: DebugConfigurationProvider
 
+  private extByWorkspace: Map<string, JestExt> = new Map()
+  private context: vscode.ExtensionContext
+  private commonPluginSettings: IPluginWindowSettings
+
   constructor(context: vscode.ExtensionContext) {
     this.context = context
+
+    this.commonPluginSettings = getExtensionWindowSettings()
+
     this.debugConfigurationProvider = new DebugConfigurationProvider()
     this.debugCodeLensProvider = new DebugCodeLensProvider(uri => this.getByDocUri(uri))
     this.applySettings(getExtensionWindowSettings())
@@ -44,6 +51,7 @@ export class ExtensionManager {
       jestPath,
       configPath,
       currentJestVersion,
+      workspaceFolder.name,
       null,
       debugMode
     )
@@ -88,7 +96,9 @@ export class ExtensionManager {
     }
   }
   shouldStart(workspaceFolderName: string): boolean {
-    const { commonPluginSettings: { disabledWorkspaceFolders } } = this
+    const {
+      commonPluginSettings: { disabledWorkspaceFolders },
+    } = this
     if (this.extByWorkspace.has(workspaceFolderName)) {
       return false
     }
@@ -100,7 +110,7 @@ export class ExtensionManager {
   getByName(workspaceFolderName: string) {
     return this.extByWorkspace.get(workspaceFolderName)
   }
-  getByDocUri(uri: vscode.Uri) {
+  public getByDocUri: GetJestExtByURI = (uri: vscode.Uri) => {
     const workspace = vscode.workspace.getWorkspaceFolder(uri)
     if (workspace) {
       return this.getByName(workspace.name)
@@ -152,6 +162,7 @@ export class ExtensionManager {
   }
   onDidChangeActiveTextEditor(editor: vscode.TextEditor) {
     if (editor && editor.document) {
+      statusBar.onDidChangeActiveTextEditor(editor)
       const ext = this.getByDocUri(editor.document.uri)
       if (ext) {
         ext.onDidChangeActiveTextEditor(editor)

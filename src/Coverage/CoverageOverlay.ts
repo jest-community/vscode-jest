@@ -8,8 +8,8 @@ import { hasDocument } from '../editor'
 export class CoverageOverlay {
   static readonly defaultVisibility = false
   static readonly defaultFormatter = 'DefaultFormatter'
-  private _enabled: boolean
   formatter: AbstractFormatter
+  private _enabled: boolean
 
   constructor(
     context: vscode.ExtensionContext,
