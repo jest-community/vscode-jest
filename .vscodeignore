@@ -17,3 +17,4 @@ tslint.json
 yarn.lock
 yarn-error.log
 scripts/
+coverage

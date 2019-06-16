@@ -5,9 +5,16 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 
+-->
+
+### 3.0.0
+* Support multi-root workspaces - escaton
+  * multiroot workspace statusBar displays both active folder and workspace summary info - connectdotz
+  * fix race condition in multi-root projects - connectdotz
+  * add folder status bar support for multi-root projects - connectdotz
+
 * support template-literal-string test names by matching with location info from jest result - connectdotz
-* fix race condition in multi-root projects - connectdotz
-* add folder status bar support for multi-root projects - connectdotz
+
 * paying down some tech debt, see PR#447 for detail.
 
 * Add disableOptimisticBPs option to debug configuration. Fixes #400 - blikblum
@@ -15,11 +22,6 @@ Bug-fixes within the same version aren't needed
 * Adds "Jest: Restart Runner" command - vdh
 
 * replaced deprecated vscode.previewHtml command with webview - qalex
-
-* Support multi-root workspaces - escaton
-  * multiroot workspace statusBar displays both active folder and workspace summary info - connectdotz
-
--->
 
 ### 2.9.1
 
