@@ -23,6 +23,8 @@ Bug-fixes within the same version aren't needed
 
 * replaced deprecated vscode.previewHtml command with webview - qalex
 
+* use webpack for compilation, resulting in a much smaller extension size - stephtr
+
 ### 2.9.1
 
 * Prevent ANSI escape codes from appearing in test messages - seanpoulter
