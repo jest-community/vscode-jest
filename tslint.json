@@ -15,6 +15,7 @@
     "member-access": false,
     "interface-name": false,
     "no-empty": [true, "allow-empty-catch", "allow-empty-functions"],
-    "no-this-assignment": [true, { "allow-destructuring": true }]
+    "no-this-assignment": [true, { "allow-destructuring": true }],
+    "no-implicit-dependencies": [true, "dev"]
   }
 }

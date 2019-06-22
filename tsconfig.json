@@ -20,5 +20,5 @@
       }
     ]
   },
-  "exclude": ["integrations", "__mocks__"]
+  "exclude": ["integrations", "__mocks__", "node_modules"]
 }

@@ -4,7 +4,6 @@ src/**
 **/*.map
 .gitignore
 tsconfig.json
-vsc-extension-quickstart.md
 integrations/**
 **/__mocks__/**
 **/tests/**
@@ -18,3 +17,7 @@ yarn.lock
 yarn-error.log
 scripts/
 coverage
+.github/**
+images/**
+!images/vscode-jest.png
+webpack.config.js

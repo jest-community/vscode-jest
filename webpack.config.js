@@ -4,37 +4,46 @@
 
 const path = require('path');
 
-/**@type {import('webpack').Configuration}*/
-const config = {
-  target: 'node',
+/**@returns {import('webpack').Configuration}*/
+module.exports = (env, argv) => {
+  const isProduction = argv.mode === 'production';
+  const isDevelopment = !isProduction;
 
-  entry: './src/extension.ts',
-  output: {
-    path: path.resolve(__dirname, 'out'),
-    filename: 'extension.js',
-    libraryTarget: 'commonjs2',
-    devtoolModuleFilenameTemplate: '../[resource-path]'
-  },
-  devtool: 'source-map',
-  externals: {
-    vscode: 'commonjs vscode' // the vscode-module is created on-the-fly and must be excluded. Add other modules that cannot be webpack'ed, 📖 -> https://webpack.js.org/configuration/externals/
-  },
-  resolve: {
-    extensions: ['.ts', '.js']
-  },
-  module: {
-    rules: [
-      {
-        test: /\.ts$/,
-        exclude: /node_modules/,
-        use: [
-          {
-            loader: 'ts-loader'
-          }
-        ]
-      }
-    ]
+  /**@type {any} */
+  const externals = [
+    'jest-config', // the jest-config module isn't utilized in this plugin, compiling it would result in unnecessary overhead and errors    
+    { 'vscode': 'commonjs vscode' } // the vscode-module is created on-the-fly and must be excluded. Add other modules that cannot be webpack'ed, 📖 -> https://webpack.js.org/configuration/externals/
+  ];
+
+  // during development keep the largest external dependencies out of the bundle in order to speed up build time
+  if (isDevelopment) {
+    externals.push('typescript', /^\@babel\/.*/, 'babylon');
   }
+  return {
+    context: __dirname,
+    target: 'node',
+    entry: './src/extension.ts',
+    output: {
+      path: path.resolve(__dirname, 'out'),
+      filename: 'extension.js',
+      libraryTarget: 'commonjs2',
+      devtoolModuleFilenameTemplate: '../[resource-path]'
+    },
+    devtool: 'source-map',
+    externals,
+    resolve: {
+      extensions: ['.ts', '.js']
+    },
+    module: {
+      rules: [
+        {
+          test: /\.ts$/,
+          exclude: /node_modules/,
+          use: [
+            { loader: 'ts-loader' }
+          ]
+        }
+      ]
+    }
+  };
 };
-
-module.exports = config;
