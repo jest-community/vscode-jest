@@ -11,8 +11,8 @@ module.exports = (env, argv) => {
 
   /**@type {any} */
   const externals = [
-    'jest-config', // the jest-config module isn't utilized in this plugin, compiling it would result in unnecessary overhead and errors    
-    { 'vscode': 'commonjs vscode' } // the vscode-module is created on-the-fly and must be excluded. Add other modules that cannot be webpack'ed, 📖 -> https://webpack.js.org/configuration/externals/
+    {'jest-config': 'root {}'}, // the jest-config module isn't utilized in this plugin, compiling it would result in unnecessary overhead and errors    
+    { 'vscode': 'commonjs vscode' } // the vscode-module is created on-the-fly and must be excluded.
   ];
 
   // during development keep the largest external dependencies out of the bundle in order to speed up build time
