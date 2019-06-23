@@ -7,6 +7,12 @@ Bug-fixes within the same version aren't needed
 
 -->
 
+### 3.0.1
+
+* use webpack for compilation, resulting in a much smaller extension size - stephtr
+
+* fix security vulnerability for dependencies flagged by github - stephtr
+
 ### 3.0.0
 * Support multi-root workspaces - escaton
   * multiroot workspace statusBar displays both active folder and workspace summary info - connectdotz
@@ -22,8 +28,6 @@ Bug-fixes within the same version aren't needed
 * Adds "Jest: Restart Runner" command - vdh
 
 * replaced deprecated vscode.previewHtml command with webview - qalex
-
-* use webpack for compilation, resulting in a much smaller extension size - stephtr
 
 ### 2.9.1
 
