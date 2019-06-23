@@ -1,29 +1,31 @@
-// A launch configuration that compiles the extension and then opens it inside a new window
 {
-    "version": "0.1.0",
-    "configurations": [
-        {
-            "type": "node",
-            "request": "launch",
-            "name": "Debug Tests",
-            "program": "${workspaceRoot}/node_modules/jest/bin/jest.js",
-            "cwd": "${workspaceRoot}",
-            "args": [
-                "--i",
-                "--config",
-                "jest.json"
-            ]
-        },
-        {
-            "name": "Launch Extension",
-            "type": "extensionHost",
-            "request": "launch",
-            "runtimeExecutable": "${execPath}",
-            "args": ["--extensionDevelopmentPath=${workspaceRoot}" ],
-            "stopOnEntry": false,
-            "sourceMaps": true,
-            "outDir": "${workspaceRoot}/out/src",
-            "preLaunchTask": "npm"
-        }
-    ]
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Tests",
+      "program": "${workspaceRoot}/node_modules/jest/bin/jest.js",
+      "cwd": "${workspaceRoot}",
+      "args": ["--i", "--config", "jest.json"]
+    },
+    {
+      "name": "Launch Extension (development)",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": ["--extensionDevelopmentPath=${workspaceFolder}"],
+      "outFiles": ["${workspaceFolder}/out/**/*.js"],
+      "preLaunchTask": "watch"
+    },
+    {
+      "name": "Launch Extension (production)",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": ["--extensionDevelopmentPath=${workspaceFolder}"],
+      "outFiles": ["${workspaceFolder}/out/**/*.js"],
+      "preLaunchTask": "npm: compile"
+    }
+  ]
 }
