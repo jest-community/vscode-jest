@@ -1,39 +1,15 @@
 import * as vscode from 'vscode'
-import { ProjectWorkspace } from 'jest-editor-support'
-import * as path from 'path'
 
 import { extensionName } from './appGlobals'
-import { pathToJest, pathToConfig } from './helpers'
-import { JestExt } from './JestExt'
-import { IPluginSettings } from './Settings'
-import { registerStatusBar } from './statusBar'
+import { statusBar } from './StatusBar'
+import { CoverageCodeLensProvider } from './Coverage'
+import { ExtensionManager, getExtensionWindowSettings } from './extensionManager'
 import { registerSnapshotCodeLens, registerSnapshotPreview } from './SnapshotCodeLens'
-import { registerCoverageCodeLens } from './Coverage'
-import { TestState } from './DebugCodeLens'
 
-let extensionInstance: JestExt
+let extensionManager: ExtensionManager
 
 export function activate(context: vscode.ExtensionContext) {
-  // To make us VS Code agnostic outside of this file
-  const pluginSettings = getExtensionSettings()
-  const jestPath = pathToJest(pluginSettings)
-  const configPath = pathToConfig(pluginSettings)
-  const currentJestVersion = 20
-  const debugMode = pluginSettings.debugMode
-  const workspace = new ProjectWorkspace(
-    pluginSettings.rootPath,
-    jestPath,
-    configPath,
-    currentJestVersion,
-    null,
-    debugMode
-  )
-
-  // Create our own console
-  const channel = vscode.window.createOutputChannel('Jest')
-
-  // We need a singleton to represent the extension
-  extensionInstance = new JestExt(context, workspace, channel, pluginSettings)
+  extensionManager = new ExtensionManager(context)
 
   const languages = [
     { language: 'javascript' },
@@ -41,68 +17,50 @@ export function activate(context: vscode.ExtensionContext) {
     { language: 'typescript' },
     { language: 'typescriptreact' },
   ]
+
   context.subscriptions.push(
-    registerStatusBar(channel),
-    vscode.commands.registerCommand(`${extensionName}.start`, () => {
+    ...statusBar.register((folder: string) => extensionManager.getByName(folder)),
+
+    extensionManager.registerCommand(`${extensionName}.start`, extension => {
       vscode.window.showInformationMessage('Started Jest, press escape to hide this message.')
-      extensionInstance.startProcess()
+      extension.startProcess()
     }),
-    vscode.commands.registerCommand(`${extensionName}.stop`, () => extensionInstance.stopProcess()),
-    vscode.commands.registerCommand(`${extensionName}.show-channel`, () => {
-      channel.show()
-    }),
-    ...registerSnapshotCodeLens(pluginSettings.enableSnapshotPreviews),
-    ...registerSnapshotPreview(),
-    ...registerCoverageCodeLens(extensionInstance),
-    vscode.commands.registerCommand(
-      `${extensionName}.coverage.toggle`,
-      extensionInstance.toggleCoverageOverlay,
-      extensionInstance
+    extensionManager.registerCommand(`${extensionName}.stop`, extension => extension.stopProcess()),
+    extensionManager.registerCommand(`${extensionName}.restart`, extension => extension.restartProcess()),
+    // dublicate of "show-output" maybe remove?
+    extensionManager.registerCommand(`${extensionName}.show-channel`, extension => extension.channel.show()),
+    extensionManager.registerCommand(`${extensionName}.coverage.toggle`, extension =>
+      extension.toggleCoverageOverlay()
     ),
-    vscode.commands.registerCommand(`${extensionName}.run-test`, extensionInstance.runTest),
-    vscode.languages.registerCodeLensProvider(languages, extensionInstance.debugCodeLensProvider),
-    // this provides the opportunity to inject test names into the DebugConfiguration
-    vscode.debug.registerDebugConfigurationProvider('node', extensionInstance.debugConfigurationProvider),
-    // this provides the snippets generation
-    vscode.debug.registerDebugConfigurationProvider('vscode-jest-tests', extensionInstance.debugConfigurationProvider),
-    vscode.workspace.onDidChangeConfiguration(e => {
-      if (e.affectsConfiguration('jest')) {
-        const updatedSettings = getExtensionSettings()
-        extensionInstance.triggerUpdateSettings(updatedSettings)
+    vscode.commands.registerCommand(
+      `${extensionName}.run-test`,
+      (document: vscode.TextDocument, filename: string, identifier: string) => {
+        const workspace = vscode.workspace.getWorkspaceFolder(document.uri)
+        extensionManager.getByName(workspace.name).runTest(workspace, filename, identifier)
       }
-    }),
+    ),
+    ...registerSnapshotCodeLens(getExtensionWindowSettings().enableSnapshotPreviews),
+    ...registerSnapshotPreview(),
+    vscode.languages.registerCodeLensProvider(
+      { pattern: '**/*.{ts,tsx,js,jsx}' },
+      new CoverageCodeLensProvider(uri => extensionManager.getByDocUri(uri))
+    ),
+    vscode.languages.registerCodeLensProvider(languages, extensionManager.debugCodeLensProvider),
+    // this provides the opportunity to inject test names into the DebugConfiguration
+    vscode.debug.registerDebugConfigurationProvider('node', extensionManager.debugConfigurationProvider),
+    // this provides the snippets generation
+    vscode.debug.registerDebugConfigurationProvider('vscode-jest-tests', extensionManager.debugConfigurationProvider),
+    vscode.workspace.onDidChangeConfiguration(extensionManager.onDidChangeConfiguration, extensionManager),
 
-    vscode.workspace.onDidCloseTextDocument(document => {
-      extensionInstance.onDidCloseTextDocument(document)
-    }),
+    vscode.workspace.onDidChangeWorkspaceFolders(extensionManager.onDidChangeWorkspaceFolders, extensionManager),
 
-    vscode.window.onDidChangeActiveTextEditor(extensionInstance.onDidChangeActiveTextEditor, extensionInstance),
-    vscode.workspace.onDidChangeTextDocument(extensionInstance.onDidChangeTextDocument, extensionInstance)
+    vscode.workspace.onDidCloseTextDocument(extensionManager.onDidCloseTextDocument, extensionManager),
+
+    vscode.window.onDidChangeActiveTextEditor(extensionManager.onDidChangeActiveTextEditor, extensionManager),
+    vscode.workspace.onDidChangeTextDocument(extensionManager.onDidChangeTextDocument, extensionManager)
   )
 }
 
 export function deactivate() {
-  extensionInstance.deactivate()
-}
-
-export function getExtensionSettings(): IPluginSettings {
-  const config = vscode.workspace.getConfiguration('jest')
-  return {
-    autoEnable: config.get<boolean>('autoEnable'),
-    debugCodeLens: {
-      enabled: config.get<boolean>('enableCodeLens'),
-      showWhenTestStateIn: config.get<TestState[]>('debugCodeLens.showWhenTestStateIn'),
-    },
-    enableInlineErrorMessages: config.get<boolean>('enableInlineErrorMessages'),
-    enableSnapshotPreviews: config.get<boolean>('enableSnapshotPreviews'),
-    enableSnapshotUpdateMessages: config.get<boolean>('enableSnapshotUpdateMessages'),
-    pathToConfig: config.get<string>('pathToConfig'),
-    pathToJest: config.get<string>('pathToJest'),
-    restartJestOnSnapshotUpdate: config.get<boolean>('restartJestOnSnapshotUpdate'),
-    rootPath: path.join(vscode.workspace.rootPath, config.get<string>('rootPath')),
-    runAllTestsFirst: config.get<boolean>('runAllTestsFirst'),
-    showCoverageOnLoad: config.get<boolean>('showCoverageOnLoad'),
-    coverageFormatter: config.get<string>('coverageFormatter'),
-    debugMode: config.get<boolean>('debugMode'),
-  }
+  extensionManager.unregisterAll()
 }

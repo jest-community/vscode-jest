@@ -6,33 +6,12 @@ import { extensionName } from '../appGlobals'
 export const previewCommand = `${extensionName}.snapshot.preview`
 
 export function registerSnapshotPreview() {
-  const previewUri = vscode.Uri.parse(`${extensionName}.snapshot.preview://snapshot-preview`)
-  const provider = new SnapshotPreviewProvider()
-  return [
-    vscode.commands.registerCommand(previewCommand, (snapshot: SnapshotMetadata) => {
-      vscode.commands.executeCommand('vscode.previewHtml', previewUri, vscode.ViewColumn.Two, snapshot.name)
-      provider.update(previewUri, snapshot.content)
-    }),
-    vscode.workspace.registerTextDocumentContentProvider(`${extensionName}.snapshot.preview`, provider),
-  ]
-}
+  let panel: vscode.WebviewPanel = null
 
-class SnapshotPreviewProvider implements vscode.TextDocumentContentProvider {
-  private _onDidChange = new vscode.EventEmitter<vscode.Uri>()
-  private snapshot: string
-
-  get onDidChange() {
-    return this._onDidChange.event
-  }
-
-  public update(uri: vscode.Uri, snapshot: string) {
-    this.snapshot = snapshot
-    this._onDidChange.fire(uri)
-  }
-
-  public provideTextDocumentContent() {
-    if (this.snapshot) {
-      const escaped = this.snapshot
+  const escaped = (snapshot: string) => {
+    if (snapshot) {
+      // tslint:disable-next-line no-shadowed-variable
+      const escaped = snapshot
         .replace(/&/g, '&amp;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;')
@@ -41,4 +20,21 @@ class SnapshotPreviewProvider implements vscode.TextDocumentContentProvider {
       return `<pre>${escaped}</pre>`
     }
   }
+
+  return [
+    vscode.commands.registerCommand(previewCommand, (snapshot: SnapshotMetadata) => {
+      if (panel) {
+        panel.reveal()
+      } else {
+        panel = vscode.window.createWebviewPanel('view_snapshot', snapshot.name, vscode.ViewColumn.Two, {})
+
+        panel.onDidDispose(() => {
+          panel = null
+        })
+      }
+
+      panel.webview.html = escaped(snapshot.content)
+      panel.title = snapshot.name
+    }),
+  ]
 }

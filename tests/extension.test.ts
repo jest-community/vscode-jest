@@ -1,60 +1,18 @@
 jest.unmock('../src/extension')
 
-jest.mock('vscode', () => ({
-  CodeLens: class {},
-  commands: {
-    registerCommand: jest.fn(),
-  },
-  debug: {
-    registerDebugConfigurationProvider: jest.fn(),
-  },
-  languages: {
-    registerCodeLensProvider: jest.fn(),
-  },
-  OverviewRulerLane: {},
-  StatusBarAlignment: {},
-  window: {
-    createStatusBarItem: jest.fn().mockReturnValue({ show: jest.fn() }),
-    createTextEditorDecorationType: jest.fn(),
-    createOutputChannel: jest.fn(),
-    onDidChangeActiveTextEditor: jest.fn().mockReturnValue('onDidChangeActiveTextEditor'),
-  },
-  workspace: {
-    /** Mock getConfiguration by reading default values from package.json */
-    getConfiguration: jest.fn().mockImplementation(section => {
-      const data = readFileSync('./package.json')
-      const config = JSON.parse(data.toString()).contributes.configuration.properties
-
-      const defaults = {}
-      for (const key of Object.keys(config)) {
-        if (section.length === 0 || key.startsWith(`${section}.`)) {
-          defaults[key] = config[key].default
-        }
-      }
-
-      return {
-        get: jest.fn().mockImplementation(key => defaults[`${section}.${key}`]),
-      }
-    }),
-    onDidChangeConfiguration: jest.fn(),
-    onDidCloseTextDocument: jest.fn(),
-    onDidChangeTextDocument: jest.fn().mockReturnValue('onDidChangeTextDocument'),
-  },
+const extensionName = 'jest'
+jest.mock('../src/appGlobals', () => ({
+  extensionName,
 }))
+
+const statusBar = {
+  register: jest.fn(() => []),
+}
+jest.mock('../src/StatusBar', () => ({ statusBar }))
 
 jest.mock('../src/Coverage', () => ({
   registerCoverageCodeLens: jest.fn().mockReturnValue([]),
-}))
-
-const jestInstance = {
-  onDidChangeActiveTextEditor: {},
-  onDidChangeTextDocument: {},
-  toggleCoverageOverlay: {},
-}
-jest.mock('../src/JestExt', () => ({
-  JestExt: function() {
-    return jestInstance
-  },
+  CoverageCodeLensProvider: jest.fn().mockReturnValue({}),
 }))
 
 jest.mock('../src/SnapshotCodeLens', () => ({
@@ -62,10 +20,39 @@ jest.mock('../src/SnapshotCodeLens', () => ({
   registerSnapshotPreview: jest.fn(() => []),
 }))
 
-import { activate, getExtensionSettings } from '../src/extension'
+const jestInstance = {
+  toggleCoverageOverlay: jest.fn(),
+  runTest: jest.fn(),
+  startProcess: jest.fn(),
+  stopProcess: jest.fn(),
+  restartProcess: jest.fn(),
+}
+
+const extensionManager = {
+  register: jest.fn(),
+  getByName: jest.fn().mockReturnValue(jestInstance),
+  get: jest.fn().mockReturnValue(jestInstance),
+  unregisterAll: jest.fn(),
+  registerCommand: jest.fn().mockImplementation((...args) => args),
+}
+
+// tslint:disable-next-line: variable-name
+const ExtensionManager = jest.fn().mockImplementation(() => extensionManager)
+
+jest.mock('../src/extensionManager', () => ({
+  ExtensionManager,
+  getExtensionWindowSettings: jest.fn(() => ({})),
+}))
+
 import * as vscode from 'vscode'
-import { readFileSync } from 'fs'
-import { TestState } from '../src/DebugCodeLens'
+import { activate, deactivate } from '../src/extension'
+;(vscode.commands as any).registerCommand = jest.fn().mockImplementation((...args) => args)
+;(vscode.window as any).onDidChangeActiveTextEditor = jest.fn().mockReturnValue('onDidChangeActiveTextEditor')
+vscode.workspace.getWorkspaceFolder = jest.fn().mockReturnValue({ name: 'workspaceFolder1' })
+;(vscode.workspace as any).onDidChangeConfiguration = jest.fn().mockReturnValue('onDidChangeConfiguration')
+;(vscode.workspace as any).onDidChangeTextDocument = jest.fn().mockReturnValue('onDidChangeTextDocument')
+;(vscode.workspace as any).onDidChangeWorkspaceFolders = jest.fn().mockReturnValue('onDidChangeWorkspaceFolders')
+;(vscode.workspace as any).onDidCloseTextDocument = jest.fn().mockReturnValue('onDidCloseTextDocument')
 
 describe('Extension', () => {
   describe('activate()', () => {
@@ -74,37 +61,113 @@ describe('Extension', () => {
         push: jest.fn(),
       },
     }
-    vscode.workspace.rootPath = 'rootPath'
-    const thisArg = jestInstance
 
     beforeEach(() => {
       context.subscriptions.push.mockReset()
     })
 
+    it('should instantiate ExtensionManager', () => {
+      activate(context)
+      expect(ExtensionManager).toHaveBeenCalledTimes(1)
+    })
+
+    it('should register statusBar', () => {
+      statusBar.register.mockClear()
+      activate(context)
+      expect(statusBar.register).toHaveBeenCalled()
+    })
+
     it('should register an event handler to handle when the editor changes focus', () => {
-      const handler = jestInstance.onDidChangeActiveTextEditor
       activate(context)
 
-      expect(vscode.window.onDidChangeActiveTextEditor).toBeCalledWith(handler, thisArg)
+      expect(vscode.window.onDidChangeActiveTextEditor).toBeCalled()
       expect(context.subscriptions.push.mock.calls[0]).toContain('onDidChangeActiveTextEditor')
     })
 
     it('should register an event handler to handle when a document is saved', () => {
-      const handler = jestInstance.onDidChangeTextDocument
       activate(context)
 
-      expect(vscode.workspace.onDidChangeTextDocument).toBeCalledWith(handler, thisArg)
+      expect(vscode.workspace.onDidChangeTextDocument).toBeCalled()
       expect(context.subscriptions.push.mock.calls[0]).toContain('onDidChangeTextDocument')
     })
 
-    it('should register a command to toggle the coverage overlay visibility', () => {
-      const expected = ['io.orta.jest.coverage.toggle', jestInstance.toggleCoverageOverlay, jestInstance]
-      ;(vscode.commands.registerCommand as jest.Mock<any>).mockReturnValue(expected)
-
+    it('should register an event handler to handle when an extension configuration changed', () => {
       activate(context)
 
-      expect((vscode.commands.registerCommand as jest.Mock<any>).mock.calls).toContainEqual(expected)
-      expect(context.subscriptions.push.mock.calls[0]).toContain(expected)
+      expect(vscode.workspace.onDidChangeConfiguration).toBeCalled()
+      expect(context.subscriptions.push.mock.calls[0]).toContain('onDidChangeConfiguration')
+    })
+
+    it('should register an event handler to handle when workspace folders changed', () => {
+      activate(context)
+
+      expect(vscode.workspace.onDidChangeWorkspaceFolders).toBeCalled()
+      expect(context.subscriptions.push.mock.calls[0]).toContain('onDidChangeWorkspaceFolders')
+    })
+
+    describe('should register a command', () => {
+      beforeEach(() => {
+        jestInstance.toggleCoverageOverlay.mockReset()
+        jestInstance.runTest.mockReset()
+        jestInstance.startProcess.mockReset()
+        jestInstance.stopProcess.mockReset()
+        jestInstance.restartProcess.mockReset()
+      })
+
+      it('to start extension', () => {
+        activate(context)
+        const callArg = context.subscriptions.push.mock.calls[0].find(args => {
+          return args[0] === `${extensionName}.start`
+        })
+
+        expect(callArg).toBeDefined()
+        callArg[1](jestInstance)
+        expect(jestInstance.startProcess).toHaveBeenCalled()
+      })
+
+      it('to stop extension', () => {
+        activate(context)
+        const callArg = context.subscriptions.push.mock.calls[0].find(args => {
+          return args[0] === `${extensionName}.stop`
+        })
+
+        expect(callArg).toBeDefined()
+        callArg[1](jestInstance)
+        expect(jestInstance.stopProcess).toHaveBeenCalled()
+      })
+
+      it('to restart extension', () => {
+        activate(context)
+        const callArg = context.subscriptions.push.mock.calls[0].find(args => {
+          return args[0] === `${extensionName}.restart`
+        })
+
+        expect(callArg).toBeDefined()
+        callArg[1](jestInstance)
+        expect(jestInstance.restartProcess).toHaveBeenCalled()
+      })
+
+      it('to toggle the coverage overlay visibility', () => {
+        activate(context)
+        const callArg = context.subscriptions.push.mock.calls[0].find(args => {
+          return args[0] === `${extensionName}.coverage.toggle`
+        })
+
+        expect(callArg).toBeDefined()
+        callArg[1](jestInstance)
+        expect(jestInstance.toggleCoverageOverlay).toHaveBeenCalled()
+      })
+
+      it('to run specific test', () => {
+        activate(context)
+        const callArg = context.subscriptions.push.mock.calls[0].find(args => {
+          return args[0] === `${extensionName}.run-test`
+        })
+
+        expect(callArg).toBeDefined()
+        callArg[1]({ uri: '' })
+        expect(jestInstance.runTest).toHaveBeenCalled()
+      })
     })
 
     it('should register a DebugConfigurationProvider', () => {
@@ -120,28 +183,10 @@ describe('Extension', () => {
     })
   })
 
-  describe('getExtensionSettings()', () => {
-    it('should return the extension configuration', async () => {
-      vscode.workspace.rootPath = '<rootDir>'
-
-      expect(getExtensionSettings()).toEqual({
-        autoEnable: true,
-        coverageFormatter: 'DefaultFormatter',
-        debugCodeLens: {
-          enabled: true,
-          showWhenTestStateIn: [TestState.Fail, TestState.Unknown],
-        },
-        enableInlineErrorMessages: true,
-        enableSnapshotPreviews: true,
-        enableSnapshotUpdateMessages: true,
-        pathToConfig: '',
-        pathToJest: null,
-        restartJestOnSnapshotUpdate: false,
-        rootPath: '<rootDir>',
-        runAllTestsFirst: true,
-        showCoverageOnLoad: false,
-        debugMode: false,
-      })
+  describe('deactivate()', () => {
+    it('should call unregisterAll on instancesManager', () => {
+      deactivate()
+      expect(extensionManager.unregisterAll).toBeCalled()
     })
   })
 })

@@ -9,7 +9,16 @@
     "outDir": "out",
     "lib": ["es6", "es7"],
     "sourceMap": true,
-    "rootDir": "."
+    "rootDir": ".",
+    "plugins": [
+      {
+        "name": "typescript-tslint-plugin",
+        "alwaysShowRuleFailuresAsWarnings": false,
+        "ignoreDefinitionFiles": true,
+        "suppressWhileTypeErrorsPresent": false,
+        "mockTypeScriptVersion": false
+      }
+    ]
   },
-  "exclude": ["integrations", "__mocks__"]
+  "exclude": ["integrations", "__mocks__", "node_modules"]
 }

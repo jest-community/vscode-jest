@@ -24,11 +24,13 @@ describe('JestProcessManager', () => {
 
   describe('when creating', () => {
     it('accepts Project Workspace as the argument', () => {
+      // tslint:disable-next-line no-shadowed-variable
       const jestProcessManager = new JestProcessManager({ projectWorkspace: projectWorkspaceMock })
       expect(jestProcessManager).not.toBe(null)
     })
 
     it('accepts runAllTestsFirstInWatchMode argument (true if not provided)', () => {
+      // tslint:disable-next-line no-shadowed-variable
       const jestProcessManager = new JestProcessManager({
         projectWorkspace: projectWorkspaceMock,
         runAllTestsFirstInWatchMode: false,
@@ -255,11 +257,14 @@ describe('JestProcessManager', () => {
       jestProcessManager.startJestProcess()
       jestProcessManager.startJestProcess()
 
-      jestProcessManager.stopAll()
+      const stopAll = jestProcessManager.stopAll()
 
-      expect(jestProcessMock.mock.instances.length).toBe(2)
-      expect(mockImplementation.stop).toHaveBeenCalledTimes(2)
-      expect(jestProcessManager.numberOfProcesses).toBe(0)
+      expect(stopAll).toBeInstanceOf(Promise)
+      return stopAll.then(() => {
+        expect(jestProcessMock.mock.instances.length).toBe(2)
+        expect(mockImplementation.stop).toHaveBeenCalledTimes(2)
+        expect(jestProcessManager.numberOfProcesses).toBe(0)
+      })
     })
 
     it('does not stop any jest process if none is running', () => {
@@ -270,11 +275,14 @@ describe('JestProcessManager', () => {
 
       jestProcessMock.mockImplementation(() => mockImplementation)
 
-      jestProcessManager.stopAll()
+      const stopAll = jestProcessManager.stopAll()
 
-      expect(jestProcessMock.mock.instances.length).toBe(0)
-      expect(mockImplementation.stop).not.toHaveBeenCalled()
-      expect(jestProcessManager.numberOfProcesses).toBe(0)
+      expect(stopAll).toBeInstanceOf(Promise)
+      return stopAll.then(() => {
+        expect(jestProcessMock.mock.instances.length).toBe(0)
+        expect(mockImplementation.stop).not.toHaveBeenCalled()
+        expect(jestProcessManager.numberOfProcesses).toBe(0)
+      })
     })
   })
 

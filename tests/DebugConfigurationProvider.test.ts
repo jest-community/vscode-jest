@@ -17,8 +17,8 @@ describe('DebugConfigurationProvider', () => {
     expect(config.program).toMatch('jest')
   })
   it('should return a valid CRA DebugConfiguration', () => {
-    ;(getTestCommand as jest.Mock<Function>).mockReturnValueOnce('react-scripts test --env=jsdom')
-    ;(isCreateReactAppTestCommand as jest.Mock<Function>).mockReturnValueOnce(true)
+    ;((getTestCommand as unknown) as jest.Mock<{}>).mockReturnValueOnce('react-scripts test --env=jsdom')
+    ;((isCreateReactAppTestCommand as unknown) as jest.Mock<{}>).mockReturnValueOnce(true)
 
     const folder: any = { uri: { fsPath: null } }
     const sut = new DebugConfigurationProvider()
@@ -28,6 +28,7 @@ describe('DebugConfigurationProvider', () => {
     const config = configurations[0]
     expect(config.name).toBe('vscode-jest-tests')
     expect(config.type).toBe('node')
+    // tslint:disable-next-line no-invalid-template-strings
     expect(config.runtimeExecutable).toBe('${workspaceFolder}/node_modules/.bin/react-scripts')
     expect(config.args[0]).toBe('test')
     expect(config.args).toContain('--env=jsdom')

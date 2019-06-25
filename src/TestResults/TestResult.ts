@@ -1,10 +1,9 @@
 import { TestReconciliationState } from './TestReconciliationState'
-import { JestTotalResults } from 'jest-editor-support'
-import { JestFileResults } from 'jest-editor-support'
+import { JestFileResults, JestTotalResults } from 'jest-editor-support'
 import { FileCoverage } from 'istanbul-lib-coverage'
 import * as path from 'path'
 
-type Position = {
+interface Position {
   /** Zero-based column number */
   column: number
 
@@ -12,7 +11,7 @@ type Position = {
   line: number
 }
 
-export type TestResult = {
+export interface TestResult {
   name: string
   start: Position
   end: Position
@@ -71,9 +70,7 @@ function fileCoverageWithLowerCaseWindowsDriveLetter(fileCoverage: FileCoverage)
   return fileCoverage
 }
 
-export function testResultsWithLowerCaseWindowsDriveLetters(
-  testResults: Array<JestFileResults>
-): Array<JestFileResults> {
+export function testResultsWithLowerCaseWindowsDriveLetters(testResults: JestFileResults[]): JestFileResults[] {
   if (!testResults) {
     return testResults
   }

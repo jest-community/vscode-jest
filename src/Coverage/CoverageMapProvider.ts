@@ -18,7 +18,7 @@ export class CoverageMapProvider {
     return this._map
   }
 
-  update(obj: CoverageMap | Object) {
+  update(obj: CoverageMap | object) {
     const map = createCoverageMap(obj)
     const transformed = this.mapStore.transformCoverage(map)
     this._map = transformed.map

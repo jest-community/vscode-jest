@@ -146,7 +146,7 @@ describe('DefaultFormatter', () => {
 
     it('should add decorations with the reindexed ranges', () => {
       const expected = [{}, {}]
-      ;(vscode.Range as jest.Mock<vscode.Range>).mockReturnValueOnce(expected[0]).mockReturnValueOnce(expected[1])
+      ;((vscode.Range as unknown) as jest.Mock<{}>).mockReturnValueOnce(expected[0]).mockReturnValueOnce(expected[1])
       ;(isValidLocation as jest.Mock<any>).mockReturnValueOnce(true).mockReturnValueOnce(true)
 
       const coverageMapProvider: any = {}
@@ -203,7 +203,7 @@ describe('DefaultFormatter', () => {
 
     it('should add decorations with the reindexed ranges', () => {
       const expected = [{}, {}]
-      ;(vscode.Range as jest.Mock<vscode.Range>).mockReturnValueOnce(expected[0]).mockReturnValueOnce(expected[1])
+      ;((vscode.Range as unknown) as jest.Mock<{}>).mockReturnValueOnce(expected[0]).mockReturnValueOnce(expected[1])
 
       const coverageMapProvider: any = {}
       const editor: any = {

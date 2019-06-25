@@ -41,6 +41,7 @@ describe('ModuleHelpers', () => {
     })
 
     describe('pathToJest: <default>', () => {
+      // tslint:disable no-shadowed-variable
       describe('rootPath: <default>', () => {
         it('should return package.json when Jest is installed as a dependency', () => {
           const expected = path.join('node_modules', 'jest', 'package.json')

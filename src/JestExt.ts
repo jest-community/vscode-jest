@@ -2,8 +2,8 @@ import * as vscode from 'vscode'
 import { ProjectWorkspace, JestTotalResults } from 'jest-editor-support'
 
 import * as decorations from './decorations'
-import { IPluginSettings } from './Settings'
-import * as status from './statusBar'
+import { IPluginResourceSettings } from './Settings'
+import { statusBar, StatusBar } from './StatusBar'
 import {
   TestReconciliationState,
   TestResultProvider,
@@ -17,25 +17,33 @@ import { updateDiagnostics, updateCurrentDiagnostics, resetDiagnostics, failedSu
 import { DebugCodeLensProvider } from './DebugCodeLens'
 import { DebugConfigurationProvider } from './DebugConfigurationProvider'
 import { DecorationOptions } from './types'
-import { hasDocument, isOpenInMultipleEditors } from './editor'
+import { isOpenInMultipleEditors } from './editor'
 import { CoverageOverlay } from './Coverage/CoverageOverlay'
 import { JestProcess, JestProcessManager } from './JestProcessManagement'
 import { isWatchNotSupported, WatchMode } from './Jest'
 import * as messaging from './messaging'
 
-export class JestExt {
-  private workspace: ProjectWorkspace
-  private pluginSettings: IPluginSettings
+interface InstanceSettings {
+  multirootEnv: boolean
+}
 
+export class JestExt {
   coverageMapProvider: CoverageMapProvider
   coverageOverlay: CoverageOverlay
 
   testResultProvider: TestResultProvider
-  public debugCodeLensProvider: DebugCodeLensProvider
+  debugCodeLensProvider: DebugCodeLensProvider
   debugConfigurationProvider: DebugConfigurationProvider
 
   // So you can read what's going on
-  private channel: vscode.OutputChannel
+  channel: vscode.OutputChannel
+
+  failingAssertionDecorators: { [fileName: string]: vscode.TextEditorDecorationType[] }
+
+  private jestWorkspace: ProjectWorkspace
+  private pluginSettings: IPluginResourceSettings
+  private workspaceFolder: vscode.WorkspaceFolder
+  private instanceSettings: InstanceSettings
 
   // The ability to show fails in the problems section
   private failDiagnostics: vscode.DiagnosticCollection
@@ -48,25 +56,33 @@ export class JestExt {
   private parsingTestFile = false
 
   // We have to keep track of our inline assert fails to remove later
-  failingAssertionDecorators: { [fileName: string]: vscode.TextEditorDecorationType[] }
 
   private jestProcessManager: JestProcessManager
   private jestProcess: JestProcess
 
   private clearOnNextInput: boolean
+  private status: ReturnType<StatusBar['bind']>
 
   constructor(
     context: vscode.ExtensionContext,
-    workspace: ProjectWorkspace,
+    workspaceFolder: vscode.WorkspaceFolder,
+    jestWorkspace: ProjectWorkspace,
     outputChannel: vscode.OutputChannel,
-    pluginSettings: IPluginSettings
+    pluginSettings: IPluginResourceSettings,
+    debugCodeLensProvider: DebugCodeLensProvider,
+    debugConfigurationProvider: DebugConfigurationProvider,
+    failDiagnostics: vscode.DiagnosticCollection,
+    instanceSettings: InstanceSettings
   ) {
-    this.workspace = workspace
+    this.workspaceFolder = workspaceFolder
+    this.jestWorkspace = jestWorkspace
     this.channel = outputChannel
     this.failingAssertionDecorators = {}
-    this.failDiagnostics = vscode.languages.createDiagnosticCollection('Jest')
+    this.failDiagnostics = failDiagnostics
     this.clearOnNextInput = true
     this.pluginSettings = pluginSettings
+    this.debugCodeLensProvider = debugCodeLensProvider
+    this.instanceSettings = instanceSettings
 
     this.coverageMapProvider = new CoverageMapProvider()
     this.coverageOverlay = new CoverageOverlay(
@@ -76,23 +92,21 @@ export class JestExt {
       pluginSettings.coverageFormatter
     )
 
-    this.testResultProvider = new TestResultProvider()
-    this.debugCodeLensProvider = new DebugCodeLensProvider(
-      this.testResultProvider,
-      pluginSettings.debugCodeLens.enabled ? pluginSettings.debugCodeLens.showWhenTestStateIn : []
-    )
-    this.debugConfigurationProvider = new DebugConfigurationProvider()
+    this.testResultProvider = new TestResultProvider(this.pluginSettings.debugMode)
+    this.debugConfigurationProvider = debugConfigurationProvider
 
     this.jestProcessManager = new JestProcessManager({
-      projectWorkspace: workspace,
+      projectWorkspace: jestWorkspace,
       runAllTestsFirstInWatchMode: this.pluginSettings.runAllTestsFirst,
     })
+
+    this.status = statusBar.bind(workspaceFolder.name)
 
     // The theme stuff
     this.setupDecorators()
     // The bottom bar thing
     this.setupStatusBar()
-    //reset the jest diagnostics
+    // reset the jest diagnostics
     resetDiagnostics(this.failDiagnostics)
 
     // If we should start the process by default, do so
@@ -103,9 +117,276 @@ export class JestExt {
     }
   }
 
+  public startProcess() {
+    if (this.jestProcessManager.numberOfProcesses > 0) {
+      return
+    }
+
+    if (this.pluginSettings.runAllTestsFirst) {
+      this.testsHaveStartedRunning()
+    }
+
+    this.jestProcess = this.jestProcessManager.startJestProcess({
+      watchMode: WatchMode.Watch,
+      keepAlive: true,
+      exitCallback: (jestProcess, jestProcessInWatchMode) => {
+        if (jestProcessInWatchMode) {
+          this.jestProcess = jestProcessInWatchMode
+
+          this.channel.appendLine('Finished running all tests. Starting watch mode.')
+          this.status.running('Starting watch mode')
+
+          this.assignHandlers(this.jestProcess)
+        } else {
+          this.status.stopped()
+          if (!jestProcess.stopRequested()) {
+            let msg = `Starting Jest in Watch mode failed too many times and has been stopped.`
+            if (this.instanceSettings.multirootEnv) {
+              msg += `\nConsider add this workspace folder to disabledWorkspaceFolders`
+            }
+            this.channel.appendLine(`${msg}\n see troubleshooting: ${messaging.TROUBLESHOOTING_URL}`)
+            this.channel.show(true)
+            messaging.systemErrorMessage(msg, messaging.showTroubleshootingAction)
+          }
+        }
+      },
+    })
+
+    this.assignHandlers(this.jestProcess)
+  }
+
+  public stopProcess() {
+    this.channel.appendLine('Closing Jest')
+    return this.jestProcessManager.stopAll().then(() => {
+      this.status.stopped()
+    })
+  }
+
+  public restartProcess() {
+    return this.stopProcess().then(() => {
+      this.startProcess()
+    })
+  }
+
+  public triggerUpdateActiveEditor(editor: vscode.TextEditor) {
+    this.coverageOverlay.updateVisibleEditors()
+
+    if (!this.canUpdateActiveEditor(editor)) {
+      return
+    }
+
+    // not sure why we need to protect this block with parsingTestFile ?
+    // using an ivar as a locking mechanism has bad smell
+    // TODO: refactor maybe?
+    this.parsingTestFile = true
+
+    const filePath = editor.document.fileName
+    const testResults = this.testResultProvider.getSortedResults(filePath)
+
+    this.updateDecorators(testResults, editor)
+    updateCurrentDiagnostics(testResults.fail, this.failDiagnostics, editor)
+
+    this.parsingTestFile = false
+  }
+
+  public triggerUpdateSettings(updatedSettings: IPluginResourceSettings) {
+    this.pluginSettings = updatedSettings
+
+    this.jestWorkspace.rootPath = updatedSettings.rootPath
+    this.jestWorkspace.pathToJest = pathToJest(updatedSettings)
+    this.jestWorkspace.pathToConfig = pathToConfig(updatedSettings)
+    this.jestWorkspace.debug = updatedSettings.debugMode
+    this.testResultProvider.verbose = updatedSettings.debugMode
+
+    this.coverageOverlay.enabled = updatedSettings.showCoverageOnLoad
+
+    this.restartProcess()
+  }
+
+  updateDecorators(testResults: SortedTestResults, editor: vscode.TextEditor) {
+    // Dots
+    const styleMap = [
+      { data: testResults.success, decorationType: this.passingItStyle, state: TestReconciliationState.KnownSuccess },
+      { data: testResults.fail, decorationType: this.failingItStyle, state: TestReconciliationState.KnownFail },
+      { data: testResults.skip, decorationType: this.skipItStyle, state: TestReconciliationState.KnownSkip },
+      { data: testResults.unknown, decorationType: this.unknownItStyle, state: TestReconciliationState.Unknown },
+    ]
+
+    styleMap.forEach(style => {
+      const decorators = this.generateDotsForItBlocks(style.data, style.state)
+      editor.setDecorations(style.decorationType, decorators)
+    })
+
+    // Debug CodeLens
+    this.debugCodeLensProvider.didChange()
+
+    // Inline error messages
+    this.resetInlineErrorDecorators(editor)
+    if (this.pluginSettings.enableInlineErrorMessages) {
+      const fileName = editor.document.fileName
+      testResults.fail.forEach(a => {
+        const { style, decorator } = this.generateInlineErrorDecorator(fileName, a)
+        editor.setDecorations(style, [decorator])
+      })
+    }
+  }
+
+  canUpdateActiveEditor(editor: vscode.TextEditor) {
+    const inSettings = !editor.document
+    if (inSettings) {
+      return false
+    }
+
+    if (this.parsingTestFile) {
+      return false
+    }
+
+    // check if file is a possible code file: js/jsx/ts/tsx
+    const codeRegex = /\.[t|j]sx?$/
+    return codeRegex.test(editor.document.uri.fsPath)
+  }
+
+  public deactivate() {
+    this.jestProcessManager.stopAll()
+  }
+
+  public runTest = async (workspaceFolder: vscode.WorkspaceFolder, fileName: string, identifier: string) => {
+    const restart = this.jestProcessManager.numberOfProcesses > 0
+    this.jestProcessManager.stopAll()
+
+    this.debugConfigurationProvider.prepareTestRun(fileName, identifier)
+
+    const handle = vscode.debug.onDidTerminateDebugSession(_ => {
+      handle.dispose()
+      if (restart) {
+        this.startProcess()
+      }
+    })
+
+    try {
+      // try to run the debug configuration from launch.json
+      await vscode.debug.startDebugging(workspaceFolder, 'vscode-jest-tests')
+    } catch {
+      // if that fails, there (probably) isn't any debug configuration (at least no correctly named one)
+      // therefore debug the test using the default configuration
+      const debugConfiguration = this.debugConfigurationProvider.provideDebugConfigurations(workspaceFolder)[0]
+      await vscode.debug.startDebugging(workspaceFolder, debugConfiguration)
+    }
+  }
+
+  onDidCloseTextDocument(document: vscode.TextDocument) {
+    this.removeCachedTestResults(document)
+    this.removeCachedDecorationTypes(document)
+  }
+
+  removeCachedTestResults(document: vscode.TextDocument) {
+    if (!document || document.isUntitled) {
+      return
+    }
+
+    const filePath = document.fileName
+    this.testResultProvider.removeCachedResults(filePath)
+  }
+
+  removeCachedDecorationTypes(document: vscode.TextDocument) {
+    if (!document || !document.fileName) {
+      return
+    }
+
+    delete this.failingAssertionDecorators[document.fileName]
+  }
+
+  onDidChangeActiveTextEditor(editor: vscode.TextEditor) {
+    this.triggerUpdateActiveEditor(editor)
+  }
+
+  /**
+   * This event is fired with the document not dirty when:
+   * - before the onDidSaveTextDocument event
+   * - the document was changed by an external editor
+   */
+  onDidChangeTextDocument(event: vscode.TextDocumentChangeEvent) {
+    if (event.document.isDirty) {
+      return
+    }
+    if (event.document.uri.scheme === 'git') {
+      return
+    }
+
+    // Ignore a clean file with a change:
+    if (event.contentChanges.length > 0) {
+      return
+    }
+
+    this.removeCachedTestResults(event.document)
+
+    for (const editor of vscode.window.visibleTextEditors) {
+      if (editor.document === event.document) {
+        this.triggerUpdateActiveEditor(editor)
+      }
+    }
+  }
+
+  toggleCoverageOverlay() {
+    this.coverageOverlay.toggleVisibility()
+  }
+
+  private detectedSnapshotErrors() {
+    if (!this.pluginSettings.enableSnapshotUpdateMessages) {
+      return
+    }
+    vscode.window
+      .showInformationMessage('Would you like to update your Snapshots?', { title: 'Replace them' })
+      .then(response => {
+        // No response == cancel
+        if (response) {
+          this.jestProcess.runJestWithUpdateForSnapshots(() => {
+            if (this.pluginSettings.restartJestOnSnapshotUpdate) {
+              this.jestProcessManager.stopJestProcess(this.jestProcess).then(() => {
+                this.startProcess()
+              })
+              vscode.window.showInformationMessage('Updated Snapshots and restarted Jest.')
+            } else {
+              vscode.window.showInformationMessage('Updated Snapshots. It will show in your next test run.')
+            }
+          })
+        }
+      })
+  }
+
+  private resetInlineErrorDecorators(editor: vscode.TextEditor) {
+    if (!this.failingAssertionDecorators[editor.document.fileName]) {
+      this.failingAssertionDecorators[editor.document.fileName] = []
+      return
+    }
+
+    if (isOpenInMultipleEditors(editor.document)) {
+      return
+    }
+
+    this.failingAssertionDecorators[editor.document.fileName].forEach(element => {
+      element.dispose()
+    })
+    this.failingAssertionDecorators[editor.document.fileName] = []
+  }
+
+  private generateInlineErrorDecorator(fileName: string, test: TestResult) {
+    const errorMessage = test.terseMessage || test.shortMessage
+    const decorator = {
+      range: new vscode.Range(test.lineNumberOfError, 0, test.lineNumberOfError, 0),
+      hoverMessage: errorMessage,
+    }
+
+    // We have to make a new style for each unique message, this is
+    // why we have to remove off of them beforehand
+    const style = decorations.failingAssertionStyle(errorMessage)
+    this.failingAssertionDecorators[fileName].push(style)
+
+    return { style, decorator }
+  }
+
   private handleStdErr(error: Buffer) {
     const message = error.toString()
-
     if (this.shouldIgnoreOutput(message)) {
       return
     }
@@ -156,188 +437,8 @@ export class JestExt {
       })
   }
 
-  public startProcess() {
-    if (this.jestProcessManager.numberOfProcesses > 0) {
-      return
-    }
-
-    if (this.pluginSettings.runAllTestsFirst) {
-      this.testsHaveStartedRunning()
-    }
-
-    this.jestProcess = this.jestProcessManager.startJestProcess({
-      watchMode: WatchMode.Watch,
-      keepAlive: true,
-      exitCallback: (jestProcess, jestProcessInWatchMode) => {
-        if (jestProcessInWatchMode) {
-          this.jestProcess = jestProcessInWatchMode
-
-          this.channel.appendLine('Finished running all tests. Starting watch mode.')
-          status.running('Starting watch mode')
-
-          this.assignHandlers(this.jestProcess)
-        } else {
-          status.stopped()
-          if (!jestProcess.stopRequested) {
-            const msg = `Starting Jest in Watch mode failed too many times and has been stopped.`
-            this.channel.appendLine(`${msg}\n see troubleshooting: ${messaging.TroubleShootingURL}`)
-            this.channel.show(true)
-            messaging.systemErrorMessage(msg, messaging.showTroubleshootingAction)
-          }
-        }
-      },
-    })
-
-    this.assignHandlers(this.jestProcess)
-  }
-
-  public stopProcess() {
-    this.channel.appendLine('Closing Jest')
-    this.jestProcessManager.stopAll()
-    status.stopped()
-  }
-
-  private detectedSnapshotErrors() {
-    if (!this.pluginSettings.enableSnapshotUpdateMessages) {
-      return
-    }
-    vscode.window
-      .showInformationMessage('Would you like to update your Snapshots?', { title: 'Replace them' })
-      .then(response => {
-        // No response == cancel
-        if (response) {
-          this.jestProcess.runJestWithUpdateForSnapshots(() => {
-            if (this.pluginSettings.restartJestOnSnapshotUpdate) {
-              this.jestProcessManager.stopJestProcess(this.jestProcess).then(() => {
-                this.startProcess()
-              })
-              vscode.window.showInformationMessage('Updated Snapshots and restarted Jest.')
-            } else {
-              vscode.window.showInformationMessage('Updated Snapshots. It will show in your next test run.')
-            }
-          })
-        }
-      })
-  }
-
-  public triggerUpdateActiveEditor(editor: vscode.TextEditor) {
-    this.coverageOverlay.updateVisibleEditors()
-
-    if (!this.canUpdateActiveEditor(editor)) {
-      return
-    }
-
-    // not sure why we need to protect this block with parsingTestFile ?
-    // using an ivar as a locking mechanism has bad smell
-    // TODO: refactor maybe?
-    this.parsingTestFile = true
-
-    const filePath = editor.document.fileName
-    const testResults = this.testResultProvider.getSortedResults(filePath)
-
-    this.updateDecorators(testResults, editor)
-    updateCurrentDiagnostics(testResults.fail, this.failDiagnostics, editor)
-
-    this.parsingTestFile = false
-  }
-
-  public triggerUpdateSettings(updatedSettings: IPluginSettings) {
-    this.pluginSettings = updatedSettings
-
-    this.workspace.rootPath = updatedSettings.rootPath
-    this.workspace.pathToJest = pathToJest(updatedSettings)
-    this.workspace.pathToConfig = pathToConfig(updatedSettings)
-    this.workspace.debug = updatedSettings.debugMode
-
-    this.coverageOverlay.enabled = updatedSettings.showCoverageOnLoad
-
-    this.debugCodeLensProvider.showWhenTestStateIn = updatedSettings.debugCodeLens.enabled
-      ? updatedSettings.debugCodeLens.showWhenTestStateIn
-      : []
-
-    this.stopProcess()
-
-    setTimeout(() => {
-      this.startProcess()
-    }, 500)
-  }
-
-  updateDecorators(testResults: SortedTestResults, editor: vscode.TextEditor) {
-    // Dots
-    const styleMap = [
-      { data: testResults.success, decorationType: this.passingItStyle, state: TestReconciliationState.KnownSuccess },
-      { data: testResults.fail, decorationType: this.failingItStyle, state: TestReconciliationState.KnownFail },
-      { data: testResults.skip, decorationType: this.skipItStyle, state: TestReconciliationState.KnownSkip },
-      { data: testResults.unknown, decorationType: this.unknownItStyle, state: TestReconciliationState.Unknown },
-    ]
-
-    styleMap.forEach(style => {
-      const decorators = this.generateDotsForItBlocks(style.data, style.state)
-      editor.setDecorations(style.decorationType, decorators)
-    })
-
-    // Debug CodeLens
-    this.debugCodeLensProvider.didChange()
-
-    // Inline error messages
-    this.resetInlineErrorDecorators(editor)
-    if (this.pluginSettings.enableInlineErrorMessages) {
-      const fileName = editor.document.fileName
-      testResults.fail.forEach(a => {
-        const { style, decorator } = this.generateInlineErrorDecorator(fileName, a)
-        editor.setDecorations(style, [decorator])
-      })
-    }
-  }
-
-  private resetInlineErrorDecorators(editor: vscode.TextEditor) {
-    if (!this.failingAssertionDecorators[editor.document.fileName]) {
-      this.failingAssertionDecorators[editor.document.fileName] = []
-      return
-    }
-
-    if (isOpenInMultipleEditors(editor.document)) {
-      return
-    }
-
-    this.failingAssertionDecorators[editor.document.fileName].forEach(element => {
-      element.dispose()
-    })
-    this.failingAssertionDecorators[editor.document.fileName] = []
-  }
-
-  private generateInlineErrorDecorator(fileName: string, test: TestResult) {
-    const errorMessage = test.terseMessage || test.shortMessage
-    const decorator = {
-      range: new vscode.Range(test.lineNumberOfError, 0, test.lineNumberOfError, 0),
-      hoverMessage: errorMessage,
-    }
-
-    // We have to make a new style for each unique message, this is
-    // why we have to remove off of them beforehand
-    const style = decorations.failingAssertionStyle(errorMessage)
-    this.failingAssertionDecorators[fileName].push(style)
-
-    return { style, decorator }
-  }
-
-  canUpdateActiveEditor(editor: vscode.TextEditor) {
-    const inSettings = !editor.document
-    if (inSettings) {
-      return false
-    }
-
-    if (this.parsingTestFile) {
-      return false
-    }
-
-    // check if file is a possible code file: js/jsx/ts/tsx
-    const codeRegex = /\.[t|j]sx?$/
-    return codeRegex.test(editor.document.uri.fsPath)
-  }
-
   private setupStatusBar() {
-    status.initial()
+    this.status.initial()
   }
 
   private setupDecorators() {
@@ -354,7 +455,7 @@ export class JestExt {
 
   private testsHaveStartedRunning() {
     this.channel.clear()
-    status.running('initial full test run')
+    this.status.running('initial full test run')
   }
 
   private updateWithData(data: JestTotalResults) {
@@ -366,13 +467,15 @@ export class JestExt {
 
     const failedFileCount = failedSuiteCount(this.failDiagnostics)
     if (failedFileCount <= 0 && normalizedData.success) {
-      status.success()
+      this.status.success()
     } else {
-      status.failed(` (${failedFileCount} test suite${failedFileCount > 1 ? 's' : ''} failed)`)
+      this.status.failed(` (${failedFileCount} test suite${failedFileCount > 1 ? 's' : ''} failed)`)
     }
 
     for (const editor of vscode.window.visibleTextEditors) {
-      this.triggerUpdateActiveEditor(editor)
+      if (vscode.workspace.getWorkspaceFolder(editor.document.uri) === this.workspaceFolder) {
+        this.triggerUpdateActiveEditor(editor)
+      }
     }
     this.clearOnNextInput = true
   }
@@ -392,95 +495,5 @@ export class JestExt {
         identifier: it.name,
       }
     })
-  }
-
-  public deactivate() {
-    this.jestProcessManager.stopAll()
-  }
-
-  public runTest = async (fileName: string, identifier: string) => {
-    const restart = this.jestProcessManager.numberOfProcesses > 0
-    this.jestProcessManager.stopAll()
-
-    this.debugConfigurationProvider.prepareTestRun(fileName, identifier)
-
-    const handle = vscode.debug.onDidTerminateDebugSession(_ => {
-      handle.dispose()
-      if (restart) {
-        this.startProcess()
-      }
-    })
-
-    const workspaceFolder = vscode.workspace.workspaceFolders[0]
-    try {
-      // try to run the debug configuration from launch.json
-      await vscode.debug.startDebugging(workspaceFolder, 'vscode-jest-tests')
-    } catch {
-      // if that fails, there (probably) isn't any debug configuration (at least no correctly named one)
-      // therefore debug the test using the default configuration
-      const debugConfiguration = this.debugConfigurationProvider.provideDebugConfigurations(workspaceFolder)[0]
-      await vscode.debug.startDebugging(workspaceFolder, debugConfiguration)
-    }
-  }
-
-  onDidCloseTextDocument(document: vscode.TextDocument) {
-    this.removeCachedTestResults(document)
-    this.removeCachedDecorationTypes(document)
-  }
-
-  removeCachedTestResults(document: vscode.TextDocument) {
-    if (!document || document.isUntitled) {
-      return
-    }
-
-    const filePath = document.fileName
-    this.testResultProvider.removeCachedResults(filePath)
-  }
-
-  removeCachedDecorationTypes(document: vscode.TextDocument) {
-    if (!document || !document.fileName) {
-      return
-    }
-
-    delete this.failingAssertionDecorators[document.fileName]
-  }
-
-  onDidChangeActiveTextEditor(editor: vscode.TextEditor) {
-    if (!hasDocument(editor)) {
-      return
-    }
-
-    this.triggerUpdateActiveEditor(editor)
-  }
-
-  /**
-* This event is fired with the document not dirty when:
-* - before the onDidSaveTextDocument event
-* - the document was changed by an external editor
-*/
-  onDidChangeTextDocument(event: vscode.TextDocumentChangeEvent) {
-    if (event.document.isDirty) {
-      return
-    }
-    if (event.document.uri.scheme === 'git') {
-      return
-    }
-
-    // Ignore a clean file with a change:
-    if (event.contentChanges.length > 0) {
-      return
-    }
-
-    this.removeCachedTestResults(event.document)
-
-    for (const editor of vscode.window.visibleTextEditors) {
-      if (editor.document === event.document) {
-        this.triggerUpdateActiveEditor(editor)
-      }
-    }
-  }
-
-  toggleCoverageOverlay() {
-    this.coverageOverlay.toggleVisibility()
   }
 }

@@ -1,13 +1,8 @@
 import { TestState } from '../DebugCodeLens'
 
-export interface IPluginSettings {
+export interface IPluginResourceSettings {
   autoEnable?: boolean
-  debugCodeLens: {
-    enabled: boolean
-    showWhenTestStateIn: TestState[]
-  }
   enableInlineErrorMessages?: boolean
-  enableSnapshotPreviews?: boolean
   enableSnapshotUpdateMessages?: boolean
   pathToConfig?: string
   pathToJest?: string
@@ -17,6 +12,15 @@ export interface IPluginSettings {
   showCoverageOnLoad: boolean
   coverageFormatter: string
   debugMode?: boolean
+}
+
+export interface IPluginWindowSettings {
+  debugCodeLens: {
+    enabled: boolean
+    showWhenTestStateIn: TestState[]
+  }
+  enableSnapshotPreviews?: boolean
+  disabledWorkspaceFolders: string[]
 }
 
 export function isDefaultPathToJest(str) {
