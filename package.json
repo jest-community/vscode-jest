@@ -258,7 +258,6 @@
     "jest-editor-support": "^26.0.0-beta",
     "jest-snapshot": "^24.7.0",
     "lint-staged": "^4.2.3",
-    "micromatch": "^2.3.11",
     "prettier": "^1.17.0",
     "rimraf": "^2.6.2",
     "ts-jest": "^24.0.2",

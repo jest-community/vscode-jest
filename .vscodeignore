@@ -4,7 +4,6 @@ src/**
 **/*.map
 .gitignore
 tsconfig.json
-integrations/**
 **/__mocks__/**
 **/tests/**
 **/*.ts
