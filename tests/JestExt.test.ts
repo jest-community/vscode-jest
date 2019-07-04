@@ -642,8 +642,9 @@ describe('JestExt', () => {
       const spy = jest.spyOn(sut as any, 'detectedSnapshotErrors')
       ;(sut as any).handleStdErr(new Error('Snapshot test failed'))
       ;(sut as any).handleStdErr(new Error('Snapshot failed'))
+      ;(sut as any).handleStdErr(new Error('Snapshots failed'))
       ;(sut as any).handleStdErr(new Error('Failed for some other reason'))
-      expect(spy).toHaveBeenCalledTimes(2)
+      expect(spy).toHaveBeenCalledTimes(3)
     })
   })
 
