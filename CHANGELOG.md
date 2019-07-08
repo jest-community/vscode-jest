@@ -5,7 +5,7 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 
-* Fix regex to detect the pluralized message 'snapshots failed' and show the 'Would you like to update your Snapshots' dialog.
+* Fix regex to detect the pluralized message 'snapshots failed' and show the 'Would you like to update your Snapshots' dialog - shruda
 
 -->
 
