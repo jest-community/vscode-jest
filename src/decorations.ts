@@ -7,13 +7,13 @@ export function failingItName() {
     light: {
       before: {
         color: '#FF564B',
-        contentText: '●',
+        contentText: '● ',
       },
     },
     dark: {
       before: {
         color: '#AD322D',
-        contentText: '●',
+        contentText: '● ',
       },
     },
     rangeBehavior: DecorationRangeBehavior.ClosedClosed,
@@ -27,13 +27,13 @@ export function skipItName() {
     light: {
       before: {
         color: '#fed37f',
-        contentText: '○',
+        contentText: '○ ',
       },
     },
     dark: {
       before: {
         color: '#fed37f',
-        contentText: '○',
+        contentText: '○ ',
       },
     },
     rangeBehavior: DecorationRangeBehavior.ClosedClosed,
@@ -47,13 +47,13 @@ export function passingItName() {
     light: {
       before: {
         color: '#3BB26B',
-        contentText: '●',
+        contentText: '● ',
       },
     },
     dark: {
       before: {
         color: '#2F8F51',
-        contentText: '●',
+        contentText: '● ',
       },
     },
     rangeBehavior: DecorationRangeBehavior.ClosedClosed,
@@ -67,13 +67,13 @@ export function notRanItName() {
     dark: {
       before: {
         color: '#3BB26B',
-        contentText: '○',
+        contentText: '○ ',
       },
     },
     light: {
       before: {
         color: '#2F8F51',
-        contentText: '○',
+        contentText: '○ ',
       },
     },
     rangeBehavior: DecorationRangeBehavior.ClosedClosed,
