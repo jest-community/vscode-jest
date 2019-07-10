@@ -5,7 +5,7 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 
-* Fix regex to detect the pluralized message 'snapshots failed' and show the 'Would you like to update your Snapshots' dialog - shruda
+* Improve global and local detection for Jest executable on `win32` platform - [@rfgamaral](https://github.com/rfgamaral)
 
 -->
 
