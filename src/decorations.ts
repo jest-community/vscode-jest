@@ -66,13 +66,13 @@ export function notRanItName() {
     overviewRulerLane: OverviewRulerLane.Left,
     dark: {
       before: {
-        color: '#3BB26B',
+        color: '#9C9C9C',
         contentText: '○ ',
       },
     },
     light: {
       before: {
-        color: '#2F8F51',
+        color: '#7C7C7C',
         contentText: '○ ',
       },
     },
