@@ -49,9 +49,14 @@ function isBootstrappedWithCreateReactApp(rootPath: string): boolean {
   return isCreateReactAppTestCommand(testCommand)
 }
 
-function getLocalPathForExecutable(rootPath: string, executable: string): string {
+function getPlatformJestExecutable(executable: string): string {
   const ext = platform() === 'win32' ? '.cmd' : ''
-  return normalize(join(rootPath, 'node_modules', '.bin', executable + ext))
+  return executable + ext
+}
+
+function getLocalPathForExecutable(rootPath: string, executable: string): string {
+  const platformExecutable = getPlatformJestExecutable(executable)
+  return normalize(join(rootPath, 'node_modules', '.bin', platformExecutable))
 }
 
 function hasNodeExecutable(rootPath: string, executable: string): boolean {
@@ -78,7 +83,8 @@ export function pathToJest({ pathToJest, rootPath }: IPluginResourceSettings) {
   if (existsSync(localJestExecutable)) {
     return localJestExecutable
   }
-  return 'jest'
+
+  return getPlatformJestExecutable('jest')
 }
 
 /**
