@@ -49,9 +49,13 @@ function isBootstrappedWithCreateReactApp(rootPath: string): boolean {
   return isCreateReactAppTestCommand(testCommand)
 }
 
-function hasNodeExecutable(rootPath: string, executable: string): boolean {
+function getLocalPathForExecutable(rootPath: string, executable: string): string {
   const ext = platform() === 'win32' ? '.cmd' : ''
-  const absolutePath = join(rootPath, 'node_modules', '.bin', executable + ext)
+  return normalize(join(rootPath, 'node_modules', '.bin', executable + ext))
+}
+
+function hasNodeExecutable(rootPath: string, executable: string): boolean {
+  const absolutePath = getLocalPathForExecutable(rootPath, executable)
   return existsSync(absolutePath)
 }
 
@@ -70,15 +74,11 @@ export function pathToJest({ pathToJest, rootPath }: IPluginResourceSettings) {
     return 'npm test --'
   }
 
-  const localJestExecutable = pathToLocalJestExecutable(rootPath)
+  const localJestExecutable = getLocalPathForExecutable(rootPath, 'jest')
   if (existsSync(localJestExecutable)) {
     return localJestExecutable
   }
   return 'jest'
-}
-
-function pathToLocalJestExecutable(rootDir) {
-  return normalize(join(rootDir, 'node_modules/.bin/jest'))
 }
 
 /**
