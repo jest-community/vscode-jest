@@ -170,26 +170,52 @@ describe('ModuleHelpers', () => {
       expect(mockNormalize).toBeCalledWith(settings.pathToJest)
     })
 
-    it('defaults to "node_modules/.bin/jest" when Jest is locally installed', () => {
-      const expected = 'node_modules/.bin/jest'
+    describe('os platform: linux', () => {
+      it('defaults to "node_modules/.bin/jest" when Jest is locally installed', () => {
+        const expected = 'node_modules/.bin/jest'
 
-      mockJoin.mockImplementation(require.requireActual('path').posix.join)
-      mockPlatform.mockReturnValue('linux')
-      mockNormalize.mockImplementationOnce(arg => arg)
-      mockExistsSync.mockImplementation(path => path === expected)
+        mockJoin.mockImplementation(require.requireActual('path').posix.join)
+        mockPlatform.mockReturnValue('linux')
+        mockNormalize.mockImplementationOnce(arg => arg)
+        mockExistsSync.mockImplementation(path => path === expected)
 
-      expect(pathToJest(defaultSettings)).toBe(expected)
+        expect(pathToJest(defaultSettings)).toBe(expected)
+      })
+
+      it('defaults to "jest" when Jest is locally installed', () => {
+        const expected = 'jest'
+
+        mockJoin.mockImplementation(require.requireActual('path').posix.join)
+        mockPlatform.mockReturnValue('linux')
+        mockNormalize.mockImplementationOnce(arg => arg)
+        mockExistsSync.mockImplementation(_ => false)
+
+        expect(pathToJest(defaultSettings)).toBe(expected)
+      })
     })
 
-    it('defaults to "jest" when Jest is locally installed', () => {
-      const expected = 'jest'
+    describe('os platform: win32', () => {
+      it('defaults to "node_modules/.bin/jest.cmd" when Jest is locally installed', () => {
+        const expected = 'node_modules/.bin/jest.cmd'
 
-      mockJoin.mockImplementation(require.requireActual('path').posix.join)
-      mockPlatform.mockReturnValue('linux')
-      mockNormalize.mockImplementationOnce(arg => arg)
-      mockExistsSync.mockImplementation(_ => false)
+        mockJoin.mockImplementation(require.requireActual('path').posix.join)
+        mockPlatform.mockReturnValue('win32')
+        mockNormalize.mockImplementationOnce(arg => arg)
+        mockExistsSync.mockImplementation(path => path === expected)
 
-      expect(pathToJest(defaultSettings)).toBe(expected)
+        expect(pathToJest(defaultSettings)).toBe(expected)
+      })
+
+      it('defaults to "jest.cmd" when Jest is locally installed', () => {
+        const expected = 'jest.cmd'
+
+        mockJoin.mockImplementation(require.requireActual('path').posix.join)
+        mockPlatform.mockReturnValue('win32')
+        mockNormalize.mockImplementationOnce(arg => arg)
+        mockExistsSync.mockImplementation(_ => false)
+
+        expect(pathToJest(defaultSettings)).toBe(expected)
+      })
     })
   })
 })
