@@ -7,7 +7,7 @@
       "name": "Debug Tests",
       "program": "${workspaceRoot}/node_modules/jest/bin/jest.js",
       "cwd": "${workspaceRoot}",
-      "args": ["--i", "--config", "jest.json"]
+      "args": ["--i", "--config", "jest.config.js"]
     },
     {
       "name": "Launch Extension (development)",
