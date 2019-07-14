@@ -18,16 +18,11 @@ jest.mock('path', () => ({
   normalize: mockNormalize,
 }))
 
-import {
-  isCreateReactAppTestCommand,
-  pathToJest,
-  pathToJestPackageJSON,
-  nodeBinExtension as nodeBinExtensionOverwrite,
-} from '../src/helpers'
+import { isCreateReactAppTestCommand, pathToJest, pathToJestPackageJSON, nodeBinExtension } from '../src/helpers'
 import * as path from 'path'
 
 // Manually (forcefully) set the executable's file extension to test its addition independendly of the operating system.
-;(nodeBinExtensionOverwrite as string) = '.TEST'
+;(nodeBinExtension as string) = '.TEST'
 
 describe('ModuleHelpers', () => {
   describe('nodeBinExtension', () => {
@@ -35,15 +30,13 @@ describe('ModuleHelpers', () => {
     it('should return an empty string on Linux', () => {
       jest.resetModules()
       mockPlatform.mockReturnValueOnce('linux')
-      const { nodeBinExtension } = require('../src/helpers')
-      expect(nodeBinExtension).toBe('')
+      expect(require('../src/helpers').nodeBinExtension).toBe('')
     })
 
     it('should equal ".cmd" on Windows', () => {
       jest.resetModules()
       mockPlatform.mockReturnValueOnce('win32')
-      const { nodeBinExtension } = require('../src/helpers')
-      expect(nodeBinExtension).toBe('.cmd')
+      expect(require('../src/helpers').nodeBinExtension).toBe('.cmd')
     })
   })
 
