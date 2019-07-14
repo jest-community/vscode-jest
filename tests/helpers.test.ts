@@ -22,7 +22,7 @@ import { isCreateReactAppTestCommand, pathToJest, pathToJestPackageJSON, nodeBin
 import * as path from 'path'
 
 // Manually (forcefully) set the executable's file extension to test its addition independendly of the operating system.
-;(nodeBinExtension as any) = '.TEST'
+;(nodeBinExtension as string) = '.TEST'
 
 describe('ModuleHelpers', () => {
   describe('nodeBinExtension', () => {
