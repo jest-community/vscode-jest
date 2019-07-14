@@ -10,6 +10,26 @@ import { IPluginResourceSettings, hasUserSetPathToJest } from './Settings'
 const createReactAppBinaryNames = ['react-scripts', 'react-native-scripts', 'react-scripts-ts', 'react-app-rewired']
 
 /**
+ * File extension for npm binaries
+ */
+export const nodeBinExtension: string = platform() === 'win32' ? '.cmd' : ''
+
+/**
+ * Resolves the location of an npm binary
+ */
+function getLocalPathForExecutable(rootPath: string, executable: string): string {
+  return normalize(join(rootPath, 'node_modules', '.bin', executable + nodeBinExtension))
+}
+
+/**
+ * Checks whether an npm binary exists
+ */
+function hasNodeExecutable(rootPath: string, executable: string): boolean {
+  const absolutePath = getLocalPathForExecutable(rootPath, executable)
+  return existsSync(absolutePath)
+}
+
+/**
  * Tries to read the test command from the scripts section within `package.json`
  *
  * Returns the test command in case of success,
@@ -49,21 +69,6 @@ function isBootstrappedWithCreateReactApp(rootPath: string): boolean {
   return isCreateReactAppTestCommand(testCommand)
 }
 
-function getPlatformJestExecutable(executable: string): string {
-  const ext = platform() === 'win32' ? '.cmd' : ''
-  return executable + ext
-}
-
-function getLocalPathForExecutable(rootPath: string, executable: string): string {
-  const platformExecutable = getPlatformJestExecutable(executable)
-  return normalize(join(rootPath, 'node_modules', '.bin', platformExecutable))
-}
-
-function hasNodeExecutable(rootPath: string, executable: string): boolean {
-  const absolutePath = getLocalPathForExecutable(rootPath, executable)
-  return existsSync(absolutePath)
-}
-
 /**
  * Handles getting the jest runner, handling the OS and project specific work too
  *
@@ -84,7 +89,7 @@ export function pathToJest({ pathToJest, rootPath }: IPluginResourceSettings) {
     return localJestExecutable
   }
 
-  return getPlatformJestExecutable('jest')
+  return 'jest' + nodeBinExtension
 }
 
 /**
@@ -124,7 +129,7 @@ export function pathToJestPackageJSON(pluginSettings: IPluginResourceSettings): 
   return null
 }
 
-function removeSurroundingQuotes(str) {
+function removeSurroundingQuotes(str: string) {
   return str.replace(/^['"`]/, '').replace(/['"`]$/, '')
 }
 

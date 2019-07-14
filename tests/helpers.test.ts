@@ -21,7 +21,28 @@ jest.mock('path', () => ({
 import { isCreateReactAppTestCommand, pathToJest, pathToJestPackageJSON } from '../src/helpers'
 import * as path from 'path'
 
+// tslint:disable-next-line no-duplicate-imports
+import * as moduleHelpers from '../src/helpers'
+;(moduleHelpers as any).nodeBinExtension = '.TEST'
+
 describe('ModuleHelpers', () => {
+  describe('nodeBinExtension', () => {
+    // Since `nodeBinExtension` is a variable, we have to reload the module in order to re-evaluate it.
+    it('should return an empty string on Linux', () => {
+      jest.resetModules()
+      mockPlatform.mockReturnValueOnce('linux')
+      const { nodeBinExtension } = require('../src/helpers')
+      expect(nodeBinExtension).toBe('')
+    })
+
+    it('should equal ".cmd" on Windows', () => {
+      jest.resetModules()
+      mockPlatform.mockReturnValueOnce('win32')
+      const { nodeBinExtension } = require('../src/helpers')
+      expect(nodeBinExtension).toBe('.cmd')
+    })
+  })
+
   describe('pathToJestPackageJSON', () => {
     const defaultPathToJest = null
     const defaultSettings: any = {
@@ -145,6 +166,12 @@ describe('ModuleHelpers', () => {
       rootPath: '',
     }
 
+    beforeEach(() => {
+      mockJoin.mockImplementation(require.requireActual('path').join)
+      mockNormalize.mockImplementation(require.requireActual('path').normalize)
+      mockExistsSync.mockImplementation(require.requireActual('path').existsSync)
+    })
+
     it('returns "npm test --" when bootstrapped with create-react-app', () => {
       mockReadFileSync.mockReturnValueOnce(
         JSON.stringify({
@@ -170,52 +197,24 @@ describe('ModuleHelpers', () => {
       expect(mockNormalize).toBeCalledWith(settings.pathToJest)
     })
 
-    describe('os platform: linux', () => {
-      it('defaults to "node_modules/.bin/jest" when Jest is locally installed', () => {
-        const expected = 'node_modules/.bin/jest'
+    it('defaults to "node_modules/.bin/jest" when Jest is locally installed', () => {
+      const expected = 'node_modules/.bin/jest.TEST'
 
-        mockJoin.mockImplementation(require.requireActual('path').posix.join)
-        mockPlatform.mockReturnValue('linux')
-        mockNormalize.mockImplementationOnce(arg => arg)
-        mockExistsSync.mockImplementation(path => path === expected)
+      mockJoin.mockImplementation(require.requireActual('path').posix.join)
+      mockNormalize.mockImplementation(arg => arg)
+      mockExistsSync.mockImplementation(path => path === expected)
 
-        expect(pathToJest(defaultSettings)).toBe(expected)
-      })
-
-      it('defaults to "jest" when Jest is locally installed', () => {
-        const expected = 'jest'
-
-        mockJoin.mockImplementation(require.requireActual('path').posix.join)
-        mockPlatform.mockReturnValue('linux')
-        mockNormalize.mockImplementationOnce(arg => arg)
-        mockExistsSync.mockImplementation(_ => false)
-
-        expect(pathToJest(defaultSettings)).toBe(expected)
-      })
+      expect(pathToJest(defaultSettings)).toBe(expected)
     })
 
-    describe('os platform: win32', () => {
-      it('defaults to "node_modules/.bin/jest.cmd" when Jest is locally installed', () => {
-        const expected = 'node_modules/.bin/jest.cmd'
+    it('defaults to "jest" when Jest is not locally installed', () => {
+      const expected = 'jest.TEST'
 
-        mockJoin.mockImplementation(require.requireActual('path').posix.join)
-        mockPlatform.mockReturnValue('win32')
-        mockNormalize.mockImplementationOnce(arg => arg)
-        mockExistsSync.mockImplementation(path => path === expected)
+      mockJoin.mockImplementation(require.requireActual('path').posix.join)
+      mockNormalize.mockImplementation(arg => arg)
+      mockExistsSync.mockImplementation(_ => false)
 
-        expect(pathToJest(defaultSettings)).toBe(expected)
-      })
-
-      it('defaults to "jest.cmd" when Jest is locally installed', () => {
-        const expected = 'jest.cmd'
-
-        mockJoin.mockImplementation(require.requireActual('path').posix.join)
-        mockPlatform.mockReturnValue('win32')
-        mockNormalize.mockImplementationOnce(arg => arg)
-        mockExistsSync.mockImplementation(_ => false)
-
-        expect(pathToJest(defaultSettings)).toBe(expected)
-      })
+      expect(pathToJest(defaultSettings)).toBe(expected)
     })
   })
 })
