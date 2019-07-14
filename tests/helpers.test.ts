@@ -18,12 +18,11 @@ jest.mock('path', () => ({
   normalize: mockNormalize,
 }))
 
-import { isCreateReactAppTestCommand, pathToJest, pathToJestPackageJSON } from '../src/helpers'
+import { isCreateReactAppTestCommand, pathToJest, pathToJestPackageJSON, nodeBinExtension } from '../src/helpers'
 import * as path from 'path'
 
-// tslint:disable-next-line no-duplicate-imports
-import * as moduleHelpers from '../src/helpers'
-;(moduleHelpers as any).nodeBinExtension = '.TEST'
+// Manually (forcefully) set the executable's file extension to test its addition independendly of the operating system.
+;(nodeBinExtension as any) = '.TEST'
 
 describe('ModuleHelpers', () => {
   describe('nodeBinExtension', () => {
