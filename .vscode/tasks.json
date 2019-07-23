@@ -3,8 +3,8 @@
   "tasks": [
     {
       "label": "watch",
-      "type": "shell",
-      "command": "yarn run watch",
+      "type": "npm",
+      "script": "watch",
       "isBackground": true,
       "problemMatcher": [
         {
