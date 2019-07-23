@@ -7,7 +7,6 @@ Bug-fixes within the same version aren't needed
 
 * Improve global and local detection for Jest executable on `win32` platform - [@rfgamaral](https://github.com/rfgamaral)
 * Set `"extensionKind": "workspace"` in `package.json` to support remote developement - [@rfgamaral](https://github.com/rfgamaral)
-* Activate extension if workspace contains either 'jest' or 'jest.cmd' executable - [@rfgamaral](https://github.com/rfgamaral)
 
 -->
 
