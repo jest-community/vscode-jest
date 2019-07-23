@@ -16,17 +16,12 @@ export const nodeBinExtension: string = platform() === 'win32' ? '.cmd' : ''
 
 /**
  * Resolves the location of an npm binary
+ *
+ * Returns the path if it exists, or `undefined` otherwise
  */
 function getLocalPathForExecutable(rootPath: string, executable: string): string {
-  return normalize(join(rootPath, 'node_modules', '.bin', executable + nodeBinExtension))
-}
-
-/**
- * Checks whether an npm binary exists
- */
-function hasNodeExecutable(rootPath: string, executable: string): boolean {
-  const absolutePath = getLocalPathForExecutable(rootPath, executable)
-  return existsSync(absolutePath)
+  const absolutePath = normalize(join(rootPath, 'node_modules', '.bin', executable + nodeBinExtension))
+  return existsSync(absolutePath) ? absolutePath : undefined
 }
 
 /**
@@ -64,7 +59,7 @@ function isBootstrappedWithCreateReactApp(rootPath: string): boolean {
   if (testCommand === undefined) {
     // In case parsing `package.json` failed or was unconclusive,
     // fallback to checking for the presence of the binaries in `./node_modules/.bin`
-    return createReactAppBinaryNames.some(binary => hasNodeExecutable(rootPath, binary))
+    return createReactAppBinaryNames.some(binary => getLocalPathForExecutable(rootPath, binary) !== undefined)
   }
   return isCreateReactAppTestCommand(testCommand)
 }
@@ -84,12 +79,7 @@ export function pathToJest({ pathToJest, rootPath }: IPluginResourceSettings) {
     return 'npm test --'
   }
 
-  const localJestExecutable = getLocalPathForExecutable(rootPath, 'jest')
-  if (existsSync(localJestExecutable)) {
-    return localJestExecutable
-  }
-
-  return 'jest' + nodeBinExtension
+  return getLocalPathForExecutable(rootPath, 'jest') || 'jest' + nodeBinExtension
 }
 
 /**
