@@ -1,10 +1,12 @@
 jest.unmock('../../src/TestResults/TestResult')
+jest.unmock('../../src/helpers')
 jest.mock('path', () => ({ sep: require.requireActual('path').sep }))
 
 import {
   resultsWithLowerCaseWindowsDriveLetters,
   coverageMapWithLowerCaseWindowsDriveLetters,
   testResultsWithLowerCaseWindowsDriveLetters,
+  resultsWithoutAnsiCharacters,
   withLowerCaseWindowsDriveLetter,
 } from '../../src/TestResults/TestResult'
 import * as path from 'path'
@@ -58,6 +60,34 @@ describe('TestResult', () => {
           coverageMap: expected,
         })
       })
+    })
+  })
+
+  describe('resultsWithoutAnsiCharacters', () => {
+    it('should remove ANSI characters from the test results when provided', () => {
+      const data: any = {
+        testResults: [
+          {
+            message:
+              '\u001b[36m<body>\u001b[39m \u001b[36m<div>\u001b[39m \u001b[36m<div\u001b[39m \u001b[33mclass\u001b[39m=\u001b[32m"root"\u001b[39m \u001b[36m>\u001b[39m \u001b[0mLearn React\u001b[0m \u001b[36m</div>\u001b[39m \u001b[36m</div>\u001b[39m\u001b[36m</body>\u001b[39m',
+            assertionResults: [
+              {
+                failureMessages: [
+                  '\u001b[36m<body>\u001b[39m \u001b[36m<div>\u001b[39m \u001b[36m<div\u001b[39m \u001b[33mclass\u001b[39m=\u001b[32m"root"\u001b[39m \u001b[36m>\u001b[39m \u001b[0mLearn React\u001b[0m \u001b[36m</div>\u001b[39m \u001b[36m</div>\u001b[39m\u001b[36m</body>\u001b[39m',
+                ],
+              },
+            ],
+          },
+        ],
+      }
+      expect(resultsWithoutAnsiCharacters(data).testResults).toEqual([
+        {
+          message: '<body> <div> <div class="root" > Learn React </div> </div></body>',
+          assertionResults: [
+            { failureMessages: ['<body> <div> <div class="root" > Learn React </div> </div></body>'] },
+          ],
+        },
+      ])
     })
   })
 
