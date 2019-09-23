@@ -64,6 +64,11 @@ describe('TestResult', () => {
   })
 
   describe('resultsWithoutAnsiCharacters', () => {
+    it('should not break when there is no data or testResults', () => {
+      expect(resultsWithoutAnsiCharacters(undefined)).toEqual(undefined)
+      const noTestResults: any = {}
+      expect(resultsWithoutAnsiCharacters(noTestResults)).toEqual({})
+    })
     it('should remove ANSI characters from the test results when provided', () => {
       const data: any = {
         testResults: [
