@@ -7,6 +7,7 @@ Bug-fixes within the same version aren't needed
 
 * Add 'hair space' (U+200A) after decoration text - [@rfgamaral](https://github.com/rfgamaral)
 * Fix decoration color for 'unknown' tests - [@rfgamaral](https://github.com/rfgamaral)
+* Fix remove ANSI characters from test messages - [@jmarceli](https://github.com/jmarceli)
 
 -->
 
