@@ -6,7 +6,7 @@ import {
   resultsWithLowerCaseWindowsDriveLetters,
   coverageMapWithLowerCaseWindowsDriveLetters,
   testResultsWithLowerCaseWindowsDriveLetters,
-  resultsWithoutAnsiCharacters,
+  resultsWithoutAnsiEscapeSequence,
   withLowerCaseWindowsDriveLetter,
 } from '../../src/TestResults/TestResult'
 import * as path from 'path'
@@ -63,11 +63,11 @@ describe('TestResult', () => {
     })
   })
 
-  describe('resultsWithoutAnsiCharacters', () => {
+  describe('resultsWithoutAnsiEscapeSequence', () => {
     it('should not break when there is no data or testResults', () => {
-      expect(resultsWithoutAnsiCharacters(undefined)).toEqual(undefined)
+      expect(resultsWithoutAnsiEscapeSequence(undefined)).toEqual(undefined)
       const noTestResults: any = {}
-      expect(resultsWithoutAnsiCharacters(noTestResults)).toEqual({})
+      expect(resultsWithoutAnsiEscapeSequence(noTestResults)).toEqual({})
     })
     it('should remove ANSI characters from the test results when provided', () => {
       const data: any = {
@@ -85,7 +85,7 @@ describe('TestResult', () => {
           },
         ],
       }
-      expect(resultsWithoutAnsiCharacters(data).testResults).toEqual([
+      expect(resultsWithoutAnsiEscapeSequence(data).testResults).toEqual([
         {
           message: '<body> <div> <div class="root" > Learn React </div> </div></body>',
           assertionResults: [

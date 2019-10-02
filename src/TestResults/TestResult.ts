@@ -45,9 +45,9 @@ export function resultsWithLowerCaseWindowsDriveLetters(data: JestTotalResults) 
 }
 
 /**
- * Removes ANSI characters from test results in order to get clean messages
+ * Removes ANSI escape sequence characters from test results in order to get clean messages
  */
-export function resultsWithoutAnsiCharacters(data: JestTotalResults) {
+export function resultsWithoutAnsiEscapeSequence(data: JestTotalResults) {
   if (!data || !data.testResults) {
     return data
   }

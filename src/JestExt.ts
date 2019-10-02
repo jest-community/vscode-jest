@@ -22,7 +22,7 @@ import { CoverageOverlay } from './Coverage/CoverageOverlay'
 import { JestProcess, JestProcessManager } from './JestProcessManagement'
 import { isWatchNotSupported, WatchMode } from './Jest'
 import * as messaging from './messaging'
-import { resultsWithoutAnsiCharacters } from './TestResults/TestResult'
+import { resultsWithoutAnsiEscapeSequence } from './TestResults/TestResult'
 
 interface InstanceSettings {
   multirootEnv: boolean
@@ -460,7 +460,7 @@ export class JestExt {
   }
 
   private updateWithData(data: JestTotalResults) {
-    const noAnsiData = resultsWithoutAnsiCharacters(data)
+    const noAnsiData = resultsWithoutAnsiEscapeSequence(data)
     const normalizedData = resultsWithLowerCaseWindowsDriveLetters(noAnsiData)
     this.coverageMapProvider.update(normalizedData.coverageMap)
 
