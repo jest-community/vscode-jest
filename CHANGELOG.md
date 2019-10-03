@@ -12,6 +12,10 @@ Bug-fixes within the same version aren't needed
 
 -->
 
+## Master
+
+* replacing the status bar spinner to VS Code spinner
+
 ### 3.0.1
 
 * use webpack for compilation, resulting in a much smaller extension size - stephtr
