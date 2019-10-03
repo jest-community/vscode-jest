@@ -5,10 +5,12 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 
+* Fix regex to detect the pluralized message 'snapshots failed' and show the 'Would you like to update your Snapshots' dialog - shruda
 * Add 'hair space' (U+200A) after decoration text - [@rfgamaral](https://github.com/rfgamaral)
 * Fix decoration color for 'unknown' tests - [@rfgamaral](https://github.com/rfgamaral)
 * Improve global and local detection for Jest executable on `win32` platform - [@rfgamaral](https://github.com/rfgamaral)
 * Set `"extensionKind": "workspace"` in `package.json` to support remote developement - [@rfgamaral](https://github.com/rfgamaral)
+* Fix remove ANSI characters from test messages - [@jmarceli](https://github.com/jmarceli)
 
 -->
 

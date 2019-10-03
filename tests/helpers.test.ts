@@ -18,7 +18,7 @@ jest.mock('path', () => ({
   normalize: mockNormalize,
 }))
 
-import { isCreateReactAppTestCommand, pathToJest, pathToJestPackageJSON, nodeBinExtension } from '../src/helpers'
+import { isCreateReactAppTestCommand, pathToJest, pathToJestPackageJSON, nodeBinExtension, cleanAnsi } from '../src/helpers'
 import * as path from 'path'
 
 // Manually (forcefully) set the executable's file extension to test its addition independendly of the operating system.
@@ -212,6 +212,15 @@ describe('ModuleHelpers', () => {
       mockExistsSync.mockImplementation(_ => false)
 
       expect(pathToJest(defaultSettings)).toBe(expected)
+    })
+  })
+
+  describe('cleanAnsi', () => {
+    it('removes ANSI characters from string', () => {
+      const ansiString =
+        '\u001b[36m<body>\u001b[39m \u001b[36m<div>\u001b[39m \u001b[36m<div\u001b[39m \u001b[33mclass\u001b[39m=\u001b[32m"root"\u001b[39m \u001b[36m>\u001b[39m \u001b[0mLearn React\u001b[0m \u001b[36m</div>\u001b[39m \u001b[36m</div>\u001b[39m\u001b[36m</body>\u001b[39m'
+
+      expect(cleanAnsi(ansiString)).toBe('<body> <div> <div class="root" > Learn React </div> </div></body>')
     })
   })
 })
