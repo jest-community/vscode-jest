@@ -2,6 +2,7 @@ import { TestReconciliationState } from './TestReconciliationState'
 import { JestFileResults, JestTotalResults } from 'jest-editor-support'
 import { FileCoverage } from 'istanbul-lib-coverage'
 import * as path from 'path'
+import { cleanAnsi } from '../helpers'
 
 interface Position {
   /** Zero-based column number */
@@ -41,6 +42,27 @@ export function resultsWithLowerCaseWindowsDriveLetters(data: JestTotalResults) 
   }
 
   return data
+}
+
+/**
+ * Removes ANSI escape sequence characters from test results in order to get clean messages
+ */
+export function resultsWithoutAnsiEscapeSequence(data: JestTotalResults) {
+  if (!data || !data.testResults) {
+    return data
+  }
+
+  return {
+    ...data,
+    testResults: data.testResults.map(result => ({
+      ...result,
+      message: cleanAnsi(result.message),
+      assertionResults: result.assertionResults.map(assertion => ({
+        ...assertion,
+        failureMessages: assertion.failureMessages.map(message => cleanAnsi(message)),
+      })),
+    })),
+  }
 }
 
 export function coverageMapWithLowerCaseWindowsDriveLetters(data: JestTotalResults) {

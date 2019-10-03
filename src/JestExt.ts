@@ -11,7 +11,7 @@ import {
   resultsWithLowerCaseWindowsDriveLetters,
   SortedTestResults,
 } from './TestResults'
-import { pathToJest, pathToConfig } from './helpers'
+import { pathToJest, pathToConfig, cleanAnsi } from './helpers'
 import { CoverageMapProvider } from './Coverage'
 import { updateDiagnostics, updateCurrentDiagnostics, resetDiagnostics, failedSuiteCount } from './diagnostics'
 import { DebugCodeLensProvider } from './DebugCodeLens'
@@ -22,6 +22,7 @@ import { CoverageOverlay } from './Coverage/CoverageOverlay'
 import { JestProcess, JestProcessManager } from './JestProcessManagement'
 import { isWatchNotSupported, WatchMode } from './Jest'
 import * as messaging from './messaging'
+import { resultsWithoutAnsiEscapeSequence } from './TestResults/TestResult'
 
 interface InstanceSettings {
   multirootEnv: boolean
@@ -403,8 +404,8 @@ export class JestExt {
       this.parsingTestFile = false
       this.channel.clear()
     }
-    // thanks Qix, http://stackoverflow.com/questions/25245716/remove-all-ansi-colors-styles-from-strings
-    const noANSI = message.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '')
+
+    const noANSI = cleanAnsi(message)
     if (/(snapshots? failed)|(snapshot test failed)/i.test(noANSI)) {
       this.detectedSnapshotErrors()
     }
@@ -459,7 +460,8 @@ export class JestExt {
   }
 
   private updateWithData(data: JestTotalResults) {
-    const normalizedData = resultsWithLowerCaseWindowsDriveLetters(data)
+    const noAnsiData = resultsWithoutAnsiEscapeSequence(data)
+    const normalizedData = resultsWithLowerCaseWindowsDriveLetters(noAnsiData)
     this.coverageMapProvider.update(normalizedData.coverageMap)
 
     const statusList = this.testResultProvider.updateTestResults(normalizedData)

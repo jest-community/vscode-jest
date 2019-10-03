@@ -1,5 +1,8 @@
 jest.unmock('events')
 jest.unmock('../src/JestExt')
+jest.mock('../src/helpers', () => ({
+  cleanAnsi: (str: string) => str,
+}))
 
 jest.mock('../src/DebugCodeLens', () => ({
   DebugCodeLensProvider: class MockCodeLensProvider {},
