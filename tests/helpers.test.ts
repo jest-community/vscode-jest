@@ -18,10 +18,28 @@ jest.mock('path', () => ({
   normalize: mockNormalize,
 }))
 
-import { isCreateReactAppTestCommand, pathToJest, pathToJestPackageJSON, cleanAnsi } from '../src/helpers'
+import { isCreateReactAppTestCommand, pathToJest, pathToJestPackageJSON, nodeBinExtension, cleanAnsi } from '../src/helpers'
 import * as path from 'path'
 
+// Manually (forcefully) set the executable's file extension to test its addition independendly of the operating system.
+;(nodeBinExtension as string) = '.TEST'
+
 describe('ModuleHelpers', () => {
+  describe('nodeBinExtension', () => {
+    // Since `nodeBinExtension` is a variable, we have to reload the module in order to re-evaluate it.
+    it('should return an empty string on Linux', () => {
+      jest.resetModules()
+      mockPlatform.mockReturnValueOnce('linux')
+      expect(require('../src/helpers').nodeBinExtension).toBe('')
+    })
+
+    it('should equal ".cmd" on Windows', () => {
+      jest.resetModules()
+      mockPlatform.mockReturnValueOnce('win32')
+      expect(require('../src/helpers').nodeBinExtension).toBe('.cmd')
+    })
+  })
+
   describe('pathToJestPackageJSON', () => {
     const defaultPathToJest = null
     const defaultSettings: any = {
@@ -145,6 +163,12 @@ describe('ModuleHelpers', () => {
       rootPath: '',
     }
 
+    beforeEach(() => {
+      mockJoin.mockImplementation(require.requireActual('path').join)
+      mockNormalize.mockImplementation(require.requireActual('path').normalize)
+      mockExistsSync.mockImplementation(require.requireActual('path').existsSync)
+    })
+
     it('returns "npm test --" when bootstrapped with create-react-app', () => {
       mockReadFileSync.mockReturnValueOnce(
         JSON.stringify({
@@ -171,22 +195,20 @@ describe('ModuleHelpers', () => {
     })
 
     it('defaults to "node_modules/.bin/jest" when Jest is locally installed', () => {
-      const expected = 'node_modules/.bin/jest'
+      const expected = 'node_modules/.bin/jest.TEST'
 
       mockJoin.mockImplementation(require.requireActual('path').posix.join)
-      mockPlatform.mockReturnValue('linux')
-      mockNormalize.mockImplementationOnce(arg => arg)
+      mockNormalize.mockImplementation(arg => arg)
       mockExistsSync.mockImplementation(path => path === expected)
 
       expect(pathToJest(defaultSettings)).toBe(expected)
     })
 
-    it('defaults to "jest" when Jest is locally installed', () => {
-      const expected = 'jest'
+    it('defaults to "jest" when Jest is not locally installed', () => {
+      const expected = 'jest.TEST'
 
       mockJoin.mockImplementation(require.requireActual('path').posix.join)
-      mockPlatform.mockReturnValue('linux')
-      mockNormalize.mockImplementationOnce(arg => arg)
+      mockNormalize.mockImplementation(arg => arg)
       mockExistsSync.mockImplementation(_ => false)
 
       expect(pathToJest(defaultSettings)).toBe(expected)

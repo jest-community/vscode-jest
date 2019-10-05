@@ -10,6 +10,21 @@ import { IPluginResourceSettings, hasUserSetPathToJest } from './Settings'
 const createReactAppBinaryNames = ['react-scripts', 'react-native-scripts', 'react-scripts-ts', 'react-app-rewired']
 
 /**
+ * File extension for npm binaries
+ */
+export const nodeBinExtension: string = platform() === 'win32' ? '.cmd' : ''
+
+/**
+ * Resolves the location of an npm binary
+ *
+ * Returns the path if it exists, or `undefined` otherwise
+ */
+function getLocalPathForExecutable(rootPath: string, executable: string): string {
+  const absolutePath = normalize(join(rootPath, 'node_modules', '.bin', executable + nodeBinExtension))
+  return existsSync(absolutePath) ? absolutePath : undefined
+}
+
+/**
  * Tries to read the test command from the scripts section within `package.json`
  *
  * Returns the test command in case of success,
@@ -44,15 +59,9 @@ function isBootstrappedWithCreateReactApp(rootPath: string): boolean {
   if (testCommand === undefined) {
     // In case parsing `package.json` failed or was unconclusive,
     // fallback to checking for the presence of the binaries in `./node_modules/.bin`
-    return createReactAppBinaryNames.some(binary => hasNodeExecutable(rootPath, binary))
+    return createReactAppBinaryNames.some(binary => getLocalPathForExecutable(rootPath, binary) !== undefined)
   }
   return isCreateReactAppTestCommand(testCommand)
-}
-
-function hasNodeExecutable(rootPath: string, executable: string): boolean {
-  const ext = platform() === 'win32' ? '.cmd' : ''
-  const absolutePath = join(rootPath, 'node_modules', '.bin', executable + ext)
-  return existsSync(absolutePath)
 }
 
 /**
@@ -70,15 +79,7 @@ export function pathToJest({ pathToJest, rootPath }: IPluginResourceSettings) {
     return 'npm test --'
   }
 
-  const localJestExecutable = pathToLocalJestExecutable(rootPath)
-  if (existsSync(localJestExecutable)) {
-    return localJestExecutable
-  }
-  return 'jest'
-}
-
-function pathToLocalJestExecutable(rootDir) {
-  return normalize(join(rootDir, 'node_modules/.bin/jest'))
+  return getLocalPathForExecutable(rootPath, 'jest') || 'jest' + nodeBinExtension
 }
 
 /**
@@ -118,7 +119,7 @@ export function pathToJestPackageJSON(pluginSettings: IPluginResourceSettings): 
   return null
 }
 
-function removeSurroundingQuotes(str) {
+function removeSurroundingQuotes(str: string) {
   return str.replace(/^['"`]/, '').replace(/['"`]$/, '')
 }
 
