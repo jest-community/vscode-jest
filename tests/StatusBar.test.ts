@@ -158,11 +158,6 @@ describe('StatusBar', () => {
 
       expect(renderSpy).toHaveBeenCalledTimes(2)
 
-      renderSpy.mockClear()
-
-      jest.advanceTimersByTime(150)
-
-      expect(renderSpy).toHaveBeenCalledTimes(2)
       const calls: any[][] = renderSpy.mock.calls
       expect(calls.every(c => c[0].status === 'running')).toBe(true)
       expect(calls.some(c => c[1].type === StatusType.active)).toBe(true)
@@ -175,8 +170,6 @@ describe('StatusBar', () => {
       statusBar.bind('testSource1').running()
       expect(active.show).toBeCalledTimes(1)
       expect(summary.show).toBeCalledTimes(0)
-      expect(setInterval).toBeCalledTimes(1)
-      expect(clearInterval).toBeCalledTimes(0)
 
       jest.clearAllMocks()
       jest.clearAllTimers()
@@ -185,11 +178,7 @@ describe('StatusBar', () => {
       expect(active.show).toBeCalledTimes(0)
       expect(summary.show).toBeCalledTimes(1)
 
-      // from summary status only
-      expect(setInterval).toBeCalledTimes(1)
-
       expect(active.hide).toBeCalledTimes(1)
-      expect(clearInterval).toBeCalledTimes(1)
     })
   })
 })

@@ -18,7 +18,13 @@ jest.mock('path', () => ({
   normalize: mockNormalize,
 }))
 
-import { isCreateReactAppTestCommand, pathToJest, pathToJestPackageJSON, nodeBinExtension, cleanAnsi } from '../src/helpers'
+import {
+  isCreateReactAppTestCommand,
+  pathToJest,
+  pathToJestPackageJSON,
+  nodeBinExtension,
+  cleanAnsi,
+} from '../src/helpers'
 import * as path from 'path'
 
 // Manually (forcefully) set the executable's file extension to test its addition independendly of the operating system.
@@ -201,11 +207,28 @@ describe('ModuleHelpers', () => {
       mockNormalize.mockImplementation(arg => arg)
       mockExistsSync.mockImplementation(path => path === expected)
 
-      expect(pathToJest(defaultSettings)).toBe(expected)
+      expect(pathToJest(defaultSettings)).toBe(`"${expected}"`)
     })
+    it('default jestToPath path can preserve special characters', () => {
+      mockJoin.mockImplementation(require.requireActual('path').posix.join)
+      mockNormalize.mockImplementation(arg => arg)
 
+      const testPaths = [
+        '/root/my dir/space',
+        '/root/my dir/escape-space',
+        '/root/👍/emoji',
+        '/root/外國人/unicode',
+        '/root/\\space/double-escape',
+      ]
+      testPaths.forEach(p => {
+        const settings = { ...defaultSettings, rootPath: p }
+        const expected = `${p}/node_modules/.bin/jest.TEST`
+        mockExistsSync.mockImplementation(path => path === expected)
+        expect(pathToJest(settings)).toBe(`"${expected}"`)
+      })
+    })
     it('defaults to "jest" when Jest is not locally installed', () => {
-      const expected = 'jest.TEST'
+      const expected = '"jest.TEST"'
 
       mockJoin.mockImplementation(require.requireActual('path').posix.join)
       mockNormalize.mockImplementation(arg => arg)

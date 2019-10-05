@@ -79,7 +79,8 @@ export function pathToJest({ pathToJest, rootPath }: IPluginResourceSettings) {
     return 'npm test --'
   }
 
-  return getLocalPathForExecutable(rootPath, 'jest') || 'jest' + nodeBinExtension
+  const p = getLocalPathForExecutable(rootPath, 'jest') || 'jest' + nodeBinExtension
+  return `"${p}"`
 }
 
 /**
