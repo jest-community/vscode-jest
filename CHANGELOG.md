@@ -14,7 +14,7 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 
-* replacing the status bar spinner with VS Code spinner - rhalaly
+* replacing the status bar spinner with the VS Code spinner - rhalaly
 
 ### 3.0.1
 
