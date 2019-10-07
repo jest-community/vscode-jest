@@ -4,5 +4,9 @@ module.exports = {
   testRegex: "tests/.*\\.ts$",
   automock: true,
   moduleFileExtensions: ["ts", "js", "json"],
-  unmockedModulePathPatterns: ["jest-editor-support\/node_modules"],
+  unmockedModulePathPatterns: [
+    "jest-editor-support/node_modules/",
+    "@babel/traverse/node_modules",
+    "realpath-native"
+  ],
 };
