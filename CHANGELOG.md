@@ -14,6 +14,10 @@ Bug-fixes within the same version aren't needed
 
 -->
 
+## Master
+
+* replacing the status bar spinner with the VS Code spinner - rhalaly
+
 ### 3.0.1
 
 * use webpack for compilation, resulting in a much smaller extension size - stephtr

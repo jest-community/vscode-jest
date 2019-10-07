@@ -1,5 +1,4 @@
 import * as vscode from 'vscode'
-import * as elegantSpinner from 'elegant-spinner'
 import { extensionName } from './appGlobals'
 import { JestExt } from './JestExt'
 
@@ -23,31 +22,14 @@ interface SpinnableStatusBarItem {
 
   show(): void
   hide(): void
-  clearSpinner(): void
-  startSpinner(callback: () => void): void
 }
 
 const createStatusBarItem = (type: StatusType, priority: number): SpinnableStatusBarItem => {
-  let spinner: NodeJS.Timer | undefined
   const item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, priority)
-  const clearSpinner = () => {
-    if (spinner) {
-      clearInterval(spinner)
-    }
-  }
-
   return {
     type,
-    clearSpinner,
-    startSpinner: (callback: () => void, interval = 100) => {
-      clearSpinner()
-      spinner = setInterval(callback, interval)
-    },
     show: () => item.show(),
-    hide: () => {
-      item.hide()
-      clearSpinner()
-    },
+    hide: () => item.hide(),
 
     get command() {
       return item.command
@@ -76,7 +58,6 @@ export class StatusBar {
   private activeStatusItem = createStatusBarItem(StatusType.active, 2)
   private summaryStatusItem = createStatusBarItem(StatusType.summary, 1)
 
-  private frame = elegantSpinner()
   private priorities: Status[] = ['running', 'failed', 'success', 'stopped', 'initial']
   private requests = new Map<string, StatusUpdateRequest>()
   private _activeFolder?: string
@@ -210,12 +191,7 @@ export class StatusBar {
   }
 
   private render(request: StatusUpdateRequest, statusBarItem: SpinnableStatusBarItem) {
-    statusBarItem.clearSpinner()
-
     const message = this.getMessageByStatus(request.status)
-    if (request.status === 'running') {
-      statusBarItem.startSpinner(() => this.render(request, statusBarItem))
-    }
 
     switch (statusBarItem.type) {
       case StatusType.active:
@@ -253,7 +229,7 @@ export class StatusBar {
   private getMessageByStatus(status: Status) {
     switch (status) {
       case 'running':
-        return this.frame()
+        return '$(sync~spin)'
       case 'failed':
         return '$(alert)'
       case 'success':
