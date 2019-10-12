@@ -70,6 +70,22 @@ describe('test diagnostics', () => {
       expect(mockDiagnostics.set).not.toBeCalled()
     })
 
+    it('ensures non-negative line number in diagnostic message', () => {
+      const mockDiagnostics = new MockDiagnosticCollection()
+
+      console.warn = jest.fn()
+      const testResult = createTestResult('mocked-test-file.js', [
+        {
+          title: 'should be valid',
+          status: 'KnownFail',
+          message: 'failing reason',
+          line: -100,
+        },
+      ])
+      updateDiagnostics([testResult], mockDiagnostics)
+      expect(vscode.Range).toHaveBeenCalledWith(0, 0, 0, Number.MAX_SAFE_INTEGER)
+    })
+
     it('uses shortMessage format to display error details', () => {
       const mockDiagnostics = new MockDiagnosticCollection()
 
