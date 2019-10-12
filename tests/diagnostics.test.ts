@@ -70,6 +70,39 @@ describe('test diagnostics', () => {
       expect(mockDiagnostics.set).not.toBeCalled()
     })
 
+    it('uses shortMessage format to display error details', () => {
+      const mockDiagnostics = new MockDiagnosticCollection()
+
+      const testResult = createTestResult('mocked-test-file.js', [
+        {
+          title: 'should be valid',
+          status: 'KnownFail',
+          message: `expect(received).toBe(expected) // Object.is equality
+
+        Expected: 2
+        Received: 1
+
+        at Object.toBe (src/pages/Home.test.tsx:6:13)`,
+          shortMessage: `expect(received).toBe(expected) // Object.is equality
+
+        Expected: 2
+        Received: 1`,
+          terseMessage: `Expected: 2, Received: 1`,
+          line: 123,
+        },
+      ])
+      updateDiagnostics([testResult], mockDiagnostics)
+      expect(vscode.Diagnostic).toHaveBeenCalledTimes(1)
+      expect(vscode.Diagnostic).toHaveBeenCalledWith(
+        expect.anything(),
+        `expect(received).toBe(expected) // Object.is equality
+
+        Expected: 2
+        Received: 1`,
+        expect.anything()
+      )
+    })
+
     it('can update diagnostics from mixed test results', () => {
       const allTests = [
         createTestResult('f1', [createAssertion('a1', 'KnownFail'), createAssertion('a2', 'KnownFail')]),

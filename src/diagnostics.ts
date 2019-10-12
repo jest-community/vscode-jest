@@ -51,7 +51,7 @@ export function updateCurrentDiagnostics(
     testResult.map(r => {
       const line = r.lineNumberOfError || r.end.line
       const textLine = editor.document.lineAt(line)
-      return createDiagnosticWithRange(r.terseMessage || r.shortMessage, textLine.range)
+      return createDiagnosticWithRange(r.shortMessage, textLine.range)
     })
   )
 }
@@ -73,11 +73,7 @@ export function updateDiagnostics(testResults: TestFileAssertionStatus[], diagno
     diagnostics.set(
       uri,
       asserts.map(assertion =>
-        createDiagnostic(
-          uri,
-          assertion.terseMessage || assertion.shortMessage || assertion.message,
-          assertion.line > 0 ? assertion.line - 1 : 0
-        )
+        createDiagnostic(uri, assertion.shortMessage || assertion.message, assertion.line > 0 ? assertion.line - 1 : 0)
       )
     )
   }
