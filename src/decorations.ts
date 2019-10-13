@@ -47,13 +47,13 @@ export function passingItName() {
     light: {
       before: {
         color: '#3BB26B',
-        contentText: '● ',
+        contentText: '✔ ',
       },
     },
     dark: {
       before: {
         color: '#2F8F51',
-        contentText: '● ',
+        contentText: '✔ ',
       },
     },
     rangeBehavior: DecorationRangeBehavior.ClosedClosed,
