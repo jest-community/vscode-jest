@@ -77,7 +77,7 @@
         "jest.enableInlineErrorMessages": {
           "description": "Whether errors should be reported inline on a file",
           "type": "boolean",
-          "default": true,
+          "default": false,
           "scope": "resource"
         },
         "jest.enableSnapshotUpdateMessages": {
