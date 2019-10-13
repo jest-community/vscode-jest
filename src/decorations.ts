@@ -7,13 +7,13 @@ export function failingItName() {
     light: {
       before: {
         color: '#FF564B',
-        contentText: '● ',
+        contentText: '✘ ',
       },
     },
     dark: {
       before: {
         color: '#AD322D',
-        contentText: '● ',
+        contentText: '✘ ',
       },
     },
     rangeBehavior: DecorationRangeBehavior.ClosedClosed,
