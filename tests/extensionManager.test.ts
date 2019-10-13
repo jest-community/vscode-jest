@@ -5,6 +5,7 @@ const jestInstance = {
   onDidCloseTextDocument: jest.fn(),
   onDidChangeActiveTextEditor: jest.fn(),
   onDidChangeTextDocument: jest.fn(),
+  onDidSaveTextDocument: jest.fn(),
 }
 
 jest.mock('../src/JestExt', () => ({
@@ -329,6 +330,23 @@ describe('InstancesManager', () => {
       ;(vscode.workspace.getWorkspaceFolder as any).mockReturnValueOnce(undefined)
       extensionManager.onDidChangeTextDocument({ document: {} } as any)
       expect(jestInstance.onDidChangeTextDocument).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('onDidSaveTextDocument()', () => {
+    afterEach(() => {
+      jestInstance.onDidSaveTextDocument.mockClear()
+    })
+    it('should call extension method', () => {
+      ;(vscode.workspace.getWorkspaceFolder as any).mockReturnValueOnce({ name: 'workspaceFolder1' })
+      extensionManager.onDidSaveTextDocument({ document: {} } as any)
+      expect(jestInstance.onDidSaveTextDocument).toHaveBeenCalled()
+    })
+
+    it('should not call try to call extension method if no extension', () => {
+      ;(vscode.workspace.getWorkspaceFolder as any).mockReturnValueOnce(undefined)
+      extensionManager.onDidSaveTextDocument({ document: {} } as any)
+      expect(jestInstance.onDidSaveTextDocument).not.toHaveBeenCalled()
     })
   })
 

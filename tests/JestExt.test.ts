@@ -10,10 +10,11 @@ jest.mock('../src/DebugCodeLens', () => ({
 jest.mock('os')
 jest.mock('../src/decorations')
 
+const running = jest.fn()
 const statusBar = {
   bind: () => ({
     initial: jest.fn(),
-    running: jest.fn(),
+    running,
     success: jest.fn(),
     failed: jest.fn(),
     stopped: jest.fn(),
@@ -325,6 +326,31 @@ describe('JestExt', () => {
       sut.onDidChangeActiveTextEditor(editor)
 
       expect(sut.triggerUpdateActiveEditor).toBeCalledWith(editor)
+    })
+  })
+
+  describe('onDidSaveTextDocument()', () => {
+    let sut
+    const editor: any = {}
+    const projectWorkspace = new ProjectWorkspace(null, null, null, null)
+    sut = new JestExt(
+      null,
+      workspaceFolder,
+      projectWorkspace,
+      channelStub,
+      extensionSettings,
+      debugCodeLensProvider,
+      debugConfigurationProvider,
+      null,
+      null
+    )
+
+    it('should set status to "Running tests"', () => {
+      running.mockClear()
+      ;((hasDocument as unknown) as jest.Mock<{}>).mockReturnValueOnce(true)
+      sut.onDidSaveTextDocument(editor)
+
+      expect(running).toBeCalledWith('Running tests')
     })
   })
 
