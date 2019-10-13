@@ -301,6 +301,11 @@ export class JestExt {
     this.triggerUpdateActiveEditor(editor)
   }
 
+  onDidSaveTextDocument(_editor: vscode.TextDocument) {
+    // each file save will/should trigger tests re-running
+    this.status.running('Running tests')
+  }
+
   /**
    * This event is fired with the document not dirty when:
    * - before the onDidSaveTextDocument event
@@ -456,7 +461,7 @@ export class JestExt {
 
   private testsHaveStartedRunning() {
     this.channel.clear()
-    this.status.running('initial full test run')
+    this.status.running('Initial full test run')
   }
 
   private updateWithData(data: JestTotalResults) {

@@ -53,6 +53,7 @@ vscode.workspace.getWorkspaceFolder = jest.fn().mockReturnValue({ name: 'workspa
 ;(vscode.workspace as any).onDidChangeTextDocument = jest.fn().mockReturnValue('onDidChangeTextDocument')
 ;(vscode.workspace as any).onDidChangeWorkspaceFolders = jest.fn().mockReturnValue('onDidChangeWorkspaceFolders')
 ;(vscode.workspace as any).onDidCloseTextDocument = jest.fn().mockReturnValue('onDidCloseTextDocument')
+;(vscode.workspace as any).onDidSaveTextDocument = jest.fn().mockReturnValue('onDidSaveTextDocument')
 
 describe('Extension', () => {
   describe('activate()', () => {
@@ -89,6 +90,13 @@ describe('Extension', () => {
 
       expect(vscode.workspace.onDidChangeTextDocument).toBeCalled()
       expect(context.subscriptions.push.mock.calls[0]).toContain('onDidChangeTextDocument')
+    })
+
+    it('should register an event handler to handle when file is saved', () => {
+      activate(context)
+
+      expect(vscode.workspace.onDidSaveTextDocument).toBeCalled()
+      expect(context.subscriptions.push.mock.calls[0]).toContain('onDidSaveTextDocument')
     })
 
     it('should register an event handler to handle when an extension configuration changed', () => {

@@ -175,6 +175,12 @@ export class ExtensionManager {
       ext.onDidChangeTextDocument(event)
     }
   }
+  onDidSaveTextDocument(event: vscode.TextDocument) {
+    const ext = this.getByDocUri(event.uri)
+    if (ext) {
+      ext.onDidSaveTextDocument(event)
+    }
+  }
 }
 
 export function getExtensionResourceSettings(uri: vscode.Uri): IPluginResourceSettings {
