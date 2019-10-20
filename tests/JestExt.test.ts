@@ -330,10 +330,9 @@ describe('JestExt', () => {
   })
 
   describe('onDidSaveTextDocument()', () => {
-    let sut
+    ;(JestProcessManager as jest.Mock).mockClear()
     const editor: any = {}
-    const projectWorkspace = new ProjectWorkspace(null, null, null, null)
-    sut = new JestExt(
+    const jestExt = new JestExt(
       null,
       workspaceFolder,
       projectWorkspace,
@@ -344,13 +343,26 @@ describe('JestExt', () => {
       null,
       null
     )
+    const mockProcessManager: any = (JestProcessManager as jest.Mock).mock.instances[0]
+
+    beforeEach(() => {
+      running.mockClear()
+    })
 
     it('should set status to "Running tests"', () => {
-      running.mockClear()
-      ;((hasDocument as unknown) as jest.Mock<{}>).mockReturnValueOnce(true)
-      sut.onDidSaveTextDocument(editor)
+      mockProcessManager.numberOfProcesses = 1
+
+      jestExt.onDidSaveTextDocument(editor)
 
       expect(running).toBeCalledWith('Running tests')
+    })
+
+    it('should do nothing if Jest is not running', () => {
+      mockProcessManager.numberOfProcesses = 0
+
+      jestExt.onDidSaveTextDocument(editor)
+
+      expect(running).not.toBeCalled()
     })
   })
 

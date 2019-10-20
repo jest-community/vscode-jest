@@ -302,6 +302,10 @@ export class JestExt {
   }
 
   onDidSaveTextDocument(_editor: vscode.TextDocument) {
+    if (!this.jestProcessManager.numberOfProcesses || this.jestProcessManager.numberOfProcesses < 1) {
+      return
+    }
+
     // each file save will/should trigger tests re-running
     this.status.running('Running tests')
   }
