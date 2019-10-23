@@ -54,7 +54,7 @@ Open up VS Code, go search for the extension "Jest".
 
 This project has the expectation that you would run something like `npm run test` which _just_ looks like `jest` in the `package.json`. So, please keep your configuration inside the `package.json` as opposed to using command line arguments.
 
-If have a more complex setup, it can probably be supported, check out the settings. They are all prefixed with `jest`.
+If you have a more complex setup, it can probably be supported, check out the settings. They are all prefixed with `jest`.
 
 Also, you should use Jest 17+, however 16 works - it will just offer a warning. We're aiming to try and do current Jest version - 1, but won't specifically drop support for older versions unless we're forced into it.
 
