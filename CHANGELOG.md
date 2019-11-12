@@ -11,6 +11,7 @@ Bug-fixes within the same version aren't needed
 * Improve global and local detection for Jest executable on `win32` platform - [@rfgamaral](https://github.com/rfgamaral)
 * Set `"extensionKind": "workspace"` in `package.json` to support remote developement - [@rfgamaral](https://github.com/rfgamaral)
 * Fix remove ANSI characters from test messages - [@jmarceli](https://github.com/jmarceli)
+* Adjust test result indicators for colorblind people - [@jmarceli](https://github.com/jmarceli)
 * Use short message instead of terse message in test diagnostic tooltip and tab - [@jmarceli](https://github.com/jmarceli)
 
 -->
