@@ -375,7 +375,6 @@ export class JestExt {
     const errorMessage = test.terseMessage || test.shortMessage
     const decorator = {
       range: new vscode.Range(test.lineNumberOfError, 0, test.lineNumberOfError, 0),
-      hoverMessage: errorMessage,
     }
 
     // We have to make a new style for each unique message, this is
