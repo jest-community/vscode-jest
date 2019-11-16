@@ -176,7 +176,7 @@
         "languages": ["javascript", "javascriptreact", "typescript", "typescriptreact"],
         "configurationSnippets": [
           {
-            "label": "Jest:  Default jest configuration",
+            "label": "Jest: Default jest configuration",
             "description": "Running tests by directly running jest",
             "body": {
               "type": "node",
