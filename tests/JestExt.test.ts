@@ -10,13 +10,15 @@ jest.mock('../src/DebugCodeLens', () => ({
 jest.mock('os')
 jest.mock('../src/decorations')
 
+const running = jest.fn()
+const stopped = jest.fn()
 const statusBar = {
   bind: () => ({
     initial: jest.fn(),
-    running: jest.fn(),
+    running,
     success: jest.fn(),
     failed: jest.fn(),
-    stopped: jest.fn(),
+    stopped,
   }),
 }
 jest.mock('../src/StatusBar', () => ({ statusBar }))
@@ -727,6 +729,51 @@ describe('JestExt', () => {
         expect(p1.onJestEditorSupportEvent).not.toHaveBeenCalled()
         expect(messaging.systemErrorMessage).toHaveBeenCalled()
       })
+    })
+  })
+
+  describe('handleJestEditorSupportEvent()', () => {
+    let sut: JestExt
+
+    const settings: any = {
+      debugCodeLens: {},
+      enableSnapshotUpdateMessages: true,
+    }
+
+    beforeEach(() => {
+      jest.resetAllMocks()
+      const projectWorkspace = new ProjectWorkspace(null, null, null, null)
+      sut = new JestExt(
+        null,
+        workspaceFolder,
+        projectWorkspace,
+        channelStub,
+        settings,
+        debugCodeLensProvider,
+        debugConfigurationProvider,
+        null,
+        null
+      )
+    })
+
+    it('will change status according to received output', () => {
+      running.mockClear()
+      ;(sut as any).handleJestEditorSupportEvent('onRunStart')
+      expect(running).toHaveBeenCalledTimes(1)
+      expect(running).toHaveBeenCalledWith('Running tests')
+      stopped.mockClear()
+      ;(sut as any).handleJestEditorSupportEvent('onRunComplete')
+      expect(stopped).toHaveBeenCalledTimes(1)
+    })
+
+    it('will append line to output', () => {
+      channelStub.appendLine.mockClear()
+      ;(sut as any).handleJestEditorSupportEvent('not ignored output')
+      expect(channelStub.appendLine).toHaveBeenCalledTimes(1)
+      expect(channelStub.appendLine).toHaveBeenCalledWith('not ignored output')
+      channelStub.appendLine.mockClear()
+      ;(sut as any).handleJestEditorSupportEvent('onRunComplete')
+      expect(channelStub.appendLine).not.toHaveBeenCalled()
     })
   })
 })

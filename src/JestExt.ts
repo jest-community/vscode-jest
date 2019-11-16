@@ -412,23 +412,25 @@ export class JestExt {
     this.channel.appendLine(noANSI)
   }
 
+  private handleJestEditorSupportEvent(output: string) {
+    if (output.includes('onRunStart')) {
+      this.status.running('Running tests')
+    }
+    if (output.includes('onRunComplete')) {
+      this.status.stopped()
+    }
+
+    if (!this.shouldIgnoreOutput(output)) {
+      this.channel.appendLine(output)
+    }
+  }
+
   private assignHandlers(jestProcess: JestProcess) {
     jestProcess
       .onJestEditorSupportEvent('executableJSON', (data: JestTotalResults) => {
         this.updateWithData(data)
       })
-      .onJestEditorSupportEvent('executableOutput', (output: string) => {
-        if (output.includes('onRunStart')) {
-          this.status.running('Running tests')
-        }
-        if (output.includes('onRunComplete')) {
-          this.status.stopped()
-        }
-
-        if (!this.shouldIgnoreOutput(output)) {
-          this.channel.appendLine(output)
-        }
-      })
+      .onJestEditorSupportEvent('executableOutput', this.handleJestEditorSupportEvent)
       .onJestEditorSupportEvent('executableStdErr', (error: Buffer) => this.handleStdErr(error))
       .onJestEditorSupportEvent('nonTerminalError', (error: string) => {
         this.channel.appendLine(`Received an error from Jest Runner: ${error.toString()}`)
