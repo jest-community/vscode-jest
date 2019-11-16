@@ -180,6 +180,42 @@ describe('DefaultFormatter', () => {
 
       expect(editor.setDecorations).toBeCalledWith(undefined, expected)
     })
+
+    it('should handle when the end column is `null`', () => {
+      ;(isValidLocation as jest.Mock<any>).mockReturnValueOnce(true)
+
+      const coverageMapProvider: any = {}
+      const editor: any = {
+        setDecorations: jest.fn(),
+      }
+
+      const fileCoverage: any = {
+        b: {
+          0: [0],
+        },
+        branchMap: {
+          0: {
+            locations: [
+              {
+                start: {
+                  line: 2,
+                  column: 2,
+                },
+                end: {
+                  line: 4,
+                  column: null,
+                },
+              },
+            ],
+          },
+        },
+      }
+
+      const sut = new DefaultFormatter(coverageMapProvider)
+      sut.formatBranches(editor, fileCoverage)
+
+      expect(vscode.Range).toBeCalledWith(1, 2, 3, 0)
+    })
   })
 
   describe('formatUncoveredLines()', () => {
