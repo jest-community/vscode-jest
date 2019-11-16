@@ -68,9 +68,12 @@ export class JestProcess {
     this.stopResolveCallback = null
     let exited = false
 
+    const reporterPath = `${process.cwd()}/src/JestProcessManagement/vscode-jest-reporter.ts`
     const options = {
       noColor: true,
       shell: platform() === 'win32',
+      // workaround required until reporters argument won't be supported by jest-editor-support
+      testFileNamePattern: `--reporters="${reporterPath}"`,
     }
     this.runner = new Runner(this.projectWorkspace, options)
 

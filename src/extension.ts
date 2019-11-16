@@ -57,8 +57,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.workspace.onDidCloseTextDocument(extensionManager.onDidCloseTextDocument, extensionManager),
 
     vscode.window.onDidChangeActiveTextEditor(extensionManager.onDidChangeActiveTextEditor, extensionManager),
-    vscode.workspace.onDidChangeTextDocument(extensionManager.onDidChangeTextDocument, extensionManager),
-    vscode.workspace.onDidSaveTextDocument(extensionManager.onDidSaveTextDocument, extensionManager)
+    vscode.workspace.onDidChangeTextDocument(extensionManager.onDidChangeTextDocument, extensionManager)
   )
 }
 

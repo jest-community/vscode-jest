@@ -10,11 +10,10 @@ jest.mock('../src/DebugCodeLens', () => ({
 jest.mock('os')
 jest.mock('../src/decorations')
 
-const running = jest.fn()
 const statusBar = {
   bind: () => ({
     initial: jest.fn(),
-    running,
+    running: jest.fn(),
     success: jest.fn(),
     failed: jest.fn(),
     stopped: jest.fn(),
@@ -326,43 +325,6 @@ describe('JestExt', () => {
       sut.onDidChangeActiveTextEditor(editor)
 
       expect(sut.triggerUpdateActiveEditor).toBeCalledWith(editor)
-    })
-  })
-
-  describe('onDidSaveTextDocument()', () => {
-    ;(JestProcessManager as jest.Mock).mockClear()
-    const editor: any = {}
-    const jestExt = new JestExt(
-      null,
-      workspaceFolder,
-      projectWorkspace,
-      channelStub,
-      extensionSettings,
-      debugCodeLensProvider,
-      debugConfigurationProvider,
-      null,
-      null
-    )
-    const mockProcessManager: any = (JestProcessManager as jest.Mock).mock.instances[0]
-
-    beforeEach(() => {
-      running.mockClear()
-    })
-
-    it('should set status to "Running tests"', () => {
-      mockProcessManager.numberOfProcesses = 1
-
-      jestExt.onDidSaveTextDocument(editor)
-
-      expect(running).toBeCalledWith('Running tests')
-    })
-
-    it('should do nothing if Jest is not running', () => {
-      mockProcessManager.numberOfProcesses = 0
-
-      jestExt.onDidSaveTextDocument(editor)
-
-      expect(running).not.toBeCalled()
     })
   })
 

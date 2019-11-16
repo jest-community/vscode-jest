@@ -301,15 +301,6 @@ export class JestExt {
     this.triggerUpdateActiveEditor(editor)
   }
 
-  onDidSaveTextDocument(_editor: vscode.TextDocument) {
-    if (!this.jestProcessManager.numberOfProcesses || this.jestProcessManager.numberOfProcesses < 1) {
-      return
-    }
-
-    // each file save will/should trigger tests re-running
-    this.status.running('Running tests')
-  }
-
   /**
    * This event is fired with the document not dirty when:
    * - before the onDidSaveTextDocument event
@@ -427,6 +418,13 @@ export class JestExt {
         this.updateWithData(data)
       })
       .onJestEditorSupportEvent('executableOutput', (output: string) => {
+        if (output.includes('onRunStart')) {
+          this.status.running('Running tests')
+        }
+        if (output.includes('onRunComplete')) {
+          this.status.stopped()
+        }
+
         if (!this.shouldIgnoreOutput(output)) {
           this.channel.appendLine(output)
         }
@@ -459,12 +457,11 @@ export class JestExt {
 
   private shouldIgnoreOutput(text: string): boolean {
     // this fails when snapshots change - to be revised - returning always false for now
-    return text.includes('Watch Usage')
+    return text.includes('Watch Usage') || text.includes('onRunComplete') || text.includes('onRunStart')
   }
 
   private testsHaveStartedRunning() {
     this.channel.clear()
-    this.status.running('Initial full test run')
   }
 
   private updateWithData(data: JestTotalResults) {
