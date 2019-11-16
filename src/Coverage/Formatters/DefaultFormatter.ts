@@ -28,9 +28,14 @@ export class DefaultFormatter extends AbstractFormatter {
           return
         }
 
-        ranges.push(
-          new vscode.Range(branch.start.line - 1, branch.start.column, branch.end.line - 1, branch.end.column)
-        )
+        let endColumn = branch.end.column
+
+        // The value is `null`, so set it to the first character on its line.
+        if (!endColumn) {
+          endColumn = 0
+        }
+
+        ranges.push(new vscode.Range(branch.start.line - 1, branch.start.column, branch.end.line - 1, endColumn))
       })
     })
 
