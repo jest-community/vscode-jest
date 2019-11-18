@@ -255,7 +255,7 @@
     "istanbul-lib-coverage": "^1.1.1",
     "istanbul-lib-source-maps": "^1.1.0",
     "jest": "^24.7.0",
-    "jest-editor-support": "^26.0.0-beta",
+    "jest-editor-support": "^27.0.0",
     "jest-snapshot": "^24.7.0",
     "lint-staged": "^4.2.3",
     "prettier": "^1.17.0",
