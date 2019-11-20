@@ -17,7 +17,7 @@ export class DefaultFormatter extends AbstractFormatter {
   formatBranches(editor: vscode.TextEditor, fileCoverage: FileCoverage) {
     const ranges = []
 
-    Object.keys(fileCoverage.b).forEach(branchIndex => {
+    Object.keys(fileCoverage.b).forEach((branchIndex) => {
       fileCoverage.b[branchIndex].forEach((hitCount, locationIndex) => {
         if (hitCount > 0) {
           return
@@ -28,12 +28,9 @@ export class DefaultFormatter extends AbstractFormatter {
           return
         }
 
-        let endColumn = branch.end.column
-
-        // The value is `null`, so set it to the first character on its line.
-        if (!endColumn) {
-          endColumn = 0
-        }
+        // If the value is `null`, then set it to the first character on its
+        // line.
+        const endColumn = branch.end.column || 0
 
         ranges.push(new vscode.Range(branch.start.line - 1, branch.start.column, branch.end.line - 1, endColumn))
       })
