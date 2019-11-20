@@ -5,6 +5,8 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 
+* fix test breakage with 'jest-editor-support' internal modules due to automock. - connectdotz
+* replacing the status bar spinner with the VS Code spinner - rhalaly
 * Fix regex to detect the pluralized message 'snapshots failed' and show the 'Would you like to update your Snapshots' dialog - shruda
 * Add 'hair space' (U+200A) after decoration text - [@rfgamaral](https://github.com/rfgamaral)
 * Fix decoration color for 'unknown' tests - [@rfgamaral](https://github.com/rfgamaral)
@@ -15,10 +17,6 @@ Bug-fixes within the same version aren't needed
 * Use short message instead of terse message in test diagnostic tooltip and tab - [@jmarceli](https://github.com/jmarceli)
 
 -->
-
-## Master
-
-* replacing the status bar spinner with the VS Code spinner - rhalaly
 
 ### 3.0.1
 
