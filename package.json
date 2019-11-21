@@ -239,7 +239,7 @@
     "watch": "webpack --mode development --watch --info-verbosity verbose",
     "lint": "tslint -c tslint.json 'src/**/*.ts' 'tests/**/*.ts'",
     "postinstall": "node ./node_modules/vscode/bin/install",
-    "test": "jest --coverage",
+    "test": "jest",
     "watch-test": "yarn test -- --watch",
     "prettier": "prettier",
     "prettier-write": "yarn prettier --parser typescript --no-semi --single-quote --trailing-comma es5 --write --print-width 120",
