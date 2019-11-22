@@ -1,7 +1,9 @@
+import * as vscode from 'vscode'
 import { platform } from 'os'
 import { Runner, ProjectWorkspace } from 'jest-editor-support'
 import { WatchMode } from '../Jest'
 import { ExitCallback } from './JestProcessManager'
+import { extensionId } from '../appGlobals'
 
 export class JestProcess {
   static readonly keepAliveLimit = 5
@@ -68,7 +70,9 @@ export class JestProcess {
     this.stopResolveCallback = null
     let exited = false
 
-    const reporterPath = `${process.cwd()}/src/JestProcessManagement/vscode-jest-reporter.ts`
+    const extensionPath = vscode.extensions.getExtension(extensionId).extensionPath
+    const reporterPath = `${extensionPath}/src/JestProcessManagement/vscode-jest-reporter.ts`
+
     const options = {
       noColor: true,
       shell: platform() === 'win32',

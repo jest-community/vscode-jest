@@ -102,6 +102,7 @@ export class JestExt {
     })
 
     this.status = statusBar.bind(workspaceFolder.name)
+    this.handleJestEditorSupportEvent = this.handleJestEditorSupportEvent.bind(this)
 
     // The theme stuff
     this.setupDecorators()

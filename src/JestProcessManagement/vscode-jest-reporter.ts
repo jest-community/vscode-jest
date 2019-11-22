@@ -1,9 +1,9 @@
 class VSCodeJestReporter {
-  onRunStart(_results) {
+  onRunStart() {
     // tslint:disable-next-line: no-console
     console.log('onRunStart')
   }
-  onRunComplete(_contexts, _results) {
+  onRunComplete() {
     // tslint:disable-next-line: no-console
     console.log('onRunComplete')
   }
