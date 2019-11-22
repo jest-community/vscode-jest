@@ -1,5 +1,6 @@
 import * as vscode from 'vscode'
 import { platform } from 'os'
+import { join } from 'path'
 import { Runner, ProjectWorkspace } from 'jest-editor-support'
 import { WatchMode } from '../Jest'
 import { ExitCallback } from './JestProcessManager'
@@ -71,7 +72,7 @@ export class JestProcess {
     let exited = false
 
     const extensionPath = vscode.extensions.getExtension(extensionId).extensionPath
-    const reporterPath = `${extensionPath}/src/JestProcessManagement/vscode-jest-reporter.ts`
+    const reporterPath = join(extensionPath, 'out', 'reporter.js')
 
     const options = {
       noColor: true,

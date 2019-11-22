@@ -1,3 +1,4 @@
+// Custom Jest reporter used by jest-vscode extension
 class VSCodeJestReporter {
   onRunStart() {
     // tslint:disable-next-line: no-console
