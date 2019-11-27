@@ -86,6 +86,14 @@ describe('StatusBar', () => {
       statusBar.bind('testSource2').success()
       assertRender(2, { source: 'testSource1', status: 'failed' }, StatusType.summary)
     })
+    it('can display modes', () => {
+      // first instance failed, display it as folder status
+      statusBar.bind('testSource1').failed('some reason', ['watch', 'coverage'])
+      expect(statusBarItem.text).toEqual('Jest: $(alert) some reason $(eye) $(color-mode)')
+
+      statusBar.bind('testSource1').success(undefined, ['watch'])
+      expect(statusBarItem.text).toEqual('Jest: $(check) $(eye)')
+    })
   })
 
   describe('multiroot status', () => {
@@ -116,7 +124,7 @@ describe('StatusBar', () => {
     it('only update active status for single root', () => {
       statusBar.bind('testSource').initial()
       const { active, summary } = getStatusBarItems()
-      expect(active.text).toEqual('Jest: ... ')
+      expect(active.text).toEqual('Jest: ...')
       expect(summary.text).toEqual('')
     })
     it('update both status for multiroot', () => {
@@ -124,7 +132,7 @@ describe('StatusBar', () => {
 
       statusBar.bind('testSource1').initial()
       expect(active.show).toBeCalledTimes(1)
-      expect(active.text).toEqual('Jest: ... ')
+      expect(active.text).toEqual('Jest: ...')
 
       statusBar.bind('testSource2').initial()
       expect(summary.show).toBeCalledTimes(1)

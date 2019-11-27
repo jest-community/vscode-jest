@@ -3,7 +3,7 @@ import { ProjectWorkspace, JestTotalResults } from 'jest-editor-support'
 
 import * as decorations from './decorations'
 import { IPluginResourceSettings } from './Settings'
-import { statusBar, StatusBar } from './StatusBar'
+import { statusBar, StatusBar, Mode } from './StatusBar'
 import {
   TestReconciliationState,
   TestResultProvider,
@@ -92,6 +92,7 @@ export class JestExt {
       pluginSettings.showCoverageOnLoad,
       pluginSettings.coverageFormatter
     )
+    this.jestWorkspace.collectCoverage = pluginSettings.showCoverageOnLoad
 
     this.testResultProvider = new TestResultProvider(this.pluginSettings.debugMode)
     this.debugConfigurationProvider = debugConfigurationProvider
@@ -135,11 +136,11 @@ export class JestExt {
           this.jestProcess = jestProcessInWatchMode
 
           this.channel.appendLine('Finished running all tests. Starting watch mode.')
-          this.status.running('Starting watch mode')
+          this.status.running('Starting watch mode', this.getStatusModes())
 
           this.assignHandlers(this.jestProcess)
         } else {
-          this.status.stopped()
+          this.status.stopped(undefined, this.getStatusModes(false))
           if (!jestProcess.stopRequested()) {
             let msg = `Starting Jest in Watch mode failed too many times and has been stopped.`
             if (this.instanceSettings.multirootEnv) {
@@ -196,10 +197,16 @@ export class JestExt {
     this.jestWorkspace.rootPath = updatedSettings.rootPath
     this.jestWorkspace.pathToJest = pathToJest(updatedSettings)
     this.jestWorkspace.pathToConfig = pathToConfig(updatedSettings)
+
+    // debug
     this.jestWorkspace.debug = updatedSettings.debugMode
     this.testResultProvider.verbose = updatedSettings.debugMode
 
-    this.coverageOverlay.enabled = updatedSettings.showCoverageOnLoad
+    // coverage
+    const showCoverage =
+      this.coverageOverlay.enabled === undefined ? updatedSettings.showCoverageOnLoad : this.coverageOverlay.enabled
+    this.jestWorkspace.collectCoverage = showCoverage
+    this.coverageOverlay.enabled = showCoverage
 
     this.restartProcess()
   }
@@ -330,6 +337,9 @@ export class JestExt {
 
   toggleCoverageOverlay() {
     this.coverageOverlay.toggleVisibility()
+
+    // restart jest since coverage condition has changed
+    this.triggerUpdateSettings(this.pluginSettings)
   }
 
   private detectedSnapshotErrors() {
@@ -438,7 +448,7 @@ export class JestExt {
   }
 
   private setupStatusBar() {
-    this.status.initial()
+    this.status.initial(this.getStatusModes(false))
   }
 
   private setupDecorators() {
@@ -455,7 +465,7 @@ export class JestExt {
 
   private testsHaveStartedRunning() {
     this.channel.clear()
-    this.status.running('initial full test run')
+    this.status.running('initial full test run', this.getStatusModes(false))
   }
 
   private updateWithData(data: JestTotalResults) {
@@ -468,9 +478,12 @@ export class JestExt {
 
     const failedFileCount = failedSuiteCount(this.failDiagnostics)
     if (failedFileCount <= 0 && normalizedData.success) {
-      this.status.success()
+      this.status.success(undefined, this.getStatusModes())
     } else {
-      this.status.failed(` (${failedFileCount} test suite${failedFileCount > 1 ? 's' : ''} failed)`)
+      this.status.failed(
+        ` (${failedFileCount} test suite${failedFileCount > 1 ? 's' : ''} failed)`,
+        this.getStatusModes()
+      )
     }
 
     for (const editor of vscode.window.visibleTextEditors) {
@@ -496,5 +509,16 @@ export class JestExt {
         identifier: it.name,
       }
     })
+  }
+
+  private getStatusModes(watchMode = true) {
+    const modes: Mode[] = []
+    if (this.coverageOverlay.enabled) {
+      modes.push('coverage')
+    }
+    if (watchMode) {
+      modes.push('watch')
+    }
+    return modes
   }
 }
