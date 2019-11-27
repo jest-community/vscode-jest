@@ -1,4 +1,3 @@
-import { platform } from 'os'
 import { Runner, ProjectWorkspace } from 'jest-editor-support'
 import { WatchMode } from '../Jest'
 import { ExitCallback } from './JestProcessManager'
@@ -70,7 +69,6 @@ export class JestProcess {
 
     const options = {
       noColor: true,
-      shell: platform() === 'win32',
     }
     this.runner = new Runner(this.projectWorkspace, options)
 
