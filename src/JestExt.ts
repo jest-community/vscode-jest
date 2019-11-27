@@ -61,7 +61,6 @@ export class JestExt {
   private jestProcessManager: JestProcessManager
   private jestProcess: JestProcess
 
-  private clearOnNextInput: boolean
   private status: ReturnType<StatusBar['bind']>
 
   constructor(
@@ -80,7 +79,6 @@ export class JestExt {
     this.channel = outputChannel
     this.failingAssertionDecorators = {}
     this.failDiagnostics = failDiagnostics
-    this.clearOnNextInput = true
     this.pluginSettings = pluginSettings
     this.debugCodeLensProvider = debugCodeLensProvider
     this.instanceSettings = instanceSettings
@@ -396,15 +394,6 @@ export class JestExt {
       this.jestProcess.watchMode = WatchMode.WatchAll
     }
 
-    // The "tests are done" message comes through stdErr
-    // We want to use this as a marker that the console should
-    // be cleared, as the next input will be from a new test run.
-    if (this.clearOnNextInput) {
-      this.clearOnNextInput = false
-      this.parsingTestFile = false
-      this.channel.clear()
-    }
-
     const noANSI = cleanAnsi(message)
     if (/(snapshots? failed)|(snapshot test failed)/i.test(noANSI)) {
       this.detectedSnapshotErrors()
@@ -419,6 +408,8 @@ export class JestExt {
     }
     if (output.includes('onRunComplete')) {
       this.status.stopped()
+      this.parsingTestFile = false
+      this.channel.clear()
     }
 
     if (!this.shouldIgnoreOutput(output)) {
@@ -487,7 +478,6 @@ export class JestExt {
         this.triggerUpdateActiveEditor(editor)
       }
     }
-    this.clearOnNextInput = true
   }
 
   private generateDotsForItBlocks(blocks: TestResult[], state: TestReconciliationState): DecorationOptions[] {
