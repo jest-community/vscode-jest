@@ -78,7 +78,7 @@ export class JestProcess {
       noColor: true,
       shell: platform() === 'win32',
       // workaround required until reporters argument won't be supported by jest-editor-support
-      testFileNamePattern: `--reporters="${reporterPath}"`,
+      testFileNamePattern: `--reporters="default" --reporters="${reporterPath}"`,
     }
     this.runner = new Runner(this.projectWorkspace, options)
 
