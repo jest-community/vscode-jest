@@ -16,6 +16,7 @@ Bug-fixes within the same version aren't needed
 * Adjust test result indicators for colorblind people - [@jmarceli](https://github.com/jmarceli)
 * Use short message instead of terse message in test diagnostic tooltip and tab - [@jmarceli](https://github.com/jmarceli)
 * Fix for when `branch.end.column` is `null`. [@garyking](https://github.com/garyking)
+* Fix several jest coverage issues and improve usability. - @connectdotz
 
 -->
 
