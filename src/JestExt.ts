@@ -122,10 +122,6 @@ export class JestExt {
       return
     }
 
-    if (this.pluginSettings.runAllTestsFirst) {
-      this.testsHaveStartedRunning()
-    }
-
     this.jestProcess = this.jestProcessManager.startJestProcess({
       watchMode: WatchMode.Watch,
       keepAlive: true,
@@ -404,12 +400,12 @@ export class JestExt {
 
   private handleJestEditorSupportEvent(output: string) {
     if (output.includes('onRunStart')) {
+      this.channel.clear()
       this.status.running('Running tests')
     }
     if (output.includes('onRunComplete')) {
       this.status.stopped()
       this.parsingTestFile = false
-      this.channel.clear()
     }
 
     if (!this.shouldIgnoreOutput(output)) {
@@ -452,10 +448,6 @@ export class JestExt {
   private shouldIgnoreOutput(text: string): boolean {
     // this fails when snapshots change - to be revised - returning always false for now
     return text.includes('Watch Usage') || text.includes('onRunComplete') || text.includes('onRunStart')
-  }
-
-  private testsHaveStartedRunning() {
-    this.channel.clear()
   }
 
   private updateWithData(data: JestTotalResults) {

@@ -692,9 +692,7 @@ describe('JestExt', () => {
       const { runAllTestsFirstInWatchMode } = (JestProcessManager as jest.Mock).mock.calls[0][0]
       expect(runAllTestsFirstInWatchMode).toBeTruthy()
 
-      const spy = jest.spyOn(sut, 'testsHaveStartedRunning')
       sut.startProcess()
-      expect(spy).toHaveBeenCalled()
       expect(mockProcessManager.startJestProcess).toHaveBeenCalled()
     })
     it('can start watch mode first if configured.', () => {
@@ -703,9 +701,7 @@ describe('JestExt', () => {
       const { runAllTestsFirstInWatchMode } = (JestProcessManager as jest.Mock).mock.calls[0][0]
       expect(runAllTestsFirstInWatchMode).toBeFalsy()
 
-      const spy = jest.spyOn(sut, 'testsHaveStartedRunning')
       sut.startProcess()
-      expect(spy).not.toHaveBeenCalled()
       expect(mockProcessManager.startJestProcess).toHaveBeenCalled()
     })
     describe('exitCallback', () => {
