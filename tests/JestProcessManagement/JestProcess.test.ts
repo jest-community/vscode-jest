@@ -36,7 +36,7 @@ describe('JestProcess', () => {
       expect(runnerMock).toHaveBeenCalledWith(undefined, {
         noColor: true,
         shell: expect.any(Boolean),
-        testFileNamePattern: '--reporters="default" --reporters="/my/vscode/extensions/out/reporter.js"',
+        reporters: ['default', '/my/vscode/extensions/out/reporter.js'],
       })
     })
   })
