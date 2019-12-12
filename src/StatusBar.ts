@@ -260,7 +260,7 @@ export class StatusBar {
           throw new Error(`unrecognized mode: ${m}`)
       }
     })
-    return modesStrings.length > 0 ? `${modesStrings.join(' ')}` : ''
+    return modesStrings.join(' ')
   }
 }
 
