@@ -14,11 +14,7 @@ jest.mock('../src/decorations')
 
 const statusBar = {
   bind: () => ({
-    initial: jest.fn(),
-    running: jest.fn(),
-    success: jest.fn(),
-    failed: jest.fn(),
-    stopped: jest.fn(),
+    update: jest.fn(),
   }),
 }
 jest.mock('../src/StatusBar', () => ({ statusBar }))
