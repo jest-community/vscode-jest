@@ -7,11 +7,14 @@ export enum StatusType {
   summary,
 }
 
-type Status = 'running' | 'failed' | 'success' | 'stopped' | 'initial'
+export type Status = 'running' | 'failed' | 'success' | 'stopped' | 'initial'
+export type Mode = 'watch' | 'coverage'
+
 interface StatusUpdateRequest {
   source: string
   status: Status
-  details: string | undefined
+  details?: string
+  modes?: Mode[]
 }
 
 interface SpinnableStatusBarItem {
@@ -92,20 +95,8 @@ export class StatusBar {
   }
   bind(source: string) {
     return {
-      initial: () => {
-        this.request(source, 'initial')
-      },
-      running: (details?: string) => {
-        this.request(source, 'running', details)
-      },
-      success: (details?: string) => {
-        this.request(source, 'success', details)
-      },
-      failed: (details?: string) => {
-        this.request(source, 'failed', details)
-      },
-      stopped: (details?: string) => {
-        this.request(source, 'stopped', details)
+      update: (status: Status, details?: string, modes?: Mode[]) => {
+        this.request(source, status, details, modes)
       },
     }
   }
@@ -120,11 +111,12 @@ export class StatusBar {
     }
   }
 
-  private request(source: string, status: Status, details?: string) {
+  private request(source: string, status: Status, details?: string, modes?: Mode[]) {
     const request: StatusUpdateRequest = {
       source,
       status,
       details,
+      modes,
     }
     this.requests.set(source, request)
     this.updateStatus(request)
@@ -195,8 +187,10 @@ export class StatusBar {
 
     switch (statusBarItem.type) {
       case StatusType.active:
+        const modes = this.getModes(request.modes)
         const details = !this.needsSummaryStatus() && request.details ? request.details : ''
-        statusBarItem.text = `Jest: ${message} ${details}`
+        const displayString = [message, details, modes].filter(s => s && s.length > 0).join(' ')
+        statusBarItem.text = `Jest: ${displayString}`
         statusBarItem.tooltip = `Jest status of '${this.activeFolder}'`
         break
       case StatusType.summary:
@@ -239,6 +233,22 @@ export class StatusBar {
       default:
         return status
     }
+  }
+  private getModes(modes?: Mode[]) {
+    if (!modes) {
+      return ''
+    }
+    const modesStrings = modes.map(m => {
+      switch (m) {
+        case 'coverage':
+          return '$(color-mode)'
+        case 'watch':
+          return '$(eye)'
+        default:
+          throw new Error(`unrecognized mode: ${m}`)
+      }
+    })
+    return modesStrings.join(' ')
   }
 }
 

@@ -21,7 +21,11 @@ export class CoverageMapProvider {
   update(obj: CoverageMap | object) {
     const map = createCoverageMap(obj)
     const transformed = this.mapStore.transformCoverage(map)
-    this._map = transformed.map
+    if (this._map) {
+      this._map.merge(transformed.map)
+    } else {
+      this._map = transformed.map
+    }
   }
 
   public getFileCoverage(filePath: string) {

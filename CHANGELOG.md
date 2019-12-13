@@ -17,6 +17,7 @@ Bug-fixes within the same version aren't needed
 * Use short message instead of terse message in test diagnostic tooltip and tab - [@jmarceli](https://github.com/jmarceli)
 * quoting default "pathToJest" to preserve special characters, if any. - @connectdotz
 * Fix for when `branch.end.column` is `null`. [@garyking](https://github.com/garyking)
+* Fix several jest coverage issues and improve usability. - @connectdotz
 
 -->
 

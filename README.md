@@ -85,17 +85,15 @@ In contrast to previous versions of this plugin the debug settings are now indep
 
 ## How do I show code coverage?
 
-To show code coverage in the VS Code, you will need to:
+Starting from [v3.1](https://github.com/jest-community/vscode-jest/releases/tag/v3.1.0), code coverage can be easily turned on/off at runtime without customization. 
 
-- Configure Jest to collect coverage information using [the config](https://facebook.github.io/jest/docs/en/configuration.html#collectcoverage-boolean) or [command line options](https://facebook.github.io/jest/docs/en/cli.html#coverage)
-- Show the coverage overlay:
-  - Run the **Jest: Toggle Coverage Overlay** command to show the overlay once
-  - To configure the extension to show the coverage overlay when your workspace loads, add the following setting:
-    ```json
-    {
-        "jest.showCoverageOnLoad": true
-    }
-    ```
+To toggle the coverage mode: go to [Command Palette](https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette) and select **Jest: Toggle Coverage Overlay** command. (TODO: toggle from StatusBar, PR welcome)
+
+The coverage mode, along with watch mode, are shown in StatusBar:
+
+![status-bar-modes](https://github.com/jest-community/vscode-jest/raw/master/images/status-bar-modes.png)
+
+_(The initial coverage mode is `off` but can be changed by setting `"jest.showCoverageOnLoad"` option to true.)_ 
 
 <!--
 ### TODO: Change overlay format

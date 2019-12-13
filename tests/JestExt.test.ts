@@ -2,6 +2,8 @@ jest.unmock('events')
 jest.unmock('../src/JestExt')
 jest.mock('../src/helpers', () => ({
   cleanAnsi: (str: string) => str,
+  pathToJest: jest.fn(),
+  pathToConfig: jest.fn(),
 }))
 
 jest.mock('../src/DebugCodeLens', () => ({
@@ -12,11 +14,7 @@ jest.mock('../src/decorations')
 
 const statusBar = {
   bind: () => ({
-    initial: jest.fn(),
-    running: jest.fn(),
-    success: jest.fn(),
-    failed: jest.fn(),
-    stopped: jest.fn(),
+    update: jest.fn(),
   }),
 }
 jest.mock('../src/StatusBar', () => ({ statusBar }))
@@ -428,9 +426,32 @@ describe('JestExt', () => {
         null,
         null
       )
+      sut.triggerUpdateSettings = jest.fn()
       sut.toggleCoverageOverlay()
 
       expect(sut.coverageOverlay.toggleVisibility).toBeCalled()
+      expect(sut.triggerUpdateSettings).toBeCalled()
+    })
+    it('overrides showCoverageOnLoad settings', () => {
+      const settings = { showCoverageOnLoad: true } as any
+      const sut = new JestExt(
+        null,
+        workspaceFolder,
+        projectWorkspace,
+        channelStub,
+        settings,
+        debugCodeLensProvider,
+        debugConfigurationProvider,
+        null,
+        null
+      )
+      expect(projectWorkspace.collectCoverage).toBe(true)
+
+      sut.restartProcess = jest.fn()
+      sut.coverageOverlay.enabled = false
+      sut.toggleCoverageOverlay()
+
+      expect(projectWorkspace.collectCoverage).toBe(false)
     })
   })
 

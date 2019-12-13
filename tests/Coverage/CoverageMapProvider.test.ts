@@ -62,6 +62,25 @@ describe('CoverageMapProvider', () => {
 
       expect(sut.map).toBe(expected)
     })
+    it('can preserve the previous maps', () => {
+      const map1: any = {}
+      const map2: any = {}
+
+      const mergeFn = jest.fn()
+      ;(createCoverageMap as jest.Mock<any>).mockReturnValueOnce({
+        data: {},
+        merge: mergeFn,
+      })
+      createSourceMapStore.mockReturnValue({
+        transformCoverage: m => ({ map: m }),
+      })
+
+      const sut = new CoverageMapProvider()
+      sut.update(map1)
+      sut.update(map2)
+
+      expect(mergeFn).toBeCalledTimes(2)
+    })
   })
 
   describe('getFileCoverage()', () => {
