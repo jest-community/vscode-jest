@@ -7,7 +7,7 @@ export enum StatusType {
   summary,
 }
 
-type Status = 'running' | 'failed' | 'success' | 'stopped' | 'initial'
+export type Status = 'running' | 'failed' | 'success' | 'stopped' | 'initial'
 export type Mode = 'watch' | 'coverage'
 
 interface StatusUpdateRequest {
@@ -95,20 +95,8 @@ export class StatusBar {
   }
   bind(source: string) {
     return {
-      initial: (modes?: Mode[]) => {
-        this.request(source, 'initial', undefined, modes)
-      },
-      running: (details?: string, modes?: Mode[]) => {
-        this.request(source, 'running', details, modes)
-      },
-      success: (details?: string, modes?: Mode[]) => {
-        this.request(source, 'success', details, modes)
-      },
-      failed: (details?: string, modes?: Mode[]) => {
-        this.request(source, 'failed', details, modes)
-      },
-      stopped: (details?: string, modes?: Mode[]) => {
-        this.request(source, 'stopped', details, modes)
+      update: (status: Status, details?: string, modes?: Mode[]) => {
+        this.request(source, status, details, modes)
       },
     }
   }
