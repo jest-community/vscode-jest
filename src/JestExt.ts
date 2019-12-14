@@ -451,7 +451,7 @@ export class JestExt {
     this.updateStatusBar('initial', undefined, false)
   }
 
-  private updateStatusBar(status: Status, details?: string, watchMode?: boolean) {
+  private updateStatusBar(status: Status, details?: string, watchMode: boolean = true) {
     const modes: Mode[] = []
     if (this.coverageOverlay.enabled) {
       modes.push('coverage')
