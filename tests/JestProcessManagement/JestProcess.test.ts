@@ -35,7 +35,6 @@ describe('JestProcess', () => {
       new JestProcess(projectWorkspaceMock)
       expect(runnerMock).toHaveBeenCalledWith(undefined, {
         noColor: true,
-        shell: expect.any(Boolean),
         reporters: ['default', '/my/vscode/extensions/out/reporter.js'],
       })
     })

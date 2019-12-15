@@ -1,5 +1,4 @@
 import * as vscode from 'vscode'
-import { platform } from 'os'
 import { join } from 'path'
 import { Runner, ProjectWorkspace } from 'jest-editor-support'
 import { WatchMode } from '../Jest'
@@ -76,7 +75,6 @@ export class JestProcess {
 
     const options = {
       noColor: true,
-      shell: platform() === 'win32',
       reporters: ['default', reporterPath],
     }
     this.runner = new Runner(this.projectWorkspace, options)
