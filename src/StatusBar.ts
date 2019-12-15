@@ -127,14 +127,14 @@ export class StatusBar {
   }
 
   private get activeFolder() {
+    if (!this._activeFolder && vscode.workspace.workspaceFolders.length === 1) {
+      this._activeFolder = vscode.workspace.workspaceFolders[0].name
+    }
     if (!this._activeFolder && vscode.window.activeTextEditor) {
       const folder = vscode.workspace.getWorkspaceFolder(vscode.window.activeTextEditor.document.uri)
       if (folder) {
         this._activeFolder = folder.name
       }
-    }
-    if (!this._activeFolder && vscode.workspace.workspaceFolders.length === 1) {
-      this._activeFolder = vscode.workspace.workspaceFolders[0].name
     }
     return this._activeFolder
   }
