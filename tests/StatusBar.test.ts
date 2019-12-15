@@ -14,7 +14,7 @@ const statusBarItem = newStatusBarItem()
 jest.mock('elegant-spinner', () => () => jest.fn())
 
 import * as vscode from 'vscode'
-import { StatusBar, StatusType } from '../src/StatusBar'
+import { StatusBar, StatusType, Status } from '../src/StatusBar'
 
 const createStatusBarItem = jest.fn().mockReturnValue(statusBarItem)
 
@@ -58,7 +58,7 @@ describe('StatusBar', () => {
       const source = 'testSource'
       const helpers = statusBar.bind(source)
       ;['initial', 'running', 'success', 'failed', 'stopped'].forEach(status => {
-        helpers[status]()
+        helpers.update(status as Status)
         expect(updateStatusSpy).toHaveBeenCalledWith({ source, status })
       })
     })
@@ -66,7 +66,7 @@ describe('StatusBar', () => {
 
   describe('request()', () => {
     it('should update status', () => {
-      statusBar.bind('testSource1').initial()
+      statusBar.bind('testSource1').update('initial')
 
       expect(updateStatusSpy).toHaveBeenCalled()
     })
@@ -75,16 +75,24 @@ describe('StatusBar', () => {
   describe('updateStatus()', () => {
     it('should pick most relevant status', () => {
       // first instance failed, display it as folder status
-      statusBar.bind('testSource1').failed()
+      statusBar.bind('testSource1').update('failed')
       assertRender(0, { source: 'testSource1', status: 'failed' }, StatusType.active)
 
       // then second is running, this status is more important then previous, will display as workspace status
-      statusBar.bind('testSource2').running()
+      statusBar.bind('testSource2').update('running')
       assertRender(1, { source: 'testSource2', status: 'running' }, StatusType.summary)
 
       // second is ok, display first instance fail as it is more important, will display as workspace status
-      statusBar.bind('testSource2').success()
+      statusBar.bind('testSource2').update('success')
       assertRender(2, { source: 'testSource1', status: 'failed' }, StatusType.summary)
+    })
+    it('can display modes', () => {
+      // first instance failed, display it as folder status
+      statusBar.bind('testSource1').update('failed', 'some reason', ['watch', 'coverage'])
+      expect(statusBarItem.text).toEqual('Jest: $(alert) some reason $(eye) $(color-mode)')
+
+      statusBar.bind('testSource1').update('success', undefined, ['watch'])
+      expect(statusBarItem.text).toEqual('Jest: $(check) $(eye)')
     })
   })
 
@@ -114,19 +122,19 @@ describe('StatusBar', () => {
       expect(createStatusBarItem).toBeCalledTimes(2)
     })
     it('only update active status for single root', () => {
-      statusBar.bind('testSource').initial()
+      statusBar.bind('testSource').update('initial')
       const { active, summary } = getStatusBarItems()
-      expect(active.text).toEqual('Jest: ... ')
+      expect(active.text).toEqual('Jest: ...')
       expect(summary.text).toEqual('')
     })
     it('update both status for multiroot', () => {
       const { active, summary } = getStatusBarItems()
 
-      statusBar.bind('testSource1').initial()
+      statusBar.bind('testSource1').update('initial')
       expect(active.show).toBeCalledTimes(1)
-      expect(active.text).toEqual('Jest: ... ')
+      expect(active.text).toEqual('Jest: ...')
 
-      statusBar.bind('testSource2').initial()
+      statusBar.bind('testSource2').update('initial')
       expect(summary.show).toBeCalledTimes(1)
       expect(summary.text).toEqual('Jest-WS: ...')
 
@@ -136,8 +144,8 @@ describe('StatusBar', () => {
     it('can show active status from active editor', () => {
       const { active } = getStatusBarItems()
 
-      statusBar.bind('testSource1').initial()
-      statusBar.bind('testSource2').initial()
+      statusBar.bind('testSource1').update('initial')
+      statusBar.bind('testSource2').update('initial')
 
       // without active folder, the active status will be hidden in multiroot
       expect(active.show).toBeCalledTimes(1)
@@ -153,8 +161,8 @@ describe('StatusBar', () => {
       getWorkspaceFolder.mockReturnValue({ name: 'testSource1' })
       statusBar.onDidChangeActiveTextEditor(editor)
 
-      statusBar.bind('testSource1').running()
-      statusBar.bind('testSource2').running()
+      statusBar.bind('testSource1').update('running')
+      statusBar.bind('testSource2').update('running')
 
       expect(renderSpy).toHaveBeenCalledTimes(2)
 
@@ -167,14 +175,14 @@ describe('StatusBar', () => {
       const { active, summary } = getStatusBarItems()
 
       // sending 2 request without activeFolder should disable the active status
-      statusBar.bind('testSource1').running()
+      statusBar.bind('testSource1').update('running')
       expect(active.show).toBeCalledTimes(1)
       expect(summary.show).toBeCalledTimes(0)
 
       jest.clearAllMocks()
       jest.clearAllTimers()
 
-      statusBar.bind('testSource2').initial()
+      statusBar.bind('testSource2').update('initial')
       expect(active.show).toBeCalledTimes(0)
       expect(summary.show).toBeCalledTimes(1)
 

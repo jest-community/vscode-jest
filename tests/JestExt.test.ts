@@ -2,6 +2,8 @@ jest.unmock('events')
 jest.unmock('../src/JestExt')
 jest.mock('../src/helpers', () => ({
   cleanAnsi: (str: string) => str,
+  pathToJest: jest.fn(),
+  pathToConfig: jest.fn(),
 }))
 
 jest.mock('../src/DebugCodeLens', () => ({
@@ -10,16 +12,9 @@ jest.mock('../src/DebugCodeLens', () => ({
 jest.mock('os')
 jest.mock('../src/decorations')
 
-const running = jest.fn()
-const stopped = jest.fn()
+const update = jest.fn()
 const statusBar = {
-  bind: () => ({
-    initial: jest.fn(),
-    running,
-    success: jest.fn(),
-    failed: jest.fn(),
-    stopped,
-  }),
+  bind: () => ({ update }),
 }
 jest.mock('../src/StatusBar', () => ({ statusBar }))
 
@@ -430,9 +425,32 @@ describe('JestExt', () => {
         null,
         null
       )
+      sut.triggerUpdateSettings = jest.fn()
       sut.toggleCoverageOverlay()
 
       expect(sut.coverageOverlay.toggleVisibility).toBeCalled()
+      expect(sut.triggerUpdateSettings).toBeCalled()
+    })
+    it('overrides showCoverageOnLoad settings', () => {
+      const settings = { showCoverageOnLoad: true } as any
+      const sut = new JestExt(
+        null,
+        workspaceFolder,
+        projectWorkspace,
+        channelStub,
+        settings,
+        debugCodeLensProvider,
+        debugConfigurationProvider,
+        null,
+        null
+      )
+      expect(projectWorkspace.collectCoverage).toBe(true)
+
+      sut.restartProcess = jest.fn()
+      sut.coverageOverlay.enabled = false
+      sut.toggleCoverageOverlay()
+
+      expect(projectWorkspace.collectCoverage).toBe(false)
     })
   })
 
@@ -753,13 +771,14 @@ describe('JestExt', () => {
     })
 
     it('will change status according to received output', () => {
-      running.mockClear()
+      update.mockClear()
       ;(sut as any).handleJestEditorSupportEvent('onRunStart')
-      expect(running).toHaveBeenCalledTimes(1)
-      expect(running).toHaveBeenCalledWith('Running tests')
-      stopped.mockClear()
+      expect(update).toHaveBeenCalledTimes(1)
+      expect(update).toHaveBeenCalledWith('running', 'Running tests', [])
+      update.mockClear()
       ;(sut as any).handleJestEditorSupportEvent('onRunComplete')
-      expect(stopped).toHaveBeenCalledTimes(1)
+      expect(update).toHaveBeenCalledTimes(1)
+      expect(update).toHaveBeenCalledWith('stopped', undefined, [])
     })
 
     it('will append line to output', () => {
