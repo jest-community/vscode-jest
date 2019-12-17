@@ -19,6 +19,7 @@ Bug-fixes within the same version aren't needed
 * Fix for when `branch.end.column` is `null`. [@garyking](https://github.com/garyking)
 * Fix several jest coverage issues and improve usability. - @connectdotz
 * Add "Running tests" message to the StatusBar - [@jmarceli](https://github.com/jmarceli)
+* Disable inline error messages by default - [@jmarceli](https://github.com/jmarceli)
 
 -->
 
