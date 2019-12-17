@@ -337,7 +337,7 @@ describe('InstancesManager', () => {
       expect(getExtensionResourceSettings(vscode.workspace.workspaceFolders[0].uri)).toEqual({
         autoEnable: true,
         coverageFormatter: 'DefaultFormatter',
-        enableInlineErrorMessages: true,
+        enableInlineErrorMessages: false,
         enableSnapshotUpdateMessages: true,
         pathToConfig: '',
         pathToJest: null,
