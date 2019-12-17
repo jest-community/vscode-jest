@@ -48,7 +48,8 @@ Orta Therox ([@orta](https://github.com/orta)), Sean Poulter ([@seanpoulter](htt
 
 ## How to get it?
 
-Open up VS Code, go search for the extension "Jest".
+Open up VS Code, go search for the extension "Jest".  
+As an alternative, install with 1-click through [Visual Studio Marketplace - Orta.vscode-jest](https://marketplace.visualstudio.com/items?itemName=Orta.vscode-jest).
 
 ## How to get it set up?
 
