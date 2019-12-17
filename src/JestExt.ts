@@ -61,7 +61,6 @@ export class JestExt {
   private jestProcessManager: JestProcessManager
   private jestProcess: JestProcess
 
-  private clearOnNextInput: boolean
   private status: ReturnType<StatusBar['bind']>
 
   constructor(
@@ -80,7 +79,6 @@ export class JestExt {
     this.channel = outputChannel
     this.failingAssertionDecorators = {}
     this.failDiagnostics = failDiagnostics
-    this.clearOnNextInput = true
     this.pluginSettings = pluginSettings
     this.debugCodeLensProvider = debugCodeLensProvider
     this.instanceSettings = instanceSettings
@@ -103,6 +101,7 @@ export class JestExt {
     })
 
     this.status = statusBar.bind(workspaceFolder.name)
+    this.handleJestEditorSupportEvent = this.handleJestEditorSupportEvent.bind(this)
 
     // The theme stuff
     this.setupDecorators()
@@ -124,10 +123,6 @@ export class JestExt {
       return
     }
 
-    if (this.pluginSettings.runAllTestsFirst) {
-      this.testsHaveStartedRunning()
-    }
-
     this.jestProcess = this.jestProcessManager.startJestProcess({
       watchMode: WatchMode.Watch,
       keepAlive: true,
@@ -136,7 +131,7 @@ export class JestExt {
           this.jestProcess = jestProcessInWatchMode
 
           this.channel.appendLine('Finished running all tests. Starting watch mode.')
-          this.updateStatusBar('running', 'Starting watch mode')
+          this.updateStatusBar('running', 'Starting watch mode', false)
 
           this.assignHandlers(this.jestProcess)
         } else {
@@ -405,15 +400,6 @@ export class JestExt {
       this.jestProcess.watchMode = WatchMode.WatchAll
     }
 
-    // The "tests are done" message comes through stdErr
-    // We want to use this as a marker that the console should
-    // be cleared, as the next input will be from a new test run.
-    if (this.clearOnNextInput) {
-      this.clearOnNextInput = false
-      this.parsingTestFile = false
-      this.channel.clear()
-    }
-
     const noANSI = cleanAnsi(message)
     if (/(snapshots? failed)|(snapshot test failed)/i.test(noANSI)) {
       this.detectedSnapshotErrors()
@@ -422,16 +408,27 @@ export class JestExt {
     this.channel.appendLine(noANSI)
   }
 
+  private handleJestEditorSupportEvent(output: string) {
+    if (output.includes('onRunStart')) {
+      this.channel.clear()
+      this.updateStatusBar('running', 'Running tests', false)
+    }
+    if (output.includes('onRunComplete')) {
+      this.updateStatusBar('stopped', undefined, false)
+      this.parsingTestFile = false
+    }
+
+    if (!this.shouldIgnoreOutput(output)) {
+      this.channel.appendLine(output)
+    }
+  }
+
   private assignHandlers(jestProcess: JestProcess) {
     jestProcess
       .onJestEditorSupportEvent('executableJSON', (data: JestTotalResults) => {
         this.updateWithData(data)
       })
-      .onJestEditorSupportEvent('executableOutput', (output: string) => {
-        if (!this.shouldIgnoreOutput(output)) {
-          this.channel.appendLine(output)
-        }
-      })
+      .onJestEditorSupportEvent('executableOutput', this.handleJestEditorSupportEvent)
       .onJestEditorSupportEvent('executableStdErr', (error: Buffer) => this.handleStdErr(error))
       .onJestEditorSupportEvent('nonTerminalError', (error: string) => {
         this.channel.appendLine(`Received an error from Jest Runner: ${error.toString()}`)
@@ -471,12 +468,7 @@ export class JestExt {
 
   private shouldIgnoreOutput(text: string): boolean {
     // this fails when snapshots change - to be revised - returning always false for now
-    return text.includes('Watch Usage')
-  }
-
-  private testsHaveStartedRunning() {
-    this.channel.clear()
-    this.updateStatusBar('running', 'initial full test run', false)
+    return text.includes('Watch Usage') || text.includes('onRunComplete') || text.includes('onRunStart')
   }
 
   private updateWithData(data: JestTotalResults) {
@@ -499,7 +491,6 @@ export class JestExt {
         this.triggerUpdateActiveEditor(editor)
       }
     }
-    this.clearOnNextInput = true
   }
 
   private generateDotsForItBlocks(blocks: TestResult[], state: TestReconciliationState): DecorationOptions[] {

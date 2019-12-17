@@ -1,6 +1,9 @@
+import * as vscode from 'vscode'
+import { join } from 'path'
 import { Runner, ProjectWorkspace } from 'jest-editor-support'
 import { WatchMode } from '../Jest'
 import { ExitCallback } from './JestProcessManager'
+import { extensionId } from '../appGlobals'
 
 export class JestProcess {
   static readonly keepAliveLimit = 5
@@ -67,8 +70,12 @@ export class JestProcess {
     this.stopResolveCallback = null
     let exited = false
 
+    const extensionPath = vscode.extensions.getExtension(extensionId).extensionPath
+    const reporterPath = join(extensionPath, 'out', 'reporter.js')
+
     const options = {
       noColor: true,
+      reporters: ['default', reporterPath],
     }
     this.runner = new Runner(this.projectWorkspace, options)
 
