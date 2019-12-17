@@ -4,6 +4,14 @@ import { Runner, ProjectWorkspace } from 'jest-editor-support'
 import { JestProcess } from '../../src/JestProcessManagement/JestProcess'
 import { EventEmitter } from 'events'
 import { WatchMode } from '../../src/Jest'
+jest.unmock('path')
+jest.mock('vscode', () => ({
+  extensions: {
+    getExtension: () => {
+      return { extensionPath: '/my/vscode/extensions' }
+    },
+  },
+}))
 
 describe('JestProcess', () => {
   let projectWorkspaceMock
@@ -20,6 +28,16 @@ describe('JestProcess', () => {
       start: jest.fn(),
       runJestWithUpdateForSnapshots: jest.fn(),
     }
+  })
+
+  describe('Runner', () => {
+    it('loads reporter from path', () => {
+      new JestProcess(projectWorkspaceMock)
+      expect(runnerMock).toHaveBeenCalledWith(undefined, {
+        noColor: true,
+        reporters: ['default', '/my/vscode/extensions/out/reporter.js'],
+      })
+    })
   })
 
   describe('when creating', () => {

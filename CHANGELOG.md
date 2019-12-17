@@ -18,6 +18,7 @@ Bug-fixes within the same version aren't needed
 * quoting default "pathToJest" to preserve special characters, if any. - @connectdotz
 * Fix for when `branch.end.column` is `null`. [@garyking](https://github.com/garyking)
 * Fix several jest coverage issues and improve usability. - @connectdotz
+* Add "Running tests" message to the StatusBar - [@jmarceli](https://github.com/jmarceli)
 
 -->
 
