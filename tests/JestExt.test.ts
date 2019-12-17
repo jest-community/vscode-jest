@@ -2,6 +2,8 @@ jest.unmock('events')
 jest.unmock('../src/JestExt')
 jest.mock('../src/helpers', () => ({
   cleanAnsi: (str: string) => str,
+  pathToJest: jest.fn(),
+  pathToConfig: jest.fn(),
 }))
 
 jest.mock('../src/DebugCodeLens', () => ({
@@ -10,14 +12,9 @@ jest.mock('../src/DebugCodeLens', () => ({
 jest.mock('os')
 jest.mock('../src/decorations')
 
+const update = jest.fn()
 const statusBar = {
-  bind: () => ({
-    initial: jest.fn(),
-    running: jest.fn(),
-    success: jest.fn(),
-    failed: jest.fn(),
-    stopped: jest.fn(),
-  }),
+  bind: () => ({ update }),
 }
 jest.mock('../src/StatusBar', () => ({ statusBar }))
 
@@ -428,9 +425,32 @@ describe('JestExt', () => {
         null,
         null
       )
+      sut.triggerUpdateSettings = jest.fn()
       sut.toggleCoverageOverlay()
 
       expect(sut.coverageOverlay.toggleVisibility).toBeCalled()
+      expect(sut.triggerUpdateSettings).toBeCalled()
+    })
+    it('overrides showCoverageOnLoad settings', () => {
+      const settings = { showCoverageOnLoad: true } as any
+      const sut = new JestExt(
+        null,
+        workspaceFolder,
+        projectWorkspace,
+        channelStub,
+        settings,
+        debugCodeLensProvider,
+        debugConfigurationProvider,
+        null,
+        null
+      )
+      expect(projectWorkspace.collectCoverage).toBe(true)
+
+      sut.restartProcess = jest.fn()
+      sut.coverageOverlay.enabled = false
+      sut.toggleCoverageOverlay()
+
+      expect(projectWorkspace.collectCoverage).toBe(false)
     })
   })
 
@@ -690,9 +710,7 @@ describe('JestExt', () => {
       const { runAllTestsFirstInWatchMode } = (JestProcessManager as jest.Mock).mock.calls[0][0]
       expect(runAllTestsFirstInWatchMode).toBeTruthy()
 
-      const spy = jest.spyOn(sut, 'testsHaveStartedRunning')
       sut.startProcess()
-      expect(spy).toHaveBeenCalled()
       expect(mockProcessManager.startJestProcess).toHaveBeenCalled()
     })
     it('can start watch mode first if configured.', () => {
@@ -701,9 +719,7 @@ describe('JestExt', () => {
       const { runAllTestsFirstInWatchMode } = (JestProcessManager as jest.Mock).mock.calls[0][0]
       expect(runAllTestsFirstInWatchMode).toBeFalsy()
 
-      const spy = jest.spyOn(sut, 'testsHaveStartedRunning')
       sut.startProcess()
-      expect(spy).not.toHaveBeenCalled()
       expect(mockProcessManager.startJestProcess).toHaveBeenCalled()
     })
     describe('exitCallback', () => {
@@ -727,6 +743,52 @@ describe('JestExt', () => {
         expect(p1.onJestEditorSupportEvent).not.toHaveBeenCalled()
         expect(messaging.systemErrorMessage).toHaveBeenCalled()
       })
+    })
+  })
+
+  describe('handleJestEditorSupportEvent()', () => {
+    let sut: JestExt
+
+    const settings: any = {
+      debugCodeLens: {},
+      enableSnapshotUpdateMessages: true,
+    }
+
+    beforeEach(() => {
+      jest.resetAllMocks()
+      const projectWorkspace = new ProjectWorkspace(null, null, null, null)
+      sut = new JestExt(
+        null,
+        workspaceFolder,
+        projectWorkspace,
+        channelStub,
+        settings,
+        debugCodeLensProvider,
+        debugConfigurationProvider,
+        null,
+        null
+      )
+    })
+
+    it('will change status according to received output', () => {
+      update.mockClear()
+      ;(sut as any).handleJestEditorSupportEvent('onRunStart')
+      expect(update).toHaveBeenCalledTimes(1)
+      expect(update).toHaveBeenCalledWith('running', 'Running tests', [])
+      update.mockClear()
+      ;(sut as any).handleJestEditorSupportEvent('onRunComplete')
+      expect(update).toHaveBeenCalledTimes(1)
+      expect(update).toHaveBeenCalledWith('stopped', undefined, [])
+    })
+
+    it('will append line to output', () => {
+      channelStub.appendLine.mockClear()
+      ;(sut as any).handleJestEditorSupportEvent('not ignored output')
+      expect(channelStub.appendLine).toHaveBeenCalledTimes(1)
+      expect(channelStub.appendLine).toHaveBeenCalledWith('not ignored output')
+      channelStub.appendLine.mockClear()
+      ;(sut as any).handleJestEditorSupportEvent('onRunComplete')
+      expect(channelStub.appendLine).not.toHaveBeenCalled()
     })
   })
 })

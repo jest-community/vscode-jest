@@ -3,7 +3,7 @@ import { ProjectWorkspace, JestTotalResults } from 'jest-editor-support'
 
 import * as decorations from './decorations'
 import { IPluginResourceSettings } from './Settings'
-import { statusBar, StatusBar } from './StatusBar'
+import { statusBar, Status, StatusBar, Mode } from './StatusBar'
 import {
   TestReconciliationState,
   TestResultProvider,
@@ -61,7 +61,6 @@ export class JestExt {
   private jestProcessManager: JestProcessManager
   private jestProcess: JestProcess
 
-  private clearOnNextInput: boolean
   private status: ReturnType<StatusBar['bind']>
 
   constructor(
@@ -80,7 +79,6 @@ export class JestExt {
     this.channel = outputChannel
     this.failingAssertionDecorators = {}
     this.failDiagnostics = failDiagnostics
-    this.clearOnNextInput = true
     this.pluginSettings = pluginSettings
     this.debugCodeLensProvider = debugCodeLensProvider
     this.instanceSettings = instanceSettings
@@ -92,6 +90,7 @@ export class JestExt {
       pluginSettings.showCoverageOnLoad,
       pluginSettings.coverageFormatter
     )
+    this.jestWorkspace.collectCoverage = pluginSettings.showCoverageOnLoad
 
     this.testResultProvider = new TestResultProvider(this.pluginSettings.debugMode)
     this.debugConfigurationProvider = debugConfigurationProvider
@@ -102,6 +101,7 @@ export class JestExt {
     })
 
     this.status = statusBar.bind(workspaceFolder.name)
+    this.handleJestEditorSupportEvent = this.handleJestEditorSupportEvent.bind(this)
 
     // The theme stuff
     this.setupDecorators()
@@ -123,10 +123,6 @@ export class JestExt {
       return
     }
 
-    if (this.pluginSettings.runAllTestsFirst) {
-      this.testsHaveStartedRunning()
-    }
-
     this.jestProcess = this.jestProcessManager.startJestProcess({
       watchMode: WatchMode.Watch,
       keepAlive: true,
@@ -135,11 +131,11 @@ export class JestExt {
           this.jestProcess = jestProcessInWatchMode
 
           this.channel.appendLine('Finished running all tests. Starting watch mode.')
-          this.status.running('Starting watch mode')
+          this.updateStatusBar('running', 'Starting watch mode', false)
 
           this.assignHandlers(this.jestProcess)
         } else {
-          this.status.stopped()
+          this.updateStatusBar('stopped', undefined, false)
           if (!jestProcess.stopRequested()) {
             let msg = `Starting Jest in Watch mode failed too many times and has been stopped.`
             if (this.instanceSettings.multirootEnv) {
@@ -159,7 +155,7 @@ export class JestExt {
   public stopProcess() {
     this.channel.appendLine('Closing Jest')
     return this.jestProcessManager.stopAll().then(() => {
-      this.status.stopped()
+      this.updateStatusBar('stopped')
     })
   }
 
@@ -196,10 +192,16 @@ export class JestExt {
     this.jestWorkspace.rootPath = updatedSettings.rootPath
     this.jestWorkspace.pathToJest = pathToJest(updatedSettings)
     this.jestWorkspace.pathToConfig = pathToConfig(updatedSettings)
+
+    // debug
     this.jestWorkspace.debug = updatedSettings.debugMode
     this.testResultProvider.verbose = updatedSettings.debugMode
 
-    this.coverageOverlay.enabled = updatedSettings.showCoverageOnLoad
+    // coverage
+    const showCoverage =
+      this.coverageOverlay.enabled === undefined ? updatedSettings.showCoverageOnLoad : this.coverageOverlay.enabled
+    this.jestWorkspace.collectCoverage = showCoverage
+    this.coverageOverlay.enabled = showCoverage
 
     this.restartProcess()
   }
@@ -330,6 +332,9 @@ export class JestExt {
 
   toggleCoverageOverlay() {
     this.coverageOverlay.toggleVisibility()
+
+    // restart jest since coverage condition has changed
+    this.triggerUpdateSettings(this.pluginSettings)
   }
 
   private detectedSnapshotErrors() {
@@ -375,7 +380,6 @@ export class JestExt {
     const errorMessage = test.terseMessage || test.shortMessage
     const decorator = {
       range: new vscode.Range(test.lineNumberOfError, 0, test.lineNumberOfError, 0),
-      hoverMessage: errorMessage,
     }
 
     // We have to make a new style for each unique message, this is
@@ -396,15 +400,6 @@ export class JestExt {
       this.jestProcess.watchMode = WatchMode.WatchAll
     }
 
-    // The "tests are done" message comes through stdErr
-    // We want to use this as a marker that the console should
-    // be cleared, as the next input will be from a new test run.
-    if (this.clearOnNextInput) {
-      this.clearOnNextInput = false
-      this.parsingTestFile = false
-      this.channel.clear()
-    }
-
     const noANSI = cleanAnsi(message)
     if (/(snapshots? failed)|(snapshot test failed)/i.test(noANSI)) {
       this.detectedSnapshotErrors()
@@ -413,16 +408,27 @@ export class JestExt {
     this.channel.appendLine(noANSI)
   }
 
+  private handleJestEditorSupportEvent(output: string) {
+    if (output.includes('onRunStart')) {
+      this.channel.clear()
+      this.updateStatusBar('running', 'Running tests', false)
+    }
+    if (output.includes('onRunComplete')) {
+      this.updateStatusBar('stopped', undefined, false)
+      this.parsingTestFile = false
+    }
+
+    if (!this.shouldIgnoreOutput(output)) {
+      this.channel.appendLine(output)
+    }
+  }
+
   private assignHandlers(jestProcess: JestProcess) {
     jestProcess
       .onJestEditorSupportEvent('executableJSON', (data: JestTotalResults) => {
         this.updateWithData(data)
       })
-      .onJestEditorSupportEvent('executableOutput', (output: string) => {
-        if (!this.shouldIgnoreOutput(output)) {
-          this.channel.appendLine(output)
-        }
-      })
+      .onJestEditorSupportEvent('executableOutput', this.handleJestEditorSupportEvent)
       .onJestEditorSupportEvent('executableStdErr', (error: Buffer) => this.handleStdErr(error))
       .onJestEditorSupportEvent('nonTerminalError', (error: string) => {
         this.channel.appendLine(`Received an error from Jest Runner: ${error.toString()}`)
@@ -439,7 +445,18 @@ export class JestExt {
   }
 
   private setupStatusBar() {
-    this.status.initial()
+    this.updateStatusBar('initial', undefined, false)
+  }
+
+  private updateStatusBar(status: Status, details?: string, watchMode: boolean = true) {
+    const modes: Mode[] = []
+    if (this.coverageOverlay.enabled) {
+      modes.push('coverage')
+    }
+    if (watchMode) {
+      modes.push('watch')
+    }
+    this.status.update(status, details, modes)
   }
 
   private setupDecorators() {
@@ -451,12 +468,7 @@ export class JestExt {
 
   private shouldIgnoreOutput(text: string): boolean {
     // this fails when snapshots change - to be revised - returning always false for now
-    return text.includes('Watch Usage')
-  }
-
-  private testsHaveStartedRunning() {
-    this.channel.clear()
-    this.status.running('initial full test run')
+    return text.includes('Watch Usage') || text.includes('onRunComplete') || text.includes('onRunStart')
   }
 
   private updateWithData(data: JestTotalResults) {
@@ -469,9 +481,9 @@ export class JestExt {
 
     const failedFileCount = failedSuiteCount(this.failDiagnostics)
     if (failedFileCount <= 0 && normalizedData.success) {
-      this.status.success()
+      this.updateStatusBar('success')
     } else {
-      this.status.failed(` (${failedFileCount} test suite${failedFileCount > 1 ? 's' : ''} failed)`)
+      this.updateStatusBar('failed', ` (${failedFileCount} test suite${failedFileCount > 1 ? 's' : ''} failed)`)
     }
 
     for (const editor of vscode.window.visibleTextEditors) {
@@ -479,7 +491,6 @@ export class JestExt {
         this.triggerUpdateActiveEditor(editor)
       }
     }
-    this.clearOnNextInput = true
   }
 
   private generateDotsForItBlocks(blocks: TestResult[], state: TestReconciliationState): DecorationOptions[] {

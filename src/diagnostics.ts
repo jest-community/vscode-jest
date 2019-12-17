@@ -9,20 +9,12 @@ import { TestFileAssertionStatus } from 'jest-editor-support'
 import { TestReconciliationState, TestResult } from './TestResults'
 
 function createDiagnostic(
-  uri: vscode.Uri,
   message: string,
   lineNumber: number,
   startCol = 0,
   endCol = Number.MAX_SAFE_INTEGER
 ): vscode.Diagnostic {
-  let line = lineNumber
-  if (line < 0) {
-    line = 0
-    // tslint:disable-next-line no-console
-    console.warn(
-      `received invalid line number '${line}' for '${uri.toString()}'. (most likely due to unexpected test results... you can help fix the root cause by logging an issue with a sample project to reproduce this warning)`
-    )
-  }
+  const line = lineNumber > 0 ? lineNumber - 1 : 0
   return createDiagnosticWithRange(message, new vscode.Range(line, startCol, line, endCol))
 }
 
@@ -51,7 +43,7 @@ export function updateCurrentDiagnostics(
     testResult.map(r => {
       const line = r.lineNumberOfError || r.end.line
       const textLine = editor.document.lineAt(line)
-      return createDiagnosticWithRange(r.terseMessage || r.shortMessage, textLine.range)
+      return createDiagnosticWithRange(r.shortMessage, textLine.range)
     })
   )
 }
@@ -64,7 +56,7 @@ export function updateCurrentDiagnostics(
 
 export function updateDiagnostics(testResults: TestFileAssertionStatus[], diagnostics: vscode.DiagnosticCollection) {
   function addTestFileError(result: TestFileAssertionStatus, uri: vscode.Uri) {
-    const diag = createDiagnostic(uri, result.message || 'test file error', 0, 0, 0)
+    const diag = createDiagnostic(result.message || 'test file error', 0, 0, 0)
     diagnostics.set(uri, [diag])
   }
 
@@ -72,13 +64,7 @@ export function updateDiagnostics(testResults: TestFileAssertionStatus[], diagno
     const asserts = result.assertions.filter(a => a.status === TestReconciliationState.KnownFail)
     diagnostics.set(
       uri,
-      asserts.map(assertion =>
-        createDiagnostic(
-          uri,
-          assertion.terseMessage || assertion.shortMessage || assertion.message,
-          assertion.line > 0 ? assertion.line - 1 : 0
-        )
-      )
+      asserts.map(assertion => createDiagnostic(assertion.shortMessage || assertion.message, assertion.line))
     )
   }
 

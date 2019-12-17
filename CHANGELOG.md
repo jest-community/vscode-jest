@@ -5,19 +5,23 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 
+* fix test breakage with 'jest-editor-support' internal modules due to automock. - connectdotz
+* replacing the status bar spinner with the VS Code spinner - rhalaly
 * Fix regex to detect the pluralized message 'snapshots failed' and show the 'Would you like to update your Snapshots' dialog - shruda
 * Add 'hair space' (U+200A) after decoration text - [@rfgamaral](https://github.com/rfgamaral)
 * Fix decoration color for 'unknown' tests - [@rfgamaral](https://github.com/rfgamaral)
 * Improve global and local detection for Jest executable on `win32` platform - [@rfgamaral](https://github.com/rfgamaral)
 * Set `"extensionKind": "workspace"` in `package.json` to support remote developement - [@rfgamaral](https://github.com/rfgamaral)
 * Fix remove ANSI characters from test messages - [@jmarceli](https://github.com/jmarceli)
+* Adjust test result indicators for colorblind people - [@jmarceli](https://github.com/jmarceli)
+* Use short message instead of terse message in test diagnostic tooltip and tab - [@jmarceli](https://github.com/jmarceli)
+* quoting default "pathToJest" to preserve special characters, if any. - @connectdotz
+* Fix for when `branch.end.column` is `null`. [@garyking](https://github.com/garyking)
+* Fix several jest coverage issues and improve usability. - @connectdotz
+* Add "Running tests" message to the StatusBar - [@jmarceli](https://github.com/jmarceli)
 * Disable inline error messages by default - [@jmarceli](https://github.com/jmarceli)
 
 -->
-
-## Master
-
-* replacing the status bar spinner with the VS Code spinner - rhalaly
 
 ### 3.0.1
 

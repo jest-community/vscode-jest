@@ -79,7 +79,8 @@ export function pathToJest({ pathToJest, rootPath }: IPluginResourceSettings) {
     return 'npm test --'
   }
 
-  return getLocalPathForExecutable(rootPath, 'jest') || 'jest' + nodeBinExtension
+  const p = getLocalPathForExecutable(rootPath, 'jest') || 'jest' + nodeBinExtension
+  return `"${p}"`
 }
 
 /**
@@ -93,34 +94,6 @@ export function pathToConfig(pluginSettings: IPluginResourceSettings) {
   }
 
   return ''
-}
-
-export function pathToJestPackageJSON(pluginSettings: IPluginResourceSettings): string | null {
-  let pathToNodeModules = join(pluginSettings.rootPath, 'node_modules')
-
-  if (pluginSettings.pathToJest) {
-    const relativeJestCmd = removeSurroundingQuotes(pluginSettings.pathToJest.split(' ')[0])
-    const relativePathToNodeModules = relativeJestCmd.replace(/node_modules.+$/i, 'node_modules')
-
-    pathToNodeModules = join(pluginSettings.rootPath, relativePathToNodeModules)
-  }
-
-  const defaultPath = normalize(join(pathToNodeModules, 'jest/package.json'))
-  const cliPath = normalize(join(pathToNodeModules, 'jest-cli/package.json'))
-  const craPath = normalize(join(pathToNodeModules, 'react-scripts/node_modules/jest/package.json'))
-  const paths = [defaultPath, cliPath, craPath]
-
-  for (const i in paths) {
-    if (existsSync(paths[i])) {
-      return paths[i]
-    }
-  }
-
-  return null
-}
-
-function removeSurroundingQuotes(str: string) {
-  return str.replace(/^['"`]/, '').replace(/['"`]$/, '')
 }
 
 /**

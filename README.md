@@ -1,4 +1,4 @@
-# vscode-jest [![Build Status](https://travis-ci.org/jest-community/vscode-jest.svg?branch=master)](https://travis-ci.org/jest-community/vscode-jest)
+# vscode-jest [![Build Status](https://travis-ci.org/jest-community/vscode-jest.svg?branch=master)](https://travis-ci.org/jest-community/vscode-jest) [![Visual Studio Marketplace](https://img.shields.io/visual-studio-marketplace/v/Orta.vscode-jest?color=success&label=Visual%20Studio%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=Orta.vscode-jest)
 
 ---
 
@@ -48,13 +48,14 @@ Orta Therox ([@orta](https://github.com/orta)), Sean Poulter ([@seanpoulter](htt
 
 ## How to get it?
 
-Open up VS Code, go search for the extension "Jest".
+Open up VS Code, go search for the extension "Jest".  
+As an alternative, install with 1-click through [Visual Studio Marketplace - Orta.vscode-jest](https://marketplace.visualstudio.com/items?itemName=Orta.vscode-jest).
 
 ## How to get it set up?
 
 This project has the expectation that you would run something like `npm run test` which _just_ looks like `jest` in the `package.json`. So, please keep your configuration inside the `package.json` as opposed to using command line arguments.
 
-If have a more complex setup, it can probably be supported, check out the settings. They are all prefixed with `jest`.
+If you have a more complex setup, it can probably be supported, check out the settings. They are all prefixed with `jest`.
 
 Also, you should use Jest 17+, however 16 works - it will just offer a warning. We're aiming to try and do current Jest version - 1, but won't specifically drop support for older versions unless we're forced into it.
 
@@ -85,17 +86,15 @@ In contrast to previous versions of this plugin the debug settings are now indep
 
 ## How do I show code coverage?
 
-To show code coverage in the VS Code, you will need to:
+Starting from [v3.1](https://github.com/jest-community/vscode-jest/releases/tag/v3.1.0), code coverage can be easily turned on/off at runtime without customization. 
 
-- Configure Jest to collect coverage information using [the config](https://facebook.github.io/jest/docs/en/configuration.html#collectcoverage-boolean) or [command line options](https://facebook.github.io/jest/docs/en/cli.html#coverage)
-- Show the coverage overlay:
-  - Run the **Jest: Toggle Coverage Overlay** command to show the overlay once
-  - To configure the extension to show the coverage overlay when your workspace loads, add the following setting:
-    ```json
-    {
-        "jest.showCoverageOnLoad": true
-    }
-    ```
+To toggle the coverage mode: go to [Command Palette](https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette) and select **Jest: Toggle Coverage Overlay** command. (TODO: toggle from StatusBar, PR welcome)
+
+The coverage mode, along with watch mode, are shown in StatusBar:
+
+![status-bar-modes](https://github.com/jest-community/vscode-jest/raw/master/images/status-bar-modes.png)
+
+_(The initial coverage mode is `off` but can be changed by setting `"jest.showCoverageOnLoad"` option to true.)_ 
 
 <!--
 ### TODO: Change overlay format
