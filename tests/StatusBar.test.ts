@@ -189,4 +189,50 @@ describe('StatusBar', () => {
       expect(active.hide).toBeCalledTimes(1)
     })
   })
+
+  describe('StatusBarItem', () => {
+    const registerCommand = (vscode.commands.registerCommand as unknown) as jest.Mock<{}>
+
+    beforeEach(() => {
+      // reset statusBar to clear its internal `activeFolder`
+      statusBar = new StatusBar()
+      registerCommand.mockReset()
+    })
+    afterEach(() => {
+      vscode.workspace.workspaceFolders = []
+      vscode.window.activeTextEditor = undefined
+    })
+
+    it('responds to clicks for one active WorkspaceFolder', () => {
+      const getExtensionByName = jest.fn()
+      statusBar.register(getExtensionByName)
+
+      const statusBarClickHandler = registerCommand.mock.calls.find(c => c[0].includes('show-active-output'))[1]
+      expect(statusBarClickHandler).toBeDefined()
+
+      vscode.workspace.workspaceFolders = [{ name: 'testproject', uri: vscode.Uri.file(''), index: 0 }]
+      statusBarClickHandler()
+      expect(getExtensionByName).toBeCalledWith('testproject')
+    })
+
+    it('responds to clicks for two WorkspaceFolders but only one active', () => {
+      const getExtensionByName = jest.fn()
+      statusBar.register(getExtensionByName)
+
+      const statusBarClickHandler = registerCommand.mock.calls.find(c => c[0].includes('show-active-output'))[1]
+      expect(statusBarClickHandler).toBeDefined()
+
+      vscode.workspace.workspaceFolders = [
+        { name: 'testproject1', uri: vscode.Uri.file(''), index: 0 },
+        { name: 'testproject2', uri: vscode.Uri.file(''), index: 1 },
+        { name: 'testproject3', uri: vscode.Uri.file(''), index: 2 },
+      ]
+      const projectUrl = vscode.Uri.file('projecturl')
+      vscode.window.activeTextEditor = ({ document: { uri: projectUrl } } as unknown) as vscode.TextEditor
+      vscode.workspace.getWorkspaceFolder = url =>
+        url === projectUrl ? vscode.workspace.workspaceFolders[1] : undefined
+      statusBarClickHandler()
+      expect(getExtensionByName).toBeCalledWith(vscode.workspace.workspaceFolders[1].name)
+    })
+  })
 })
