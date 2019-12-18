@@ -5,6 +5,9 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 
+-->
+
+### 3.1.0
 * fix test breakage with 'jest-editor-support' internal modules due to automock. - connectdotz
 * replacing the status bar spinner with the VS Code spinner - rhalaly
 * Fix regex to detect the pluralized message 'snapshots failed' and show the 'Would you like to update your Snapshots' dialog - shruda
@@ -21,8 +24,6 @@ Bug-fixes within the same version aren't needed
 * Add "Running tests" message to the StatusBar - [@jmarceli](https://github.com/jmarceli)
 * Disable inline error messages by default - [@jmarceli](https://github.com/jmarceli)
 * Fix StatusBarItem when starting Jest without active text editor but only one workspace folder - @stephtr
-
--->
 
 ### 3.0.1
 

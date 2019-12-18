@@ -44,21 +44,23 @@ Orta Therox ([@orta](https://github.com/orta)), Sean Poulter ([@seanpoulter](htt
 * Highlights the errors next to the `expect` functions.
 * Adds syntax highlighting to snapshot files.
 * A one button update for failed snapshots.
-* Show coverage information in files being tested. (_requires coverage to be collected by your jest config_)
+* Show coverage information in files being tested. 
+* Help debug jest tests in vscode.
 
 ## How to get it?
 
 Open up VS Code, go search for the extension "Jest".  
 As an alternative, install with 1-click through [Visual Studio Marketplace - Orta.vscode-jest](https://marketplace.visualstudio.com/items?itemName=Orta.vscode-jest).
+ 
+The detailed releases and migration help: see [releases](https://github.com/jest-community/vscode-jest/releases).
 
 ## How to get it set up?
 
-This project has the expectation that you would run something like `npm run test` which _just_ looks like `jest` in the `package.json`. So, please keep your configuration inside the `package.json` as opposed to using command line arguments.
+This project deploys a thin layer to simulate how users run their jest tests. It has the expectation that, upon launch, users already have their jest environment properly setup, i.e. they can execute the basic jest tests in vscode shell. 
 
-If you have a more complex setup, it can probably be supported, check out the settings. They are all prefixed with `jest`.
+Out of the box, this extension should work for most simple/standard jest and react projects. However, if you have a more sophisticated project or custom jest command, it most likely won't be sufficient but you can easily customize it with various settings, such as `jest.pathToJest` where you can specify how you usually run your jest tests. These settings are all prefixed with `jest`.
 
-Also, you should use Jest 17+, however 16 works - it will just offer a warning. We're aiming to try and do current Jest version - 1, but won't specifically drop support for older versions unless we're forced into it.
-
+If you encountered any difficulty or have suggestions, please do not hesitate to [ask](https://github.com/jest-community/vscode-jest/issues), we have an active community that you might find helpful. 
 
 ## How to start the Jest?
 

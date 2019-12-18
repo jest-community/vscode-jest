@@ -2,7 +2,7 @@
   "name": "vscode-jest",
   "displayName": "Jest",
   "description": "Use Facebook's Jest With Pleasure.",
-  "version": "3.0.2",
+  "version": "3.1.0",
   "publisher": "Orta",
   "engines": {
     "vscode": "^1.23.0"
@@ -16,11 +16,11 @@
     "url": "https://github.com/jest-community/vscode-jest"
   },
   "galleryBanner": {
-    "theme": "light",
-    "color": "#ca461a"
+    "theme": "dark",
+    "color": "#384357"
   },
   "categories": ["Other"],
-  "keywords": ["multi-root ready"],
+  "keywords": ["jest", "debug", "snippet", "react", "multi-root ready"],
   "activationEvents": [
     "workspaceContains:jest.config.js",
     "workspaceContains:jest.json",
