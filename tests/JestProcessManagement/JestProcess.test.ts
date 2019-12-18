@@ -4,11 +4,12 @@ import { Runner, ProjectWorkspace } from 'jest-editor-support'
 import { JestProcess } from '../../src/JestProcessManagement/JestProcess'
 import { EventEmitter } from 'events'
 import { WatchMode } from '../../src/Jest'
+import { normalize } from 'path'
 jest.unmock('path')
 jest.mock('vscode', () => ({
   extensions: {
     getExtension: () => {
-      return { extensionPath: '/my/vscode/extensions' }
+      return { extensionPath: normalize('/my/vscode/extensions') }
     },
   },
 }))
@@ -35,7 +36,7 @@ describe('JestProcess', () => {
       new JestProcess(projectWorkspaceMock)
       expect(runnerMock).toHaveBeenCalledWith(undefined, {
         noColor: true,
-        reporters: ['default', '/my/vscode/extensions/out/reporter.js'],
+        reporters: ['default', normalize('/my/vscode/extensions/out/reporter.js')],
       })
     })
   })

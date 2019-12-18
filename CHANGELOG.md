@@ -20,6 +20,7 @@ Bug-fixes within the same version aren't needed
 * Fix several jest coverage issues and improve usability. - @connectdotz
 * Add "Running tests" message to the StatusBar - [@jmarceli](https://github.com/jmarceli)
 * Disable inline error messages by default - [@jmarceli](https://github.com/jmarceli)
+* Fix StatusBarItem when starting Jest without active text editor but only one workspace folder - @stephtr
 
 -->
 
