@@ -9,7 +9,7 @@ Content
 * [Features](#features)
 * [How to get it?](#how-to-get-it)
 * [How to get it set up?](#how-to-get-it-set-up)
-* [How to start the Jest?](#how-to-start-the-jest)
+* [How to start Jest?](#how-to-start-jest)
 * [How do I debug tests?](#how-do-i-debug-tests)
 	* [Notes for troubleshooting](#notes-for-troubleshooting)
 * [How do I show code coverage?](#how-do-i-show-code-coverage)
@@ -44,23 +44,27 @@ Orta Therox ([@orta](https://github.com/orta)), Sean Poulter ([@seanpoulter](htt
 * Highlights the errors next to the `expect` functions.
 * Adds syntax highlighting to snapshot files.
 * A one button update for failed snapshots.
-* Show coverage information in files being tested. (_requires coverage to be collected by your jest config_)
+* Show coverage information in files being tested. 
+* Help debug jest tests in vscode.
 
 ## How to get it?
 
-Open up VS Code, go search for the extension "Jest".  
-As an alternative, install with 1-click through [Visual Studio Marketplace - Orta.vscode-jest](https://marketplace.visualstudio.com/items?itemName=Orta.vscode-jest).
+Simply open [Jest - Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=Orta.vscode-jest) and click "Install".
+Alternatively open Visual Studio Code, go to the extension view and search for "Jest".
+ 
+For detailed releases and migration help, please see [releases](https://github.com/jest-community/vscode-jest/releases).
 
 ## How to get it set up?
 
-This project has the expectation that you would run something like `npm run test` which _just_ looks like `jest` in the `package.json`. So, please keep your configuration inside the `package.json` as opposed to using command line arguments.
+This extension runs on top of your Jest installation. Upon starting, it has the expectation that the Jest environment is properly set up, i.e. jest can be executed in VS Code's terminal.
 
-If you have a more complex setup, it can probably be supported, check out the settings. They are all prefixed with `jest`.
+Out of the box, this extension should work for most simple/standard jest and react projects. However, if you have a more sophisticated project or custom jest command, the default configuration most likely won't be sufficient but you can easily customize it with various settings<sup>*</sup>, such as `jest.pathToJest` where you can specify how you usually run your jest tests. 
 
-Also, you should use Jest 17+, however 16 works - it will just offer a warning. We're aiming to try and do current Jest version - 1, but won't specifically drop support for older versions unless we're forced into it.
+If you encountered any difficulty or have suggestions, please do not hesitate to [ask](https://github.com/jest-community/vscode-jest/issues), we have an active community that you might find helpful. 
 
+_*: all settings in this extension are prefixed with `jest`_
 
-## How to start the Jest?
+## How to start Jest?
 
 The extension will start Jest for you when:
 
@@ -94,7 +98,7 @@ The coverage mode, along with watch mode, are shown in StatusBar:
 
 ![status-bar-modes](https://github.com/jest-community/vscode-jest/raw/master/images/status-bar-modes.png)
 
-_(The initial coverage mode is `off` but can be changed by setting `"jest.showCoverageOnLoad"` option to true.)_ 
+_(The initial coverage mode is `off` but can be changed by adding `"jest.showCoverageOnLoad": true` in settings.)_ 
 
 <!--
 ### TODO: Change overlay format
