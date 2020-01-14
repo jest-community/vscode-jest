@@ -75,7 +75,7 @@ export class JestProcess {
 
     const options = {
       noColor: true,
-      reporters: ['default', reporterPath],
+      reporters: ['default', `'${reporterPath}'`],
     }
     this.runner = new Runner(this.projectWorkspace, options)
 
