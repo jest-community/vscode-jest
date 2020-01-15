@@ -4,9 +4,11 @@ Please add your own contribution below inside the Master section
 Bug-fixes within the same version aren't needed
 
 ## Master
-* fix reporter failed to load due to whitespace in path - connectdotz
 
 -->
+
+### 3.1.1
+* fix reporter failed to load due to whitespace in path - connectdotz
 
 ### 3.1.0
 * fix test breakage with 'jest-editor-support' internal modules due to automock. - connectdotz
