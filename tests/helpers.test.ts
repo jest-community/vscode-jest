@@ -49,10 +49,12 @@ describe('ModuleHelpers', () => {
     })
 
     it('should return false for other scripts', () => {
+      expect(isCreateReactAppTestCommand(undefined)).toBe(false)
       expect(isCreateReactAppTestCommand('custom-script')).toBe(false)
     })
 
     it('should return false for other scripts with cross-env', () => {
+      isCreateReactAppTestCommand(undefined)
       expect(isCreateReactAppTestCommand('cross-env CI=true custom-script')).toBe(false)
     })
   })
