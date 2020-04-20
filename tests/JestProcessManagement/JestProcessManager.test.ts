@@ -243,6 +243,21 @@ describe('JestProcessManager', () => {
       expect(stopMock).toHaveBeenCalledTimes(1)
       expect(jestProcessManager.numberOfProcesses).toBe(0)
     })
+    it('stopJestProcess can stop the process even if it is not in the process list', () => {
+      const stopMock = jest.fn()
+      jestProcessMock.mockImplementation(() => ({
+        onExit: jest.fn(),
+        stop: stopMock,
+      }))
+      const jestProcess = jestProcessManager.startJestProcess()
+      const cloned = { ...jestProcess }
+
+      expect(jestProcessManager.numberOfProcesses).toBe(1)
+      jestProcessManager.stopJestProcess(cloned)
+
+      expect(stopMock).toHaveBeenCalledTimes(1)
+      expect(jestProcessManager.numberOfProcesses).toBe(1)
+    })
 
     // jest mocking does not let us test it properly because
     // jestProcessMock.instances does not work as expected
@@ -264,6 +279,57 @@ describe('JestProcessManager', () => {
         expect(jestProcessMock.mock.instances.length).toBe(2)
         expect(mockImplementation.stop).toHaveBeenCalledTimes(2)
         expect(jestProcessManager.numberOfProcesses).toBe(0)
+      })
+    })
+    describe('2-staged process: runAllTest => runWatchMode', () => {
+      let startOptions = {}
+      let mockImplementation
+      beforeEach(() => {
+        const onExitMock = jest.fn().mockImplementation(callback => {
+          eventEmitter.on('debuggerProcessExit', callback)
+        })
+        mockImplementation = {
+          onExit: onExitMock,
+          stop: jest.fn(),
+        }
+
+        jestProcessMock.mockImplementation(() => mockImplementation)
+        startOptions = {
+          exitCallback: exitHandler,
+          watchMode: WatchMode.Watch,
+        }
+      })
+      it('normally the watch-mode process will auto-start when first process exit', () => {
+        jestProcessManager.startJestProcess(startOptions)
+        expect(jestProcessMock.mock.instances.length).toBe(1)
+
+        eventEmitter.emit('debuggerProcessExit', mockImplementation)
+
+        expect(jestProcessMock.mock.instances.length).toBe(2)
+      })
+      it('stopAll will prevent auto start the watch mode process', async () => {
+        jestProcessManager.startJestProcess(startOptions)
+        expect(jestProcessMock.mock.instances.length).toBe(1)
+        expect(jestProcessManager.numberOfProcesses).toBe(1)
+
+        await jestProcessManager.stopAll()
+        expect(jestProcessManager.numberOfProcesses).toBe(0)
+
+        eventEmitter.emit('debuggerProcessExit', mockImplementation)
+        expect(jestProcessManager.numberOfProcesses).toBe(0)
+        expect(jestProcessMock.mock.instances.length).toBe(1)
+      })
+      it('stopJestProcess will prevent auto start the watch mode process', async () => {
+        const p = jestProcessManager.startJestProcess(startOptions)
+        expect(jestProcessMock.mock.instances.length).toBe(1)
+        expect(jestProcessManager.numberOfProcesses).toBe(1)
+
+        await jestProcessManager.stopJestProcess(p)
+        expect(jestProcessManager.numberOfProcesses).toBe(0)
+
+        eventEmitter.emit('debuggerProcessExit', mockImplementation)
+        expect(jestProcessManager.numberOfProcesses).toBe(0)
+        expect(jestProcessMock.mock.instances.length).toBe(1)
       })
     })
 
