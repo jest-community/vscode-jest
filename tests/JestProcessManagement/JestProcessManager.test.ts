@@ -107,15 +107,9 @@ describe('JestProcessManager', () => {
 
   describe('when starting jest process in watch mode', () => {
     it('will run all tests without watch mode then restart with --watch', () => {
-      jestProcessMock.mockImplementation(() => ({
-        onExit: callback => {
-          eventEmitter.on('debuggerProcessExit', callback)
-        },
-      }))
-
       jestProcessManager.startJestProcess({ watchMode: WatchMode.Watch })
 
-      eventEmitter.emit('debuggerProcessExit')
+      eventEmitter.emit('debuggerProcessExit', { stopRequested: () => false })
 
       expect(jestProcessMock.mock.calls).toEqual([
         [
@@ -136,12 +130,6 @@ describe('JestProcessManager', () => {
     })
 
     it('starts the process for non-watch mode with keep-alive flag set to false', () => {
-      jestProcessMock.mockImplementation(() => ({
-        onExit: callback => {
-          eventEmitter.on('debuggerProcessExit', callback)
-        },
-      }))
-
       jestProcessManager.startJestProcess({
         keepAlive: true,
         watchMode: WatchMode.Watch,
@@ -149,22 +137,16 @@ describe('JestProcessManager', () => {
 
       // we need this to trigger the watch-mode process that only starts
       // after the non-watch-mode process exits
-      eventEmitter.emit('debuggerProcessExit')
+      eventEmitter.emit('debuggerProcessExit', { stopRequested: () => false })
 
       expect(jestProcessMock.mock.calls[0][0]).toHaveProperty('keepAlive', false)
       expect(jestProcessMock.mock.calls[1][0]).toHaveProperty('keepAlive', true)
     })
 
     it('starts both jest processes with the same project workspace', () => {
-      jestProcessMock.mockImplementation(() => ({
-        onExit: callback => {
-          eventEmitter.on('debuggerProcessExit', callback)
-        },
-      }))
-
       jestProcessManager.startJestProcess({ watchMode: WatchMode.Watch })
 
-      eventEmitter.emit('debuggerProcessExit')
+      eventEmitter.emit('debuggerProcessExit', { stopRequested: () => false })
 
       expect(jestProcessMock.mock.calls[0][0]).toHaveProperty('projectWorkspace', projectWorkspaceMock)
       expect(jestProcessMock.mock.calls[1][0]).toHaveProperty('projectWorkspace', projectWorkspaceMock)
@@ -190,8 +172,8 @@ describe('JestProcessManager', () => {
         watchMode: WatchMode.Watch,
       })
 
-      eventEmitter.emit('debuggerProcessExit', { watchMode: false })
-      eventEmitterForWatchMode.emit('debuggerProcessExit', { watchMode: true })
+      eventEmitter.emit('debuggerProcessExit', { stopRequested: () => false, watchMode: false })
+      eventEmitterForWatchMode.emit('debuggerProcessExit', { stopRequested: () => false, watchMode: true })
 
       expect(exitHandler).toHaveBeenCalledTimes(2)
       expect(exitHandler.mock.calls[0][0].watchMode).toBe(false)
@@ -212,6 +194,7 @@ describe('JestProcessManager', () => {
       const mockImplementation = {
         onExit: onExitMock,
         restart: jest.fn(),
+        stopRequested: () => false,
       }
 
       jestProcessMock.mockImplementation(() => mockImplementation)
@@ -285,13 +268,16 @@ describe('JestProcessManager', () => {
       let startOptions = {}
       let mockImplementation
       beforeEach(() => {
-        const onExitMock = jest.fn().mockImplementation(callback => {
+        // const onExitMock = jest.fn().mockImplementation(callback => {
+        //   eventEmitter.on('debuggerProcessExit', callback)
+        // })
+        let isStopped = false
+        const stop = () => (isStopped = true)
+        const stopRequested = () => isStopped
+        const onExit = callback => {
           eventEmitter.on('debuggerProcessExit', callback)
-        })
-        mockImplementation = {
-          onExit: onExitMock,
-          stop: jest.fn(),
         }
+        mockImplementation = { onExit, stop, stopRequested }
 
         jestProcessMock.mockImplementation(() => mockImplementation)
         startOptions = {
@@ -399,6 +385,7 @@ describe('JestProcessManager', () => {
         onExit: callback => {
           eventEmitter.on('debuggerProcessExit', callback)
         },
+        stopRequested: () => false,
       }))
 
       const jestProcess = jestProcessManager.startJestProcess({
