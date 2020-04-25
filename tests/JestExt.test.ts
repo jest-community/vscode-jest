@@ -29,7 +29,7 @@ import * as messaging from '../src/messaging'
 
 describe('JestExt', () => {
   const getConfiguration = workspace.getConfiguration as jest.Mock<any>
-  const workspaceFolder = {} as any
+  const workspaceFolder = { name: 'test-folder' } as any
   let projectWorkspace: ProjectWorkspace
   const channelStub = { appendLine: jest.fn(), clear: jest.fn(), show: jest.fn() } as any
   const extensionSettings = { debugCodeLens: {} } as any
@@ -679,7 +679,7 @@ describe('JestExt', () => {
       mockProcess.onJestEditorSupportEvent.mockReturnValue(mockProcess)
       return mockProcess
     }
-    const createJestExt = (settings: any) => {
+    const createJestExt = (settings: any, instanceSettings = { multirootEnv: false }) => {
       ;(JestProcessManager as jest.Mock).mockClear()
       const mockProcess: any = mockJestProcess()
 
@@ -692,7 +692,7 @@ describe('JestExt', () => {
         debugCodeLensProvider,
         debugConfigurationProvider,
         null,
-        { multirootEnv: false }
+        instanceSettings
       )
       const mockProcessManager: any = (JestProcessManager as jest.Mock).mock.instances[0]
       mockProcessManager.startJestProcess.mockReturnValue(mockProcess)
@@ -722,8 +722,9 @@ describe('JestExt', () => {
       sut.startProcess()
       expect(mockProcessManager.startJestProcess).toHaveBeenCalled()
     })
+
     describe('exitCallback', () => {
-      const [sut, mockProcessManager] = createJestExt(extensionSettings)
+      const [sut, mockProcessManager] = createJestExt(extensionSettings, { multirootEnv: true })
       sut.startProcess()
       const { exitCallback } = mockProcessManager.startJestProcess.mock.calls[0][0]
 
@@ -742,6 +743,8 @@ describe('JestExt', () => {
         exitCallback(p1)
         expect(p1.onJestEditorSupportEvent).not.toHaveBeenCalled()
         expect(messaging.systemErrorMessage).toHaveBeenCalled()
+        const msg: string = (messaging.systemErrorMessage as jest.Mock).mock.calls[0][0]
+        expect(msg.includes(workspaceFolder.name)).toBeTruthy()
       })
     })
   })
