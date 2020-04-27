@@ -120,6 +120,8 @@ export class JestExt {
 
   public startProcess() {
     if (this.jestProcessManager.numberOfProcesses > 0) {
+      // tslint:disable-next-line no-console
+      console.warn(`process is already running, will not start a new process.`)
       return
     }
 
@@ -137,9 +139,10 @@ export class JestExt {
         } else {
           this.updateStatusBar('stopped', undefined, false)
           if (!jestProcess.stopRequested()) {
-            let msg = `Starting Jest in Watch mode failed too many times and has been stopped.`
+            let msg = 'Starting Jest in Watch mode failed too many times and has been stopped.'
             if (this.instanceSettings.multirootEnv) {
-              msg += `\nConsider adding this workspace folder to disabledWorkspaceFolders`
+              const folder = this.workspaceFolder.name
+              msg = `(${folder}) ${msg}\nIf this is expected, consider adding '${folder}' to disabledWorkspaceFolders`
             }
             this.channel.appendLine(`${msg}\n see troubleshooting: ${messaging.TROUBLESHOOTING_URL}`)
             this.channel.show(true)

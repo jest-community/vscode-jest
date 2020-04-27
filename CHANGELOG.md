@@ -4,7 +4,8 @@ Please add your own contribution below inside the Master section
 Bug-fixes within the same version aren't needed
 
 ## Master
-
+* prevent auto starting watch-mode jest process when the parent process is stopped, which can lead to orphan process during deactivation among others. - @connectdotz
+  
 -->
 
 ### 3.1.1

@@ -31,6 +31,10 @@ export class JestProcessManager {
   } = {}): JestProcess {
     if (watchMode !== WatchMode.None && this.runAllTestsFirstInWatchMode) {
       return this.runAllTestsFirst(exitedJestProcess => {
+        // cancel the rest execution if stop() has been requested.
+        if (exitedJestProcess.stopRequested()) {
+          return
+        }
         this.removeJestProcessReference(exitedJestProcess)
         const jestProcessInWatchMode = this.run({
           watchMode: WatchMode.Watch,
