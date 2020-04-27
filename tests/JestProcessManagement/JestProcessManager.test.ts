@@ -43,7 +43,7 @@ describe('JestProcessManager', () => {
     it('creates JestProcess', () => {
       jestProcessManager.startJestProcess()
 
-      expect(jestProcessMock.mock.instances.length).toBe(1)
+      expect(jestProcessMock).toHaveBeenCalledTimes(1)
     })
 
     it('returns an instance of JestProcess', () => {
@@ -259,7 +259,7 @@ describe('JestProcessManager', () => {
 
       expect(stopAll).toBeInstanceOf(Promise)
       return stopAll.then(() => {
-        expect(jestProcessMock.mock.instances.length).toBe(2)
+        expect(jestProcessMock).toHaveBeenCalledTimes(2)
         expect(mockImplementation.stop).toHaveBeenCalledTimes(2)
         expect(jestProcessManager.numberOfProcesses).toBe(0)
       })
@@ -283,15 +283,15 @@ describe('JestProcessManager', () => {
       })
       it('normally the watch-mode process will auto-start when first process exit', () => {
         const p = jestProcessManager.startJestProcess(startOptions)
-        expect(jestProcessMock.mock.instances.length).toBe(1)
+        expect(jestProcessMock).toHaveBeenCalledTimes(1)
 
         eventEmitter.emit('debuggerProcessExit', p)
 
-        expect(jestProcessMock.mock.instances.length).toBe(2)
+        expect(jestProcessMock).toHaveBeenCalledTimes(2)
       })
       it('stopAll will prevent auto start the watch mode process', async () => {
         const p = jestProcessManager.startJestProcess(startOptions)
-        expect(jestProcessMock.mock.instances.length).toBe(1)
+        expect(jestProcessMock).toHaveBeenCalledTimes(1)
         expect(jestProcessManager.numberOfProcesses).toBe(1)
 
         await jestProcessManager.stopAll()
@@ -299,11 +299,11 @@ describe('JestProcessManager', () => {
 
         eventEmitter.emit('debuggerProcessExit', p)
         expect(jestProcessManager.numberOfProcesses).toBe(0)
-        expect(jestProcessMock.mock.instances.length).toBe(1)
+        expect(jestProcessMock).toHaveBeenCalledTimes(1)
       })
       it('stopJestProcess will prevent auto start the watch mode process', async () => {
         const p = jestProcessManager.startJestProcess(startOptions)
-        expect(jestProcessMock.mock.instances.length).toBe(1)
+        expect(jestProcessMock).toHaveBeenCalledTimes(1)
         expect(jestProcessManager.numberOfProcesses).toBe(1)
 
         await jestProcessManager.stopJestProcess(p)
@@ -311,7 +311,7 @@ describe('JestProcessManager', () => {
 
         eventEmitter.emit('debuggerProcessExit', p)
         expect(jestProcessManager.numberOfProcesses).toBe(0)
-        expect(jestProcessMock.mock.instances.length).toBe(1)
+        expect(jestProcessMock).toHaveBeenCalledTimes(1)
       })
     })
 
@@ -327,7 +327,7 @@ describe('JestProcessManager', () => {
 
       expect(stopAll).toBeInstanceOf(Promise)
       return stopAll.then(() => {
-        expect(jestProcessMock.mock.instances.length).toBe(0)
+        expect(jestProcessMock).toHaveBeenCalledTimes(0)
         expect(mockImplementation.stop).not.toHaveBeenCalled()
         expect(jestProcessManager.numberOfProcesses).toBe(0)
       })
@@ -499,7 +499,7 @@ describe('JestProcessManager', () => {
 
       eventEmitter.emit('debuggerProcessExit', jestProcess)
 
-      expect(jestProcessMock.mock.instances.length).toBe(1)
+      expect(jestProcessMock).toHaveBeenCalledTimes(1)
 
       expect(jestProcessMock.mock.calls[0]).toEqual([
         {
