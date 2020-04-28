@@ -199,7 +199,7 @@ describe('StatusBar', () => {
       registerCommand.mockReset()
     })
     afterEach(() => {
-      vscode.workspace.workspaceFolders = []
+      (vscode.workspace as any).workspaceFolders = []
       vscode.window.activeTextEditor = undefined
     })
 
@@ -210,7 +210,7 @@ describe('StatusBar', () => {
       const statusBarClickHandler = registerCommand.mock.calls.find(c => c[0].includes('show-active-output'))[1]
       expect(statusBarClickHandler).toBeDefined()
 
-      vscode.workspace.workspaceFolders = [{ name: 'testproject', uri: vscode.Uri.file(''), index: 0 }]
+      ;(vscode.workspace as any).workspaceFolders = [{ name: 'testproject', uri: vscode.Uri.file(''), index: 0 }]
       statusBarClickHandler()
       expect(getExtensionByName).toBeCalledWith('testproject')
     })
@@ -222,7 +222,7 @@ describe('StatusBar', () => {
       const statusBarClickHandler = registerCommand.mock.calls.find(c => c[0].includes('show-active-output'))[1]
       expect(statusBarClickHandler).toBeDefined()
 
-      vscode.workspace.workspaceFolders = [
+      ;(vscode.workspace as any).workspaceFolders = [
         { name: 'testproject1', uri: vscode.Uri.file(''), index: 0 },
         { name: 'testproject2', uri: vscode.Uri.file(''), index: 1 },
         { name: 'testproject3', uri: vscode.Uri.file(''), index: 2 },

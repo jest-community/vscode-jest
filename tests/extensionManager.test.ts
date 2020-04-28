@@ -45,7 +45,7 @@ describe('InstancesManager', () => {
     extensionManager = new ExtensionManager({} as any)
     registerSpy.mockClear()
     unregisterSpy.mockClear()
-    vscode.workspace.workspaceFolders = [{ uri: { fsPath: 'workspaceFolder1' }, name: 'workspaceFolder1' }] as any
+    ;(vscode.workspace as any).workspaceFolders = [{ uri: { fsPath: 'workspaceFolder1' }, name: 'workspaceFolder1' }] as any
     ;(jestInstance.deactivate as any).mockReset()
     ;(vscode.window.showWorkspaceFolderPick as any).mockReset()
     ;(vscode.commands.registerCommand as any).mockReset()
@@ -174,7 +174,7 @@ describe('InstancesManager', () => {
 
   describe('get()', () => {
     afterEach(() => {
-      vscode.workspace.workspaceFolders = [{ uri: { fsPath: 'workspaceFolder1' }, name: 'workspaceFolder1' }] as any
+      (vscode.workspace as any).workspaceFolders = [{ uri: { fsPath: 'workspaceFolder1' }, name: 'workspaceFolder1' }] as any
     })
 
     it('should return extension at once if there is only one workspace folder', async () => {
@@ -184,14 +184,14 @@ describe('InstancesManager', () => {
 
     it('should prompt for workspace if there are more then one workspace folder', async () => {
       registerInstance('workspaceFolder1')
-      vscode.workspace.workspaceFolders = [{ name: 'workspaceFolder1' }, { name: 'workspaceFolder2' }] as any
+      ;(vscode.workspace as any).workspaceFolders = [{ name: 'workspaceFolder1' }, { name: 'workspaceFolder2' }] as any
       ;(vscode.window.showWorkspaceFolderPick as any).mockReturnValue({ name: 'workspaceFolder1' })
       expect(await extensionManager.get()).toBe(jestInstance)
       expect(vscode.window.showWorkspaceFolderPick).toHaveBeenCalled()
     })
 
     it('should return undefined if no workspace selected', async () => {
-      vscode.workspace.workspaceFolders = [{ name: 'workspaceFolder1' }, { name: 'workspaceFolder2' }] as any
+      (vscode.workspace as any).workspaceFolders = [{ name: 'workspaceFolder1' }, { name: 'workspaceFolder2' }] as any
       ;(vscode.window.showWorkspaceFolderPick as any).mockReturnValue(undefined)
       expect(await extensionManager.get()).toBeUndefined()
     })

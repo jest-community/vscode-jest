@@ -17,12 +17,8 @@ interface StatusUpdateRequest {
   modes?: Mode[]
 }
 
-interface SpinnableStatusBarItem {
+interface SpinnableStatusBarItem extends Pick<vscode.StatusBarItem, 'command' | 'text' | 'tooltip'> {
   readonly type: StatusType
-  command: string | undefined
-  text: string | undefined
-  tooltip: string | undefined
-
   show(): void
   hide(): void
 }
@@ -44,7 +40,7 @@ const createStatusBarItem = (type: StatusType, priority: number): SpinnableStatu
       return item.tooltip
     },
 
-    set command(_command: string) {
+    set command(_command) {
       item.command = _command
     },
     set text(_text: string) {

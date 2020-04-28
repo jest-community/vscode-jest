@@ -41,6 +41,8 @@ describe('JestExt', () => {
 
   // tslint:disable-next-line no-console
   console.error = jest.fn()
+  // tslint:disable-next-line no-console
+  console.warn = jest.fn()
 
   beforeEach(() => {
     jest.resetAllMocks()

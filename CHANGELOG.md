@@ -4,7 +4,8 @@ Please add your own contribution below inside the Master section
 Bug-fixes within the same version aren't needed
 
 ## Master
-  
+* upgrade all dependencies to the latest, except istanbul-lib-xxx, which requires more code change and will be handled in a separate coverage PR. - @connectdotz
+    
 -->
 
 ### 3.2.0
