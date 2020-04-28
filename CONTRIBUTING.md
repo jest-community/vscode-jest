@@ -51,38 +51,36 @@ yarn install
 code .
 ```
 
-The other part is inside the [Jest source code](http://github.com/facebook/jest/). It's a node module called "[jest-editor-support](https://github.com/facebook/jest/tree/master/packages/jest-editor-support)".
+The other part is inside the [jest-editor-support](https://github.com/jest-community/jest-editor-support)".
 
 It's very possible that you're going to want to make changes inside here, if you're doing something that touches the test runner process or file parsers. To get that set up to work I'd recommend doing this:
 
 ```
 # set up jest
 cd ..
-git clone https://github.com/facebook/jest.git
-cd jest
+git clone https://github.com/jest-community/jest-editor-support.git
+cd jest-editor-support
 yarn install
 
 # link jest-editor-support
-cd packages/jest-editor-support
 yarn link
 
 # set up vscode-jest to use the real jest-editor-support
-cd ../../..
+cd ../
 cd vscode-jest
 yarn link jest-editor-support
 
-
 # go back and start the jest build watcher
-cd ..
-cd jest
-yarn watch
+cd ../
+cd jest-editor-support
+yarn build --watch
 ```
 
-With that installed, you want to use a custom `jest-editor-support` by going into `cd packages/jest-editor-support` and running `yarn link`.
+With that installed, you want to use a custom `jest-editor-support` by going into `cd jest-editor-support` and running `yarn link`.
 
-Go back to vscode-jest, and do one more `yarn link "jest-editor-support"` and now you're using those files directly from master of Jest.
+Go back to vscode-jest, and do one more `yarn link "jest-editor-support"` and now you're using those files directly from master of `jest-editor-support`.
 
-As `jest-editor-support` requires running through Babel, you can run the Babel watcher for all Jest files by running `yarn run watch` inside the Jest root directory.
+As `jest-editor-support` requires running through Babel, you can run the Babel watcher using the command `yarn build --watch` inside the `jest-editor-support` root directory.
 
 Yeah, it's a bit of a process, but we'll be sharing code with the nuclide team and that's worth it IMO.
 
