@@ -1,8 +1,29 @@
 language: node_js
+
+stages:
+  - verify
+  - test
+
+jobs:
+  - stage: "verify"
+    name: "verify"
+    node_js: "10"
+    os: osx
+    install: yarn --frozen-lockfile 
+    script: yarn danger ci
+
 node_js:
   - "8"
+  - "10"
+
+os:
+  - osx
+  - linux
+  - windows
+
+install: yarn --frozen-lockfile --ignore-optional
 script:
   - yarn ci
   - cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js
-  - yarn danger
   - yarn vscode:prepublish
+
