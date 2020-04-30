@@ -11,8 +11,6 @@ const newStatusBarItem = () => ({
 
 const statusBarItem = newStatusBarItem()
 
-jest.mock('elegant-spinner', () => () => jest.fn())
-
 import * as vscode from 'vscode'
 import { StatusBar, StatusType, Status } from '../src/StatusBar'
 
@@ -48,8 +46,8 @@ describe('StatusBar', () => {
 
       const registerCommand = (vscode.commands.registerCommand as unknown) as jest.Mock<{}>
       const calls = registerCommand.mock.calls
-      expect(calls.some(c => c[0].includes('show-summary-output'))).toBe(true)
-      expect(calls.some(c => c[0].includes('show-active-output'))).toBe(true)
+      expect(calls.some((c) => c[0].includes('show-summary-output'))).toBe(true)
+      expect(calls.some((c) => c[0].includes('show-active-output'))).toBe(true)
     })
   })
 
@@ -57,7 +55,7 @@ describe('StatusBar', () => {
     it('returns binded helpers', () => {
       const source = 'testSource'
       const helpers = statusBar.bind(source)
-      ;['initial', 'running', 'success', 'failed', 'stopped'].forEach(status => {
+      ;['initial', 'running', 'success', 'failed', 'stopped'].forEach((status) => {
         helpers.update(status as Status)
         expect(updateStatusSpy).toHaveBeenCalledWith({ source, status })
       })
@@ -167,9 +165,9 @@ describe('StatusBar', () => {
       expect(renderSpy).toHaveBeenCalledTimes(2)
 
       const calls: any[][] = renderSpy.mock.calls
-      expect(calls.every(c => c[0].status === 'running')).toBe(true)
-      expect(calls.some(c => c[1].type === StatusType.active)).toBe(true)
-      expect(calls.some(c => c[1].type !== StatusType.active)).toBe(true)
+      expect(calls.every((c) => c[0].status === 'running')).toBe(true)
+      expect(calls.some((c) => c[1].type === StatusType.active)).toBe(true)
+      expect(calls.some((c) => c[1].type !== StatusType.active)).toBe(true)
     })
     it('when hiding status, spinner should be stopped too', () => {
       const { active, summary } = getStatusBarItems()
@@ -199,7 +197,7 @@ describe('StatusBar', () => {
       registerCommand.mockReset()
     })
     afterEach(() => {
-      (vscode.workspace as any).workspaceFolders = []
+      ;(vscode.workspace as any).workspaceFolders = []
       vscode.window.activeTextEditor = undefined
     })
 
@@ -207,9 +205,8 @@ describe('StatusBar', () => {
       const getExtensionByName = jest.fn()
       statusBar.register(getExtensionByName)
 
-      const statusBarClickHandler = registerCommand.mock.calls.find(c => c[0].includes('show-active-output'))[1]
+      const statusBarClickHandler = registerCommand.mock.calls.find((c) => c[0].includes('show-active-output'))[1]
       expect(statusBarClickHandler).toBeDefined()
-
       ;(vscode.workspace as any).workspaceFolders = [{ name: 'testproject', uri: vscode.Uri.file(''), index: 0 }]
       statusBarClickHandler()
       expect(getExtensionByName).toBeCalledWith('testproject')
@@ -219,9 +216,8 @@ describe('StatusBar', () => {
       const getExtensionByName = jest.fn()
       statusBar.register(getExtensionByName)
 
-      const statusBarClickHandler = registerCommand.mock.calls.find(c => c[0].includes('show-active-output'))[1]
+      const statusBarClickHandler = registerCommand.mock.calls.find((c) => c[0].includes('show-active-output'))[1]
       expect(statusBarClickHandler).toBeDefined()
-
       ;(vscode.workspace as any).workspaceFolders = [
         { name: 'testproject1', uri: vscode.Uri.file(''), index: 0 },
         { name: 'testproject2', uri: vscode.Uri.file(''), index: 1 },
@@ -229,7 +225,7 @@ describe('StatusBar', () => {
       ]
       const projectUrl = vscode.Uri.file('projecturl')
       vscode.window.activeTextEditor = ({ document: { uri: projectUrl } } as unknown) as vscode.TextEditor
-      vscode.workspace.getWorkspaceFolder = url =>
+      vscode.workspace.getWorkspaceFolder = (url) =>
         url === projectUrl ? vscode.workspace.workspaceFolders[1] : undefined
       statusBarClickHandler()
       expect(getExtensionByName).toBeCalledWith(vscode.workspace.workspaceFolders[1].name)
