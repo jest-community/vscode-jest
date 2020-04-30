@@ -3,17 +3,23 @@ language: node_js
 stages:
   - verify
   - test
+  - pre-publish
 
 jobs:
   - stage: "verify"
     name: "verify"
-    node_js: "10"
+    node_js: "13"
     os: osx
     script: yarn danger ci
+  - stage: "pre-publish"
+    name: "pre-publish"
+    node_js: "13"
+    script: yarn vscode:prepublish
 
 node_js:
   - "8"
   - "10"
+  - "13"
 
 os:
   - osx
@@ -23,5 +29,5 @@ os:
 script:
   - yarn ci
   - cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js
-  - yarn vscode:prepublish
+  
 
