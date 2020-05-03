@@ -11,17 +11,13 @@ env:
 jobs:
   - stage: "verify"
     name: "verify"
-    node_js: "13"
+    node_js: "10"
     os: osx
     script: yarn danger ci
-  - stage: "pre-publish"
-    name: "pre-publish"
-    node_js: "13"
-    script: yarn vscode:prepublish
 
 node_js:
-  - "8"
-  - "13"
+  - "10"
+  - "lts/*"
 
 os:
   - osx
@@ -31,5 +27,6 @@ os:
 script:
   - yarn ci
   - cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js
+  - yarn vscode:prepublish
   
 
