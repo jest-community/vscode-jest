@@ -227,8 +227,8 @@
     ]
   },
   "lint-staged": {
-    "*.json": ["yarn prettier-write --parser json", "git add"],
-    "*.ts": ["yarn prettier-write --parser typescript", "git add"]
+    "*.json": ["yarn prettier-write --parser json"],
+    "*.ts": ["yarn prettier-write --parser typescript"]
   },
   "scripts": {
     "precommit": "lint-staged",
@@ -240,9 +240,9 @@
     "lint": "tslint -c tslint.json 'src/**/*.ts' 'tests/**/*.ts'",
     "test": "jest",
     "watch-test": "yarn test -- --watch",
-    "prettier": "prettier",
-    "prettier-write": "yarn prettier --parser typescript --no-semi --single-quote --trailing-comma es5 --write --print-width 120",
-    "prettier-project": "yarn prettier-write -- '?(__mocks__|src|tests)/**/*.ts'"
+    "prettier": "prettier --no-semi --single-quote --trailing-comma es5 --print-width 120",
+    "prettier-write": "yarn prettier --write ",
+    "prettier-project": "yarn prettier-write --parser typescript -- '?(__mocks__|src|tests)/**/*.ts'"
   },
   "dependencies": {
     "istanbul-lib-coverage": "^1.1.1",
