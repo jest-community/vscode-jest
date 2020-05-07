@@ -227,8 +227,8 @@
     ]
   },
   "lint-staged": {
-    "*.json": ["yarn prettier-write --parser json"],
-    "*.ts": ["yarn prettier-write --parser typescript"]
+    "*.json": "yarn prettier-write --parser json",
+    "*.ts": "yarn prettier-write --parser typescript"
   },
   "scripts": {
     "precommit": "lint-staged",
