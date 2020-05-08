@@ -227,8 +227,8 @@
     ]
   },
   "lint-staged": {
-    "*.json": ["yarn prettier-write --parser json", "git add"],
-    "*.ts": ["yarn prettier-write --parser typescript", "git add"]
+    "*.json": "yarn prettier-write --parser json",
+    "*.ts": "yarn prettier-write --parser typescript"
   },
   "scripts": {
     "precommit": "lint-staged",
@@ -238,37 +238,37 @@
     "compile": "webpack --mode production",
     "watch": "webpack --mode development --watch --info-verbosity verbose",
     "lint": "tslint -c tslint.json 'src/**/*.ts' 'tests/**/*.ts'",
-    "postinstall": "node ./node_modules/vscode/bin/install",
     "test": "jest",
     "watch-test": "yarn test -- --watch",
-    "prettier": "prettier",
-    "prettier-write": "yarn prettier --parser typescript --no-semi --single-quote --trailing-comma es5 --write --print-width 120",
-    "prettier-project": "yarn prettier-write -- '?(__mocks__|src|tests)/**/*.ts'"
+    "prettier": "prettier --no-semi --single-quote --trailing-comma es5 --print-width 120",
+    "prettier-write": "yarn prettier --write ",
+    "prettier-project": "yarn prettier-write --parser typescript -- '?(__mocks__|src|tests)/**/*.ts'"
   },
-  "devDependencies": {
-    "@types/jest": "^24.0.11",
-    "@types/node": "^8.0.31",
-    "coveralls": "^3.0.0",
-    "danger": "^2",
-    "glob": "^7.1.1",
-    "husky": "^0.14.3",
+  "dependencies": {
     "istanbul-lib-coverage": "^1.1.1",
     "istanbul-lib-source-maps": "^1.1.0",
-    "jest": "^24.7.0",
     "jest-editor-support": "^27.2.0",
-    "jest-snapshot": "^24.7.0",
-    "lint-staged": "^4.2.3",
-    "prettier": "^1.17.0",
-    "rimraf": "^2.6.2",
-    "ts-jest": "^24.0.2",
-    "ts-loader": "^6.0.4",
-    "tslint": "^5.16.0",
+    "jest-snapshot": "^25.5.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^25.2.1",
+    "@types/node": "^8.0.31",
+    "@types/vscode": "^1.23.0",
+    "coveralls": "^3.1.0",
+    "danger": "^10.1.1",
+    "jest": "^25.5.0",
+    "lint-staged": "^10.2.0",
+    "prettier": "^2.0.5",
+    "rimraf": "^3.0.2",
+    "ts-jest": "^25.4.0",
+    "ts-loader": "^7.0.1",
+    "tslint": "^6.1.2",
     "tslint-config-prettier": "^1.18.0",
-    "typescript": "^3.4.3",
-    "typescript-tslint-plugin": "^0.3.1",
-    "vscode": "^1.1.33",
-    "webpack": "^4.35.0",
-    "webpack-cli": "^3.3.4"
+    "typescript": "^3.8.3",
+    "typescript-tslint-plugin": "^0.5.5",
+    "vscode-test": "^1.3.0",
+    "webpack": "^4.43.0",
+    "webpack-cli": "^3.3.11"
   },
   "__metadata": {
     "id": "7997a8ae-1fae-4022-b834-12f6318aeffd",
