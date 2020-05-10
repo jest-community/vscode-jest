@@ -11,5 +11,7 @@ module.exports = {
     "snapdragon",
     "ansi-styles",
     "core-js",
+    "debug",
+    "@babel/template",
   ],
 };
