@@ -44,8 +44,17 @@ describe('ModuleHelpers', () => {
       expect(isCreateReactAppTestCommand('react-scripts test --env=jsdom')).toBe(true)
     })
 
+    it('should return true for CRA with cross-env', () => {
+      expect(isCreateReactAppTestCommand('cross-env CI=true react-scripts test --env=jsdom')).toBe(true)
+    })
+
     it('should return false for other scripts', () => {
+      expect(isCreateReactAppTestCommand(undefined)).toBe(false)
       expect(isCreateReactAppTestCommand('custom-script')).toBe(false)
+    })
+
+    it('should return false for other scripts with cross-env', () => {
+      expect(isCreateReactAppTestCommand('cross-env CI=true custom-script')).toBe(false)
     })
   })
 

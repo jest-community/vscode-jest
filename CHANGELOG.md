@@ -5,9 +5,10 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 
+* improve create-react-app detection logic - stephtr
+* improve the detection of cases in which Jest needs to be restarted with `--watchAll` - [@lordofthelake](https://github.com/lordofthelake)  
 * upgrade all dependencies to the latest, except istanbul-lib-xxx, which requires more code change and will be handled in a separate coverage PR. - @connectdotz
 
-* Improve the detection of cases in which Jest needs to be restarted with `--watchAll` - [@lordofthelake](https://github.com/lordofthelake)  
 -->
 
 ### 3.2.0
