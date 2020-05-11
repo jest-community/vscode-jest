@@ -281,8 +281,8 @@
     "test": "jest",
     "watch-test": "yarn test -- --watch",
     "prettier": "prettier",
-    "prettier-project-check": "yarn prettier --check \"?(__mocks__|src|tests)/**/*.ts\" \"json\"",
-    "prettier-project-write": "yarn prettier --write \"?(__mocks__|src|tests)/**/*.ts\" \"json\""
+    "prettier-project-check": "yarn prettier --check \"?(__mocks__|src|tests)/**/*.ts\" \"*.json\"",
+    "prettier-project-write": "yarn prettier --write \"?(__mocks__|src|tests)/**/*.ts\" \"*.json\""
   },
   "dependencies": {
     "istanbul-lib-coverage": "^1.1.1",
