@@ -1,0 +1,2 @@
+# all tex files will be checked out with LF as eol
+* text=auto eol=lf
