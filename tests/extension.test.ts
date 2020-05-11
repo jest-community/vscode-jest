@@ -116,7 +116,7 @@ describe('Extension', () => {
 
       it('to start extension', () => {
         activate(context)
-        const callArg = context.subscriptions.push.mock.calls[0].find(args => {
+        const callArg = context.subscriptions.push.mock.calls[0].find((args) => {
           return args[0] === `${extensionName}.start`
         })
 
@@ -127,7 +127,7 @@ describe('Extension', () => {
 
       it('to stop extension', () => {
         activate(context)
-        const callArg = context.subscriptions.push.mock.calls[0].find(args => {
+        const callArg = context.subscriptions.push.mock.calls[0].find((args) => {
           return args[0] === `${extensionName}.stop`
         })
 
@@ -138,7 +138,7 @@ describe('Extension', () => {
 
       it('to restart extension', () => {
         activate(context)
-        const callArg = context.subscriptions.push.mock.calls[0].find(args => {
+        const callArg = context.subscriptions.push.mock.calls[0].find((args) => {
           return args[0] === `${extensionName}.restart`
         })
 
@@ -149,7 +149,7 @@ describe('Extension', () => {
 
       it('to toggle the coverage overlay visibility', () => {
         activate(context)
-        const callArg = context.subscriptions.push.mock.calls[0].find(args => {
+        const callArg = context.subscriptions.push.mock.calls[0].find((args) => {
           return args[0] === `${extensionName}.coverage.toggle`
         })
 
@@ -160,7 +160,7 @@ describe('Extension', () => {
 
       it('to run specific test', () => {
         activate(context)
-        const callArg = context.subscriptions.push.mock.calls[0].find(args => {
+        const callArg = context.subscriptions.push.mock.calls[0].find((args) => {
           return args[0] === `${extensionName}.run-test`
         })
 
@@ -177,8 +177,8 @@ describe('Extension', () => {
       activate(context)
 
       expect(register).toHaveBeenCalledTimes(2)
-      const registeredAsNode = register.mock.calls.some(parameters => parameters[0] === 'node')
-      const registeredAsJestTest = register.mock.calls.some(parameters => parameters[0] === 'vscode-jest-tests')
+      const registeredAsNode = register.mock.calls.some((parameters) => parameters[0] === 'node')
+      const registeredAsJestTest = register.mock.calls.some((parameters) => parameters[0] === 'vscode-jest-tests')
       expect(registeredAsNode && registeredAsJestTest).toBeTruthy()
     })
   })

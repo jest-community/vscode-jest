@@ -17,9 +17,9 @@ describe('CoverageMapProvider', () => {
 
   describe('map', () => {
     it('should return the coverage map', () => {
-      ;(createCoverageMap as jest.Mock<any>).mockImplementation(map => map)
+      ;(createCoverageMap as jest.Mock<any>).mockImplementation((map) => map)
       createSourceMapStore.mockReturnValueOnce({
-        transformCoverage: map => ({ map }),
+        transformCoverage: (map) => ({ map }),
       })
 
       const expected: any = {}
@@ -40,8 +40,8 @@ describe('CoverageMapProvider', () => {
   describe('update()', () => {
     it('should transform the coverage map', () => {
       const expected: any = {}
-      ;(createCoverageMap as jest.Mock<any>).mockImplementation(map => map)
-      const transformCoverage = jest.fn().mockImplementationOnce(map => ({ map }))
+      ;(createCoverageMap as jest.Mock<any>).mockImplementation((map) => map)
+      const transformCoverage = jest.fn().mockImplementationOnce((map) => ({ map }))
       createSourceMapStore.mockReturnValueOnce({ transformCoverage })
 
       const sut = new CoverageMapProvider()
@@ -72,7 +72,7 @@ describe('CoverageMapProvider', () => {
         merge: mergeFn,
       })
       createSourceMapStore.mockReturnValue({
-        transformCoverage: m => ({ map: m }),
+        transformCoverage: (m) => ({ map: m }),
       })
 
       const sut = new CoverageMapProvider()

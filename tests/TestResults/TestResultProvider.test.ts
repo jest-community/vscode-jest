@@ -206,7 +206,7 @@ describe('TestResultProvider', () => {
         const actual = sut.getResults(filePath)
 
         expect(actual).toHaveLength(2)
-        expect(actual.every(r => r.status === TestReconciliationState.KnownSuccess)).toEqual(true)
+        expect(actual.every((r) => r.status === TestReconciliationState.KnownSuccess)).toEqual(true)
       })
       it('default to unknown if failed to match by line or location', () => {
         ;((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
@@ -227,8 +227,8 @@ describe('TestResultProvider', () => {
         const actual = sut.getResults(filePath)
 
         expect(actual).toHaveLength(2)
-        expect(actual.every(r => r.status === TestReconciliationState.Unknown)).toEqual(true)
-        expect(actual.every(r => r.shortMessage && r.shortMessage.includes('duplicate test names'))).toEqual(true)
+        expect(actual.every((r) => r.status === TestReconciliationState.Unknown)).toEqual(true)
+        expect(actual.every((r) => r.shortMessage && r.shortMessage.includes('duplicate test names'))).toEqual(true)
       })
     })
     it('should only mark error line number if it is within the right itBlock', () => {
@@ -257,10 +257,12 @@ describe('TestResultProvider', () => {
       const actual = sut.getResults(filePath)
 
       expect(actual).toHaveLength(2)
-      expect(actual.some(a => a.name === testBlock.name && a.status === TestReconciliationState.Unknown)).toEqual(true)
+      expect(actual.some((a) => a.name === testBlock.name && a.status === TestReconciliationState.Unknown)).toEqual(
+        true
+      )
       expect(
         actual.some(
-          a =>
+          (a) =>
             a.name === testBlock2.name &&
             a.status === TestReconciliationState.KnownSuccess &&
             a.lineNumberOfError === testBlock2.end.line - 1
@@ -304,12 +306,12 @@ describe('TestResultProvider', () => {
         const actual = sut.getResults(filePath)
 
         expect(actual).toHaveLength(2)
-        expect(actual.some(a => a.status === TestReconciliationState.Unknown && a.name === testBlock.name)).toEqual(
+        expect(actual.some((a) => a.status === TestReconciliationState.Unknown && a.name === testBlock.name)).toEqual(
           true
         )
-        expect(actual.some(a => a.status === TestReconciliationState.KnownFail && a.name === testBlock2.name)).toEqual(
-          true
-        )
+        expect(
+          actual.some((a) => a.status === TestReconciliationState.KnownFail && a.name === testBlock2.name)
+        ).toEqual(true)
       })
       it(`find test by assertion location`, () => {
         const sut = new TestResultProvider()
@@ -325,11 +327,11 @@ describe('TestResultProvider', () => {
         const actual = sut.getResults(filePath)
 
         expect(actual).toHaveLength(2)
-        expect(actual.some(a => a.status === TestReconciliationState.Unknown && a.name === testBlock.name)).toEqual(
+        expect(actual.some((a) => a.status === TestReconciliationState.Unknown && a.name === testBlock.name)).toEqual(
           true
         )
         expect(
-          actual.some(a => a.status === TestReconciliationState.KnownSuccess && a.name === testBlock2.name)
+          actual.some((a) => a.status === TestReconciliationState.KnownSuccess && a.name === testBlock2.name)
         ).toEqual(true)
       })
       it(`find test by partial name match`, () => {
@@ -348,11 +350,11 @@ describe('TestResultProvider', () => {
         ])
         const actual = sut.getResults(filePath)
         expect(actual).toHaveLength(2)
-        expect(actual.some(a => a.status === TestReconciliationState.Unknown && a.name === testBlock.name)).toEqual(
+        expect(actual.some((a) => a.status === TestReconciliationState.Unknown && a.name === testBlock.name)).toEqual(
           true
         )
         expect(
-          actual.some(a => a.status === TestReconciliationState.KnownSuccess && a.name === testBlock2.name)
+          actual.some((a) => a.status === TestReconciliationState.KnownSuccess && a.name === testBlock2.name)
         ).toEqual(true)
       })
       it(`multiple template literals`, () => {
@@ -373,11 +375,11 @@ describe('TestResultProvider', () => {
         const actual = sut.getResults(filePath)
         expect(actual).toHaveLength(2)
         expect(
-          actual.some(a => a.status === TestReconciliationState.KnownSuccess && a.name === testBlock3.name)
+          actual.some((a) => a.status === TestReconciliationState.KnownSuccess && a.name === testBlock3.name)
         ).toEqual(true)
-        expect(actual.some(a => a.status === TestReconciliationState.KnownFail && a.name === testBlock2.name)).toEqual(
-          true
-        )
+        expect(
+          actual.some((a) => a.status === TestReconciliationState.KnownFail && a.name === testBlock2.name)
+        ).toEqual(true)
       })
 
       describe('when match failed', () => {

@@ -46,7 +46,7 @@ export class JestProcess {
   }
 
   public stop(): Promise<void> {
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       this.keepAliveCounter = 1
       this.stopResolveCallback = resolve
       this.jestSupportEvents.clear()

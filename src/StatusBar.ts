@@ -191,7 +191,7 @@ export class StatusBar {
       case StatusType.active:
         const modes = this.getModes(request.modes)
         const details = !this.needsSummaryStatus() && request.details ? request.details : ''
-        const displayString = [message, details, modes].filter(s => s && s.length > 0).join(' ')
+        const displayString = [message, details, modes].filter((s) => s && s.length > 0).join(' ')
         statusBarItem.text = `Jest: ${displayString}`
         statusBarItem.tooltip = `Jest status of '${this.activeFolder}'`
         break
@@ -211,7 +211,7 @@ export class StatusBar {
     this.summaryOutput.clear()
 
     const messages = []
-    this.requests.forEach(item => {
+    this.requests.forEach((item) => {
       const details = item.details ? `: ${item.details}` : ''
       messages.push(`${item.source}: ${item.status} ${details}`)
     })
@@ -240,7 +240,7 @@ export class StatusBar {
     if (!modes) {
       return ''
     }
-    const modesStrings = modes.map(m => {
+    const modesStrings = modes.map((m) => {
       switch (m) {
         case 'coverage':
           return '$(color-mode)'

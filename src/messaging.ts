@@ -28,7 +28,7 @@ export const TROUBLESHOOTING_URL = 'https://github.com/jest-community/vscode-jes
 // internal methods
 //
 function _extractActionTitles(actions?: MessageAction[]): string[] {
-  return actions ? actions.map(a => a.title) : []
+  return actions ? actions.map((a) => a.title) : []
 }
 // expose the internal function so we can unit testing it
 export function _handleMessageActions(actions?: MessageAction[]): (action?: string) => void {
@@ -36,7 +36,7 @@ export function _handleMessageActions(actions?: MessageAction[]): (action?: stri
     if (!action) {
       return
     }
-    const found = actions.filter(a => a.title === action)
+    const found = actions.filter((a) => a.title === action)
     if (found.length === 1) {
       found[0].action()
     } else {

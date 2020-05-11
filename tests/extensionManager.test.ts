@@ -17,7 +17,7 @@ import { TestState } from '../src/DebugCodeLens'
 import { readFileSync } from 'fs'
 import { IPluginWindowSettings } from '../src/Settings'
 
-vscode.workspace.getConfiguration = jest.fn().mockImplementation(section => {
+vscode.workspace.getConfiguration = jest.fn().mockImplementation((section) => {
   const data = readFileSync('./package.json')
   const config = JSON.parse(data.toString()).contributes.configuration.properties
 
@@ -29,7 +29,7 @@ vscode.workspace.getConfiguration = jest.fn().mockImplementation(section => {
   }
 
   return {
-    get: jest.fn().mockImplementation(key => defaults[`${section}.${key}`]),
+    get: jest.fn().mockImplementation((key) => defaults[`${section}.${key}`]),
   }
 })
 
@@ -45,7 +45,9 @@ describe('InstancesManager', () => {
     extensionManager = new ExtensionManager({} as any)
     registerSpy.mockClear()
     unregisterSpy.mockClear()
-    ;(vscode.workspace as any).workspaceFolders = [{ uri: { fsPath: 'workspaceFolder1' }, name: 'workspaceFolder1' }] as any
+    ;(vscode.workspace as any).workspaceFolders = [
+      { uri: { fsPath: 'workspaceFolder1' }, name: 'workspaceFolder1' },
+    ] as any
     ;(jestInstance.deactivate as any).mockReset()
     ;(vscode.window.showWorkspaceFolderPick as any).mockReset()
     ;(vscode.commands.registerCommand as any).mockReset()
@@ -174,7 +176,9 @@ describe('InstancesManager', () => {
 
   describe('get()', () => {
     afterEach(() => {
-      (vscode.workspace as any).workspaceFolders = [{ uri: { fsPath: 'workspaceFolder1' }, name: 'workspaceFolder1' }] as any
+      ;(vscode.workspace as any).workspaceFolders = [
+        { uri: { fsPath: 'workspaceFolder1' }, name: 'workspaceFolder1' },
+      ] as any
     })
 
     it('should return extension at once if there is only one workspace folder', async () => {
@@ -191,7 +195,7 @@ describe('InstancesManager', () => {
     })
 
     it('should return undefined if no workspace selected', async () => {
-      (vscode.workspace as any).workspaceFolders = [{ name: 'workspaceFolder1' }, { name: 'workspaceFolder2' }] as any
+      ;(vscode.workspace as any).workspaceFolders = [{ name: 'workspaceFolder1' }, { name: 'workspaceFolder2' }] as any
       ;(vscode.window.showWorkspaceFolderPick as any).mockReturnValue(undefined)
       expect(await extensionManager.get()).toBeUndefined()
     })
@@ -212,7 +216,7 @@ describe('InstancesManager', () => {
     it('should register command and preserve context', async () => {
       const command = 'command'
       const thisArg = {}
-      const callback = jest.fn(function() {
+      const callback = jest.fn(function () {
         expect(this).toBe(thisArg)
       })
       ;(vscode.commands.registerCommand as any).mockImplementation((_command, _callback) => {

@@ -21,15 +21,15 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     ...statusBar.register((folder: string) => extensionManager.getByName(folder)),
 
-    extensionManager.registerCommand(`${extensionName}.start`, extension => {
+    extensionManager.registerCommand(`${extensionName}.start`, (extension) => {
       vscode.window.showInformationMessage('Started Jest, press escape to hide this message.')
       extension.startProcess()
     }),
-    extensionManager.registerCommand(`${extensionName}.stop`, extension => extension.stopProcess()),
-    extensionManager.registerCommand(`${extensionName}.restart`, extension => extension.restartProcess()),
+    extensionManager.registerCommand(`${extensionName}.stop`, (extension) => extension.stopProcess()),
+    extensionManager.registerCommand(`${extensionName}.restart`, (extension) => extension.restartProcess()),
     // dublicate of "show-output" maybe remove?
-    extensionManager.registerCommand(`${extensionName}.show-channel`, extension => extension.channel.show()),
-    extensionManager.registerCommand(`${extensionName}.coverage.toggle`, extension =>
+    extensionManager.registerCommand(`${extensionName}.show-channel`, (extension) => extension.channel.show()),
+    extensionManager.registerCommand(`${extensionName}.coverage.toggle`, (extension) =>
       extension.toggleCoverageOverlay()
     ),
     vscode.commands.registerCommand(
@@ -43,7 +43,7 @@ export function activate(context: vscode.ExtensionContext) {
     ...registerSnapshotPreview(),
     vscode.languages.registerCodeLensProvider(
       { pattern: '**/*.{ts,tsx,js,jsx}' },
-      new CoverageCodeLensProvider(uri => extensionManager.getByDocUri(uri))
+      new CoverageCodeLensProvider((uri) => extensionManager.getByDocUri(uri))
     ),
     vscode.languages.registerCodeLensProvider(languages, extensionManager.debugCodeLensProvider),
     // this provides the opportunity to inject test names into the DebugConfiguration

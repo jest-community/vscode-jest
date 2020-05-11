@@ -134,8 +134,8 @@ describe('test diagnostics', () => {
       const failedTestSuiteCount = allTests.reduce((sum, t) => sum + (t.status === 'KnownFail' ? 1 : 0), 0)
       const notFailedTestSuiteCount = allTests.reduce((sum, t) => sum + (t.status !== 'KnownFail' ? 1 : 0), 0)
       const failedAssertionCount = allTests
-        .filter(t => t.status === 'KnownFail')
-        .map(f => f.assertions.filter(a => (a.status = 'KnownFail')))
+        .filter((t) => t.status === 'KnownFail')
+        .map((f) => f.assertions.filter((a) => (a.status = 'KnownFail')))
         .reduce((sum, assertions) => sum + assertions.length, 0)
 
       const failedTestWithoutAssertionCount = allTests.reduce(
@@ -172,7 +172,7 @@ describe('test diagnostics', () => {
           validateRange(rCall, 0, 0)
           assertion++
         } else {
-          f.assertions.forEach(a => {
+          f.assertions.forEach((a) => {
             const rCall = rangeCalls[assertion]
             const dCall = diagCalls[assertion]
 
@@ -189,7 +189,7 @@ describe('test diagnostics', () => {
     it('knows how many failed suite from diagnostics', () => {
       const mockDiagnostics = new MockDiagnosticCollection()
       const invokeCount = 7
-      mockDiagnostics.forEach.mockImplementation(f => {
+      mockDiagnostics.forEach.mockImplementation((f) => {
         for (let i = 0; i < invokeCount; i++) {
           f({})
         }
@@ -204,7 +204,7 @@ describe('test diagnostics', () => {
       const invalidLine = [0, -1, undefined, null, NaN]
       console.warn = jest.fn()
 
-      invalidLine.forEach(line => {
+      invalidLine.forEach((line) => {
         jest.clearAllMocks()
 
         assertion.line = line

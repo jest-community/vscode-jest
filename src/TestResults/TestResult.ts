@@ -54,12 +54,12 @@ export function resultsWithoutAnsiEscapeSequence(data: JestTotalResults) {
 
   return {
     ...data,
-    testResults: data.testResults.map(result => ({
+    testResults: data.testResults.map((result) => ({
       ...result,
       message: cleanAnsi(result.message),
-      assertionResults: result.assertionResults.map(assertion => ({
+      assertionResults: result.assertionResults.map((assertion) => ({
         ...assertion,
-        failureMessages: assertion.failureMessages.map(message => cleanAnsi(message)),
+        failureMessages: assertion.failureMessages.map((message) => cleanAnsi(message)),
       })),
     })),
   }

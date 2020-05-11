@@ -218,7 +218,7 @@ export class JestExt {
       { data: testResults.unknown, decorationType: this.unknownItStyle, state: TestReconciliationState.Unknown },
     ]
 
-    styleMap.forEach(style => {
+    styleMap.forEach((style) => {
       const decorators = this.generateDotsForItBlocks(style.data, style.state)
       editor.setDecorations(style.decorationType, decorators)
     })
@@ -230,7 +230,7 @@ export class JestExt {
     this.resetInlineErrorDecorators(editor)
     if (this.pluginSettings.enableInlineErrorMessages) {
       const fileName = editor.document.fileName
-      testResults.fail.forEach(a => {
+      testResults.fail.forEach((a) => {
         const { style, decorator } = this.generateInlineErrorDecorator(fileName, a)
         editor.setDecorations(style, [decorator])
       })
@@ -262,7 +262,7 @@ export class JestExt {
 
     this.debugConfigurationProvider.prepareTestRun(fileName, identifier)
 
-    const handle = vscode.debug.onDidTerminateDebugSession(_ => {
+    const handle = vscode.debug.onDidTerminateDebugSession((_) => {
       handle.dispose()
       if (restart) {
         this.startProcess()
@@ -346,7 +346,7 @@ export class JestExt {
     }
     vscode.window
       .showInformationMessage('Would you like to update your Snapshots?', { title: 'Replace them' })
-      .then(response => {
+      .then((response) => {
         // No response == cancel
         if (response) {
           this.jestProcess.runJestWithUpdateForSnapshots(() => {
@@ -373,7 +373,7 @@ export class JestExt {
       return
     }
 
-    this.failingAssertionDecorators[editor.document.fileName].forEach(element => {
+    this.failingAssertionDecorators[editor.document.fileName].forEach((element) => {
       element.dispose()
     })
     this.failingAssertionDecorators[editor.document.fileName] = []
@@ -437,7 +437,7 @@ export class JestExt {
         this.channel.appendLine(`Received an error from Jest Runner: ${error.toString()}`)
         this.channel.show(true)
       })
-      .onJestEditorSupportEvent('exception', result => {
+      .onJestEditorSupportEvent('exception', (result) => {
         this.channel.appendLine(`\nException raised: [${result.type}]: ${result.message}\n`)
         this.channel.show(true)
       })
@@ -504,7 +504,7 @@ export class JestExt {
       [TestReconciliationState.Unknown]: 'Test has not run yet, due to Jest only running tests related to changes.',
     }
 
-    return blocks.map(it => {
+    return blocks.map((it) => {
       return {
         range: new vscode.Range(it.start.line, it.start.column, it.start.line, it.start.column + 1),
         hoverMessage: nameForState[state],

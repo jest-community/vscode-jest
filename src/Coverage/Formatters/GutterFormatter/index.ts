@@ -75,7 +75,7 @@ export class GutterFormatter extends AbstractFormatter {
       }
     }
 
-    Object.keys(fileCoverage.b).forEach(branchIndex => {
+    Object.keys(fileCoverage.b).forEach((branchIndex) => {
       fileCoverage.b[branchIndex].forEach((hitCount, locationIndex) => {
         if (hitCount > 0) {
           return
@@ -87,8 +87,8 @@ export class GutterFormatter extends AbstractFormatter {
         }
 
         const partialLineRange = new vscode.Range(branch.start.line - 1, 0, branch.start.line - 1, 0)
-        coverageFormatting.covered = coverageFormatting.covered.filter(range => !range.isEqual(partialLineRange))
-        coverageFormatting.uncovered = coverageFormatting.uncovered.filter(range => !range.isEqual(partialLineRange))
+        coverageFormatting.covered = coverageFormatting.covered.filter((range) => !range.isEqual(partialLineRange))
+        coverageFormatting.uncovered = coverageFormatting.uncovered.filter((range) => !range.isEqual(partialLineRange))
 
         coverageFormatting.partiallyCovered.push(
           new vscode.Range(branch.start.line - 1, branch.start.column, branch.end.line - 1, branch.end.column)

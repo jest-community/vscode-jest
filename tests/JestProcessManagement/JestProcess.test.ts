@@ -298,7 +298,7 @@ describe('JestProcess', () => {
         keepAlive: true,
       })
       jestProcess.onExit(onExit)
-      Array.from(Array(limit + 1).keys()).forEach(_ => {
+      Array.from(Array(limit + 1).keys()).forEach((_) => {
         eventEmitter.emit('debuggerProcessExit')
       })
       expect(runnerMock.mock.instances.length).toBe(limit)

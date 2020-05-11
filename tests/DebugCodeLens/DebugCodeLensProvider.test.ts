@@ -160,7 +160,7 @@ describe('DebugCodeLensProvider', () => {
     })
 
     it('should not show the CodeLens above failing tests unless configured', () => {
-      const testStates = allTestStates.filter(s => s !== TestState.Fail)
+      const testStates = allTestStates.filter((s) => s !== TestState.Fail)
       const status = TestReconciliationState.KnownFail
       const sut = new DebugCodeLensProvider(provideJestExt, testStates)
       getResults.mockReturnValueOnce([{ status }])
@@ -169,7 +169,7 @@ describe('DebugCodeLensProvider', () => {
     })
 
     it('should not show the CodeLens above passing tests unless configured', () => {
-      const testStates = allTestStates.filter(s => s !== TestState.Pass)
+      const testStates = allTestStates.filter((s) => s !== TestState.Pass)
       const status = TestReconciliationState.KnownSuccess
       const sut = new DebugCodeLensProvider(provideJestExt, testStates)
       getResults.mockReturnValueOnce([{ status }])
@@ -177,7 +177,7 @@ describe('DebugCodeLensProvider', () => {
       expect(sut.provideCodeLenses(document, token)).toEqual([])
     })
     it('should not show the CodeLens above skipped tests unless configured', () => {
-      const testStates = allTestStates.filter(s => s !== TestState.Skip)
+      const testStates = allTestStates.filter((s) => s !== TestState.Skip)
       const status = TestReconciliationState.KnownSkip
       const sut = new DebugCodeLensProvider(provideJestExt, testStates)
       getResults.mockReturnValueOnce([{ status }])
@@ -185,7 +185,7 @@ describe('DebugCodeLensProvider', () => {
       expect(sut.provideCodeLenses(document, token)).toEqual([])
     })
     it('should not show the CodeLens above unknown tests unless configured', () => {
-      const testStates = allTestStates.filter(s => s !== TestState.Unknown)
+      const testStates = allTestStates.filter((s) => s !== TestState.Unknown)
       const status = TestReconciliationState.Unknown
       const sut = new DebugCodeLensProvider(provideJestExt, testStates)
       getResults.mockReturnValueOnce([{ status }])

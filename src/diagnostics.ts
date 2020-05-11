@@ -40,7 +40,7 @@ export function updateCurrentDiagnostics(
 
   diagnostics.set(
     uri,
-    testResult.map(r => {
+    testResult.map((r) => {
       const line = r.lineNumberOfError || r.end.line
       const textLine = editor.document.lineAt(line)
       return createDiagnosticWithRange(r.shortMessage, textLine.range)
@@ -61,14 +61,14 @@ export function updateDiagnostics(testResults: TestFileAssertionStatus[], diagno
   }
 
   function addTestsError(result: TestFileAssertionStatus, uri: vscode.Uri) {
-    const asserts = result.assertions.filter(a => a.status === TestReconciliationState.KnownFail)
+    const asserts = result.assertions.filter((a) => a.status === TestReconciliationState.KnownFail)
     diagnostics.set(
       uri,
-      asserts.map(assertion => createDiagnostic(assertion.shortMessage || assertion.message, assertion.line))
+      asserts.map((assertion) => createDiagnostic(assertion.shortMessage || assertion.message, assertion.line))
     )
   }
 
-  testResults.forEach(result => {
+  testResults.forEach((result) => {
     const uri = vscode.Uri.file(result.file)
     switch (result.status) {
       case TestReconciliationState.KnownFail:
@@ -86,12 +86,12 @@ export function updateDiagnostics(testResults: TestFileAssertionStatus[], diagno
 
   // Remove diagnostics for files no longer in existence
   const toBeDeleted = []
-  diagnostics.forEach(uri => {
+  diagnostics.forEach((uri) => {
     if (!existsSync(uri.fsPath)) {
       toBeDeleted.push(uri)
     }
   })
-  toBeDeleted.forEach(uri => {
+  toBeDeleted.forEach((uri) => {
     diagnostics.delete(uri)
   })
 }

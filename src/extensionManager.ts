@@ -24,7 +24,7 @@ export class ExtensionManager {
     this.commonPluginSettings = getExtensionWindowSettings()
 
     this.debugConfigurationProvider = new DebugConfigurationProvider()
-    this.debugCodeLensProvider = new DebugCodeLensProvider(uri => this.getByDocUri(uri))
+    this.debugCodeLensProvider = new DebugCodeLensProvider((uri) => this.getByDocUri(uri))
     this.applySettings(getExtensionWindowSettings())
     this.registerAll()
   }
@@ -142,7 +142,7 @@ export class ExtensionManager {
       this.applySettings(getExtensionWindowSettings())
       this.registerAll()
     }
-    vscode.workspace.workspaceFolders.forEach(workspaceFolder => {
+    vscode.workspace.workspaceFolders.forEach((workspaceFolder) => {
       const jestExt = this.getByName(workspaceFolder.name)
       if (jestExt && e.affectsConfiguration('jest', workspaceFolder.uri)) {
         const updatedSettings = getExtensionResourceSettings(workspaceFolder.uri)

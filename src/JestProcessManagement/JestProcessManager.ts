@@ -30,7 +30,7 @@ export class JestProcessManager {
     keepAlive?: boolean
   } = {}): JestProcess {
     if (watchMode !== WatchMode.None && this.runAllTestsFirstInWatchMode) {
-      return this.runAllTestsFirst(exitedJestProcess => {
+      return this.runAllTestsFirst((exitedJestProcess) => {
         // cancel the rest execution if stop() has been requested.
         if (exitedJestProcess.stopRequested()) {
           return
@@ -55,7 +55,7 @@ export class JestProcessManager {
   public stopAll() {
     const processesToRemove = [...this.jestProcesses]
     this.jestProcesses = []
-    return Promise.all(processesToRemove.map(jestProcess => jestProcess.stop()))
+    return Promise.all(processesToRemove.map((jestProcess) => jestProcess.stop()))
   }
 
   public stopJestProcess(jestProcess: JestProcess) {

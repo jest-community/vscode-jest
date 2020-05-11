@@ -234,7 +234,10 @@ describe('DefaultFormatter', () => {
       sut.formatUncoveredLines(editor, fileCoverage)
 
       expect(vscode.Range).toHaveBeenCalledTimes(2)
-      expect((vscode.Range as jest.Mock<vscode.Range>).mock.calls).toEqual([[0, 0, 0, 0], [9, 0, 9, 0]])
+      expect((vscode.Range as jest.Mock<vscode.Range>).mock.calls).toEqual([
+        [0, 0, 0, 0],
+        [9, 0, 9, 0],
+      ])
     })
 
     it('should add decorations with the reindexed ranges', () => {

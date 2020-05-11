@@ -19,8 +19,16 @@
     "theme": "dark",
     "color": "#384357"
   },
-  "categories": ["Other"],
-  "keywords": ["jest", "debug", "snippet", "react", "multi-root ready"],
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "jest",
+    "debug",
+    "snippet",
+    "react",
+    "multi-root ready"
+  ],
   "activationEvents": [
     "workspaceContains:jest.config.js",
     "workspaceContains:jest.json",
@@ -31,12 +39,19 @@
   ],
   "main": "./out/extension",
   "icon": "images/vscode-jest.png",
-  "extensionKind": ["workspace"],
+  "extensionKind": [
+    "workspace"
+  ],
   "contributes": {
     "languages": [
       {
         "id": "jest-snapshot",
-        "extensions": [".js.snap", ".jsx.snap", ".ts.snap", ".tsx.snap"]
+        "extensions": [
+          ".js.snap",
+          ".jsx.snap",
+          ".ts.snap",
+          ".tsx.snap"
+        ]
       }
     ],
     "grammars": [
@@ -101,7 +116,10 @@
         "jest.coverageFormatter": {
           "description": "Coverage formatter to use",
           "type": "string",
-          "enum": ["DefaultFormatter", "GutterFormatter"],
+          "enum": [
+            "DefaultFormatter",
+            "GutterFormatter"
+          ],
           "default": "DefaultFormatter",
           "scope": "resource"
         },
@@ -115,9 +133,17 @@
           "description": "Show the debug CodeLens when the it/test block state is in this collection",
           "type": "array",
           "items": {
-            "enum": ["fail", "pass", "skip", "unknown"]
+            "enum": [
+              "fail",
+              "pass",
+              "skip",
+              "unknown"
+            ]
           },
-          "default": ["fail", "unknown"],
+          "default": [
+            "fail",
+            "unknown"
+          ],
           "scope": "window"
         },
         "jest.enableSnapshotPreviews": {
@@ -173,7 +199,12 @@
       {
         "type": "vscode-jest-tests",
         "label": "Debug Jest tests using vscode-jest",
-        "languages": ["javascript", "javascriptreact", "typescript", "typescriptreact"],
+        "languages": [
+          "javascript",
+          "javascriptreact",
+          "typescript",
+          "typescriptreact"
+        ],
         "configurationSnippets": [
           {
             "label": "Jest: Default jest configuration",
@@ -183,7 +214,9 @@
               "name": "vscode-jest-tests",
               "request": "launch",
               "program": "^\"\\${workspaceFolder}/node_modules/jest/bin/jest\"",
-              "args": ["--runInBand"],
+              "args": [
+                "--runInBand"
+              ],
               "cwd": "^\"\\${workspaceFolder}\"",
               "console": "integratedTerminal",
               "internalConsoleOptions": "neverOpen",
@@ -198,7 +231,11 @@
               "name": "vscode-jest-tests",
               "request": "launch",
               "runtimeExecutable": "^\"\\${workspaceFolder}/node_modules/.bin/react-scripts\"",
-              "args": ["test", "--env=jsdom", "--runInBand"],
+              "args": [
+                "test",
+                "--env=jsdom",
+                "--runInBand"
+              ],
               "cwd": "^\"\\${workspaceFolder}\"",
               "console": "integratedTerminal",
               "protocol": "inspector",
@@ -214,7 +251,10 @@
               "name": "vscode-jest-tests",
               "request": "launch",
               "program": "^\"\\${workspaceFolder}/scripts/test\"",
-              "args": ["--env=jsdom", "--runInBand"],
+              "args": [
+                "--env=jsdom",
+                "--runInBand"
+              ],
               "cwd": "^\"\\${workspaceFolder}\"",
               "console": "integratedTerminal",
               "protocol": "inspector",
@@ -227,12 +267,12 @@
     ]
   },
   "lint-staged": {
-    "*.json": "yarn prettier-write --parser json",
-    "*.ts": "yarn prettier-write --parser typescript"
+    "*.json": "yarn prettier --write",
+    "*.ts": "yarn prettier --write"
   },
   "scripts": {
     "precommit": "lint-staged",
-    "ci": "yarn lint && yarn test --coverage",
+    "ci": "yarn lint && yarn prettier-project-check && yarn test --coverage",
     "clean-out": "rimraf ./out",
     "vscode:prepublish": "yarn clean-out && yarn compile",
     "compile": "webpack --mode production",
@@ -240,9 +280,9 @@
     "lint": "tslint -c tslint.json 'src/**/*.ts' 'tests/**/*.ts'",
     "test": "jest",
     "watch-test": "yarn test -- --watch",
-    "prettier": "prettier --no-semi --single-quote --trailing-comma es5 --print-width 120",
-    "prettier-write": "yarn prettier --write ",
-    "prettier-project": "yarn prettier-write --parser typescript -- '?(__mocks__|src|tests)/**/*.ts'"
+    "prettier": "prettier",
+    "prettier-project-check": "yarn prettier --check '?(__mocks__|src|tests)/**/*.ts' '*.json'",
+    "prettier-project-write": "yarn prettier --write '?(__mocks__|src|tests)/**/*.ts' '*.json'"
   },
   "dependencies": {
     "istanbul-lib-coverage": "^1.1.1",

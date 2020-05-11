@@ -78,8 +78,8 @@ export class TestResultProvider {
       const remainingTests: ItBlock[] = []
       const _trackRemaining = trackRemaining === undefined ? true : trackRemaining
 
-      _itBlocks.forEach(test => {
-        const matched = remainingAssertions.filter(a => _isMatched.every(m => m(test, a)))
+      _itBlocks.forEach((test) => {
+        const matched = remainingAssertions.filter((a) => _isMatched.every((m) => m(test, a)))
         if (matched.length === 1) {
           const aIndex = remainingAssertions.indexOf(matched[0])
           if (aIndex < 0) {
@@ -123,7 +123,7 @@ export class TestResultProvider {
         return false
       }
       const parts = t.name.split(templateLiteralPattern)
-      const r = parts.every(p => a.title.includes(p))
+      const r = parts.every((p) => a.title.includes(p))
       return r
     }
     const onMatchError: OnMatchError = (t: ItBlock, match: TestAssertionStatus[]) => {
@@ -163,7 +163,7 @@ export class TestResultProvider {
     }
 
     // convert remaining itBlocks to unmatched result
-    itBlocks.forEach(t => totalResult.push(toMatchResult(t)))
+    itBlocks.forEach((t) => totalResult.push(toMatchResult(t)))
 
     this.resultsByFilePath[filePath] = totalResult
     return totalResult

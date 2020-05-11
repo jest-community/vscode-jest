@@ -21,7 +21,7 @@ export function registerSnapshotCodeLens(enableSnapshotPreviews: boolean) {
 class SnapshotCodeLensProvider implements vscode.CodeLensProvider {
   public provideCodeLenses(document: vscode.TextDocument, _token: vscode.CancellationToken) {
     const snapshots = new Snapshot()
-    return snapshots.getMetadata(document.uri.fsPath).map(snapshot => {
+    return snapshots.getMetadata(document.uri.fsPath).map((snapshot) => {
       const { line } = snapshot.node.loc.start
       const range = new vscode.Range(line - 1, 0, line - 1, 0)
       let command: vscode.Command

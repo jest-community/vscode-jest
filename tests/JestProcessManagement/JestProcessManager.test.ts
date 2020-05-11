@@ -61,7 +61,7 @@ describe('JestProcessManager', () => {
     it('calls the onExit handler when JestProcess exits', () => {
       const mockImplementation = {
         keepAlive: false,
-        onExit: callback => {
+        onExit: (callback) => {
           eventEmitter.on('debuggerProcessExit', callback)
         },
       }
@@ -156,10 +156,10 @@ describe('JestProcessManager', () => {
       const eventEmitterForWatchMode = new EventEmitter()
       const onExitMock = jest
         .fn()
-        .mockImplementationOnce(callback => {
+        .mockImplementationOnce((callback) => {
           eventEmitter.on('debuggerProcessExit', callback)
         })
-        .mockImplementationOnce(callback => {
+        .mockImplementationOnce((callback) => {
           eventEmitterForWatchMode.on('debuggerProcessExit', callback)
         })
 
@@ -184,10 +184,10 @@ describe('JestProcessManager', () => {
       const eventEmitterForWatchMode = new EventEmitter()
       const onExitMock = jest
         .fn()
-        .mockImplementationOnce(callback => {
+        .mockImplementationOnce((callback) => {
           eventEmitter.on('debuggerProcessExit', callback)
         })
-        .mockImplementationOnce(callback => {
+        .mockImplementationOnce((callback) => {
           eventEmitterForWatchMode.on('debuggerProcessExit', callback)
         })
 
@@ -271,7 +271,7 @@ describe('JestProcessManager', () => {
           let isStopped = false
           const stop = () => (isStopped = true)
           const stopRequested = () => isStopped
-          const onExit = callback => {
+          const onExit = (callback) => {
             eventEmitter.on('debuggerProcessExit', callback)
           }
           return { onExit, stop, stopRequested }
@@ -346,7 +346,7 @@ describe('JestProcessManager', () => {
     it('removes the reference to the jest process that has been stopped and the following onExit event does not do anything', () => {
       jestProcessMock.mockImplementation(() => ({
         keepAlive: true,
-        onExit: callback => {
+        onExit: (callback) => {
           eventEmitter.on('debuggerProcessExit', callback)
         },
         stop: jest.fn(),
@@ -364,7 +364,7 @@ describe('JestProcessManager', () => {
     it('keeps the reference to the jest process that exited on its own but then restarted', () => {
       jestProcessMock.mockImplementation(() => ({
         keepAlive: true,
-        onExit: callback => {
+        onExit: (callback) => {
           eventEmitter.on('debuggerProcessExit', callback)
         },
       }))
@@ -378,7 +378,7 @@ describe('JestProcessManager', () => {
 
     it('removes the reference to the jest process that exited on its own that preceeds the jest process for watch mode', () => {
       jestProcessMock.mockImplementation(() => ({
-        onExit: callback => {
+        onExit: (callback) => {
           eventEmitter.on('debuggerProcessExit', callback)
         },
         stopRequested: () => false,
@@ -398,10 +398,10 @@ describe('JestProcessManager', () => {
       const eventEmitterForWatchMode = new EventEmitter()
       const onExitMock = jest
         .fn()
-        .mockImplementationOnce(callback => {
+        .mockImplementationOnce((callback) => {
           eventEmitter.on('debuggerProcessExit', callback)
         })
-        .mockImplementationOnce(callback => {
+        .mockImplementationOnce((callback) => {
           eventEmitterForWatchMode.on('debuggerProcessExit', callback)
         })
 
@@ -435,7 +435,7 @@ describe('JestProcessManager', () => {
     it('removes the reference to the jest process that exited on its own', () => {
       jestProcessMock.mockImplementation(() => ({
         keepAlive: false,
-        onExit: callback => {
+        onExit: (callback) => {
           eventEmitter.on('debuggerProcessExit', callback)
         },
         restart: jest.fn(),
@@ -452,10 +452,10 @@ describe('JestProcessManager', () => {
       const eventEmitterForWatchMode = new EventEmitter()
       const onExitMock = jest
         .fn()
-        .mockImplementationOnce(callback => {
+        .mockImplementationOnce((callback) => {
           eventEmitter.on('debuggerProcessExit', callback)
         })
-        .mockImplementationOnce(callback => {
+        .mockImplementationOnce((callback) => {
           eventEmitterForWatchMode.on('debuggerProcessExit', callback)
         })
 
@@ -489,7 +489,7 @@ describe('JestProcessManager', () => {
       })
 
       jestProcessMock.mockImplementation(() => ({
-        onExit: callback => {
+        onExit: (callback) => {
           eventEmitter.on('debuggerProcessExit', callback)
         },
       }))
