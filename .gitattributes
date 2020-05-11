@@ -1,2 +1,2 @@
-# all tex files will be checked out with LF as eol
-* text=auto eol=lf
+# all text files will be checked in with LF as eol
+* text=auto 

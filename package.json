@@ -277,12 +277,12 @@
     "vscode:prepublish": "yarn clean-out && yarn compile",
     "compile": "webpack --mode production",
     "watch": "webpack --mode development --watch --info-verbosity verbose",
-    "lint": "tslint -c tslint.json 'src/**/*.ts' 'tests/**/*.ts'",
+    "lint": "tslint -c tslint.json \"src/**/*.ts\" \"tests/**/*.ts\"",
     "test": "jest",
     "watch-test": "yarn test -- --watch",
     "prettier": "prettier",
-    "prettier-project-check": "yarn prettier --check '?(__mocks__|src|tests)/**/*.ts' '*.json'",
-    "prettier-project-write": "yarn prettier --write '?(__mocks__|src|tests)/**/*.ts' '*.json'"
+    "prettier-project-check": "yarn prettier --check \"?(__mocks__|src|tests)/**/*.ts\" \"json\"",
+    "prettier-project-write": "yarn prettier --write \"?(__mocks__|src|tests)/**/*.ts\" \"json\""
   },
   "dependencies": {
     "istanbul-lib-coverage": "^1.1.1",
