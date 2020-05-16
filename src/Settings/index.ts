@@ -1,6 +1,6 @@
 import { TestState } from '../DebugCodeLens'
 
-export interface IPluginResourceSettings {
+export interface PluginResourceSettings {
   autoEnable?: boolean
   enableInlineErrorMessages?: boolean
   enableSnapshotUpdateMessages?: boolean
@@ -14,7 +14,7 @@ export interface IPluginResourceSettings {
   debugMode?: boolean
 }
 
-export interface IPluginWindowSettings {
+export interface PluginWindowSettings {
   debugCodeLens: {
     enabled: boolean
     showWhenTestStateIn: TestState[]

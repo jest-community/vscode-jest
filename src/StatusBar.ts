@@ -188,13 +188,14 @@ export class StatusBar {
     const message = this.getMessageByStatus(request.status)
 
     switch (statusBarItem.type) {
-      case StatusType.active:
+      case StatusType.active: {
         const modes = this.getModes(request.modes)
         const details = !this.needsSummaryStatus() && request.details ? request.details : ''
         const displayString = [message, details, modes].filter((s) => s && s.length > 0).join(' ')
         statusBarItem.text = `Jest: ${displayString}`
         statusBarItem.tooltip = `Jest status of '${this.activeFolder}'`
         break
+      }
       case StatusType.summary:
         statusBarItem.text = `Jest-WS: ${message}`
         break

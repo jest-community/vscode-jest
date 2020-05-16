@@ -1,14 +1,14 @@
 module.exports = {
-  trailingComma: "es5",
+  trailingComma: 'es5',
   printWidth: 120,
   semi: false,
   singleQuote: true,
-  "overrides": [
+  overrides: [
     {
-      "files": "*.ts",
-      "options": {
-        "parser": "typescript"
-      }
-    }
-  ]
+      files: '*.ts',
+      options: {
+        parser: 'typescript',
+      },
+    },
+  ],
 };

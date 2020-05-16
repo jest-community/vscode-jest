@@ -15,7 +15,7 @@ import * as vscode from 'vscode'
 import { ExtensionManager, getExtensionResourceSettings, getExtensionWindowSettings } from '../src/extensionManager'
 import { TestState } from '../src/DebugCodeLens'
 import { readFileSync } from 'fs'
-import { IPluginWindowSettings } from '../src/Settings'
+import { PluginWindowSettings } from '../src/Settings'
 
 vscode.workspace.getConfiguration = jest.fn().mockImplementation((section) => {
   const data = readFileSync('./package.json')
@@ -62,7 +62,7 @@ describe('InstancesManager', () => {
 
   describe('applySettings()', () => {
     it('should save settings to instance', () => {
-      const newSettings: IPluginWindowSettings = {
+      const newSettings: PluginWindowSettings = {
         debugCodeLens: {
           enabled: true,
           showWhenTestStateIn: [],
@@ -73,7 +73,7 @@ describe('InstancesManager', () => {
       expect((extensionManager as any).commonPluginSettings).toEqual(newSettings)
     })
     it('should update debugCodeLensProvider instance', () => {
-      const newSettings: IPluginWindowSettings = {
+      const newSettings: PluginWindowSettings = {
         debugCodeLens: {
           enabled: true,
           showWhenTestStateIn: [TestState.Fail],
@@ -92,7 +92,7 @@ describe('InstancesManager', () => {
 
       expect(extensionManager.getByName('workspaceFolder1')).toBeDefined()
       expect(extensionManager.getByName('workspaceFolder2')).toBeDefined()
-      const newSettings: IPluginWindowSettings = {
+      const newSettings: PluginWindowSettings = {
         debugCodeLens: {
           enabled: true,
           showWhenTestStateIn: [],

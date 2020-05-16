@@ -126,7 +126,7 @@ describe('ModuleHelpers', () => {
 
       mockJoin.mockImplementation(require.requireActual('path').posix.join)
       mockNormalize.mockImplementation((arg) => arg)
-      mockExistsSync.mockImplementation((_) => false)
+      mockExistsSync.mockImplementation(() => false)
 
       expect(pathToJest(defaultSettings)).toBe(expected)
     })

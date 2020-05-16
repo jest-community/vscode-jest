@@ -5,10 +5,39 @@ import { pathToJest, pathToConfig } from './helpers'
 import { JestExt } from './JestExt'
 import { DebugCodeLensProvider, TestState } from './DebugCodeLens'
 import { DebugConfigurationProvider } from './DebugConfigurationProvider'
-import { IPluginResourceSettings, IPluginWindowSettings } from './Settings'
+import { PluginResourceSettings, PluginWindowSettings } from './Settings'
 import { statusBar } from './StatusBar'
 
 export type GetJestExtByURI = (uri: vscode.Uri) => JestExt | undefined
+
+export function getExtensionWindowSettings(): PluginWindowSettings {
+  const config = vscode.workspace.getConfiguration('jest')
+  return {
+    debugCodeLens: {
+      enabled: config.get<boolean>('enableCodeLens'),
+      showWhenTestStateIn: config.get<TestState[]>('debugCodeLens.showWhenTestStateIn'),
+    },
+    enableSnapshotPreviews: config.get<boolean>('enableSnapshotPreviews'),
+    disabledWorkspaceFolders: config.get<string[]>('disabledWorkspaceFolders'),
+  }
+}
+
+export function getExtensionResourceSettings(uri: vscode.Uri): PluginResourceSettings {
+  const config = vscode.workspace.getConfiguration('jest', uri)
+  return {
+    autoEnable: config.get<boolean>('autoEnable'),
+    enableInlineErrorMessages: config.get<boolean>('enableInlineErrorMessages'),
+    enableSnapshotUpdateMessages: config.get<boolean>('enableSnapshotUpdateMessages'),
+    pathToConfig: config.get<string>('pathToConfig'),
+    pathToJest: config.get<string>('pathToJest'),
+    restartJestOnSnapshotUpdate: config.get<boolean>('restartJestOnSnapshotUpdate'),
+    rootPath: path.join(uri.fsPath, config.get<string>('rootPath')),
+    runAllTestsFirst: config.get<boolean>('runAllTestsFirst'),
+    showCoverageOnLoad: config.get<boolean>('showCoverageOnLoad'),
+    coverageFormatter: config.get<string>('coverageFormatter'),
+    debugMode: config.get<boolean>('debugMode'),
+  }
+}
 
 export class ExtensionManager {
   debugCodeLensProvider: DebugCodeLensProvider
@@ -16,7 +45,7 @@ export class ExtensionManager {
 
   private extByWorkspace: Map<string, JestExt> = new Map()
   private context: vscode.ExtensionContext
-  private commonPluginSettings: IPluginWindowSettings
+  private commonPluginSettings: PluginWindowSettings
 
   constructor(context: vscode.ExtensionContext) {
     this.context = context
@@ -28,7 +57,7 @@ export class ExtensionManager {
     this.applySettings(getExtensionWindowSettings())
     this.registerAll()
   }
-  applySettings(settings: IPluginWindowSettings) {
+  applySettings(settings: PluginWindowSettings) {
     this.commonPluginSettings = settings
     const { debugCodeLens } = settings
     this.debugCodeLensProvider.showWhenTestStateIn = debugCodeLens.enabled ? debugCodeLens.showWhenTestStateIn : []
@@ -174,34 +203,5 @@ export class ExtensionManager {
     if (ext) {
       ext.onDidChangeTextDocument(event)
     }
-  }
-}
-
-export function getExtensionResourceSettings(uri: vscode.Uri): IPluginResourceSettings {
-  const config = vscode.workspace.getConfiguration('jest', uri)
-  return {
-    autoEnable: config.get<boolean>('autoEnable'),
-    enableInlineErrorMessages: config.get<boolean>('enableInlineErrorMessages'),
-    enableSnapshotUpdateMessages: config.get<boolean>('enableSnapshotUpdateMessages'),
-    pathToConfig: config.get<string>('pathToConfig'),
-    pathToJest: config.get<string>('pathToJest'),
-    restartJestOnSnapshotUpdate: config.get<boolean>('restartJestOnSnapshotUpdate'),
-    rootPath: path.join(uri.fsPath, config.get<string>('rootPath')),
-    runAllTestsFirst: config.get<boolean>('runAllTestsFirst'),
-    showCoverageOnLoad: config.get<boolean>('showCoverageOnLoad'),
-    coverageFormatter: config.get<string>('coverageFormatter'),
-    debugMode: config.get<boolean>('debugMode'),
-  }
-}
-
-export function getExtensionWindowSettings(): IPluginWindowSettings {
-  const config = vscode.workspace.getConfiguration('jest')
-  return {
-    debugCodeLens: {
-      enabled: config.get<boolean>('enableCodeLens'),
-      showWhenTestStateIn: config.get<TestState[]>('debugCodeLens.showWhenTestStateIn'),
-    },
-    enableSnapshotPreviews: config.get<boolean>('enableSnapshotPreviews'),
-    disabledWorkspaceFolders: config.get<string[]>('disabledWorkspaceFolders'),
   }
 }

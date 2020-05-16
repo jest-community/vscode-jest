@@ -4,26 +4,8 @@
 
 import * as vscode from 'vscode'
 
-export interface MessageAction {
-  title: string
-  action: () => void
-}
-
-export function systemErrorMessage(message: string, ...actions: MessageAction[]) {
-  vscode.window.showErrorMessage(message, ..._extractActionTitles(actions)).then(_handleMessageActions(actions))
-}
-
-export function systemWarningMessage(message: string, ...actions: MessageAction[]) {
-  vscode.window.showWarningMessage(message, ..._extractActionTitles(actions)).then(_handleMessageActions(actions))
-}
-
-// common actions
-export const showTroubleshootingAction: MessageAction = {
-  title: 'Help',
-  action: () => vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(TROUBLESHOOTING_URL)),
-}
-
 export const TROUBLESHOOTING_URL = 'https://github.com/jest-community/vscode-jest/blob/master/README.md#troubleshooting'
+
 //
 // internal methods
 //
@@ -43,4 +25,23 @@ export function _handleMessageActions(actions?: MessageAction[]): (action?: stri
       throw Error(`expect exactly one matched action '${action}' but found ${found.length} match(es)`)
     }
   }
+}
+
+export interface MessageAction {
+  title: string
+  action: () => void
+}
+
+export function systemErrorMessage(message: string, ...actions: MessageAction[]) {
+  vscode.window.showErrorMessage(message, ..._extractActionTitles(actions)).then(_handleMessageActions(actions))
+}
+
+export function systemWarningMessage(message: string, ...actions: MessageAction[]) {
+  vscode.window.showWarningMessage(message, ..._extractActionTitles(actions)).then(_handleMessageActions(actions))
+}
+
+// common actions
+export const showTroubleshootingAction: MessageAction = {
+  title: 'Help',
+  action: () => vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(TROUBLESHOOTING_URL)),
 }

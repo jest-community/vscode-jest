@@ -1,9 +1,10 @@
 jest.disableAutomock()
+import * as Coverage from '../../src/Coverage'
 
 describe('Coverage', () => {
   describe('module.exports', () => {
     it('should match the snapshot', () => {
-      expect(require('../../src/Coverage')).toMatchSnapshot()
+      expect(Coverage).toMatchSnapshot()
     })
   })
 })

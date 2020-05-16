@@ -4,7 +4,7 @@ import * as vscode from 'vscode'
 import { FileCoverage } from 'istanbul-lib-coverage'
 import { isValidLocation } from '../helpers'
 
-export interface ICoverageLines {
+export interface CoverageLines {
   covered: vscode.Range[]
   partiallyCovered: vscode.Range[]
   uncovered: vscode.Range[]
@@ -57,8 +57,8 @@ export class GutterFormatter extends AbstractFormatter {
     editor.setDecorations(this.partiallyCoveredLine, coverageFormatting.partiallyCovered)
   }
 
-  computeFormatting(editor: vscode.TextEditor, fileCoverage: FileCoverage): ICoverageLines {
-    const coverageFormatting: ICoverageLines = {
+  computeFormatting(editor: vscode.TextEditor, fileCoverage: FileCoverage): CoverageLines {
+    const coverageFormatting: CoverageLines = {
       covered: [],
       partiallyCovered: [],
       uncovered: [],

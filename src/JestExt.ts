@@ -2,7 +2,7 @@ import * as vscode from 'vscode'
 import { ProjectWorkspace, JestTotalResults } from 'jest-editor-support'
 
 import * as decorations from './decorations'
-import { IPluginResourceSettings } from './Settings'
+import { PluginResourceSettings } from './Settings'
 import { statusBar, Status, StatusBar, Mode } from './StatusBar'
 import {
   TestReconciliationState,
@@ -42,7 +42,7 @@ export class JestExt {
   failingAssertionDecorators: { [fileName: string]: vscode.TextEditorDecorationType[] }
 
   private jestWorkspace: ProjectWorkspace
-  private pluginSettings: IPluginResourceSettings
+  private pluginSettings: PluginResourceSettings
   private workspaceFolder: vscode.WorkspaceFolder
   private instanceSettings: InstanceSettings
 
@@ -68,7 +68,7 @@ export class JestExt {
     workspaceFolder: vscode.WorkspaceFolder,
     jestWorkspace: ProjectWorkspace,
     outputChannel: vscode.OutputChannel,
-    pluginSettings: IPluginResourceSettings,
+    pluginSettings: PluginResourceSettings,
     debugCodeLensProvider: DebugCodeLensProvider,
     debugConfigurationProvider: DebugConfigurationProvider,
     failDiagnostics: vscode.DiagnosticCollection,
@@ -189,7 +189,7 @@ export class JestExt {
     this.parsingTestFile = false
   }
 
-  public triggerUpdateSettings(updatedSettings: IPluginResourceSettings) {
+  public triggerUpdateSettings(updatedSettings: PluginResourceSettings) {
     this.pluginSettings = updatedSettings
 
     this.jestWorkspace.rootPath = updatedSettings.rootPath
@@ -451,7 +451,7 @@ export class JestExt {
     this.updateStatusBar('initial', undefined, false)
   }
 
-  private updateStatusBar(status: Status, details?: string, watchMode: boolean = true) {
+  private updateStatusBar(status: Status, details?: string, watchMode = true) {
     const modes: Mode[] = []
     if (this.coverageOverlay.enabled) {
       modes.push('coverage')

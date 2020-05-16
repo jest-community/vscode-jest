@@ -226,16 +226,14 @@ describe('JestProcess', () => {
       expect.assertions(1)
       const promise = jestProcess.stop()
       eventEmitter.emit('debuggerProcessExit')
-      await promise
-      expect(promise).resolves.toBeUndefined()
+      await expect(promise).resolves.toBeUndefined()
     })
 
     it('resolves promise by timeout', async () => {
       expect.assertions(1)
       const promise = jestProcess.stop()
       jest.runAllTimers()
-      await promise
-      expect(promise).resolves.toBeUndefined()
+      await expect(promise).resolves.toBeUndefined()
     })
 
     it('do not hangs on multiple stop() calls', async () => {
@@ -243,8 +241,7 @@ describe('JestProcess', () => {
       const promise = jestProcess.stop()
       jestProcess.stop()
       jest.runAllTimers()
-      await promise
-      expect(promise).resolves.toBeUndefined()
+      await expect(promise).resolves.toBeUndefined()
     })
   })
 

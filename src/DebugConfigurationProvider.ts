@@ -2,8 +2,8 @@ import * as vscode from 'vscode'
 import { getTestCommand, isCreateReactAppTestCommand } from './helpers'
 
 export class DebugConfigurationProvider implements vscode.DebugConfigurationProvider {
-  private fileNameToRun: string = ''
-  private testToRun: string = ''
+  private fileNameToRun = ''
+  private testToRun = ''
 
   /**
    * Prepares injecting the name of the test, which has to be debugged, into the `DebugConfiguration`,

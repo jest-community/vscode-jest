@@ -8,6 +8,12 @@ import { existsSync } from 'fs'
 import { TestFileAssertionStatus } from 'jest-editor-support'
 import { TestReconciliationState, TestResult } from './TestResults'
 
+function createDiagnosticWithRange(message: string, range: vscode.Range): vscode.Diagnostic {
+  const diag = new vscode.Diagnostic(range, message, vscode.DiagnosticSeverity.Error)
+  diag.source = 'Jest'
+  return diag
+}
+
 function createDiagnostic(
   message: string,
   lineNumber: number,
@@ -16,12 +22,6 @@ function createDiagnostic(
 ): vscode.Diagnostic {
   const line = lineNumber > 0 ? lineNumber - 1 : 0
   return createDiagnosticWithRange(message, new vscode.Range(line, startCol, line, endCol))
-}
-
-function createDiagnosticWithRange(message: string, range: vscode.Range): vscode.Diagnostic {
-  const diag = new vscode.Diagnostic(range, message, vscode.DiagnosticSeverity.Error)
-  diag.source = 'Jest'
-  return diag
 }
 
 // update diagnostics for the active editor

@@ -21,7 +21,9 @@ export class JestProcessManager {
   }
 
   public startJestProcess({
-    exitCallback = () => {},
+    exitCallback = () => {
+      /* do nothing */
+    },
     watchMode = WatchMode.None,
     keepAlive = false,
   }: {

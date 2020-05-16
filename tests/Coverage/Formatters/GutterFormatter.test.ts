@@ -141,7 +141,7 @@ describe('GutterFormatter', () => {
       expect(actual.partiallyCovered).toEqual([])
     })
 
-    it('should reindex the line numbers', () => {
+    it('should reindex the line numbers for partially covered', () => {
       ;(isValidLocation as jest.Mock<any>).mockReturnValueOnce(true)
 
       const coverageMapProvider: any = {}
@@ -226,7 +226,7 @@ describe('GutterFormatter', () => {
       expect(actual.partiallyCovered).toEqual([new vscode.Range(1, 2, 5, 3)])
     })
 
-    it('should reindex the line numbers', () => {
+    it('should reindex the line numbers for uncovered', () => {
       const coverageMapProvider: any = {}
       const editor: any = {
         setDecorations: () => ({}),

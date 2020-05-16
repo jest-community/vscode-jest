@@ -32,7 +32,7 @@ jest.mock('vscode', () => {
     end: Position
 
     constructor(start, end) {
-      rangeConstructor(...arguments)
+      rangeConstructor()
       this.start = start
       this.end = end
     }

@@ -6,18 +6,6 @@ import { previewCommand } from './SnapshotPreviewProvider'
 
 const missingSnapshotCommand = `${extensionName}.snapshot.missing`
 
-export function registerSnapshotCodeLens(enableSnapshotPreviews: boolean) {
-  if (!enableSnapshotPreviews) {
-    return []
-  }
-  return [
-    vscode.languages.registerCodeLensProvider({ pattern: '**/*.{ts,tsx,js,jsx}' }, new SnapshotCodeLensProvider()),
-    vscode.commands.registerCommand(missingSnapshotCommand, () => {
-      vscode.window.showInformationMessage('Run test to generate snapshot.')
-    }),
-  ]
-}
-
 class SnapshotCodeLensProvider implements vscode.CodeLensProvider {
   public provideCodeLenses(document: vscode.TextDocument, _token: vscode.CancellationToken) {
     const snapshots = new Snapshot()
@@ -41,4 +29,16 @@ class SnapshotCodeLensProvider implements vscode.CodeLensProvider {
       return new vscode.CodeLens(range, command)
     })
   }
+}
+
+export function registerSnapshotCodeLens(enableSnapshotPreviews: boolean) {
+  if (!enableSnapshotPreviews) {
+    return []
+  }
+  return [
+    vscode.languages.registerCodeLensProvider({ pattern: '**/*.{ts,tsx,js,jsx}' }, new SnapshotCodeLensProvider()),
+    vscode.commands.registerCommand(missingSnapshotCommand, () => {
+      vscode.window.showInformationMessage('Run test to generate snapshot.')
+    }),
+  ]
 }

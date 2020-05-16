@@ -2,7 +2,7 @@ import { platform } from 'os'
 import { existsSync, readFileSync } from 'fs'
 import { normalize, join } from 'path'
 
-import { IPluginResourceSettings, hasUserSetPathToJest } from './Settings'
+import { PluginResourceSettings, hasUserSetPathToJest } from './Settings'
 
 /**
  * Known binary names of `react-scripts` forks
@@ -70,7 +70,7 @@ function isBootstrappedWithCreateReactApp(rootPath: string): boolean {
  * @returns {string}
  */
 // tslint:disable-next-line no-shadowed-variable
-export function pathToJest({ pathToJest, rootPath }: IPluginResourceSettings) {
+export function pathToJest({ pathToJest, rootPath }: PluginResourceSettings) {
   if (hasUserSetPathToJest(pathToJest)) {
     return normalize(pathToJest)
   }
@@ -88,7 +88,7 @@ export function pathToJest({ pathToJest, rootPath }: IPluginResourceSettings) {
  *
  * @returns {string}
  */
-export function pathToConfig(pluginSettings: IPluginResourceSettings) {
+export function pathToConfig(pluginSettings: PluginResourceSettings) {
   if (pluginSettings.pathToConfig !== '') {
     return normalize(pluginSettings.pathToConfig)
   }
@@ -107,5 +107,6 @@ export function escapeRegExp(str: string): string {
  * ANSI colors/characters cleaning based on http://stackoverflow.com/questions/25245716/remove-all-ansi-colors-styles-from-strings
  */
 export function cleanAnsi(str: string): string {
+  // eslint-disable-next-line no-control-regex
   return str.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '')
 }

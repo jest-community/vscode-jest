@@ -33,7 +33,7 @@ jest.mock('vscode', () => {
     end: Position
 
     constructor(start, end) {
-      rangeConstructor(...arguments)
+      rangeConstructor()
       this.start = start
       this.end = end
     }
@@ -275,7 +275,7 @@ describe('DebugCodeLensProvider', () => {
     })
   })
 
-  describe('didChange()', () => {
+  it('didChange()', () => {
     const sut = new DebugCodeLensProvider(provideJestExt, allTestStates)
     sut.onDidChange.fire = jest.fn()
     sut.didChange()

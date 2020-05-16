@@ -27,6 +27,8 @@ import { updateCurrentDiagnostics } from '../src/diagnostics'
 import { JestProcessManager, JestProcess } from '../src/JestProcessManagement'
 import * as messaging from '../src/messaging'
 
+/* eslint jest/expect-expect: ["error", { "assertFunctionNames": ["expect", "expectItTakesNoAction"] }] */
+
 describe('JestExt', () => {
   const getConfiguration = workspace.getConfiguration as jest.Mock<any>
   const workspaceFolder = { name: 'test-folder' } as any
@@ -39,9 +41,7 @@ describe('JestExt', () => {
     prepareTestRun: jest.fn(),
   } as any
 
-  // tslint:disable-next-line no-console
   console.error = jest.fn()
-  // tslint:disable-next-line no-console
   console.warn = jest.fn()
 
   beforeEach(() => {
@@ -158,7 +158,6 @@ describe('JestExt', () => {
     })
   })
 
-  // tslint:disable no-shadowed-variable
   describe('runTest()', () => {
     const workspaceFolder = {} as any
     const fileName = 'fileName'
@@ -225,7 +224,7 @@ describe('JestExt', () => {
 
     it('should remove the cached decorations', () => {
       sut.onDidCloseTextDocument(document)
-      expect(sut.removeCachedDecorationTypes)
+      expect(sut.removeCachedDecorationTypes).toBeCalled()
     })
   })
 
@@ -299,10 +298,9 @@ describe('JestExt', () => {
   })
 
   describe('onDidChangeActiveTextEditor()', () => {
-    let sut
     const editor: any = {}
     const projectWorkspace = new ProjectWorkspace(null, null, null, null)
-    sut = new JestExt(
+    const sut = new JestExt(
       null,
       workspaceFolder,
       projectWorkspace,

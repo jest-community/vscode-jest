@@ -3,6 +3,19 @@ import * as vscode from 'vscode'
 import { FileCoverage } from 'istanbul-lib-coverage'
 import { isValidLocation } from './helpers'
 
+const uncoveredBranch = vscode.window.createTextEditorDecorationType({
+  backgroundColor: 'rgba(216,134,123,0.4)',
+  overviewRulerColor: 'rgba(216,134,123,0.8)',
+  overviewRulerLane: vscode.OverviewRulerLane.Left,
+})
+
+const uncoveredLine = vscode.window.createTextEditorDecorationType({
+  isWholeLine: true,
+  backgroundColor: 'rgba(216,134,123,0.4)',
+  overviewRulerColor: 'rgba(216,134,123,0.8)',
+  overviewRulerLane: vscode.OverviewRulerLane.Left,
+})
+
 export class DefaultFormatter extends AbstractFormatter {
   format(editor: vscode.TextEditor) {
     const fileCoverage = this.coverageMapProvider.getFileCoverage(editor.document.fileName)
@@ -56,16 +69,3 @@ export class DefaultFormatter extends AbstractFormatter {
     editor.setDecorations(uncoveredBranch, [])
   }
 }
-
-const uncoveredBranch = vscode.window.createTextEditorDecorationType({
-  backgroundColor: 'rgba(216,134,123,0.4)',
-  overviewRulerColor: 'rgba(216,134,123,0.8)',
-  overviewRulerLane: vscode.OverviewRulerLane.Left,
-})
-
-const uncoveredLine = vscode.window.createTextEditorDecorationType({
-  isWholeLine: true,
-  backgroundColor: 'rgba(216,134,123,0.4)',
-  overviewRulerColor: 'rgba(216,134,123,0.8)',
-  overviewRulerLane: vscode.OverviewRulerLane.Left,
-})

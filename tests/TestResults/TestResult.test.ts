@@ -2,14 +2,16 @@ jest.unmock('../../src/TestResults/TestResult')
 jest.unmock('../../src/helpers')
 jest.mock('path', () => ({ sep: require.requireActual('path').sep }))
 
-import {
+import * as TestResult from '../../src/TestResults/TestResult'
+import * as path from 'path'
+
+const {
   resultsWithLowerCaseWindowsDriveLetters,
   coverageMapWithLowerCaseWindowsDriveLetters,
   testResultsWithLowerCaseWindowsDriveLetters,
   resultsWithoutAnsiEscapeSequence,
   withLowerCaseWindowsDriveLetter,
-} from '../../src/TestResults/TestResult'
-import * as path from 'path'
+} = TestResult
 
 describe('TestResult', () => {
   describe('resultsWithLowerCaseWindowsDriveLetters', () => {
@@ -25,40 +27,21 @@ describe('TestResult', () => {
     // tslint:disable no-shadowed-variable
     describe('on Windows systems', () => {
       beforeEach(() => {
-        jest.doMock('../../src/TestResults/TestResult', () => ({
-          ...require.requireActual('../../src/TestResults/TestResult'),
-          coverageMapWithLowerCaseWindowsDriveLetters: jest.fn(),
-          testResultsWithLowerCaseWindowsDriveLetters: jest.fn(),
-        }))
         ;(path as any).sep = '\\'
       })
 
       it('should normalize paths in the coverage map', () => {
-        const {
-          resultsWithLowerCaseWindowsDriveLetters,
-          coverageMapWithLowerCaseWindowsDriveLetters,
-        } = require('../../src/TestResults/TestResult')
-        const expected = {}
-        coverageMapWithLowerCaseWindowsDriveLetters.mockReturnValueOnce(expected)
-
+        const spy = jest.spyOn(TestResult, 'coverageMapWithLowerCaseWindowsDriveLetters')
         const data: any = { coverageMap: {} }
-        expect(resultsWithLowerCaseWindowsDriveLetters(data)).toEqual({
-          coverageMap: expected,
-        })
+        resultsWithLowerCaseWindowsDriveLetters(data)
+        expect(spy).toHaveBeenCalled()
       })
 
       it('should normalize paths in the test results', () => {
-        const {
-          resultsWithLowerCaseWindowsDriveLetters,
-          testResultsWithLowerCaseWindowsDriveLetters,
-        } = require('../../src/TestResults/TestResult')
-        const expected = {}
-        testResultsWithLowerCaseWindowsDriveLetters.mockReturnValueOnce(expected)
-
+        const spy = jest.spyOn(TestResult, 'testResultsWithLowerCaseWindowsDriveLetters')
         const data: any = { coverageMap: {} }
-        expect(resultsWithLowerCaseWindowsDriveLetters(data)).toEqual({
-          coverageMap: expected,
-        })
+        resultsWithLowerCaseWindowsDriveLetters(data)
+        expect(spy).toHaveBeenCalled()
       })
     })
   })

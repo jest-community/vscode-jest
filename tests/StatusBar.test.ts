@@ -1,6 +1,7 @@
 jest.unmock('../src/StatusBar')
 jest.useFakeTimers()
 
+/* eslint jest/expect-expect: ["error", { "assertFunctionNames": ["expect", "assertRender"] }] */
 const newStatusBarItem = () => ({
   text: '',
   command: '',

@@ -10,7 +10,9 @@ describe('test system messaging', () => {
   const mockExecCommands = commands.executeCommand as jest.Mock<any>
   const mockUriParse = Uri.parse as jest.Mock<any>
 
-  const thenable = () => {}
+  const thenable = () => {
+    /* do nothing */
+  }
   beforeEach(() => {
     jest.resetAllMocks()
 

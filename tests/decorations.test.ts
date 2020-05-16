@@ -14,6 +14,17 @@ jest.mock('vscode', () => {
 import { passingItName, failingItName, skipItName, notRanItName } from '../src/decorations'
 import * as vscode from 'vscode'
 
+function testRangeBehavior(factoryMethod: () => void) {
+  it('should set the range behavior', () => {
+    const mock = (vscode.window.createTextEditorDecorationType as unknown) as jest.Mock<{}>
+    mock.mockReset()
+    factoryMethod()
+
+    expect(mock.mock.calls).toHaveLength(1)
+    expect(mock.mock.calls[0][0].rangeBehavior).toBe(vscode.DecorationRangeBehavior.ClosedClosed)
+  })
+}
+
 describe('Test Result Annotations', () => {
   describe('Pass', () => {
     testRangeBehavior(passingItName)
@@ -31,14 +42,3 @@ describe('Test Result Annotations', () => {
     testRangeBehavior(notRanItName)
   })
 })
-
-function testRangeBehavior(factoryMethod: () => void) {
-  it('should set the range behavior', () => {
-    const mock = (vscode.window.createTextEditorDecorationType as unknown) as jest.Mock<{}>
-    mock.mockReset()
-    factoryMethod()
-
-    expect(mock.mock.calls).toHaveLength(1)
-    expect(mock.mock.calls[0][0].rangeBehavior).toBe(vscode.DecorationRangeBehavior.ClosedClosed)
-  })
-}
