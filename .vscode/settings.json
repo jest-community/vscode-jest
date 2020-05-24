@@ -10,8 +10,9 @@
   },
   "typescript.tsdk": "./node_modules/typescript/lib",
   // eslint
+  "tslint.enable": false,
   "eslint.enable": true,
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": true
-  }
+  },
 }
