@@ -1,13 +1,13 @@
-import { CoverageMapProvider } from '../CoverageMapProvider'
-import * as vscode from 'vscode'
+import { CoverageMapProvider } from '../CoverageMapProvider';
+import * as vscode from 'vscode';
 
 export abstract class AbstractFormatter {
-  protected coverageMapProvider: CoverageMapProvider
+  protected coverageMapProvider: CoverageMapProvider;
 
   constructor(coverageMapProvider: CoverageMapProvider) {
-    this.coverageMapProvider = coverageMapProvider
+    this.coverageMapProvider = coverageMapProvider;
   }
 
-  abstract format(editor: vscode.TextEditor)
-  abstract clear(editor: vscode.TextEditor)
+  abstract format(editor: vscode.TextEditor);
+  abstract clear(editor: vscode.TextEditor);
 }

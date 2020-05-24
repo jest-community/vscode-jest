@@ -1,2 +1,2 @@
-export { registerSnapshotCodeLens } from './SnapshotCodeLensProvider'
-export { registerSnapshotPreview } from './SnapshotPreviewProvider'
+export { registerSnapshotCodeLens } from './SnapshotCodeLensProvider';
+export { registerSnapshotPreview } from './SnapshotPreviewProvider';

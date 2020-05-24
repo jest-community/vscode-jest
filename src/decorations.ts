@@ -1,4 +1,4 @@
-import { window, OverviewRulerLane, DecorationRangeBehavior } from 'vscode'
+import { window, OverviewRulerLane, DecorationRangeBehavior } from 'vscode';
 
 export function failingItName() {
   return window.createTextEditorDecorationType({
@@ -17,7 +17,7 @@ export function failingItName() {
       },
     },
     rangeBehavior: DecorationRangeBehavior.ClosedClosed,
-  })
+  });
 }
 
 export function skipItName() {
@@ -37,7 +37,7 @@ export function skipItName() {
       },
     },
     rangeBehavior: DecorationRangeBehavior.ClosedClosed,
-  })
+  });
 }
 
 export function passingItName() {
@@ -57,7 +57,7 @@ export function passingItName() {
       },
     },
     rangeBehavior: DecorationRangeBehavior.ClosedClosed,
-  })
+  });
 }
 
 export function notRanItName() {
@@ -77,7 +77,7 @@ export function notRanItName() {
       },
     },
     rangeBehavior: DecorationRangeBehavior.ClosedClosed,
-  })
+  });
 }
 
 export function failingAssertionStyle(text: string) {
@@ -103,5 +103,5 @@ export function failingAssertionStyle(text: string) {
         contentText: ' // ' + text,
       },
     },
-  })
+  });
 }
