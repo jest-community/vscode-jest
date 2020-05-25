@@ -18,4 +18,13 @@ module.exports = {
   rules: {
     'prettier/prettier': 'error',
   },
-}
+  overrides: [
+    {
+      files: ['*.js'],
+      rules: {
+        '@typescript-eslint/no-var-requires': 'off',
+        '@typescript-eslint/explicit-function-return-type': 'off',
+      },
+    },
+  ],
+};
