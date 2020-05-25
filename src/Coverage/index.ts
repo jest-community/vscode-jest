@@ -1,3 +1,3 @@
-export * from './CoverageMapProvider'
-export * from './CoverageOverlay'
-export * from './CoverageCodeLensProvider'
+export * from './CoverageMapProvider';
+export * from './CoverageOverlay';
+export * from './CoverageCodeLensProvider';

@@ -1,4 +1,4 @@
-import { TestReconciliationState } from '../TestResults'
+import { TestReconciliationState } from '../TestResults';
 
 export enum TestState {
   Fail = 'fail',
@@ -13,4 +13,4 @@ export const TestStateByTestReconciliationState = {
   [TestReconciliationState.KnownSkip]: TestState.Skip,
   [TestReconciliationState.KnownSuccess]: TestState.Pass,
   [TestReconciliationState.Unknown]: TestState.Unknown,
-}
+};

@@ -1,2 +1,2 @@
-export { DebugCodeLensProvider } from './DebugCodeLensProvider'
-export { TestState } from './TestState'
+export { DebugCodeLensProvider } from './DebugCodeLensProvider';
+export { TestState } from './TestState';

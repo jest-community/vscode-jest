@@ -34,7 +34,7 @@ const OverviewRulerLane = {
 }
 
 const Uri = {
-  file: f => f,
+  file: (f) => f,
   parse: jest.fn(),
 }
 const Range = jest.fn()

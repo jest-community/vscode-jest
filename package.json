@@ -2,7 +2,7 @@
   "name": "vscode-jest",
   "displayName": "Jest",
   "description": "Use Facebook's Jest With Pleasure.",
-  "version": "3.2.0",
+  "version": "4.0.0-beta.0",
   "publisher": "Orta",
   "engines": {
     "vscode": "^1.23.0"
@@ -19,8 +19,16 @@
     "theme": "dark",
     "color": "#384357"
   },
-  "categories": ["Other"],
-  "keywords": ["jest", "debug", "snippet", "react", "multi-root ready"],
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "jest",
+    "debug",
+    "snippet",
+    "react",
+    "multi-root ready"
+  ],
   "activationEvents": [
     "workspaceContains:jest.config.js",
     "workspaceContains:jest.json",
@@ -31,12 +39,19 @@
   ],
   "main": "./out/extension",
   "icon": "images/vscode-jest.png",
-  "extensionKind": ["workspace"],
+  "extensionKind": [
+    "workspace"
+  ],
   "contributes": {
     "languages": [
       {
         "id": "jest-snapshot",
-        "extensions": [".js.snap", ".jsx.snap", ".ts.snap", ".tsx.snap"]
+        "extensions": [
+          ".js.snap",
+          ".jsx.snap",
+          ".ts.snap",
+          ".tsx.snap"
+        ]
       }
     ],
     "grammars": [
@@ -101,7 +116,10 @@
         "jest.coverageFormatter": {
           "description": "Coverage formatter to use",
           "type": "string",
-          "enum": ["DefaultFormatter", "GutterFormatter"],
+          "enum": [
+            "DefaultFormatter",
+            "GutterFormatter"
+          ],
           "default": "DefaultFormatter",
           "scope": "resource"
         },
@@ -115,9 +133,17 @@
           "description": "Show the debug CodeLens when the it/test block state is in this collection",
           "type": "array",
           "items": {
-            "enum": ["fail", "pass", "skip", "unknown"]
+            "enum": [
+              "fail",
+              "pass",
+              "skip",
+              "unknown"
+            ]
           },
-          "default": ["fail", "unknown"],
+          "default": [
+            "fail",
+            "unknown"
+          ],
           "scope": "window"
         },
         "jest.enableSnapshotPreviews": {
@@ -173,7 +199,12 @@
       {
         "type": "vscode-jest-tests",
         "label": "Debug Jest tests using vscode-jest",
-        "languages": ["javascript", "javascriptreact", "typescript", "typescriptreact"],
+        "languages": [
+          "javascript",
+          "javascriptreact",
+          "typescript",
+          "typescriptreact"
+        ],
         "configurationSnippets": [
           {
             "label": "Jest: Default jest configuration",
@@ -183,7 +214,9 @@
               "name": "vscode-jest-tests",
               "request": "launch",
               "program": "^\"\\${workspaceFolder}/node_modules/jest/bin/jest\"",
-              "args": ["--runInBand"],
+              "args": [
+                "--runInBand"
+              ],
               "cwd": "^\"\\${workspaceFolder}\"",
               "console": "integratedTerminal",
               "internalConsoleOptions": "neverOpen",
@@ -198,7 +231,11 @@
               "name": "vscode-jest-tests",
               "request": "launch",
               "runtimeExecutable": "^\"\\${workspaceFolder}/node_modules/.bin/react-scripts\"",
-              "args": ["test", "--env=jsdom", "--runInBand"],
+              "args": [
+                "test",
+                "--env=jsdom",
+                "--runInBand"
+              ],
               "cwd": "^\"\\${workspaceFolder}\"",
               "console": "integratedTerminal",
               "protocol": "inspector",
@@ -214,7 +251,10 @@
               "name": "vscode-jest-tests",
               "request": "launch",
               "program": "^\"\\${workspaceFolder}/scripts/test\"",
-              "args": ["--env=jsdom", "--runInBand"],
+              "args": [
+                "--env=jsdom",
+                "--runInBand"
+              ],
               "cwd": "^\"\\${workspaceFolder}\"",
               "console": "integratedTerminal",
               "protocol": "inspector",
@@ -226,23 +266,15 @@
       }
     ]
   },
-  "lint-staged": {
-    "*.json": "yarn prettier-write --parser json",
-    "*.ts": "yarn prettier-write --parser typescript"
-  },
   "scripts": {
-    "precommit": "lint-staged",
     "ci": "yarn lint && yarn test --coverage",
     "clean-out": "rimraf ./out",
     "vscode:prepublish": "yarn clean-out && yarn compile",
     "compile": "webpack --mode production",
     "watch": "webpack --mode development --watch --info-verbosity verbose",
-    "lint": "tslint -c tslint.json 'src/**/*.ts' 'tests/**/*.ts'",
+    "lint": "eslint \"src/**/*.ts\" \"tests/**/*.ts\" \"*.json\"  \"*.js\" ",
     "test": "jest",
-    "watch-test": "yarn test -- --watch",
-    "prettier": "prettier --no-semi --single-quote --trailing-comma es5 --print-width 120",
-    "prettier-write": "yarn prettier --write ",
-    "prettier-project": "yarn prettier-write --parser typescript -- '?(__mocks__|src|tests)/**/*.ts'"
+    "watch-test": "yarn test -- --watch"
   },
   "dependencies": {
     "istanbul-lib-coverage": "^1.1.1",
@@ -254,18 +286,23 @@
     "@types/jest": "^25.2.1",
     "@types/node": "^8.0.31",
     "@types/vscode": "^1.23.0",
+    "@typescript-eslint/eslint-plugin": "^2.32.0",
+    "@typescript-eslint/parser": "^2.32.0",
     "coveralls": "^3.1.0",
     "danger": "^10.1.1",
+    "eslint": "^7.0.0",
+    "eslint-config-prettier": "^6.11.0",
+    "eslint-plugin-import": "^2.20.2",
+    "eslint-plugin-jest": "^23.10.0",
+    "eslint-plugin-jsdoc": "^25.2.0",
+    "eslint-plugin-prefer-arrow": "^1.2.1",
+    "eslint-plugin-prettier": "^3.1.3",
     "jest": "^25.5.0",
-    "lint-staged": "^10.2.0",
     "prettier": "^2.0.5",
     "rimraf": "^3.0.2",
     "ts-jest": "^25.4.0",
     "ts-loader": "^7.0.1",
-    "tslint": "^6.1.2",
-    "tslint-config-prettier": "^1.18.0",
     "typescript": "^3.8.3",
-    "typescript-tslint-plugin": "^0.5.5",
     "vscode-test": "^1.3.0",
     "webpack": "^4.43.0",
     "webpack-cli": "^3.3.11"

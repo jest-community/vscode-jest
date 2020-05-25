@@ -10,7 +10,9 @@ tsconfig.json
 **/tsconfig.json
 jsconfig.json
 jest.config.js
-tslint.json
+.eslintrc.js
+**/.eslintrc.js
+prettier.config.js
 .travis.yml
 yarn.lock
 yarn-error.log

@@ -4,16 +4,15 @@
     "node_modules/jest-editor-support/src": false,
     "coverage/": true
   },
-  "tslint.exclude": "./integrations/*",
   "search.exclude": {
     "out": true,
     "node_modules/jest-editor-support/src": false
   },
   "typescript.tsdk": "./node_modules/typescript/lib",
-  "eslint.enable": false,
-  "tslint.autoFixOnSave": true,
-  "prettier.semi": false,
-  "prettier.printWidth": 120,
-  "prettier.trailingComma": "es5",
-  "prettier.singleQuote": true
+  // eslint
+  "tslint.enable": false,
+  "eslint.enable": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true
+  },
 }

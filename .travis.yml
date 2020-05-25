@@ -8,6 +8,10 @@ stages:
 env:
   - YARN_GPG=no
 
+## disable eol conversion upon clone
+git:
+  autocrlf: input
+
 jobs:
   - stage: "verify"
     name: "verify"
