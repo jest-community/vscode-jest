@@ -12,7 +12,7 @@ import {
   SortedTestResults,
 } from './TestResults';
 import { pathToJest, pathToConfig, cleanAnsi } from './helpers';
-import { CoverageMapProvider } from './Coverage';
+import { CoverageMapProvider, CoverageCodeLensProvider } from './Coverage';
 import {
   updateDiagnostics,
   updateCurrentDiagnostics,
@@ -28,6 +28,7 @@ import { JestProcess, JestProcessManager } from './JestProcessManagement';
 import { isWatchNotSupported, WatchMode } from './Jest';
 import * as messaging from './messaging';
 import { resultsWithoutAnsiEscapeSequence } from './TestResults/TestResult';
+import { CoverageMap, CoverageMapData } from 'istanbul-lib-coverage';
 
 interface InstanceSettings {
   multirootEnv: boolean;
@@ -40,6 +41,7 @@ export class JestExt {
   testResultProvider: TestResultProvider;
   debugCodeLensProvider: DebugCodeLensProvider;
   debugConfigurationProvider: DebugConfigurationProvider;
+  coverageCodeLensProvider: CoverageCodeLensProvider;
 
   // So you can read what's going on
   channel: vscode.OutputChannel;
@@ -77,7 +79,8 @@ export class JestExt {
     debugCodeLensProvider: DebugCodeLensProvider,
     debugConfigurationProvider: DebugConfigurationProvider,
     failDiagnostics: vscode.DiagnosticCollection,
-    instanceSettings: InstanceSettings
+    instanceSettings: InstanceSettings,
+    coverageCodeLensProvider: CoverageCodeLensProvider
   ) {
     this.workspaceFolder = workspaceFolder;
     this.jestWorkspace = jestWorkspace;
@@ -87,6 +90,7 @@ export class JestExt {
     this.pluginSettings = pluginSettings;
     this.debugCodeLensProvider = debugCodeLensProvider;
     this.instanceSettings = instanceSettings;
+    this.coverageCodeLensProvider = coverageCodeLensProvider;
 
     this.coverageMapProvider = new CoverageMapProvider();
     this.coverageOverlay = new CoverageOverlay(
@@ -123,7 +127,7 @@ export class JestExt {
     }
   }
 
-  public startProcess() {
+  public startProcess(): void {
     if (this.jestProcessManager.numberOfProcesses > 0) {
       // tslint:disable-next-line no-console
       console.warn(`process is already running, will not start a new process.`);
@@ -162,20 +166,20 @@ export class JestExt {
     this.assignHandlers(this.jestProcess);
   }
 
-  public stopProcess() {
+  public stopProcess(): Promise<void> {
     this.channel.appendLine('Closing Jest');
     return this.jestProcessManager.stopAll().then(() => {
       this.updateStatusBar('stopped');
     });
   }
 
-  public restartProcess() {
+  public restartProcess(): Promise<void> {
     return this.stopProcess().then(() => {
       this.startProcess();
     });
   }
 
-  public triggerUpdateActiveEditor(editor: vscode.TextEditor) {
+  public triggerUpdateActiveEditor(editor: vscode.TextEditor): void {
     this.coverageOverlay.updateVisibleEditors();
 
     if (!this.canUpdateActiveEditor(editor)) {
@@ -196,7 +200,7 @@ export class JestExt {
     this.parsingTestFile = false;
   }
 
-  public triggerUpdateSettings(updatedSettings: PluginResourceSettings) {
+  public triggerUpdateSettings(updatedSettings: PluginResourceSettings): void {
     this.pluginSettings = updatedSettings;
 
     this.jestWorkspace.rootPath = updatedSettings.rootPath;
@@ -218,7 +222,7 @@ export class JestExt {
     this.restartProcess();
   }
 
-  updateDecorators(testResults: SortedTestResults, editor: vscode.TextEditor) {
+  updateDecorators(testResults: SortedTestResults, editor: vscode.TextEditor): void {
     // Dots
     const styleMap = [
       {
@@ -262,7 +266,7 @@ export class JestExt {
     }
   }
 
-  canUpdateActiveEditor(editor: vscode.TextEditor) {
+  canUpdateActiveEditor(editor: vscode.TextEditor): boolean {
     const inSettings = !editor.document;
     if (inSettings) {
       return false;
@@ -277,7 +281,7 @@ export class JestExt {
     return codeRegex.test(editor.document.uri.fsPath);
   }
 
-  public deactivate() {
+  public deactivate(): void {
     this.jestProcessManager.stopAll();
   }
 
@@ -285,13 +289,13 @@ export class JestExt {
     workspaceFolder: vscode.WorkspaceFolder,
     fileName: string,
     identifier: string
-  ) => {
+  ): Promise<void> => {
     const restart = this.jestProcessManager.numberOfProcesses > 0;
     this.jestProcessManager.stopAll();
 
     this.debugConfigurationProvider.prepareTestRun(fileName, identifier);
 
-    const handle = vscode.debug.onDidTerminateDebugSession((_) => {
+    const handle = vscode.debug.onDidTerminateDebugSession(() => {
       handle.dispose();
       if (restart) {
         this.startProcess();
@@ -311,12 +315,12 @@ export class JestExt {
     }
   };
 
-  onDidCloseTextDocument(document: vscode.TextDocument) {
+  onDidCloseTextDocument(document: vscode.TextDocument): void {
     this.removeCachedTestResults(document);
     this.removeCachedDecorationTypes(document);
   }
 
-  removeCachedTestResults(document: vscode.TextDocument) {
+  removeCachedTestResults(document: vscode.TextDocument): void {
     if (!document || document.isUntitled) {
       return;
     }
@@ -325,7 +329,7 @@ export class JestExt {
     this.testResultProvider.removeCachedResults(filePath);
   }
 
-  removeCachedDecorationTypes(document: vscode.TextDocument) {
+  removeCachedDecorationTypes(document: vscode.TextDocument): void {
     if (!document || !document.fileName) {
       return;
     }
@@ -333,7 +337,7 @@ export class JestExt {
     delete this.failingAssertionDecorators[document.fileName];
   }
 
-  onDidChangeActiveTextEditor(editor: vscode.TextEditor) {
+  onDidChangeActiveTextEditor(editor: vscode.TextEditor): void {
     this.triggerUpdateActiveEditor(editor);
   }
 
@@ -342,7 +346,7 @@ export class JestExt {
    * - before the onDidSaveTextDocument event
    * - the document was changed by an external editor
    */
-  onDidChangeTextDocument(event: vscode.TextDocumentChangeEvent) {
+  onDidChangeTextDocument(event: vscode.TextDocumentChangeEvent): void {
     if (event.document.isDirty) {
       return;
     }
@@ -364,14 +368,14 @@ export class JestExt {
     }
   }
 
-  toggleCoverageOverlay() {
+  toggleCoverageOverlay(): void {
     this.coverageOverlay.toggleVisibility();
 
     // restart jest since coverage condition has changed
     this.triggerUpdateSettings(this.pluginSettings);
   }
 
-  private detectedSnapshotErrors() {
+  private detectedSnapshotErrors(): void {
     if (!this.pluginSettings.enableSnapshotUpdateMessages) {
       return;
     }
@@ -396,7 +400,7 @@ export class JestExt {
       });
   }
 
-  private resetInlineErrorDecorators(editor: vscode.TextEditor) {
+  private resetInlineErrorDecorators(editor: vscode.TextEditor): void {
     if (!this.failingAssertionDecorators[editor.document.fileName]) {
       this.failingAssertionDecorators[editor.document.fileName] = [];
       return;
@@ -412,7 +416,10 @@ export class JestExt {
     this.failingAssertionDecorators[editor.document.fileName] = [];
   }
 
-  private generateInlineErrorDecorator(fileName: string, test: TestResult) {
+  private generateInlineErrorDecorator(
+    fileName: string,
+    test: TestResult
+  ): { style: vscode.TextEditorDecorationType; decorator: vscode.DecorationOptions } {
     const errorMessage = test.terseMessage || test.shortMessage;
     const decorator = {
       range: new vscode.Range(test.lineNumberOfError, 0, test.lineNumberOfError, 0),
@@ -426,7 +433,7 @@ export class JestExt {
     return { style, decorator };
   }
 
-  private handleStdErr(error: Buffer) {
+  private handleStdErr(error: Buffer): void {
     const message = error.toString();
     if (this.shouldIgnoreOutput(message)) {
       return;
@@ -444,7 +451,7 @@ export class JestExt {
     this.channel.appendLine(noANSI);
   }
 
-  private handleJestEditorSupportEvent(output: string) {
+  private handleJestEditorSupportEvent(output: string): void {
     if (output.includes('onRunStart')) {
       this.channel.clear();
       this.updateStatusBar('running', 'Running tests', false);
@@ -459,7 +466,7 @@ export class JestExt {
     }
   }
 
-  private assignHandlers(jestProcess: JestProcess) {
+  private assignHandlers(jestProcess: JestProcess): void {
     jestProcess
       .onJestEditorSupportEvent('executableJSON', (data: JestTotalResults) => {
         this.updateWithData(data);
@@ -480,11 +487,11 @@ export class JestExt {
       });
   }
 
-  private setupStatusBar() {
+  private setupStatusBar(): void {
     this.updateStatusBar('initial', undefined, false);
   }
 
-  private updateStatusBar(status: Status, details?: string, watchMode = true) {
+  private updateStatusBar(status: Status, details?: string, watchMode = true): void {
     const modes: Mode[] = [];
     if (this.coverageOverlay.enabled) {
       modes.push('coverage');
@@ -495,7 +502,7 @@ export class JestExt {
     this.status.update(status, details, modes);
   }
 
-  private setupDecorators() {
+  private setupDecorators(): void {
     this.passingItStyle = decorations.passingItName();
     this.failingItStyle = decorations.failingItName();
     this.skipItStyle = decorations.skipItName();
@@ -509,10 +516,16 @@ export class JestExt {
     );
   }
 
-  private updateWithData(data: JestTotalResults) {
+  _updateCoverageMap(coverageMap: CoverageMap | CoverageMapData): Promise<void> {
+    return this.coverageMapProvider.update(coverageMap).then(() => {
+      this.coverageCodeLensProvider.coverageChanged();
+      this.coverageOverlay.updateVisibleEditors();
+    });
+  }
+  private updateWithData(data: JestTotalResults): void {
     const noAnsiData = resultsWithoutAnsiEscapeSequence(data);
     const normalizedData = resultsWithLowerCaseWindowsDriveLetters(noAnsiData);
-    this.coverageMapProvider.update(normalizedData.coverageMap);
+    this._updateCoverageMap(normalizedData.coverageMap);
 
     const statusList = this.testResultProvider.updateTestResults(normalizedData);
     updateDiagnostics(statusList, this.failDiagnostics);

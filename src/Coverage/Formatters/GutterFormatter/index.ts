@@ -48,7 +48,7 @@ export class GutterFormatter extends AbstractFormatter {
     });
   }
 
-  format(editor: vscode.TextEditor) {
+  format(editor: vscode.TextEditor): void {
     const fileCoverage = this.coverageMapProvider.getFileCoverage(editor.document.fileName);
     if (!fileCoverage) {
       return;
@@ -72,7 +72,7 @@ export class GutterFormatter extends AbstractFormatter {
 
     for (let line = 1; line <= editor.document.lineCount; line++) {
       const zeroBasedLineNumber = line - 1;
-      if (uncoveredLines.indexOf(line.toString()) >= 0) {
+      if (uncoveredLines.indexOf(line) >= 0) {
         coverageFormatting.uncovered.push(
           new vscode.Range(zeroBasedLineNumber, 0, zeroBasedLineNumber, 0)
         );
@@ -121,7 +121,7 @@ export class GutterFormatter extends AbstractFormatter {
     return coverageFormatting;
   }
 
-  clear(editor: vscode.TextEditor) {
+  clear(editor: vscode.TextEditor): void {
     editor.setDecorations(this.coveredLine, []);
     editor.setDecorations(this.partiallyCoveredLine, []);
     editor.setDecorations(this.uncoveredLine, []);
