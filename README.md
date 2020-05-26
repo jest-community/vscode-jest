@@ -127,7 +127,7 @@ Someone to take responsibility for ensuring that the default setup for create-re
 ## Troubleshooting
 
 ### start jest from non-root folder
-If you don't use the root of your project for your JS with Jest tests, do not worry, you can still use this project. You will need to use the "Start Jest Runner" command, and maybe have to configure your own `jest.pathToJest` setting inside the `.vscode/settings.json` to whatever you would use.
+If you don't use the root of your project for your JS with Jest tests, do not worry, you can still use this project. You will need to use the "Jest: Start Runner" command, and maybe have to configure your own `jest.pathToJest` setting inside the `.vscode/settings.json` to whatever you would use.
 
 These are the [activation events](https://code.visualstudio.com/docs/extensionAPI/activation-events) which trigger the runner to start:
 
