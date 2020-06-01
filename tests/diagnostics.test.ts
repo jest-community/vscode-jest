@@ -1,4 +1,5 @@
 jest.unmock('../src/diagnostics');
+jest.unmock('./test-helper');
 import {
   updateDiagnostics,
   updateCurrentDiagnostics,
@@ -12,6 +13,7 @@ import {
   TestAssertionStatus,
 } from 'jest-editor-support';
 import { TestResult, TestReconciliationState } from '../src/TestResults';
+import * as helper from './test-helper';
 
 class MockDiagnosticCollection implements vscode.DiagnosticCollection {
   name = 'test';
@@ -47,17 +49,15 @@ describe('test diagnostics', () => {
     let lineNumber = 17;
 
     function createAssertion(title: string, status: TestReconcilationState): TestAssertionStatus {
-      return {
-        title,
-        status,
+      return helper.makeAssertion(title, status, undefined, undefined, {
         message: `${title} ${status}`,
         line: lineNumber++,
-      };
+      });
     }
     function createTestResult(
       file: string,
       assertions: TestAssertionStatus[],
-      status: TestReconcilationState = 'KnownFail'
+      status: TestReconcilationState = TestReconciliationState.KnownFail
     ): TestFileAssertionStatus {
       return { file, message: `${file}:${status}`, status, assertions };
     }
@@ -84,12 +84,10 @@ describe('test diagnostics', () => {
 
       console.warn = jest.fn();
       const testResult = createTestResult('mocked-test-file.js', [
-        {
-          title: 'should be valid',
-          status: 'KnownFail',
+        helper.makeAssertion('should be valid', TestReconciliationState.KnownFail, [], undefined, {
           message: 'failing reason',
           line: -100,
-        },
+        }),
       ]);
       updateDiagnostics([testResult], mockDiagnostics);
       expect(vscode.Range).toHaveBeenCalledWith(0, 0, 0, Number.MAX_SAFE_INTEGER);
@@ -99,22 +97,26 @@ describe('test diagnostics', () => {
       const mockDiagnostics = new MockDiagnosticCollection();
 
       const testResult = createTestResult('mocked-test-file.js', [
-        {
-          title: 'should be valid',
-          status: 'KnownFail',
-          message: `expect(received).toBe(expected) // Object.is equality
+        helper.makeAssertion(
+          'should be valid',
+          TestReconciliationState.KnownFail,
+          undefined,
+          undefined,
+          {
+            message: `expect(received).toBe(expected) // Object.is equality
 
         Expected: 2
         Received: 1
 
         at Object.toBe (src/pages/Home.test.tsx:6:13)`,
-          shortMessage: `expect(received).toBe(expected) // Object.is equality
+            shortMessage: `expect(received).toBe(expected) // Object.is equality
 
         Expected: 2
         Received: 1`,
-          terseMessage: `Expected: 2, Received: 1`,
-          line: 123,
-        },
+            terseMessage: `Expected: 2, Received: 1`,
+            line: 123,
+          }
+        ),
       ]);
       updateDiagnostics([testResult], mockDiagnostics);
       expect(vscode.Diagnostic).toHaveBeenCalledTimes(1);

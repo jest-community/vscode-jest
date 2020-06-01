@@ -1,4 +1,6 @@
 jest.unmock('../../src/TestResults/TestResultProvider');
+jest.unmock('../../src/TestResults/match-by-context');
+jest.unmock('../test-helper');
 
 const updateFileWithJestStatus = jest.fn();
 const assertionsForTestFile = jest.fn();
@@ -33,28 +35,31 @@ jest.mock('path', () => {
 import { TestResultProvider } from '../../src/TestResults/TestResultProvider';
 import { TestReconciliationState } from '../../src/TestResults';
 import { parseTest } from '../../src/TestParser';
+import * as helper from '../test-helper';
+import { ItBlock } from 'jest-editor-support';
+
+const mockParseTest = (itBlocks: ItBlock[]) => {
+  ((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
+    root: helper.makeRoot(itBlocks),
+    itBlocks,
+  });
+};
 
 describe('TestResultProvider', () => {
   describe('getResults()', () => {
     const filePath = 'file.js';
-    const testBlock = {
-      name: 'test name',
-      start: {
-        line: 2,
-        column: 3,
-      },
-      end: {
-        line: 4,
-        column: 5,
-      },
-    };
-    const assertion = {
-      title: testBlock.name,
-      status: TestReconciliationState.KnownFail,
-      terseMessage: 'terseMessage',
-      shortMessage: 'shortMesage',
-      line: 3,
-    };
+    const testBlock = helper.makeItBlock('test name', [2, 3, 4, 5]);
+    const assertion = helper.makeAssertion(
+      testBlock.name,
+      TestReconciliationState.KnownFail,
+      undefined,
+      undefined,
+      {
+        terseMessage: 'terseMessage',
+        shortMessage: 'shortMesage',
+        line: 3,
+      }
+    );
 
     beforeEach(() => {
       jest.resetAllMocks();
@@ -62,9 +67,7 @@ describe('TestResultProvider', () => {
 
     it('should return the cached results if possible', () => {
       const sut = new TestResultProvider();
-      ((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
-        itBlocks: [],
-      });
+      mockParseTest([]);
       assertionsForTestFile.mockReturnValueOnce([]);
       const expected = sut.getResults(filePath);
 
@@ -73,9 +76,7 @@ describe('TestResultProvider', () => {
 
     it('should re-index the line and column number to zero-based', () => {
       const sut = new TestResultProvider();
-      ((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
-        itBlocks: [testBlock],
-      });
+      mockParseTest([testBlock]);
       assertionsForTestFile.mockReturnValueOnce([assertion]);
       const actual = sut.getResults(filePath);
 
@@ -91,24 +92,20 @@ describe('TestResultProvider', () => {
       });
     });
 
-    it('should look up the test result by line number only if the name matches', () => {
+    it('if context are the same, test will match even if name does not', () => {
       const sut = new TestResultProvider();
-      ((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
-        itBlocks: [testBlock],
-      });
+      mockParseTest([testBlock]);
       const assertionC = { ...assertion };
       assertionC.title = 'xxx';
       assertionsForTestFile.mockReturnValueOnce([assertionC]);
       const actual = sut.getResults(filePath);
       expect(actual).toHaveLength(1);
-      expect(actual[0].status).toBe(TestReconciliationState.Unknown);
+      expect(actual[0].status).toBe(TestReconciliationState.KnownFail);
     });
 
     it('should look up the test result by test name', () => {
       const sut = new TestResultProvider();
-      ((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
-        itBlocks: [testBlock],
-      });
+      mockParseTest([testBlock]);
       const assertionC = { ...assertion };
       assertionC.line = undefined;
       assertionsForTestFile.mockReturnValueOnce([assertionC]);
@@ -130,55 +127,27 @@ describe('TestResultProvider', () => {
       });
     });
 
-    it('should use default values for unmatched assertions', () => {
+    it('unmatched assertions should report the reason', () => {
       const sut = new TestResultProvider();
-      ((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
-        itBlocks: [testBlock],
-      });
+      mockParseTest([testBlock]);
       assertionsForTestFile.mockReturnValueOnce([]);
       const actual = sut.getResults(filePath);
 
       expect(actual).toHaveLength(1);
       expect(actual[0].status).toBe(TestReconciliationState.Unknown);
-      expect(actual[0].shortMessage).toBeUndefined();
+      expect(actual[0].shortMessage).not.toBeUndefined();
       expect(actual[0].terseMessage).toBeUndefined();
     });
     describe('duplicate test names', () => {
-      const testBlock2 = {
-        ...testBlock,
-        start: {
-          line: 5,
-          column: 3,
-        },
-        end: {
-          line: 7,
-          column: 5,
-        },
-      };
-      const testBlock3 = {
-        ...testBlock,
-        start: {
-          line: 20,
-          column: 3,
-        },
-        end: {
-          line: 25,
-          column: 5,
-        },
-      };
+      const testBlock2 = helper.makeItBlock(testBlock.name, [5, 3, 7, 5]);
       beforeEach(() => {});
-      it('can resolve by matching error line', () => {
-        ((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
-          itBlocks: [testBlock, testBlock2],
-        });
+      it('can resolve as long as they have the same context structure', () => {
+        mockParseTest([testBlock, testBlock2]);
 
         const sut = new TestResultProvider();
         assertionsForTestFile.mockReturnValueOnce([
-          assertion,
-          {
-            title: testBlock.name,
-            status: TestReconciliationState.KnownSuccess,
-          },
+          helper.makeAssertion(testBlock.name, TestReconciliationState.KnownFail, [], [1, 0]),
+          helper.makeAssertion(testBlock.name, TestReconciliationState.KnownSuccess, [], [10, 0]),
         ]);
         const actual = sut.getResults(filePath);
 
@@ -186,255 +155,155 @@ describe('TestResultProvider', () => {
         expect(actual[0].status).toBe(TestReconciliationState.KnownFail);
         expect(actual[1].status).toBe(TestReconciliationState.KnownSuccess);
       });
-      it('can resolve even if these tests pass, i.e. no line number', () => {
-        ((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
-          itBlocks: [testBlock2, testBlock3],
-        });
+      it('if context structure are different, match will fail and status = unknown', () => {
+        mockParseTest([testBlock, testBlock2]);
 
         const sut = new TestResultProvider();
+        // note: these 2 assertions have the same line number, therefore will be merge
+        // into a group-node, which made the context difference: source: 2 nodes, assertion: 1 node.
         assertionsForTestFile.mockReturnValueOnce([
-          {
-            title: testBlock.name,
-            status: TestReconciliationState.KnownSuccess,
-          },
-          {
-            title: testBlock.name,
-            status: TestReconciliationState.KnownSuccess,
-            location: { colum: 3, line: 22 },
-          },
+          helper.makeAssertion(testBlock.name, TestReconciliationState.KnownFail, [], [1, 0]),
+          helper.makeAssertion(testBlock.name, TestReconciliationState.KnownSuccess, [], [1, 0]),
         ]);
         const actual = sut.getResults(filePath);
 
         expect(actual).toHaveLength(2);
-        expect(actual.every((r) => r.status === TestReconciliationState.KnownSuccess)).toEqual(
-          true
-        );
-      });
-      it('default to unknown if failed to match by line or location', () => {
-        ((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
-          itBlocks: [testBlock2, testBlock3],
-        });
-
-        const sut = new TestResultProvider();
-        assertionsForTestFile.mockReturnValueOnce([
-          {
-            title: testBlock.name,
-            status: TestReconciliationState.KnownSuccess,
-          },
-          {
-            title: testBlock.name,
-            status: TestReconciliationState.KnownSuccess,
-          },
-        ]);
-        const actual = sut.getResults(filePath);
-
-        expect(actual).toHaveLength(2);
-        expect(actual.every((r) => r.status === TestReconciliationState.Unknown)).toEqual(true);
-        expect(
-          actual.every((r) => r.shortMessage && r.shortMessage.includes('duplicate test names'))
-        ).toEqual(true);
+        expect(actual[0].status).toBe(TestReconciliationState.Unknown);
+        expect(actual[1].status).toBe(TestReconciliationState.Unknown);
       });
     });
+
     it('should only mark error line number if it is within the right itBlock', () => {
       const sut = new TestResultProvider();
-      const testBlock2 = {
-        name: 'test2',
-        start: {
-          line: 5,
-          column: 3,
-        },
-        end: {
-          line: 7,
-          column: 5,
-        },
-      };
-      ((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
-        itBlocks: [testBlock, testBlock2],
-      });
+      const testBlock2 = helper.makeItBlock('test2', [5, 3, 7, 5]);
+      mockParseTest([testBlock, testBlock2]);
       assertionsForTestFile.mockReturnValueOnce([
-        {
-          title: testBlock2.name,
-          status: TestReconciliationState.KnownSuccess,
+        helper.makeAssertion(testBlock.name, TestReconciliationState.KnownSuccess, [], [1, 1]),
+        helper.makeAssertion(testBlock2.name, TestReconciliationState.KnownFail, [], [2, 2], {
           line: 3,
-        },
+        }),
       ]);
       const actual = sut.getResults(filePath);
 
       expect(actual).toHaveLength(2);
+      expect(actual.map((a) => a.name)).toEqual([testBlock.name, testBlock2.name]);
+      expect(actual.map((a) => a.status)).toEqual([
+        TestReconciliationState.KnownSuccess,
+        TestReconciliationState.KnownFail,
+      ]);
       expect(
-        actual.some(
-          (a) => a.name === testBlock.name && a.status === TestReconciliationState.Unknown
-        )
-      ).toEqual(true);
-      expect(
-        actual.some(
-          (a) =>
-            a.name === testBlock2.name &&
-            a.status === TestReconciliationState.KnownSuccess &&
-            a.lineNumberOfError === testBlock2.end.line - 1
-        )
-      ).toEqual(true);
+        actual.find((a) => a.status === TestReconciliationState.KnownFail)?.lineNumberOfError
+      ).toEqual(testBlock2.end.line - 1);
     });
 
-    describe('template literal handling', () => {
-      const testBlock2 = {
-        ...testBlock,
-        // tslint:disable-next-line no-invalid-template-strings
-        name: 'template literal ${num}',
-        start: {
-          line: 5,
-          column: 3,
-        },
-        end: {
-          line: 7,
-          column: 5,
-        },
-      };
-      const useTests = (itBlocks = [testBlock, testBlock2]) => {
-        ((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
-          itBlocks,
-        });
-      };
+    it('can handle template literal in the context', () => {
+      const sut = new TestResultProvider();
+      const testBlock2 = helper.makeItBlock('template literal I got ${str}', [6, 0, 7, 20]);
+      const testBlock3 = helper.makeItBlock('template literal ${i}, ${k}: {something}', [
+        10,
+        5,
+        20,
+        5,
+      ]);
+
+      mockParseTest([testBlock, testBlock3, testBlock2]);
+      assertionsForTestFile.mockReturnValueOnce([
+        helper.makeAssertion(testBlock.name, TestReconciliationState.KnownSuccess, [], [1, 0]),
+        helper.makeAssertion(
+          'template literal I got something like this',
+          TestReconciliationState.KnownFail,
+          [],
+          [2, 0]
+        ),
+        helper.makeAssertion(
+          'template literal 1, 2: {something}',
+          TestReconciliationState.KnownSuccess,
+          [],
+          [3, 0]
+        ),
+      ]);
+      const actual = sut.getResults(filePath);
+      expect(actual).toHaveLength(3);
+      expect(actual.map((a) => a.name)).toEqual([testBlock.name, testBlock2.name, testBlock3.name]);
+      expect(actual.map((a) => a.status)).toEqual([
+        TestReconciliationState.KnownSuccess,
+        TestReconciliationState.KnownFail,
+        TestReconciliationState.KnownSuccess,
+      ]);
+    });
+
+    describe('safe-guard warnings', () => {
+      const consoleWarning = jest.spyOn(console, 'warn').mockImplementation(() => {});
       beforeEach(() => {
         jest.resetAllMocks();
       });
-      it(`find test by assertion error line`, () => {
+      it('when contexts does not align', () => {
         const sut = new TestResultProvider();
-
-        useTests();
+        mockParseTest([testBlock]);
         assertionsForTestFile.mockReturnValueOnce([
-          {
-            title: 'template literal 2',
-            status: TestReconciliationState.KnownFail,
-            line: 6,
-          },
+          helper.makeAssertion('whatever', TestReconciliationState.KnownSuccess, [], [12, 19]),
+          helper.makeAssertion('whatever', TestReconciliationState.KnownSuccess, [], [20, 25]),
         ]);
         const actual = sut.getResults(filePath);
-
-        expect(actual).toHaveLength(2);
-        expect(
-          actual.some(
-            (a) => a.status === TestReconciliationState.Unknown && a.name === testBlock.name
-          )
-        ).toEqual(true);
-        expect(
-          actual.some(
-            (a) => a.status === TestReconciliationState.KnownFail && a.name === testBlock2.name
-          )
-        ).toEqual(true);
+        expect(actual).toHaveLength(1);
+        expect(actual[0].status).toBe(TestReconciliationState.Unknown);
+        expect(actual[0].shortMessage).not.toBeUndefined();
+        expect(consoleWarning).toHaveBeenCalled();
       });
-      it(`find test by assertion location`, () => {
+      it('report warning if context match but neither name nor location matched', () => {
         const sut = new TestResultProvider();
-
-        useTests();
+        mockParseTest([testBlock]);
         assertionsForTestFile.mockReturnValueOnce([
-          {
-            title: 'template literal 2',
-            status: TestReconciliationState.KnownSuccess,
-            location: { colum: 3, line: 6 },
-          },
+          helper.makeAssertion('another name', TestReconciliationState.KnownSuccess, [], [20, 25]),
         ]);
         const actual = sut.getResults(filePath);
-
-        expect(actual).toHaveLength(2);
-        expect(
-          actual.some(
-            (a) => a.status === TestReconciliationState.Unknown && a.name === testBlock.name
-          )
-        ).toEqual(true);
-        expect(
-          actual.some(
-            (a) => a.status === TestReconciliationState.KnownSuccess && a.name === testBlock2.name
-          )
-        ).toEqual(true);
+        expect(actual).toHaveLength(1);
+        expect(actual[0].status).toBe(TestReconciliationState.KnownSuccess);
+        expect(actual[0].shortMessage).toBeUndefined();
+        expect(consoleWarning).toHaveBeenCalled();
       });
-      it(`find test by partial name match`, () => {
+      it('report warning if match failed', () => {
         const sut = new TestResultProvider();
-        useTests();
-
+        mockParseTest([testBlock]);
         assertionsForTestFile.mockReturnValueOnce([
-          {
-            title: 'template literals ok',
-            status: TestReconciliationState.KnownFail,
-          },
-          {
-            title: 'template literal 2',
-            status: TestReconciliationState.KnownSuccess,
-          },
+          helper.makeAssertion(
+            'another name',
+            TestReconciliationState.KnownSuccess,
+            ['d-1'],
+            [20, 25]
+          ),
         ]);
         const actual = sut.getResults(filePath);
-        expect(actual).toHaveLength(2);
-        expect(
-          actual.some(
-            (a) => a.status === TestReconciliationState.Unknown && a.name === testBlock.name
-          )
-        ).toEqual(true);
-        expect(
-          actual.some(
-            (a) => a.status === TestReconciliationState.KnownSuccess && a.name === testBlock2.name
-          )
-        ).toEqual(true);
+        expect(actual).toHaveLength(1);
+        expect(actual[0].status).toBe(TestReconciliationState.Unknown);
+        expect(actual[0].shortMessage).not.toBeUndefined();
+        expect(consoleWarning).toHaveBeenCalled();
       });
-      it(`multiple template literals`, () => {
+      it('1-many match (jest.each) detected', () => {
         const sut = new TestResultProvider();
-        // tslint:disable-next-line: no-invalid-template-strings
-        const testBlock3 = { ...testBlock2, name: 'template literal ${i}, ${k}: {something}' };
-        useTests([testBlock3, testBlock2]);
+        mockParseTest([testBlock]);
         assertionsForTestFile.mockReturnValueOnce([
-          {
-            title: 'template literal I got something like this',
-            status: TestReconciliationState.KnownFail,
-          },
-          {
-            title: 'template literal 1, 2: {something}',
-            status: TestReconciliationState.KnownSuccess,
-          },
+          helper.makeAssertion(testBlock.name, TestReconciliationState.KnownSuccess, [], [1, 12]),
+          helper.makeAssertion(testBlock.name, TestReconciliationState.KnownSuccess, [], [1, 12]),
+          helper.makeAssertion(testBlock.name, TestReconciliationState.KnownSuccess, [], [1, 12]),
         ]);
         const actual = sut.getResults(filePath);
-        expect(actual).toHaveLength(2);
-        expect(
-          actual.some(
-            (a) => a.status === TestReconciliationState.KnownSuccess && a.name === testBlock3.name
-          )
-        ).toEqual(true);
-        expect(
-          actual.some(
-            (a) => a.status === TestReconciliationState.KnownFail && a.name === testBlock2.name
-          )
-        ).toEqual(true);
+        expect(actual).toHaveLength(1);
+        expect(actual[0].status).toBe(TestReconciliationState.KnownSuccess);
+        expect(actual[0].shortMessage).toBeUndefined();
+        expect(consoleWarning).toHaveBeenCalled();
       });
-
-      describe('when match failed', () => {
-        const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
-        beforeEach(() => {
-          jest.resetAllMocks();
-          useTests([testBlock2]);
-          assertionsForTestFile.mockReturnValueOnce([
-            {
-              title: 'template literals 2',
-              status: TestReconciliationState.KnownSuccess,
-            },
-          ]);
-        });
-
-        it(`will report error`, () => {
-          const sut = new TestResultProvider();
-          const actual = sut.getResults(filePath);
-
-          expect(actual).toHaveLength(1);
-          expect(actual[0].status).toBe(TestReconciliationState.Unknown);
-          expect(actual[0].shortMessage).not.toBeUndefined();
-          expect(consoleSpy).not.toHaveBeenCalled();
-        });
-        it('will also output to console in verbose mode', () => {
-          const sut = new TestResultProvider(true);
-          const actual = sut.getResults(filePath);
-
-          expect(actual).toHaveLength(1);
-          expect(actual[0].status).toBe(TestReconciliationState.Unknown);
-          expect(actual[0].shortMessage).not.toBeUndefined();
-          expect(consoleSpy).toHaveBeenCalled();
-        });
+      it('when all goes according to plan, no warning', () => {
+        const sut = new TestResultProvider();
+        mockParseTest([testBlock]);
+        assertionsForTestFile.mockReturnValueOnce([
+          helper.makeAssertion(testBlock.name, TestReconciliationState.KnownFail, [], [1, 12]),
+        ]);
+        const actual = sut.getResults(filePath);
+        expect(actual).toHaveLength(1);
+        expect(actual[0].status).toBe(TestReconciliationState.KnownFail);
+        expect(actual[0].shortMessage).toBeUndefined();
+        expect(consoleWarning).not.toHaveBeenCalled();
       });
     });
   });
@@ -489,5 +358,15 @@ describe('TestResultProvider', () => {
       expect(sut.updateTestResults(results)).toBe(expected);
       expect(updateFileWithJestStatus).toBeCalledWith(results);
     });
+  });
+  it('match exception should just returns empty array and not cause the whole system to crash', () => {
+    const sut = new TestResultProvider();
+    mockParseTest([]);
+    assertionsForTestFile.mockImplementation(() => {
+      throw new Error('whatever');
+    });
+
+    const actual = sut.getResults('whatever');
+    expect(actual).toEqual([]);
   });
 });
