@@ -15,10 +15,10 @@ export class CoverageMapProvider {
   private _map: CoverageMap;
 
   constructor() {
-    this.init();
+    this.reset();
   }
 
-  init(): void {
+  reset(): void {
     this._map = createCoverageMap();
     this.mapStore = createSourceMapStore();
   }
@@ -46,7 +46,7 @@ export class CoverageMapProvider {
   }
   public onVisibilityChanged(visible: boolean): void {
     if (!visible) {
-      this.init();
+      this.reset();
     }
   }
 }

@@ -7,6 +7,9 @@ import { createSourceMapStore } from 'istanbul-lib-source-maps';
 const createSourceMapStoreMock = createSourceMapStore as jest.Mock<any>;
 const createCoverageMapMock = createCoverageMap as jest.Mock<any>;
 describe('CoverageMapProvider', () => {
+  beforeEach(() => {
+    jest.resetAllMocks();
+  });
   describe('constructor()', () => {
     it('should initialize the coverage map', () => {
       const expected: any = {};
@@ -79,9 +82,8 @@ describe('CoverageMapProvider', () => {
 
       const map1: any = createTestMap('map1', ['f1', 'f2']);
       const map2: any = createTestMap('map2', ['f1', 'f3']);
-      createCoverageMapMock.mockReturnValueOnce({
-        data: {},
-      });
+      createCoverageMapMock.mockImplementation((m) => m || { data: {} });
+
       createSourceMapStoreMock.mockReturnValue({
         transformCoverage: (m) => Promise.resolve(m),
       });
@@ -90,6 +92,7 @@ describe('CoverageMapProvider', () => {
       await sut.update(map1);
       await sut.update(map2);
 
+      // expect f2 is override by map2, while the f1 and f3 remains in the map as expected.
       expect(sut.getFileCoverage('f1')).toEqual({ name: 'f1', from: 'map2' });
       expect(sut.getFileCoverage('f2')).toEqual({ name: 'f2', from: 'map1' });
       expect(sut.getFileCoverage('f3')).toEqual({ name: 'f3', from: 'map2' });
@@ -129,11 +132,12 @@ describe('CoverageMapProvider', () => {
   describe('onVisibilityChange', () => {
     it('visibility = false => the internal maps and store will be reset', () => {
       const sut = new CoverageMapProvider();
-      jest.clearAllMocks();
-
-      sut.onVisibilityChanged(false);
       expect(createCoverageMapMock).toBeCalledTimes(1);
       expect(createSourceMapStoreMock).toBeCalledTimes(1);
+
+      sut.onVisibilityChanged(false);
+      expect(createCoverageMapMock).toBeCalledTimes(2);
+      expect(createSourceMapStoreMock).toBeCalledTimes(2);
     });
     it('visibility = true => no-op', () => {
       const sut = new CoverageMapProvider();
