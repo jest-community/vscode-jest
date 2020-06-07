@@ -196,11 +196,11 @@ export class JestExt {
     this.parsingTestFile = false;
   }
 
-  public triggerUpdateSettings(updatedSettings: PluginResourceSettings) {
+  public triggerUpdateSettings(updatedSettings: PluginResourceSettings): void {
     this.pluginSettings = updatedSettings;
 
     this.jestWorkspace.rootPath = updatedSettings.rootPath;
-    this.jestWorkspace.pathToJest = pathToJest(updatedSettings);
+    this.jestWorkspace.jestCommandLine = pathToJest(updatedSettings);
     this.jestWorkspace.pathToConfig = pathToConfig(updatedSettings);
 
     // debug
