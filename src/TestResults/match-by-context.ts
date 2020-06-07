@@ -353,13 +353,10 @@ export const matchByContext = (
 
         // if not all assertions pass: consider it failed...
         const assertions: TestAssertionStatus[] = candidate.nodes.map((n) => n.data);
-        const result = toMatchResult(srcNode.data, assertions[0]);
-        // update status for the group
-        const statusSet = new Set(assertions.map((a) => a.status));
-        if (statusSet.size > 1 && statusSet.has(TestReconciliationState.KnownFail)) {
-          result.status = TestReconciliationState.KnownFail;
-        }
-        return result;
+        // TODO: support multiple errorLine
+        // until we support multiple errors, choose the first error assertion, if any
+        const targetAssertion = assertions.find((a) => a.status === 'KnownFail') || assertions[0];
+        return toMatchResult(srcNode.data, targetAssertion);
       });
     };
 

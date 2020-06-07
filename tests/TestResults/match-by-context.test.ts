@@ -241,23 +241,32 @@ describe('matchContainer', () => {
   });
   describe('1-many (jest.each) match', () => {
     const createTestData = (
-      statusList: TestReconciliationState[]
+      statusList: (TestReconciliationState | [TestReconciliationState, number])[]
     ): [context.ContainerNode<ItBlock>, context.ContainerNode<TestAssertionStatus>] => {
       const t1 = helper.makeItBlock('', [12, 1, 20, 1]);
       const sourceRoot = helper.makeRoot([t1]);
       const tContainer = context.buildSourceContainer(sourceRoot);
 
       // this match jest.each with 2 assertions
-      const assertions = statusList.map((s, idx) =>
-        helper.makeAssertion(`test-${idx}`, s, [], [11, 0])
-      );
+      const assertions = statusList.map((s, idx) => {
+        let state: TestReconciliationState;
+        let override: Partial<TestAssertionStatus>;
+        if (typeof s === 'string') {
+          state = s;
+          override = {};
+        } else {
+          state = s[0];
+          override = { line: s[1] };
+        }
+        return helper.makeAssertion(`test-${idx}`, state, [], [11, 0], override);
+      });
       const aContainer = context.buildAssertionContainer(assertions);
       return [tContainer, aContainer];
     };
     it('any failed assertion will fail the test', () => {
       const [tContainer, aContainer] = createTestData([
         'KnownSuccess',
-        'KnownFail',
+        ['KnownFail', 13],
         'KnownSuccess',
       ]);
       const matched = context.matchByContext('a file', tContainer, aContainer);
@@ -265,6 +274,7 @@ describe('matchContainer', () => {
       expect(matched[0].status).toEqual('KnownFail');
       expect(matched[0].start).toEqual({ line: 11, column: 0 });
       expect(matched[0].end).toEqual({ line: 19, column: 0 });
+      expect(matched[0].lineNumberOfError).toEqual(12);
     });
     it('test is succeeded if all assertions are successful', () => {
       const [tContainer, aContainer] = createTestData([
@@ -285,9 +295,6 @@ describe('matchContainer', () => {
       const matched = context.matchByContext('a file', tContainer, aContainer);
       expect(matched).toHaveLength(1);
       expect(matched[0].status).toEqual(TestReconciliationState.KnownSkip);
-    });
-    it(`if failed, the result should contain all error lines reported`, () => {
-      //TODO
     });
   });
 });
