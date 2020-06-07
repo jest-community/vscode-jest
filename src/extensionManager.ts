@@ -7,6 +7,7 @@ import { DebugCodeLensProvider, TestState } from './DebugCodeLens';
 import { DebugConfigurationProvider } from './DebugConfigurationProvider';
 import { PluginResourceSettings, PluginWindowSettings } from './Settings';
 import { statusBar } from './StatusBar';
+import { CoverageCodeLensProvider } from './Coverage';
 
 export type GetJestExtByURI = (uri: vscode.Uri) => JestExt | undefined;
 
@@ -42,6 +43,7 @@ export function getExtensionResourceSettings(uri: vscode.Uri): PluginResourceSet
 export class ExtensionManager {
   debugCodeLensProvider: DebugCodeLensProvider;
   debugConfigurationProvider: DebugConfigurationProvider;
+  coverageCodeLensProvider: CoverageCodeLensProvider;
 
   private extByWorkspace: Map<string, JestExt> = new Map();
   private context: vscode.ExtensionContext;
@@ -54,10 +56,11 @@ export class ExtensionManager {
 
     this.debugConfigurationProvider = new DebugConfigurationProvider();
     this.debugCodeLensProvider = new DebugCodeLensProvider((uri) => this.getByDocUri(uri));
+    this.coverageCodeLensProvider = new CoverageCodeLensProvider((uri) => this.getByDocUri(uri));
     this.applySettings(getExtensionWindowSettings());
     this.registerAll();
   }
-  applySettings(settings: PluginWindowSettings) {
+  applySettings(settings: PluginWindowSettings): void {
     this.commonPluginSettings = settings;
     const { debugCodeLens } = settings;
     this.debugCodeLensProvider.showWhenTestStateIn = debugCodeLens.enabled
@@ -65,7 +68,7 @@ export class ExtensionManager {
       : [];
     settings.disabledWorkspaceFolders.forEach(this.unregisterByName, this);
   }
-  register(workspaceFolder: vscode.WorkspaceFolder) {
+  register(workspaceFolder: vscode.WorkspaceFolder): void {
     if (!this.shouldStart(workspaceFolder.name)) {
       return;
     }
@@ -105,24 +108,25 @@ export class ExtensionManager {
         this.debugCodeLensProvider,
         this.debugConfigurationProvider,
         failDiagnostics,
-        instanceSettings
+        instanceSettings,
+        this.coverageCodeLensProvider
       )
     );
   }
-  registerAll() {
+  registerAll(): void {
     vscode.workspace.workspaceFolders.forEach(this.register, this);
   }
-  unregister(workspaceFolder: vscode.WorkspaceFolder) {
+  unregister(workspaceFolder: vscode.WorkspaceFolder): void {
     this.unregisterByName(workspaceFolder.name);
   }
-  unregisterByName(name: string) {
+  unregisterByName(name: string): void {
     const extension = this.extByWorkspace.get(name);
     if (extension) {
       extension.deactivate();
       this.extByWorkspace.delete(name);
     }
   }
-  unregisterAll() {
+  unregisterAll(): void {
     const keys = this.extByWorkspace.keys();
     for (const key of keys) {
       this.unregisterByName(key);
@@ -140,7 +144,7 @@ export class ExtensionManager {
     }
     return true;
   }
-  getByName(workspaceFolderName: string) {
+  getByName(workspaceFolderName: string): JestExt | undefined {
     return this.extByWorkspace.get(workspaceFolderName);
   }
   public getByDocUri: GetJestExtByURI = (uri: vscode.Uri) => {
@@ -149,7 +153,7 @@ export class ExtensionManager {
       return this.getByName(workspace.name);
     }
   };
-  async get() {
+  async get(): Promise<JestExt> {
     const workspace =
       vscode.workspace.workspaceFolders.length <= 1
         ? vscode.workspace.workspaceFolders[0]
@@ -164,9 +168,9 @@ export class ExtensionManager {
   }
   registerCommand(
     command: string,
-    callback: (extension: JestExt, ...args: any[]) => any,
-    thisArg?: any
-  ) {
+    callback: (extension: JestExt, ...args: unknown[]) => unknown,
+    thisArg?: unknown
+  ): vscode.Disposable {
     return vscode.commands.registerCommand(command, async (...args) => {
       const extension = await this.get();
       if (extension) {
@@ -174,7 +178,7 @@ export class ExtensionManager {
       }
     });
   }
-  onDidChangeConfiguration(e: vscode.ConfigurationChangeEvent) {
+  onDidChangeConfiguration(e: vscode.ConfigurationChangeEvent): void {
     if (e.affectsConfiguration('jest')) {
       this.applySettings(getExtensionWindowSettings());
       this.registerAll();
@@ -187,17 +191,17 @@ export class ExtensionManager {
       }
     });
   }
-  onDidChangeWorkspaceFolders(e: vscode.WorkspaceFoldersChangeEvent) {
+  onDidChangeWorkspaceFolders(e: vscode.WorkspaceFoldersChangeEvent): void {
     e.added.forEach(this.register, this);
     e.removed.forEach(this.unregister, this);
   }
-  onDidCloseTextDocument(document: vscode.TextDocument) {
+  onDidCloseTextDocument(document: vscode.TextDocument): void {
     const ext = this.getByDocUri(document.uri);
     if (ext) {
       ext.onDidCloseTextDocument(document);
     }
   }
-  onDidChangeActiveTextEditor(editor: vscode.TextEditor) {
+  onDidChangeActiveTextEditor(editor: vscode.TextEditor): void {
     if (editor && editor.document) {
       statusBar.onDidChangeActiveTextEditor(editor);
       const ext = this.getByDocUri(editor.document.uri);
@@ -206,7 +210,7 @@ export class ExtensionManager {
       }
     }
   }
-  onDidChangeTextDocument(event: vscode.TextDocumentChangeEvent) {
+  onDidChangeTextDocument(event: vscode.TextDocumentChangeEvent): void {
     const ext = this.getByDocUri(event.document.uri);
     if (ext) {
       ext.onDidChangeTextDocument(event);

@@ -4,14 +4,21 @@ import { GetJestExtByURI } from '../extensionManager';
 
 export class CoverageCodeLensProvider implements vscode.CodeLensProvider {
   private getJestExt: GetJestExtByURI;
+  private onDidChange: vscode.EventEmitter<void>;
+  onDidChangeCodeLenses: vscode.Event<void>;
 
   constructor(getJestExt: GetJestExtByURI) {
     this.getJestExt = getJestExt;
+    this.onDidChange = new vscode.EventEmitter();
+    this.onDidChangeCodeLenses = this.onDidChange.event;
   }
 
-  public provideCodeLenses(document: vscode.TextDocument, _token: vscode.CancellationToken) {
+  public provideCodeLenses(document: vscode.TextDocument): vscode.CodeLens[] {
     const ext = this.getJestExt(document.uri);
-    const coverage = ext && ext.coverageMapProvider.getFileCoverage(document.fileName);
+    const coverage =
+      ext &&
+      ext.coverageOverlay.enabled &&
+      ext.coverageMapProvider.getFileCoverage(document.fileName);
     if (!coverage) {
       return;
     }
@@ -29,5 +36,8 @@ export class CoverageCodeLensProvider implements vscode.CodeLensProvider {
     };
 
     return [new vscode.CodeLens(range, command)];
+  }
+  public coverageChanged(): void {
+    this.onDidChange.fire();
   }
 }

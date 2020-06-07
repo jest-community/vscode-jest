@@ -2,13 +2,12 @@ import * as vscode from 'vscode';
 
 import { extensionName } from './appGlobals';
 import { statusBar } from './StatusBar';
-import { CoverageCodeLensProvider } from './Coverage';
 import { ExtensionManager, getExtensionWindowSettings } from './extensionManager';
 import { registerSnapshotCodeLens, registerSnapshotPreview } from './SnapshotCodeLens';
 
 let extensionManager: ExtensionManager;
 
-export function activate(context: vscode.ExtensionContext) {
+export function activate(context: vscode.ExtensionContext): void {
   extensionManager = new ExtensionManager(context);
 
   const languages = [
@@ -47,10 +46,7 @@ export function activate(context: vscode.ExtensionContext) {
     ),
     ...registerSnapshotCodeLens(getExtensionWindowSettings().enableSnapshotPreviews),
     ...registerSnapshotPreview(),
-    vscode.languages.registerCodeLensProvider(
-      { pattern: '**/*.{ts,tsx,js,jsx}' },
-      new CoverageCodeLensProvider((uri) => extensionManager.getByDocUri(uri))
-    ),
+    vscode.languages.registerCodeLensProvider(languages, extensionManager.coverageCodeLensProvider),
     vscode.languages.registerCodeLensProvider(languages, extensionManager.debugCodeLensProvider),
     // this provides the opportunity to inject test names into the DebugConfiguration
     vscode.debug.registerDebugConfigurationProvider(
@@ -88,6 +84,6 @@ export function activate(context: vscode.ExtensionContext) {
   );
 }
 
-export function deactivate() {
+export function deactivate(): void {
   extensionManager.unregisterAll();
 }

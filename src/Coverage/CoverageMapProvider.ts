@@ -1,5 +1,10 @@
 import { createSourceMapStore, MapStore } from 'istanbul-lib-source-maps';
-import { createCoverageMap, CoverageMap } from 'istanbul-lib-coverage';
+import {
+  createCoverageMap,
+  CoverageMap,
+  CoverageMapData,
+  FileCoverage,
+} from 'istanbul-lib-coverage';
 
 export class CoverageMapProvider {
   private mapStore: MapStore;
@@ -10,25 +15,38 @@ export class CoverageMapProvider {
   private _map: CoverageMap;
 
   constructor() {
+    this.reset();
+  }
+
+  reset(): void {
     this._map = createCoverageMap();
     this.mapStore = createSourceMapStore();
   }
-
   get map(): CoverageMap {
     return this._map;
   }
 
-  update(obj: CoverageMap | object) {
+  async update(obj?: CoverageMap | CoverageMapData): Promise<void> {
     const map = createCoverageMap(obj);
-    const transformed = this.mapStore.transformCoverage(map);
+    const transformed = await this.mapStore.transformCoverage(map);
     if (this._map) {
-      this._map.merge(transformed.map);
+      transformed.files().forEach((fileName) => {
+        this.setFileCoverage(fileName, transformed);
+      });
     } else {
-      this._map = transformed.map;
+      this._map = transformed;
     }
   }
 
-  public getFileCoverage(filePath: string) {
+  setFileCoverage(filePath: string, map: CoverageMap): void {
+    this._map.data[filePath] = map.fileCoverageFor(filePath);
+  }
+  public getFileCoverage(filePath: string): FileCoverage {
     return this._map.data[filePath];
+  }
+  public onVisibilityChanged(visible: boolean): void {
+    if (!visible) {
+      this.reset();
+    }
   }
 }
