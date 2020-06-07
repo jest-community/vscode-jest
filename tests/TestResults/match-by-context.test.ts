@@ -23,6 +23,12 @@ describe('buildAssertionContainer', () => {
     const a4 = helper.makeAssertion('test-4', 'KnownSuccess', ['d-1'], [4, 0]);
     const a5 = helper.makeAssertion('test-4', 'KnownFail', ['d-2'], [5, 0]);
     const a6 = helper.makeAssertion('test-4', 'KnownFail', ['d-2'], [8, 0]);
+
+    // ensure the assertion hierarchical integrity before building the container
+    expect(
+      [a1, a5, a3, a2, a4, a6].every((a) => a.fullName === a.title || a.ancestorTitles.length > 0)
+    ).toBe(true);
+
     const root = context.buildAssertionContainer([a1, a5, a3, a2, a4, a6]);
     expect(root.childContainers).toHaveLength(2);
     expect(root.childData).toHaveLength(1);
@@ -33,6 +39,10 @@ describe('buildAssertionContainer', () => {
     expect(root.childData.map((n) => [context.isDataNode(n) && n.name, n.zeroBasedLine])).toEqual([
       ['test-1', 1],
     ]);
+    // the original assertion integrity should not be changed
+    expect(
+      [a1, a5, a3, a2, a4, a6].every((a) => a.fullName === a.title || a.ancestorTitles.length > 0)
+    ).toBe(true);
   });
   it('can group assertions with the same line', () => {
     const a1 = helper.makeAssertion('test-1', 'KnownSuccess', [], [2, 0]);

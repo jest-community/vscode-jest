@@ -71,13 +71,13 @@ export class ContainerNode<T> implements ContainerNode<T> {
     if (parentNames.length <= 0) {
       return this;
     }
-    const pn = parentNames.shift();
+    const pn = parentNames[0];
     let container = this.childContainers.find((c) => c.name === pn);
     if (!container && createIfMissing) {
       container = new ContainerNode(pn);
       this.addContainer(container);
     }
-    return container?.findContainer(parentNames, createIfMissing);
+    return container?.findContainer(parentNames.slice(1), createIfMissing);
   };
 
   public addData = (name: string, zeroBasedLine: number, data: T): void => {
@@ -148,9 +148,9 @@ export const buildAssertionContainer = (
 ): ContainerNode<TestAssertionStatus> => {
   const root = new ContainerNode<TestAssertionStatus>(ROOT_NODE_NAME);
   if (assertions.length > 0) {
-    assertions.forEach((d) => {
-      const container = root.findContainer(d.ancestorTitles, true);
-      container.addData(d.title, d.location?.line ?? 0, d);
+    assertions.forEach((a) => {
+      const container = root.findContainer(a.ancestorTitles, true);
+      container.addData(a.title, a.location?.line ?? 0, a);
     });
     // group by line since there could be multiple assertions for the same test block, such
     // as in the jest.each use case
