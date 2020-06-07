@@ -419,7 +419,7 @@ export class JestExt {
   private generateInlineErrorDecorator(
     fileName: string,
     test: TestResult
-  ): { style: vscode.TextEditorDecorationType; decorator: vscode.DecorationOptions } {
+  ): { decorator: vscode.DecorationOptions; style: vscode.TextEditorDecorationType } {
     const errorMessage = test.terseMessage || test.shortMessage;
     const decorator = {
       range: new vscode.Range(test.lineNumberOfError, 0, test.lineNumberOfError, 0),
