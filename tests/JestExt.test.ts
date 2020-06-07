@@ -26,6 +26,7 @@ import * as decorations from '../src/decorations';
 import { updateCurrentDiagnostics } from '../src/diagnostics';
 import { JestProcessManager, JestProcess } from '../src/JestProcessManagement';
 import * as messaging from '../src/messaging';
+import { CoverageMapProvider } from '../src/Coverage';
 
 /* eslint jest/expect-expect: ["error", { "assertFunctionNames": ["expect", "expectItTakesNoAction"] }] */
 
@@ -68,6 +69,7 @@ describe('JestExt', () => {
         extensionSettings,
         debugCodeLensProvider,
         debugConfigurationProvider,
+        null,
         null,
         null
       );
@@ -132,6 +134,7 @@ describe('JestExt', () => {
         debugCodeLensProvider,
         debugConfigurationProvider,
         null,
+        null,
         null
       );
       const editor: any = {
@@ -186,6 +189,7 @@ describe('JestExt', () => {
         debugCodeLensProvider,
         debugConfigurationProvider,
         null,
+        null,
         null
       );
       ((sut.debugConfigurationProvider
@@ -219,6 +223,7 @@ describe('JestExt', () => {
       debugCodeLensProvider,
       debugConfigurationProvider,
       null,
+      null,
       null
     );
     const document = {} as any;
@@ -246,6 +251,7 @@ describe('JestExt', () => {
       extensionSettings,
       debugCodeLensProvider,
       debugConfigurationProvider,
+      null,
       null,
       null
     );
@@ -282,6 +288,7 @@ describe('JestExt', () => {
       debugCodeLensProvider,
       debugConfigurationProvider,
       null,
+      null,
       null
     );
 
@@ -316,6 +323,7 @@ describe('JestExt', () => {
       extensionSettings,
       debugCodeLensProvider,
       debugConfigurationProvider,
+      null,
       null,
       null
     );
@@ -353,6 +361,7 @@ describe('JestExt', () => {
         extensionSettings,
         debugCodeLensProvider,
         debugConfigurationProvider,
+        null,
         null,
         null
       );
@@ -431,6 +440,7 @@ describe('JestExt', () => {
         debugCodeLensProvider,
         debugConfigurationProvider,
         null,
+        null,
         null
       );
       sut.triggerUpdateSettings = jest.fn();
@@ -449,6 +459,7 @@ describe('JestExt', () => {
         settings,
         debugCodeLensProvider,
         debugConfigurationProvider,
+        null,
         null,
         null
       );
@@ -478,6 +489,7 @@ describe('JestExt', () => {
         debugCodeLensProvider,
         debugConfigurationProvider,
         null,
+        null,
         null
       );
       sut.triggerUpdateActiveEditor(editor);
@@ -493,6 +505,7 @@ describe('JestExt', () => {
         extensionSettings,
         debugCodeLensProvider,
         debugConfigurationProvider,
+        null,
         null,
         null
       );
@@ -533,6 +546,7 @@ describe('JestExt', () => {
         extensionSettings,
         debugCodeLensProvider,
         debugConfigurationProvider,
+        null,
         null,
         null
       );
@@ -589,6 +603,7 @@ describe('JestExt', () => {
         settings,
         debugCodeLensProvider,
         debugConfigurationProvider,
+        null,
         null,
         null
       );
@@ -663,6 +678,7 @@ describe('JestExt', () => {
         debugCodeLensProvider,
         debugConfigurationProvider,
         null,
+        null,
         null
       );
 
@@ -702,7 +718,8 @@ describe('JestExt', () => {
         debugCodeLensProvider,
         debugConfigurationProvider,
         null,
-        instanceSettings
+        instanceSettings,
+        null
       );
       const mockProcessManager: any = (JestProcessManager as jest.Mock).mock.instances[0];
       mockProcessManager.startJestProcess.mockReturnValue(mockProcess);
@@ -785,6 +802,7 @@ describe('JestExt', () => {
         debugCodeLensProvider,
         debugConfigurationProvider,
         null,
+        null,
         null
       );
     });
@@ -808,6 +826,30 @@ describe('JestExt', () => {
       channelStub.appendLine.mockClear();
       (sut as any).handleJestEditorSupportEvent('onRunComplete');
       expect(channelStub.appendLine).not.toHaveBeenCalled();
+    });
+  });
+  describe('_updateCoverageMap', () => {
+    it('the overlay and codeLens will be updated when map updated async', async () => {
+      expect.hasAssertions();
+      (CoverageMapProvider as jest.Mock<any>).mockImplementation(() => ({
+        update: () => Promise.resolve(),
+      }));
+      const coverageCodeLensProvider: any = { coverageChanged: jest.fn() };
+      const sut = new JestExt(
+        null,
+        workspaceFolder,
+        projectWorkspace,
+        channelStub,
+        extensionSettings,
+        debugCodeLensProvider,
+        debugConfigurationProvider,
+        null,
+        null,
+        coverageCodeLensProvider
+      );
+      await sut._updateCoverageMap({});
+      expect(coverageCodeLensProvider.coverageChanged).toBeCalled();
+      expect(sut.coverageOverlay.updateVisibleEditors).toBeCalled();
     });
   });
 });

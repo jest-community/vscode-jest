@@ -238,7 +238,7 @@ describe('GutterFormatter', () => {
         asAbsolutePath: (path: string) => path,
       };
       const fileCoverage: any = {
-        getUncoveredLines: () => ['1', '10'],
+        getUncoveredLines: () => [1, 10],
         b: {},
         branchMap: {},
       };

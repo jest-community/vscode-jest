@@ -1,6 +1,5 @@
 jest.unmock('../../src/Coverage/CoverageCodeLensProvider');
 
-// tslint:disable max-classes-per-file
 const rangeConstructor = jest.fn();
 jest.mock('vscode', () => {
   class CodeLens {
@@ -13,9 +12,7 @@ jest.mock('vscode', () => {
     }
   }
 
-  // class EventEmitter {
-  //   fire() {}
-  // }
+  const EventEmitter = jest.fn();
 
   class Position {
     lineNumber: string;
@@ -42,12 +39,11 @@ jest.mock('vscode', () => {
     CodeLens,
     Position,
     Range,
+    EventEmitter,
   };
 });
-
+import * as vscode from 'vscode';
 import { CoverageCodeLensProvider } from '../../src/Coverage/CoverageCodeLensProvider';
-
-// import * as vscode from 'vscode'
 
 describe('CoverageCodeLensProvider', () => {
   let mockJestExt;
@@ -56,12 +52,21 @@ describe('CoverageCodeLensProvider', () => {
   beforeEach(() => {
     mockJestExt = {
       coverageMapProvider: { getFileCoverage: jest.fn() },
+      coverageOverlay: { enabled: true },
     };
     const mockGetExt = jest.fn().mockReturnValue(mockJestExt);
     provider = new CoverageCodeLensProvider(mockGetExt);
   });
   describe('provideCodeLenses', () => {
     const doc = { fileName: 'file.js' };
+    const coverage = {
+      toSummary: () => ({
+        toJSON: () => ({
+          branches: { pct: 10 },
+          lines: { pct: 46.15 },
+        }),
+      }),
+    };
 
     test('do nothing when no coverage', () => {
       mockJestExt.coverageMapProvider.getFileCoverage = () => null;
@@ -70,18 +75,29 @@ describe('CoverageCodeLensProvider', () => {
     });
 
     test('can summarize', () => {
-      const coverage = {
-        toSummary: () => ({
-          toJSON: () => ({
-            branches: { pct: 10 },
-            lines: { pct: 46.15 },
-          }),
-        }),
-      };
       mockJestExt.coverageMapProvider.getFileCoverage = () => coverage;
       const result = provider.provideCodeLenses(doc);
       expect(result).toHaveLength(1);
       expect(result[0].command.title).toEqual('branches: 10%, lines: 46.15%');
+    });
+    test('do nothing when coverage is disabled', () => {
+      mockJestExt.coverageMapProvider.getFileCoverage = () => coverage;
+      mockJestExt.coverageOverlay.enabled = false;
+      const result = provider.provideCodeLenses(doc);
+      expect(result).toBeUndefined();
+    });
+    test('provides trigger to update codeLens on demand', () => {
+      const fireMock = jest.fn();
+      const event: any = { whatever: true };
+      (vscode.EventEmitter as jest.Mocked<any>).mockImplementation(() => ({
+        event,
+        fire: fireMock,
+      }));
+      provider = new CoverageCodeLensProvider(mockJestExt);
+      expect(provider.onDidChangeCodeLenses).toEqual(event);
+
+      provider.coverageChanged();
+      expect(fireMock).toBeCalled();
     });
   });
 });
