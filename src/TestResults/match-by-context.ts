@@ -187,9 +187,9 @@ export const toMatchResult = (
       line: test.end.line - 1,
     },
 
-    status: assertion ? assertion.status : TestReconciliationState.Unknown,
-    shortMessage: assertion ? assertion.shortMessage : err,
-    terseMessage: assertion ? assertion.terseMessage : undefined,
+    status: assertion?.status ?? TestReconciliationState.Unknown,
+    shortMessage: assertion?.shortMessage ?? err,
+    terseMessage: assertion?.terseMessage,
     lineNumberOfError:
       assertion?.line >= test.start.line && assertion?.line <= test.end.line
         ? assertion.line - 1
