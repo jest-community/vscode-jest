@@ -198,9 +198,9 @@ export const toMatchResult = (
 };
 
 /** mark all data and child containers unmatched */
-const toUnmatcheResults = (tContainer: ContainerNode<ItBlock>, err: string): TestResult[] => {
+const toUnmatchedResults = (tContainer: ContainerNode<ItBlock>, err: string): TestResult[] => {
   const results = tContainer.childData.map((n) => toMatchResult(n.data[0], err));
-  tContainer.childContainers.forEach((c) => results.push(...toUnmatcheResults(c, err)));
+  tContainer.childContainers.forEach((c) => results.push(...toUnmatchedResults(c, err)));
   return results;
 };
 
@@ -343,7 +343,7 @@ export const matchByContext = (
       if (matched.length !== 1) {
         warning('match-failed', 'container', t);
         // if we can't find corresponding container to match, the whole container will be considered unmatched
-        return toUnmatcheResults(t, `can not find matching assertion for block ${t.name}`);
+        return toUnmatchedResults(t, `can not find matching assertion for block ${t.name}`);
       }
       return _matchByContext(t, matched[0]);
     };
