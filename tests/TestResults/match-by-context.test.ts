@@ -36,9 +36,7 @@ describe('buildAssertionContainer', () => {
       ['d-1', 2],
       ['d-2', 5],
     ]);
-    expect(root.childData.map((n) => [context.isDataNode(n) && n.name, n.zeroBasedLine])).toEqual([
-      ['test-1', 1],
-    ]);
+    expect(root.childData.map((n) => [n.name, n.zeroBasedLine])).toEqual([['test-1', 1]]);
     // the original assertion integrity should not be changed
     expect(
       [a1, a5, a3, a2, a4, a6].every((a) => a.fullName === a.title || a.ancestorTitles.length > 0)
@@ -54,12 +52,8 @@ describe('buildAssertionContainer', () => {
     expect(root.childData).toHaveLength(2);
     expect(root.childData.map((n) => n.zeroBasedLine)).toEqual([2, 5]);
     const groupNode = root.childData[0];
-    if (context.isDataGroupNode(groupNode)) {
-      expect(groupNode.nodes).toHaveLength(3);
-      expect(groupNode.nodes.map((n) => n.name)).toEqual(['test-1', 'test-3', 'test-2']);
-    } else {
-      expect(context.isDataGroupNode(groupNode)).toBeTruthy();
-    }
+    expect(groupNode.data).toHaveLength(3);
+    expect(groupNode.data.map((n) => n.title)).toEqual(['test-1', 'test-3', 'test-2']);
   });
 
   it('create a container based on assertion ancestorTitles structure', () => {
@@ -237,6 +231,18 @@ describe('matchContainer', () => {
         ['test-1', 'KnownSuccess'],
         ['test-2', 'Unknown'],
       ]);
+    });
+    it('empty desecribe block', () => {
+      const t1 = helper.makeItBlock('test-1', [1, 0, 5, 0]); // under root
+      const d11 = helper.makeDescribeBlock('d-1-1', []);
+      const d1 = helper.makeDescribeBlock('d-1', [d11]);
+      const sourceRoot = helper.makeRoot([d1, t1]);
+      const tContainer = context.buildSourceContainer(sourceRoot);
+      const a1 = helper.makeAssertion('test-1', 'KnownSuccess', [], [6, 0]);
+      const aContainer = context.buildAssertionContainer([a1]);
+      const matched = context.matchByContext('a file', tContainer, aContainer);
+      expect(matched).toHaveLength(1);
+      expect(matched.map((m) => [m.name, m.status])).toEqual([['test-1', 'KnownSuccess']]);
     });
   });
   describe('1-many (jest.each) match', () => {

@@ -45,7 +45,12 @@ export class TestResultProvider {
 
     try {
       const assertions = this.reconciler.assertionsForTestFile(filePath);
-      if (!assertions || assertions.length <= 0) {
+      if (!assertions) {
+        if (this.verbose) {
+          console.log(`perhaps not a test file:${filePath}`);
+        }
+        matchResult = [];
+      } else if (assertions.length <= 0) {
         // no assertion, all tests are unknown
         const { itBlocks } = parseTest(filePath);
         matchResult = itBlocks.map((t) => match.toMatchResult(t, 'no assertion found'));
@@ -54,7 +59,7 @@ export class TestResultProvider {
         const tContainer = match.buildSourceContainer(root);
         const aContainer = match.buildAssertionContainer(assertions);
 
-        matchResult = match.matchByContext(filePath, tContainer, aContainer);
+        matchResult = match.matchByContext(filePath, tContainer, aContainer, this.verbose);
       }
     } catch (e) {
       console.warn(`failed to get test result for ${filePath}:`, e);

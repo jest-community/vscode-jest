@@ -127,7 +127,7 @@ describe('TestResultProvider', () => {
       });
     });
 
-    it('unmatched assertions should report the reason', () => {
+    it('unmatched test should report the reason', () => {
       const sut = new TestResultProvider();
       mockParseTest([testBlock]);
       assertionsForTestFile.mockReturnValueOnce([]);
@@ -155,15 +155,16 @@ describe('TestResultProvider', () => {
         expect(actual[0].status).toBe(TestReconciliationState.KnownFail);
         expect(actual[1].status).toBe(TestReconciliationState.KnownSuccess);
       });
-      it('if context structure are different, match will fail and status = unknown', () => {
+      it('however when context structures are different, duplicate names within the same layer can not be resolved.', () => {
         mockParseTest([testBlock, testBlock2]);
 
         const sut = new TestResultProvider();
         // note: these 2 assertions have the same line number, therefore will be merge
         // into a group-node, which made the context difference: source: 2 nodes, assertion: 1 node.
+        // but since the 2 assertions' name matched the testBlock, it will still be considered as 1-to-many match
         assertionsForTestFile.mockReturnValueOnce([
-          helper.makeAssertion(testBlock.name, TestReconciliationState.KnownFail, [], [1, 0]),
           helper.makeAssertion(testBlock.name, TestReconciliationState.KnownSuccess, [], [1, 0]),
+          helper.makeAssertion(testBlock.name, TestReconciliationState.KnownFail, [], [1, 0]),
         ]);
         const actual = sut.getResults(filePath);
 
@@ -237,21 +238,38 @@ describe('TestResultProvider', () => {
       beforeEach(() => {
         jest.resetAllMocks();
       });
-      it('when contexts does not align', () => {
-        const sut = new TestResultProvider();
-        mockParseTest([testBlock]);
-        assertionsForTestFile.mockReturnValueOnce([
-          helper.makeAssertion('whatever', TestReconciliationState.KnownSuccess, [], [12, 19]),
-          helper.makeAssertion('whatever', TestReconciliationState.KnownSuccess, [], [20, 25]),
-        ]);
-        const actual = sut.getResults(filePath);
-        expect(actual).toHaveLength(1);
-        expect(actual[0].status).toBe(TestReconciliationState.Unknown);
-        expect(actual[0].shortMessage).not.toBeUndefined();
-        expect(consoleWarning).toHaveBeenCalled();
+      describe('when contexts does not align', () => {
+        beforeEach(() => {
+          mockParseTest([testBlock]);
+          assertionsForTestFile.mockReturnValueOnce([
+            helper.makeAssertion('whatever', TestReconciliationState.KnownSuccess, [], [12, 19]),
+            helper.makeAssertion('whatever', TestReconciliationState.KnownSuccess, [], [20, 25]),
+          ]);
+        });
+        it('reprots warning when verbose is true', () => {
+          const sut = new TestResultProvider();
+          sut.verbose = true;
+
+          const actual = sut.getResults(filePath);
+          expect(actual).toHaveLength(1);
+          expect(actual[0].status).toBe(TestReconciliationState.Unknown);
+          expect(actual[0].shortMessage).not.toBeUndefined();
+          expect(consoleWarning).toHaveBeenCalled();
+        });
+        it('not warning if verbose is off', () => {
+          const sut = new TestResultProvider();
+          sut.verbose = false;
+
+          const actual = sut.getResults(filePath);
+          expect(actual).toHaveLength(1);
+          expect(actual[0].status).toBe(TestReconciliationState.Unknown);
+          expect(actual[0].shortMessage).not.toBeUndefined();
+          expect(consoleWarning).not.toHaveBeenCalled();
+        });
       });
       it('report warning if context match but neither name nor location matched', () => {
         const sut = new TestResultProvider();
+        sut.verbose = true;
         mockParseTest([testBlock]);
         assertionsForTestFile.mockReturnValueOnce([
           helper.makeAssertion('another name', TestReconciliationState.KnownSuccess, [], [20, 25]),
@@ -264,6 +282,7 @@ describe('TestResultProvider', () => {
       });
       it('report warning if match failed', () => {
         const sut = new TestResultProvider();
+        sut.verbose = true;
         mockParseTest([testBlock]);
         assertionsForTestFile.mockReturnValueOnce([
           helper.makeAssertion(
@@ -281,6 +300,7 @@ describe('TestResultProvider', () => {
       });
       it('1-many match (jest.each) detected', () => {
         const sut = new TestResultProvider();
+        sut.verbose = true;
         mockParseTest([testBlock]);
         assertionsForTestFile.mockReturnValueOnce([
           helper.makeAssertion(testBlock.name, TestReconciliationState.KnownSuccess, [], [1, 12]),
@@ -295,6 +315,7 @@ describe('TestResultProvider', () => {
       });
       it('when all goes according to plan, no warning', () => {
         const sut = new TestResultProvider();
+        sut.verbose = true;
         mockParseTest([testBlock]);
         assertionsForTestFile.mockReturnValueOnce([
           helper.makeAssertion(testBlock.name, TestReconciliationState.KnownFail, [], [1, 12]),
