@@ -2,16 +2,16 @@ jest.unmock('../../src/TestResults/match-by-context');
 jest.unmock('../test-helper');
 
 import * as helper from '../test-helper';
-import * as context from '../../src/TestResults/match-by-context';
+import * as match from '../../src/TestResults/match-by-context';
 import { TestReconciliationState } from '../../src/TestResults';
-import { ItBlock, TestAssertionStatus } from 'jest-editor-support';
+import { TestAssertionStatus, ParsedNode } from 'jest-editor-support';
 
 describe('buildAssertionContainer', () => {
   it('can build and sort assertions without ancestors', () => {
     const a1 = helper.makeAssertion('test-1', 'KnownSuccess', [], [1, 0]);
     const a2 = helper.makeAssertion('test-2', 'KnownSuccess', [], [2, 0]);
     const a3 = helper.makeAssertion('test-3', 'KnownSuccess', [], [3, 0]);
-    const root = context.buildAssertionContainer([a1, a3, a2]);
+    const root = match.buildAssertionContainer([a1, a3, a2]);
     expect(root.childContainers).toHaveLength(0);
     expect(root.childData).toHaveLength(3);
     expect(root.childData.map((n) => n.zeroBasedLine)).toEqual([1, 2, 3]);
@@ -29,7 +29,7 @@ describe('buildAssertionContainer', () => {
       [a1, a5, a3, a2, a4, a6].every((a) => a.fullName === a.title || a.ancestorTitles.length > 0)
     ).toBe(true);
 
-    const root = context.buildAssertionContainer([a1, a5, a3, a2, a4, a6]);
+    const root = match.buildAssertionContainer([a1, a5, a3, a2, a4, a6]);
     expect(root.childContainers).toHaveLength(2);
     expect(root.childData).toHaveLength(1);
     expect(root.childContainers.map((n) => [n.name, n.zeroBasedLine])).toEqual([
@@ -47,7 +47,7 @@ describe('buildAssertionContainer', () => {
     const a2 = helper.makeAssertion('test-2', 'KnownSuccess', [], [2, 0]);
     const a3 = helper.makeAssertion('test-3', 'KnownSuccess', [], [2, 0]);
     const a4 = helper.makeAssertion('test-4', 'KnownSuccess', [], [5, 0]);
-    const root = context.buildAssertionContainer([a1, a3, a4, a2]);
+    const root = match.buildAssertionContainer([a1, a3, a4, a2]);
     expect(root.childContainers).toHaveLength(0);
     expect(root.childData).toHaveLength(2);
     expect(root.childData.map((n) => n.zeroBasedLine)).toEqual([2, 5]);
@@ -61,7 +61,7 @@ describe('buildAssertionContainer', () => {
     const a2 = helper.makeAssertion('test-2', 'KnownSuccess', ['d-1'], [10, 0]);
     const a3 = helper.makeAssertion('test-3', 'KnownSuccess', ['d-1', 'd-2'], [15, 0]);
     const a4 = helper.makeAssertion('test-4', 'KnownFail', ['d-1'], [20, 0]);
-    const root = context.buildAssertionContainer([a4, a3, a1, a2]);
+    const root = match.buildAssertionContainer([a4, a3, a1, a2]);
     expect(root.childData.map((n) => (n as any).name)).toEqual(['test-1']);
     expect(root.childContainers).toHaveLength(1);
     const d1 = root.findContainer(['d-1']);
@@ -78,7 +78,7 @@ describe('buildSourceContainer', () => {
     const t2 = helper.makeItBlock('test-2', [6, 0, 7, 0]);
     const t3 = helper.makeItBlock('test-3', [8, 0, 10, 0]);
     const sourceRoot = helper.makeRoot([t2, t1, t3]);
-    const root = context.buildSourceContainer(sourceRoot);
+    const root = match.buildSourceContainer(sourceRoot);
     expect(root.childContainers).toHaveLength(0);
     expect(root.childData.map((n) => (n as any).name)).toEqual(['test-1', 'test-2', 'test-3']);
   });
@@ -89,7 +89,7 @@ describe('buildSourceContainer', () => {
     const d1 = helper.makeDescribeBlock('d-1', [t2]);
     const d2 = helper.makeDescribeBlock('d-2', [t3]);
     const sourceRoot = helper.makeRoot([t1, d1, d2]);
-    const root = context.buildSourceContainer(sourceRoot);
+    const root = match.buildSourceContainer(sourceRoot);
     expect(root.childContainers).toHaveLength(2);
     expect(root.childData).toHaveLength(1);
     expect(root.childData.map((n) => (n as any).name)).toEqual([t1.name]);
@@ -106,7 +106,7 @@ describe('buildSourceContainer', () => {
     const t1 = helper.makeItBlock('test-1', [1, 0, 5, 0]);
     const t2 = helper.makeItBlock('test-2', [6, 0, 7, 0]);
     const sourceRoot = helper.makeRoot([t2, t1]);
-    const root = context.buildSourceContainer(sourceRoot);
+    const root = match.buildSourceContainer(sourceRoot);
     expect(root.childContainers).toHaveLength(0);
     expect(root.childData.map((n) => n.zeroBasedLine)).toEqual([0, 5]);
   });
@@ -116,7 +116,7 @@ describe('buildSourceContainer', () => {
     const t3 = helper.makeItBlock('test-3', [8, 0, 10, 0]);
     const d1 = helper.makeDescribeBlock('d-1', [t1, t2]);
     const sourceRoot = helper.makeRoot([t3, d1]);
-    const root = context.buildSourceContainer(sourceRoot);
+    const root = match.buildSourceContainer(sourceRoot);
     expect(root.childData.map((n) => (n as any).name)).toEqual(['test-3']);
     expect(root.childContainers).toHaveLength(1);
     const container = root.childContainers[0];
@@ -127,22 +127,20 @@ describe('buildSourceContainer', () => {
     const t1 = helper.makeItBlock('test-1', [1, 0, 5, 0]);
     const t2 = helper.makeItBlock('test-2', [1, 0, 7, 0]);
     const sourceRoot = helper.makeRoot([t1, t2]);
-    const root = context.buildSourceContainer(sourceRoot);
+    const root = match.buildSourceContainer(sourceRoot);
     expect(root.childData.map((n) => (n as any).name)).toEqual(['test-1', 'test-2']);
     expect(root.childContainers).toHaveLength(0);
   });
 });
-describe('matchContainer', () => {
+describe('matchTestAssertions', () => {
   it('tests are matched by context position regardless name and line', () => {
     const t1 = helper.makeItBlock('test-1', [1, 0, 5, 0]);
     const t2 = helper.makeItBlock('test-2-${num}', [6, 0, 7, 0]);
     const sourceRoot = helper.makeRoot([t2, t1]);
-    const tContainer = context.buildSourceContainer(sourceRoot);
 
     const a1 = helper.makeAssertion('test-1', 'KnownFail', [], [0, 0]);
     const a2 = helper.makeAssertion('test-2-100', 'KnownSuccess', [], [7, 0]);
-    const aContainer = context.buildAssertionContainer([a1, a2]);
-    const matched = context.matchByContext('a file', tContainer, aContainer);
+    const matched = match.matchTestAssertions('a file', sourceRoot, [a1, a2]);
 
     expect(matched).toHaveLength(2);
     expect(matched.map((m) => m.name)).toEqual(['test-1', 'test-2-${num}']);
@@ -153,12 +151,10 @@ describe('matchContainer', () => {
     const t2 = helper.makeItBlock('test-1', [6, 0, 7, 0]);
     const d1 = helper.makeDescribeBlock('d-1', [t2]);
     const sourceRoot = helper.makeRoot([t1, d1]);
-    const tContainer = context.buildSourceContainer(sourceRoot);
 
     const a1 = helper.makeAssertion('test-1', 'KnownFail', [], [0, 0]);
     const a2 = helper.makeAssertion('test-1', 'KnownSuccess', ['d-1'], [5, 0]);
-    const aContainer = context.buildAssertionContainer([a1, a2]);
-    const matched = context.matchByContext('a file', tContainer, aContainer);
+    const matched = match.matchTestAssertions('a file', sourceRoot, [a1, a2]);
     expect(matched.map((m) => m.name)).toEqual(['test-1', 'test-1']);
     expect(matched.map((m) => m.status)).toEqual(['KnownFail', 'KnownSuccess']);
     expect(matched.map((m) => m.start.line)).toEqual([0, 5]);
@@ -168,9 +164,7 @@ describe('matchContainer', () => {
     it('when test block is missing assertion in the same container', () => {
       const t1 = helper.makeItBlock('test-1', [1, 0, 5, 0]);
       const sourceRoot = helper.makeRoot([t1]);
-      const tContainer = context.buildSourceContainer(sourceRoot);
-      const aContainer = context.buildAssertionContainer([]);
-      const matched = context.matchByContext('a file', tContainer, aContainer);
+      const matched = match.matchTestAssertions('a file', sourceRoot, []);
       expect(matched.map((m) => m.name)).toEqual(['test-1']);
       expect(matched.map((m) => m.status)).toEqual(['Unknown']);
       expect(matched.map((m) => m.start.line)).toEqual([0]);
@@ -180,12 +174,10 @@ describe('matchContainer', () => {
       const t1 = helper.makeItBlock('test-1', [1, 0, 5, 0]);
       const t2 = helper.makeItBlock('test-2', [1, 0, 5, 0]);
       const sourceRoot = helper.makeRoot([t1, t2]);
-      const tContainer = context.buildSourceContainer(sourceRoot);
 
       const a1 = helper.makeAssertion('test-1', 'KnownFail', [], [0, 0]);
-      const aContainer = context.buildAssertionContainer([a1]);
 
-      const matched = context.matchByContext('a file', tContainer, aContainer);
+      const matched = match.matchTestAssertions('a file', sourceRoot, [a1]);
       expect(matched.map((m) => [m.name, m.status])).toEqual([
         ['test-1', 'KnownFail'],
         ['test-2', 'Unknown'],
@@ -199,15 +191,13 @@ describe('matchContainer', () => {
       const d11 = helper.makeDescribeBlock('d-1-1', [t4]);
       const d1 = helper.makeDescribeBlock('d-1', [t2, t3, d11]);
       const sourceRoot = helper.makeRoot([t1, d1]);
-      const tContainer = context.buildSourceContainer(sourceRoot);
 
       // assertion missing for 'd-1': t3
       const a1 = helper.makeAssertion('test-1', 'KnownSuccess', [], [6, 0]);
       const a2 = helper.makeAssertion('test-2', 'KnownFail', ['d-1'], [6, 0]);
       const a4 = helper.makeAssertion('test-4', 'KnownSuccess', ['d-1', 'd-1-1'], [9, 0]);
-      const aContainer = context.buildAssertionContainer([a1, a2, a4]);
 
-      const matched = context.matchByContext('a file', tContainer, aContainer);
+      const matched = match.matchTestAssertions('a file', sourceRoot, [a1, a2, a4]);
       expect(matched.map((m) => [m.name, m.status])).toEqual([
         ['test-1', 'KnownSuccess'],
         ['test-2', 'KnownFail'],
@@ -220,13 +210,11 @@ describe('matchContainer', () => {
       const t2 = helper.makeItBlock('test-2', [6, 0, 7, 0]); // under d-1
       const d1 = helper.makeDescribeBlock('d-1', [t2]);
       const sourceRoot = helper.makeRoot([t1, d1]);
-      const tContainer = context.buildSourceContainer(sourceRoot);
 
       // assertion missing for t3
       const a1 = helper.makeAssertion('test-1', 'KnownSuccess', [], [6, 0]);
-      const aContainer = context.buildAssertionContainer([a1]);
 
-      const matched = context.matchByContext('a file', tContainer, aContainer);
+      const matched = match.matchTestAssertions('a file', sourceRoot, [a1]);
       expect(matched.map((m) => [m.name, m.status])).toEqual([
         ['test-1', 'KnownSuccess'],
         ['test-2', 'Unknown'],
@@ -237,10 +225,8 @@ describe('matchContainer', () => {
       const d11 = helper.makeDescribeBlock('d-1-1', []);
       const d1 = helper.makeDescribeBlock('d-1', [d11]);
       const sourceRoot = helper.makeRoot([d1, t1]);
-      const tContainer = context.buildSourceContainer(sourceRoot);
       const a1 = helper.makeAssertion('test-1', 'KnownSuccess', [], [6, 0]);
-      const aContainer = context.buildAssertionContainer([a1]);
-      const matched = context.matchByContext('a file', tContainer, aContainer);
+      const matched = match.matchTestAssertions('a file', sourceRoot, [a1]);
       expect(matched).toHaveLength(1);
       expect(matched.map((m) => [m.name, m.status])).toEqual([['test-1', 'KnownSuccess']]);
     });
@@ -248,10 +234,9 @@ describe('matchContainer', () => {
   describe('1-many (jest.each) match', () => {
     const createTestData = (
       statusList: (TestReconciliationState | [TestReconciliationState, number])[]
-    ): [context.ContainerNode<ItBlock>, context.ContainerNode<TestAssertionStatus>] => {
+    ): [ParsedNode, TestAssertionStatus[]] => {
       const t1 = helper.makeItBlock('', [12, 1, 20, 1]);
       const sourceRoot = helper.makeRoot([t1]);
-      const tContainer = context.buildSourceContainer(sourceRoot);
 
       // this match jest.each with 2 assertions
       const assertions = statusList.map((s, idx) => {
@@ -266,16 +251,15 @@ describe('matchContainer', () => {
         }
         return helper.makeAssertion(`test-${idx}`, state, [], [11, 0], override);
       });
-      const aContainer = context.buildAssertionContainer(assertions);
-      return [tContainer, aContainer];
+      return [sourceRoot, assertions];
     };
     it('any failed assertion will fail the test', () => {
-      const [tContainer, aContainer] = createTestData([
+      const [root, assertions] = createTestData([
         'KnownSuccess',
         ['KnownFail', 13],
         'KnownSuccess',
       ]);
-      const matched = context.matchByContext('a file', tContainer, aContainer);
+      const matched = match.matchTestAssertions('a file', root, assertions);
       expect(matched).toHaveLength(1);
       expect(matched[0].status).toEqual('KnownFail');
       expect(matched[0].start).toEqual({ line: 11, column: 0 });
@@ -283,22 +267,18 @@ describe('matchContainer', () => {
       expect(matched[0].lineNumberOfError).toEqual(12);
     });
     it('test is succeeded if all assertions are successful', () => {
-      const [tContainer, aContainer] = createTestData([
-        'KnownSuccess',
-        'KnownSuccess',
-        'KnownSuccess',
-      ]);
-      const matched = context.matchByContext('a file', tContainer, aContainer);
+      const [root, assertions] = createTestData(['KnownSuccess', 'KnownSuccess', 'KnownSuccess']);
+      const matched = match.matchTestAssertions('a file', root, assertions);
       expect(matched).toHaveLength(1);
       expect(matched[0].status).toEqual('KnownSuccess');
     });
     it('test is skip when all assertions are skipped', () => {
-      const [tContainer, aContainer] = createTestData([
+      const [root, assertions] = createTestData([
         TestReconciliationState.KnownSkip,
         TestReconciliationState.KnownSkip,
         TestReconciliationState.KnownSkip,
       ]);
-      const matched = context.matchByContext('a file', tContainer, aContainer);
+      const matched = match.matchTestAssertions('a file', root, assertions);
       expect(matched).toHaveLength(1);
       expect(matched[0].status).toEqual(TestReconciliationState.KnownSkip);
     });

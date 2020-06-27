@@ -56,10 +56,7 @@ export class TestResultProvider {
         matchResult = itBlocks.map((t) => match.toMatchResult(t, 'no assertion found'));
       } else {
         const { root } = parseTest(filePath);
-        const tContainer = match.buildSourceContainer(root);
-        const aContainer = match.buildAssertionContainer(assertions);
-
-        matchResult = match.matchByContext(filePath, tContainer, aContainer, this.verbose);
+        matchResult = match.matchTestAssertions(filePath, root, assertions, this.verbose);
       }
     } catch (e) {
       console.warn(`failed to get test result for ${filePath}:`, e);
