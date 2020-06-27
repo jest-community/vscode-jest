@@ -47,9 +47,8 @@ export class TestResultProvider {
       const assertions = this.reconciler.assertionsForTestFile(filePath);
       if (!assertions) {
         if (this.verbose) {
-          console.log(`perhaps not a test file:${filePath}`);
+          console.log(`no assertion found, perhaps not a test file? '${filePath}'`);
         }
-        matchResult = [];
       } else if (assertions.length <= 0) {
         // no assertion, all tests are unknown
         const { itBlocks } = parseTest(filePath);
