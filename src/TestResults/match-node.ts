@@ -42,6 +42,7 @@ export class DataNode<T> implements BaseNodeType {
   }
 }
 
+export type ContextType = 'container' | 'data';
 export class ContainerNode<T> implements BaseNodeType {
   public childContainers: ContainerNode<T>[] = [];
   public childData: DataNode<T>[] = [];
@@ -110,5 +111,15 @@ export class ContainerNode<T> implements BaseNodeType {
       this.zeroBasedLine = Math.min(...topLines);
     }
   }
+  // use conditional type to narrow down exactly the type
+  public getChildren<C extends ContextType>(type: C): ChildNodeType<T, C>[] {
+    const children = type === 'container' ? this.childContainers : this.childData;
+    // has to cast explicitly due to the issue:
+    // https://github.com/microsoft/TypeScript/issues/24929
+    return children as ChildNodeType<T, C>[];
+  }
 }
 export type NodeType<T> = ContainerNode<T> | DataNode<T>;
+export type ChildNodeType<T, C extends ContextType> = C extends 'container'
+  ? ContainerNode<T>
+  : DataNode<T>;

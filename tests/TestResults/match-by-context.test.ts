@@ -1,4 +1,4 @@
-jest.unmock('../../src/TestResults/MatchNode');
+jest.unmock('../../src/TestResults/match-node');
 jest.unmock('../../src/TestResults/match-by-context');
 jest.unmock('../test-helper');
 
