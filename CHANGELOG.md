@@ -5,6 +5,7 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 
+* refactor editor decorations and load icons from `vscode-codicons` [@Tymek](https://github.com/Tymek)
 * move test status indicator from editor text to gutter [@Tymek](https://github.com/Tymek)
 * improve create-react-app detection logic - stephtr
 * improve the detection of cases in which Jest needs to be restarted with `--watchAll` - [@lordofthelake](https://github.com/lordofthelake)  

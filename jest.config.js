@@ -15,4 +15,7 @@ module.exports = {
     'debug',
     '@babel/template',
   ],
+  moduleNameMapper: {
+    '\\.(svg)$': '<rootDir>/tests/fileMock.ts',
+  },
 };

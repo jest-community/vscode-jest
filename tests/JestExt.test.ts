@@ -10,7 +10,7 @@ jest.mock('../src/DebugCodeLens', () => ({
   DebugCodeLensProvider: class MockCodeLensProvider {},
 }));
 jest.mock('os');
-jest.mock('../src/decorations');
+jest.mock('../src/Decorations');
 
 const update = jest.fn();
 const statusBar = {
@@ -20,9 +20,9 @@ jest.mock('../src/StatusBar', () => ({ statusBar }));
 
 import { JestExt } from '../src/JestExt';
 import { ProjectWorkspace } from 'jest-editor-support';
-import { window, workspace, debug } from 'vscode';
+import { window, workspace, debug, ExtensionContext, TextEditorDecorationType } from 'vscode';
 import { hasDocument, isOpenInMultipleEditors } from '../src/editor';
-import * as decorations from '../src/decorations';
+import { Decorations } from '../src/Decorations';
 import { updateCurrentDiagnostics } from '../src/diagnostics';
 import { JestProcessManager, JestProcess } from '../src/JestProcessManagement';
 import * as messaging from '../src/messaging';
@@ -32,6 +32,7 @@ import { CoverageMapProvider } from '../src/Coverage';
 
 describe('JestExt', () => {
   const getConfiguration = workspace.getConfiguration as jest.Mock<any>;
+  const context = { asAbsolutePath: (text) => text } as ExtensionContext;
   const workspaceFolder = { name: 'test-folder' } as any;
   let projectWorkspace: ProjectWorkspace;
   const channelStub = { appendLine: jest.fn(), clear: jest.fn(), show: jest.fn() } as any;
@@ -62,7 +63,7 @@ describe('JestExt', () => {
 
     beforeEach(() => {
       sut = new JestExt(
-        null,
+        context,
         workspaceFolder,
         projectWorkspace,
         channelStub,
@@ -76,7 +77,9 @@ describe('JestExt', () => {
 
       sut.canUpdateActiveEditor = jest.fn().mockReturnValueOnce(true);
       sut.debugCodeLensProvider.didChange = jest.fn();
-      ((decorations.failingAssertionStyle as unknown) as jest.Mock<{}>).mockReturnValue({});
+      ((Decorations.prototype.failingAssertionStyle as unknown) as jest.Mock<{}>).mockReturnValue(
+        {}
+      );
       ((sut.testResultProvider.getSortedResults as unknown) as jest.Mock<{}>).mockReturnValueOnce({
         success: [],
         fail: [],
@@ -126,7 +129,7 @@ describe('JestExt', () => {
         enableInlineErrorMessages: true,
       };
       const sut = new JestExt(
-        null,
+        context,
         workspaceFolder,
         projectWorkspace,
         channelStub,
@@ -142,9 +145,8 @@ describe('JestExt', () => {
         setDecorations: jest.fn(),
       };
       const expected = {};
-      ((decorations.failingAssertionStyle as unknown) as jest.Mock<{}>).mockReturnValueOnce(
-        expected
-      );
+      ((Decorations.prototype
+        .failingAssertionStyle as unknown) as jest.Mock<{}>).mockReturnValueOnce(expected);
       sut.canUpdateActiveEditor = jest.fn().mockReturnValueOnce(true);
       sut.testResultProvider.getSortedResults = jest.fn().mockReturnValueOnce({
         success: [],
@@ -181,7 +183,7 @@ describe('JestExt', () => {
 
       const debugConfiguration = { type: 'dummyconfig' };
       const sut = new JestExt(
-        null,
+        context,
         workspaceFolder,
         projectWorkspace,
         channelStub,
@@ -215,7 +217,7 @@ describe('JestExt', () => {
   describe('onDidCloseTextDocument()', () => {
     const projectWorkspace = new ProjectWorkspace(null, null, null, null);
     const sut = new JestExt(
-      null,
+      context,
       workspaceFolder,
       projectWorkspace,
       channelStub,
@@ -244,7 +246,7 @@ describe('JestExt', () => {
   describe('removeCachedTestResults()', () => {
     const projectWorkspace = new ProjectWorkspace(null, null, null, null);
     const sut = new JestExt(
-      null,
+      context,
       workspaceFolder,
       projectWorkspace,
       channelStub,
@@ -280,7 +282,7 @@ describe('JestExt', () => {
   describe('removeCachedAnnotations()', () => {
     const projectWorkspace = new ProjectWorkspace(null, null, null, null);
     const sut = new JestExt(
-      null,
+      context,
       workspaceFolder,
       projectWorkspace,
       channelStub,
@@ -316,7 +318,7 @@ describe('JestExt', () => {
     const editor: any = {};
     const projectWorkspace = new ProjectWorkspace(null, null, null, null);
     const sut = new JestExt(
-      null,
+      context,
       workspaceFolder,
       projectWorkspace,
       channelStub,
@@ -354,7 +356,7 @@ describe('JestExt', () => {
     beforeEach(() => {
       const projectWorkspace = new ProjectWorkspace(null, null, null, null);
       sut = new JestExt(
-        null,
+        context,
         workspaceFolder,
         projectWorkspace,
         channelStub,
@@ -432,7 +434,7 @@ describe('JestExt', () => {
   describe('toggleCoverageOverlay()', () => {
     it('should toggle the coverage overlay visibility', () => {
       const sut = new JestExt(
-        null,
+        context,
         workspaceFolder,
         projectWorkspace,
         channelStub,
@@ -452,7 +454,7 @@ describe('JestExt', () => {
     it('overrides showCoverageOnLoad settings', () => {
       const settings = { showCoverageOnLoad: true } as any;
       const sut = new JestExt(
-        null,
+        context,
         workspaceFolder,
         projectWorkspace,
         channelStub,
@@ -481,7 +483,7 @@ describe('JestExt', () => {
       const editor: any = {};
 
       const sut = new JestExt(
-        null,
+        context,
         workspaceFolder,
         projectWorkspace,
         channelStub,
@@ -498,7 +500,7 @@ describe('JestExt', () => {
     });
     it('should update both decorators and diagnostics for valid editor', () => {
       const sut = new JestExt(
-        null,
+        context,
         workspaceFolder,
         projectWorkspace,
         channelStub,
@@ -539,7 +541,7 @@ describe('JestExt', () => {
       jest.resetAllMocks();
       const projectWorkspace = new ProjectWorkspace(null, null, null, null);
       sut = new JestExt(
-        null,
+        context,
         workspaceFolder,
         projectWorkspace,
         channelStub,
@@ -589,14 +591,9 @@ describe('JestExt', () => {
 
     beforeEach(() => {
       jest.resetAllMocks();
-      ((decorations.failingItName as unknown) as jest.Mock<{}>).mockReturnValue({ key: 'fail' });
-      ((decorations.passingItName as unknown) as jest.Mock<{}>).mockReturnValue({ key: 'pass' });
-      ((decorations.skipItName as unknown) as jest.Mock<{}>).mockReturnValue({ key: 'skip' });
-      ((decorations.notRanItName as unknown) as jest.Mock<{}>).mockReturnValue({ key: 'notRan' });
-
       const projectWorkspace = new ProjectWorkspace(null, null, null, null);
       sut = new JestExt(
-        null,
+        context,
         workspaceFolder,
         projectWorkspace,
         channelStub,
@@ -607,6 +604,11 @@ describe('JestExt', () => {
         null,
         null
       );
+
+      sut['decorations'].passing = { key: 'pass' } as TextEditorDecorationType;
+      sut['decorations'].failing = { key: 'fail' } as TextEditorDecorationType;
+      sut['decorations'].skip = { key: 'skip' } as TextEditorDecorationType;
+      sut['decorations'].unknown = { key: 'unknown' } as TextEditorDecorationType;
 
       mockEditor.setDecorations = jest.fn();
       sut.debugCodeLensProvider.didChange = jest.fn();
@@ -630,7 +632,7 @@ describe('JestExt', () => {
             expect(args[1].length).toBe(1);
             break;
           case 'skip':
-          case 'notRan':
+          case 'unknown':
             expect(args[1].length).toBe(0);
             break;
           default:
@@ -642,17 +644,16 @@ describe('JestExt', () => {
     it('will update inlineError decorator only if setting is enabled', () => {
       const testResults2: any = { success: [], fail: [tr1, tr2], skip: [], unknown: [] };
       const expected = {};
-      ((decorations.failingAssertionStyle as unknown) as jest.Mock<{}>).mockReturnValueOnce(
-        expected
-      );
+      ((Decorations.prototype
+        .failingAssertionStyle as unknown) as jest.Mock<{}>).mockReturnValueOnce(expected);
       sut.updateDecorators(testResults2, mockEditor);
-      expect(decorations.failingAssertionStyle).not.toBeCalled();
+      expect(Decorations.prototype.failingAssertionStyle).not.toBeCalled();
       expect(mockEditor.setDecorations).toHaveBeenCalledTimes(4);
 
       jest.clearAllMocks();
       settings.enableInlineErrorMessages = true;
       sut.updateDecorators(testResults2, mockEditor);
-      expect(decorations.failingAssertionStyle).toHaveBeenCalledTimes(2);
+      expect(Decorations.prototype.failingAssertionStyle).toHaveBeenCalledTimes(2);
       expect(mockEditor.setDecorations).toHaveBeenCalledTimes(6);
     });
   });
@@ -670,7 +671,7 @@ describe('JestExt', () => {
       jest.resetAllMocks();
       const projectWorkspace = new ProjectWorkspace(null, null, null, null);
       sut = new JestExt(
-        null,
+        context,
         workspaceFolder,
         projectWorkspace,
         channelStub,
@@ -710,7 +711,7 @@ describe('JestExt', () => {
       const mockProcess: any = mockJestProcess();
 
       const jestExt = new JestExt(
-        null,
+        context,
         workspaceFolder,
         projectWorkspace,
         channelStub,
@@ -794,7 +795,7 @@ describe('JestExt', () => {
       jest.resetAllMocks();
       const projectWorkspace = new ProjectWorkspace(null, null, null, null);
       sut = new JestExt(
-        null,
+        context,
         workspaceFolder,
         projectWorkspace,
         channelStub,
@@ -836,7 +837,7 @@ describe('JestExt', () => {
       }));
       const coverageCodeLensProvider: any = { coverageChanged: jest.fn() };
       const sut = new JestExt(
-        null,
+        context,
         workspaceFolder,
         projectWorkspace,
         channelStub,
