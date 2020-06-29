@@ -50,6 +50,7 @@ export class JestExt {
 
   private jestWorkspace: ProjectWorkspace;
   private pluginSettings: PluginResourceSettings;
+  private context: vscode.ExtensionContext;
   private workspaceFolder: vscode.WorkspaceFolder;
   private instanceSettings: InstanceSettings;
 
@@ -82,6 +83,7 @@ export class JestExt {
     instanceSettings: InstanceSettings,
     coverageCodeLensProvider: CoverageCodeLensProvider
   ) {
+    this.context = context;
     this.workspaceFolder = workspaceFolder;
     this.jestWorkspace = jestWorkspace;
     this.channel = outputChannel;
@@ -503,10 +505,10 @@ export class JestExt {
   }
 
   private setupDecorators(): void {
-    this.passingItStyle = decorations.passingItName();
-    this.failingItStyle = decorations.failingItName();
-    this.skipItStyle = decorations.skipItName();
-    this.unknownItStyle = decorations.notRanItName();
+    this.passingItStyle = decorations.passingItName(this.context);
+    this.failingItStyle = decorations.failingItName(this.context);
+    this.skipItStyle = decorations.skipItName(this.context);
+    this.unknownItStyle = decorations.notRanItName(this.context);
   }
 
   private shouldIgnoreOutput(text: string): boolean {

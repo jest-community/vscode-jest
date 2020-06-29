@@ -5,6 +5,7 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 
+* move test status indicator from editor text to gutter [@Tymek](https://github.com/Tymek)
 * improve create-react-app detection logic - stephtr
 * improve the detection of cases in which Jest needs to be restarted with `--watchAll` - [@lordofthelake](https://github.com/lordofthelake)  
 * upgrade all dependencies to the latest, except istanbul-lib-xxx, which requires more code change and will be handled in a separate coverage PR. - @connectdotz

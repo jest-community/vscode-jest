@@ -1,27 +1,40 @@
 jest.unmock('../src/decorations');
+
 jest.mock('vscode', () => {
   return {
     DecorationRangeBehavior: {
       ClosedClosed: {},
     },
-    OverviewRulerLane: {},
+    OverviewRulerLane: {
+      Left: {},
+    },
     window: {
       createTextEditorDecorationType: jest.fn(),
     },
+    TextEditorDecorationType: jest.fn(),
   };
 });
 
 import { passingItName, failingItName, skipItName, notRanItName } from '../src/decorations';
 import * as vscode from 'vscode';
 
-function testRangeBehavior(factoryMethod: () => void) {
+function testRangeBehavior(
+  factoryMethod: (context: vscode.ExtensionContext) => vscode.TextEditorDecorationType
+) {
   it('should set the range behavior', () => {
     const mock = (vscode.window.createTextEditorDecorationType as unknown) as jest.Mock<{}>;
+    const context = {
+      asAbsolutePath: (name: string) => name,
+    };
     mock.mockReset();
-    factoryMethod();
 
-    expect(mock.mock.calls).toHaveLength(1);
+    factoryMethod((context as unknown) as vscode.ExtensionContext);
+
+    expect(mock).toHaveBeenCalledTimes(1);
     expect(mock.mock.calls[0][0].rangeBehavior).toBe(vscode.DecorationRangeBehavior.ClosedClosed);
+    expect(mock.mock.calls[0][0].overviewRulerLane).toBe(vscode.OverviewRulerLane.Left);
+    expect(mock.mock.calls[0][0].overviewRulerColor).toBeTruthy();
+    expect(mock.mock.calls[0][0].gutterIconPath).toBeTruthy();
   });
 }
 
