@@ -3,6 +3,8 @@ import { AbstractFormatter } from '../AbstractFormatter';
 import * as vscode from 'vscode';
 import { FileCoverage } from 'istanbul-lib-coverage';
 import { isValidLocation } from '../helpers';
+import prepareIcon from '../../../decorations/prepareIcon';
+import coverageGutterIcon from '../../../../icons/coverage.svg';
 
 export interface CoverageLines {
   covered: vscode.Range[];
@@ -23,18 +25,14 @@ export class GutterFormatter extends AbstractFormatter {
       backgroundColor: '',
       overviewRulerColor: 'rgba(121, 31, 10, 0.75)',
       overviewRulerLane: vscode.OverviewRulerLane.Left,
-      gutterIconPath: context.asAbsolutePath(
-        './src/Coverage/Formatters/GutterFormatter/uncovered-gutter-icon.svg'
-      ),
+      gutterIconPath: prepareIcon(context, 'uncovered', coverageGutterIcon, '#791F0A'),
     });
 
     this.partiallyCoveredLine = vscode.window.createTextEditorDecorationType({
       backgroundColor: 'rgba(121, 86, 10, 0.75)',
       overviewRulerColor: 'rgba(121, 86, 10, 0.75)',
       overviewRulerLane: vscode.OverviewRulerLane.Left,
-      gutterIconPath: context.asAbsolutePath(
-        './src/Coverage/Formatters/GutterFormatter/partially-covered-gutter-icon.svg'
-      ),
+      gutterIconPath: prepareIcon(context, 'partially-covered', coverageGutterIcon, '#79560A'),
     });
 
     this.coveredLine = vscode.window.createTextEditorDecorationType({
@@ -42,9 +40,7 @@ export class GutterFormatter extends AbstractFormatter {
       backgroundColor: '',
       overviewRulerColor: '',
       overviewRulerLane: vscode.OverviewRulerLane.Left,
-      gutterIconPath: context.asAbsolutePath(
-        './src/Coverage/Formatters/GutterFormatter/covered-gutter-icon.svg'
-      ),
+      gutterIconPath: prepareIcon(context, 'covered', coverageGutterIcon, '#2D790A'),
     });
   }
 
