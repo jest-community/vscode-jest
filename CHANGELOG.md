@@ -10,6 +10,7 @@ Bug-fixes within the same version aren't needed
 * upgrade all dependencies to the latest, except istanbul-lib-xxx, which requires more code change and will be handled in a separate coverage PR. - @connectdotz
 * code base clean up: migrate from tslint to eslint and adopted the latest recommended coding style, adopt semi-colon, added more ci check... - @connectdotz
 * resolve coverage map merge issue, upgrade istanbul dependencies to the latest and move to async coverageMap update. @connectdotz
+* introducing a new matching algorithm to use context relationship in matching test blocks and assertions - @connectdotz
 -->
 
 ### 3.2.0

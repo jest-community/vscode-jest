@@ -149,6 +149,11 @@
   resolved "https://registry.yarnpkg.com/@babel/parser/-/parser-7.9.6.tgz#3b1bbb30dabe600cd72db58720998376ff653bc7"
   integrity sha512-AoeIEJn8vt+d/6+PXDRPaksYhnlbMIiejioBZvvMQsOjW/JYK6k/0dKnvvP3EhK5GfMBWDPtrxRtegWdAcdq9Q==
 
+"@babel/parser@^7.8.3":
+  version "7.10.2"
+  resolved "https://registry.yarnpkg.com/@babel/parser/-/parser-7.10.2.tgz#871807f10442b92ff97e4783b9b54f6a0ca812d0"
+  integrity sha512-PApSXlNMJyB4JiGVhCOlzKIif+TKFTvu0aQAhnTvfP/z3vVSN6ZypH5bfUNwFXXjRQtUEBNFd2PtmCmG2Py3qQ==
+
 "@babel/plugin-syntax-async-generators@^7.8.4":
   version "7.8.4"
   resolved "https://registry.yarnpkg.com/@babel/plugin-syntax-async-generators/-/plugin-syntax-async-generators-7.8.4.tgz#a983fb1aeb2ec3f6ed042a210f640e90e786fe0d"
@@ -1246,11 +1251,6 @@ babel-preset-jest@^25.5.0:
   dependencies:
     babel-plugin-jest-hoist "^25.5.0"
     babel-preset-current-node-syntax "^0.1.2"
-
-babylon@^6.14.1:
-  version "6.18.0"
-  resolved "https://registry.yarnpkg.com/babylon/-/babylon-6.18.0.tgz#af2f3b88fa6f5c1e4c634d1a0f8eac4f55b395e3"
-  integrity sha512-q/UEjfGJ2Cm3oKV71DJz9d25TPnq5rhBVL2Q4fA5wcC3jcrdn7+SssEybFIxwAvvP+YCsCYNKughoF33GxgycQ==
 
 balanced-match@^1.0.0:
   version "1.0.0"
@@ -3621,17 +3621,17 @@ jest-each@^25.5.0:
     jest-util "^25.5.0"
     pretty-format "^25.5.0"
 
-jest-editor-support@^27.2.0:
-  version "27.2.0"
-  resolved "https://registry.yarnpkg.com/jest-editor-support/-/jest-editor-support-27.2.0.tgz#4f4308180ce9b77529a77503882c32cbe0381bca"
-  integrity sha512-sJ0aAcKq81HFACyCJUfyuJ+9SFMU71UH9o3XHbbX95jCdoZ21SWyTHkGdn8afi7xRbccKPguCLqGSaMph6SoYA==
+jest-editor-support@^28.0.0-beta:
+  version "28.0.0-beta.0"
+  resolved "https://registry.yarnpkg.com/jest-editor-support/-/jest-editor-support-28.0.0-beta.0.tgz#2c7277be185f17393d08bebeb2e4f4c0ba7df62f"
+  integrity sha512-9n/nCnsMwnfujhfzaJ9RH19/E1NVjJZoU+sNic79mKPH74ihprN8gAzH25gt5HFpJnuaRlVmOMEMjynHwDSyww==
   dependencies:
+    "@babel/parser" "^7.8.3"
     "@babel/traverse" "^7.6.2"
+    "@babel/types" "^7.8.3"
     "@jest/types" "^24.8.0"
-    babylon "^6.14.1"
     core-js "^3.2.1"
     jest-snapshot "^24.7.0"
-    typescript "^3.4.3"
 
 jest-environment-jsdom@^25.5.0:
   version "25.5.0"
@@ -6434,7 +6434,7 @@ typedarray@^0.0.6:
   resolved "https://registry.yarnpkg.com/typedarray/-/typedarray-0.0.6.tgz#867ac74e3864187b1d3d47d996a78ec5c8830777"
   integrity sha1-hnrHTjhkGHsdPUfZlqeOxciDB3c=
 
-typescript@^3.4.3, typescript@^3.8.3:
+typescript@^3.8.3:
   version "3.8.3"
   resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.8.3.tgz#409eb8544ea0335711205869ec458ab109ee1061"
   integrity sha512-MYlEfn5VrLNsgudQTVJeNaQFUAI7DkhnOjdpAp4T+ku1TfQClewlbSuTVHiA+8skNBgaf02TL/kLOvig4y3G8w==

@@ -4,7 +4,7 @@ import { FileCoverage } from 'istanbul-lib-coverage';
 import * as path from 'path';
 import { cleanAnsi } from '../helpers';
 
-interface Position {
+export interface Location {
   /** Zero-based column number */
   column: number;
 
@@ -12,10 +12,13 @@ interface Position {
   line: number;
 }
 
-export interface TestResult {
+export interface LocationRange {
+  start: Location;
+  end: Location;
+}
+
+export interface TestResult extends LocationRange {
   name: string;
-  start: Position;
-  end: Position;
 
   status: TestReconciliationState;
   shortMessage?: string;
@@ -88,7 +91,9 @@ export const coverageMapWithLowerCaseWindowsDriveLetters = (data: JestTotalResul
  *
  * @param data Parsed JSON results
  */
-export const resultsWithLowerCaseWindowsDriveLetters = (data: JestTotalResults) => {
+export const resultsWithLowerCaseWindowsDriveLetters = (
+  data: JestTotalResults
+): JestTotalResults => {
   if (path.sep === '\\') {
     return {
       ...data,
@@ -103,7 +108,7 @@ export const resultsWithLowerCaseWindowsDriveLetters = (data: JestTotalResults) 
 /**
  * Removes ANSI escape sequence characters from test results in order to get clean messages
  */
-export const resultsWithoutAnsiEscapeSequence = (data: JestTotalResults) => {
+export const resultsWithoutAnsiEscapeSequence = (data: JestTotalResults): JestTotalResults => {
   if (!data || !data.testResults) {
     return data;
   }
