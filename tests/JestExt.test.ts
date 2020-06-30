@@ -10,7 +10,9 @@ jest.mock('../src/DebugCodeLens', () => ({
   DebugCodeLensProvider: class MockCodeLensProvider {},
 }));
 jest.mock('os');
-jest.mock('../src/Decorations');
+jest.mock('../src/decorations/StateDecorations', () => ({
+  StateDecorations: jest.fn(),
+}));
 
 const update = jest.fn();
 const statusBar = {
@@ -22,7 +24,7 @@ import { JestExt } from '../src/JestExt';
 import { ProjectWorkspace } from 'jest-editor-support';
 import { window, workspace, debug, ExtensionContext, TextEditorDecorationType } from 'vscode';
 import { hasDocument, isOpenInMultipleEditors } from '../src/editor';
-import { Decorations } from '../src/Decorations';
+import { StateDecorations } from '../src/decorations/StateDecorations';
 import { updateCurrentDiagnostics } from '../src/diagnostics';
 import { JestProcessManager, JestProcess } from '../src/JestProcessManagement';
 import * as messaging from '../src/messaging';
@@ -32,6 +34,7 @@ import { CoverageMapProvider } from '../src/Coverage';
 
 describe('JestExt', () => {
   const getConfiguration = workspace.getConfiguration as jest.Mock<any>;
+  const StateDecorationsMock = StateDecorations as jest.Mock;
   const context = { asAbsolutePath: (text) => text } as ExtensionContext;
   const workspaceFolder = { name: 'test-folder' } as any;
   let projectWorkspace: ProjectWorkspace;
@@ -77,9 +80,6 @@ describe('JestExt', () => {
 
       sut.canUpdateActiveEditor = jest.fn().mockReturnValueOnce(true);
       sut.debugCodeLensProvider.didChange = jest.fn();
-      ((Decorations.prototype.failingAssertionStyle as unknown) as jest.Mock<{}>).mockReturnValue(
-        {}
-      );
       ((sut.testResultProvider.getSortedResults as unknown) as jest.Mock<{}>).mockReturnValueOnce({
         success: [],
         fail: [],
@@ -128,6 +128,10 @@ describe('JestExt', () => {
         debugCodeLens: {},
         enableInlineErrorMessages: true,
       };
+      const expected = { key: 'value' };
+      StateDecorationsMock.mockImplementation(() => ({
+        failingAssertionStyle: jest.fn().mockReturnValueOnce(expected),
+      }));
       const sut = new JestExt(
         context,
         workspaceFolder,
@@ -144,9 +148,6 @@ describe('JestExt', () => {
         document: { fileName: 'file.js' },
         setDecorations: jest.fn(),
       };
-      const expected = {};
-      ((Decorations.prototype
-        .failingAssertionStyle as unknown) as jest.Mock<{}>).mockReturnValueOnce(expected);
       sut.canUpdateActiveEditor = jest.fn().mockReturnValueOnce(true);
       sut.testResultProvider.getSortedResults = jest.fn().mockReturnValueOnce({
         success: [],
@@ -576,6 +577,7 @@ describe('JestExt', () => {
     let sut: JestExt;
     const mockEditor: any = { document: { uri: { fsPath: `file://a/b/c.js` } } };
     const emptyTestResults = { success: [], fail: [], skip: [], unknown: [] };
+    const failingAssertionStyle = jest.fn();
 
     const settings: any = {
       debugCodeLens: {},
@@ -591,6 +593,13 @@ describe('JestExt', () => {
 
     beforeEach(() => {
       jest.resetAllMocks();
+      StateDecorationsMock.mockImplementation(() => ({
+        passing: { key: 'pass' } as TextEditorDecorationType,
+        failing: { key: 'fail' } as TextEditorDecorationType,
+        skip: { key: 'skip' } as TextEditorDecorationType,
+        unknown: { key: 'unknown' } as TextEditorDecorationType,
+        failingAssertionStyle,
+      }));
       const projectWorkspace = new ProjectWorkspace(null, null, null, null);
       sut = new JestExt(
         context,
@@ -604,11 +613,6 @@ describe('JestExt', () => {
         null,
         null
       );
-
-      sut['decorations'].passing = { key: 'pass' } as TextEditorDecorationType;
-      sut['decorations'].failing = { key: 'fail' } as TextEditorDecorationType;
-      sut['decorations'].skip = { key: 'skip' } as TextEditorDecorationType;
-      sut['decorations'].unknown = { key: 'unknown' } as TextEditorDecorationType;
 
       mockEditor.setDecorations = jest.fn();
       sut.debugCodeLensProvider.didChange = jest.fn();
@@ -644,16 +648,15 @@ describe('JestExt', () => {
     it('will update inlineError decorator only if setting is enabled', () => {
       const testResults2: any = { success: [], fail: [tr1, tr2], skip: [], unknown: [] };
       const expected = {};
-      ((Decorations.prototype
-        .failingAssertionStyle as unknown) as jest.Mock<{}>).mockReturnValueOnce(expected);
+      failingAssertionStyle.mockReturnValueOnce(expected);
       sut.updateDecorators(testResults2, mockEditor);
-      expect(Decorations.prototype.failingAssertionStyle).not.toBeCalled();
+      expect(failingAssertionStyle).not.toBeCalled();
       expect(mockEditor.setDecorations).toHaveBeenCalledTimes(4);
 
       jest.clearAllMocks();
       settings.enableInlineErrorMessages = true;
       sut.updateDecorators(testResults2, mockEditor);
-      expect(Decorations.prototype.failingAssertionStyle).toHaveBeenCalledTimes(2);
+      expect(failingAssertionStyle).toHaveBeenCalledTimes(2);
       expect(mockEditor.setDecorations).toHaveBeenCalledTimes(6);
     });
   });

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { ProjectWorkspace, JestTotalResults } from 'jest-editor-support';
 
-import { Decorations } from './Decorations';
+import { StateDecorations } from './decorations/StateDecorations';
 import { PluginResourceSettings } from './Settings';
 import { statusBar, Status, StatusBar, Mode } from './StatusBar';
 import {
@@ -50,7 +50,7 @@ export class JestExt {
 
   private jestWorkspace: ProjectWorkspace;
   private pluginSettings: PluginResourceSettings;
-  private decorations: Decorations;
+  private decorations: StateDecorations;
   private workspaceFolder: vscode.WorkspaceFolder;
   private instanceSettings: InstanceSettings;
 
@@ -109,7 +109,7 @@ export class JestExt {
     this.handleJestEditorSupportEvent = this.handleJestEditorSupportEvent.bind(this);
 
     // The theme stuff
-    this.decorations = new Decorations(context);
+    this.decorations = new StateDecorations(context);
     // The bottom bar thing
     this.setupStatusBar();
     // reset the jest diagnostics
