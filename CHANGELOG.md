@@ -7,13 +7,15 @@ Bug-fixes within the same version aren't needed
 
 * refactor editor decorations and load icons from `vscode-codicons` [@Tymek](https://github.com/Tymek)
 * move test status indicator from editor text to gutter [@Tymek](https://github.com/Tymek)
+-->
+
+### 4.0.0-alpha.0
 * improve create-react-app detection logic - stephtr
 * improve the detection of cases in which Jest needs to be restarted with `--watchAll` - [@lordofthelake](https://github.com/lordofthelake)  
 * upgrade all dependencies to the latest, except istanbul-lib-xxx, which requires more code change and will be handled in a separate coverage PR. - @connectdotz
 * code base clean up: migrate from tslint to eslint and adopted the latest recommended coding style, adopt semi-colon, added more ci check... - @connectdotz
 * resolve coverage map merge issue, upgrade istanbul dependencies to the latest and move to async coverageMap update. @connectdotz
 * introducing a new matching algorithm to use context relationship in matching test blocks and assertions - @connectdotz
--->
 
 ### 3.2.0
 * prevent auto starting watch-mode jest process when the parent process is stopped, which can lead to orphan process during deactivation among others. - @connectdotz
