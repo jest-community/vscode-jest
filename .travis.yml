@@ -1,8 +1,36 @@
 language: node_js
+
+stages:
+  - verify
+  - test
+  - pre-publish
+
+env:
+  - YARN_GPG=no
+
+## disable eol conversion upon clone
+git:
+  autocrlf: input
+
+jobs:
+  - stage: "verify"
+    name: "verify"
+    node_js: "10"
+    os: osx
+    script: yarn danger ci
+
 node_js:
-  - "8"
+  - "10"
+  - "lts/*"
+
+os:
+  - osx
+  - linux
+  - windows
+
 script:
   - yarn ci
   - cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js
-  - yarn danger
   - yarn vscode:prepublish
+  
+

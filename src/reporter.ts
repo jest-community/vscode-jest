@@ -2,12 +2,12 @@
 class VSCodeJestReporter {
   onRunStart() {
     // tslint:disable-next-line: no-console
-    console.log('onRunStart')
+    console.log('onRunStart');
   }
   onRunComplete() {
     // tslint:disable-next-line: no-console
-    console.log('onRunComplete')
+    console.log('onRunComplete');
   }
 }
 
-module.exports = VSCodeJestReporter
+module.exports = VSCodeJestReporter;

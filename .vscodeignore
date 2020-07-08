@@ -9,8 +9,10 @@ tsconfig.json
 **/*.ts
 **/tsconfig.json
 jsconfig.json
-jest.json
-tslint.json
+jest.config.js
+.eslintrc.js
+**/.eslintrc.js
+prettier.config.js
 .travis.yml
 yarn.lock
 yarn-error.log
@@ -19,4 +21,5 @@ coverage
 .github/**
 images/**
 !images/vscode-jest.png
+node_modules
 webpack.config.js

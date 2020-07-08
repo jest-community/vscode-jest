@@ -1,74 +1,57 @@
-jest.unmock('../../src/TestResults/TestResult')
-jest.unmock('../../src/helpers')
-jest.mock('path', () => ({ sep: require.requireActual('path').sep }))
+jest.unmock('../../src/TestResults/TestResult');
+jest.unmock('../../src/helpers');
+jest.mock('path', () => ({ sep: require.requireActual('path').sep }));
 
-import {
+import * as TestResult from '../../src/TestResults/TestResult';
+import * as path from 'path';
+
+const {
   resultsWithLowerCaseWindowsDriveLetters,
   coverageMapWithLowerCaseWindowsDriveLetters,
   testResultsWithLowerCaseWindowsDriveLetters,
   resultsWithoutAnsiEscapeSequence,
   withLowerCaseWindowsDriveLetter,
-} from '../../src/TestResults/TestResult'
-import * as path from 'path'
+} = TestResult;
 
 describe('TestResult', () => {
   describe('resultsWithLowerCaseWindowsDriveLetters', () => {
     describe('on POSIX systems', () => {
       it('should return the results unchanged', () => {
-        ;(path as any).sep = '/'
-        const expected: any = {}
+        (path as any).sep = '/';
+        const expected: any = {};
 
-        expect(resultsWithLowerCaseWindowsDriveLetters(expected)).toBe(expected)
-      })
-    })
+        expect(resultsWithLowerCaseWindowsDriveLetters(expected)).toBe(expected);
+      });
+    });
 
     // tslint:disable no-shadowed-variable
     describe('on Windows systems', () => {
       beforeEach(() => {
-        jest.doMock('../../src/TestResults/TestResult', () => ({
-          ...require.requireActual('../../src/TestResults/TestResult'),
-          coverageMapWithLowerCaseWindowsDriveLetters: jest.fn(),
-          testResultsWithLowerCaseWindowsDriveLetters: jest.fn(),
-        }))
-        ;(path as any).sep = '\\'
-      })
+        (path as any).sep = '\\';
+      });
 
       it('should normalize paths in the coverage map', () => {
-        const {
-          resultsWithLowerCaseWindowsDriveLetters,
-          coverageMapWithLowerCaseWindowsDriveLetters,
-        } = require('../../src/TestResults/TestResult')
-        const expected = {}
-        coverageMapWithLowerCaseWindowsDriveLetters.mockReturnValueOnce(expected)
-
-        const data: any = { coverageMap: {} }
-        expect(resultsWithLowerCaseWindowsDriveLetters(data)).toEqual({
-          coverageMap: expected,
-        })
-      })
+        const spy = jest.spyOn(TestResult, 'coverageMapWithLowerCaseWindowsDriveLetters');
+        const data: any = { coverageMap: {} };
+        resultsWithLowerCaseWindowsDriveLetters(data);
+        expect(spy).toHaveBeenCalled();
+      });
 
       it('should normalize paths in the test results', () => {
-        const {
-          resultsWithLowerCaseWindowsDriveLetters,
-          testResultsWithLowerCaseWindowsDriveLetters,
-        } = require('../../src/TestResults/TestResult')
-        const expected = {}
-        testResultsWithLowerCaseWindowsDriveLetters.mockReturnValueOnce(expected)
-
-        const data: any = { coverageMap: {} }
-        expect(resultsWithLowerCaseWindowsDriveLetters(data)).toEqual({
-          coverageMap: expected,
-        })
-      })
-    })
-  })
+        const spy = jest.spyOn(TestResult, 'testResultsWithLowerCaseWindowsDriveLetters');
+        const data: any = { coverageMap: {} };
+        resultsWithLowerCaseWindowsDriveLetters(data);
+        expect(spy).toHaveBeenCalled();
+      });
+    });
+  });
 
   describe('resultsWithoutAnsiEscapeSequence', () => {
     it('should not break when there is no data or testResults', () => {
-      expect(resultsWithoutAnsiEscapeSequence(undefined)).toEqual(undefined)
-      const noTestResults: any = {}
-      expect(resultsWithoutAnsiEscapeSequence(noTestResults)).toEqual({})
-    })
+      expect(resultsWithoutAnsiEscapeSequence(undefined)).toEqual(undefined);
+      const noTestResults: any = {};
+      expect(resultsWithoutAnsiEscapeSequence(noTestResults)).toEqual({});
+    });
     it('should remove ANSI characters from the test results when provided', () => {
       const data: any = {
         testResults: [
@@ -84,43 +67,50 @@ describe('TestResult', () => {
             ],
           },
         ],
-      }
+      };
       expect(resultsWithoutAnsiEscapeSequence(data).testResults).toEqual([
         {
           message: '<body> <div> <div class="root" > Learn React </div> </div></body>',
           assertionResults: [
-            { failureMessages: ['<body> <div> <div class="root" > Learn React </div> </div></body>'] },
+            {
+              failureMessages: [
+                '<body> <div> <div class="root" > Learn React </div> </div></body>',
+              ],
+            },
           ],
         },
-      ])
-    })
-  })
+      ]);
+    });
+  });
 
   describe('testResultsWithLowerCaseWindowsDriveLetters', () => {
     it('should return nothing the test results when the results are undefined', () => {
-      const testResults: any = undefined
-      expect(testResultsWithLowerCaseWindowsDriveLetters(testResults)).toBeUndefined()
-    })
+      const testResults: any = undefined;
+      expect(testResultsWithLowerCaseWindowsDriveLetters(testResults)).toBeUndefined();
+    });
 
     it('should return the test results when no tests were run', () => {
-      const testResults: any = []
-      expect(testResultsWithLowerCaseWindowsDriveLetters(testResults)).toEqual(testResults)
-    })
+      const testResults: any = [];
+      expect(testResultsWithLowerCaseWindowsDriveLetters(testResults)).toEqual(testResults);
+    });
 
     it('should normalizes paths in the test results when provided', () => {
-      const testResults: any = [{ name: 'c:\\drive\\is\\lowercase' }, { name: 'D:\\drive\\is\\uppercase' }]
+      const testResults: any = [
+        { name: 'c:\\drive\\is\\lowercase' },
+        { name: 'D:\\drive\\is\\uppercase' },
+      ];
       expect(testResultsWithLowerCaseWindowsDriveLetters(testResults)).toEqual([
         { name: 'c:\\drive\\is\\lowercase' },
         { name: 'd:\\drive\\is\\uppercase' },
-      ])
-    })
-  })
+      ]);
+    });
+  });
 
   describe('coverageMapWithLowerCaseWindowsDriveLetters', () => {
     it('should return nothing when coverage was not collected', () => {
-      const data: any = {}
-      expect(coverageMapWithLowerCaseWindowsDriveLetters(data)).toBeUndefined()
-    })
+      const data: any = {};
+      expect(coverageMapWithLowerCaseWindowsDriveLetters(data)).toBeUndefined();
+    });
 
     it('should normalizes paths in the coverage map when collected', () => {
       const data: any = {
@@ -134,7 +124,7 @@ describe('TestResult', () => {
             property: {},
           },
         },
-      }
+      };
       expect(coverageMapWithLowerCaseWindowsDriveLetters(data)).toEqual({
         'c:\\drive\\is\\lowercase': {
           path: 'c:\\drive\\is\\lowercase',
@@ -144,19 +134,19 @@ describe('TestResult', () => {
           path: 'd:\\drive\\is\\uppercase',
           property: {},
         },
-      })
-    })
-  })
+      });
+    });
+  });
 
   describe('withLowerCaseDriveLetter', () => {
     it('should return a new file path when provided a path with an upper case drive letter', () => {
-      const filePath = 'C:\\path\\file.ext'
-      expect(withLowerCaseWindowsDriveLetter(filePath)).toBe('c:\\path\\file.ext')
-    })
+      const filePath = 'C:\\path\\file.ext';
+      expect(withLowerCaseWindowsDriveLetter(filePath)).toBe('c:\\path\\file.ext');
+    });
 
     it('should indicate no change is required otherwise', () => {
-      const filePath = 'c:\\path\\file.ext'
-      expect(withLowerCaseWindowsDriveLetter(filePath)).toBeUndefined()
-    })
-  })
-})
+      const filePath = 'c:\\path\\file.ext';
+      expect(withLowerCaseWindowsDriveLetter(filePath)).toBeUndefined();
+    });
+  });
+});

@@ -1,12 +1,12 @@
-import * as vscode from 'vscode'
-import { SnapshotMetadata } from 'jest-editor-support'
+import * as vscode from 'vscode';
+import { SnapshotMetadata } from 'jest-editor-support';
 
-import { extensionName } from '../appGlobals'
+import { extensionName } from '../appGlobals';
 
-export const previewCommand = `${extensionName}.snapshot.preview`
+export const previewCommand = `${extensionName}.snapshot.preview`;
 
 export function registerSnapshotPreview() {
-  let panel: vscode.WebviewPanel = null
+  let panel: vscode.WebviewPanel = null;
 
   const escaped = (snapshot: string) => {
     if (snapshot) {
@@ -16,25 +16,30 @@ export function registerSnapshotPreview() {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;')
         .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-      return `<pre>${escaped}</pre>`
+        .replace(/>/g, '&gt;');
+      return `<pre>${escaped}</pre>`;
     }
-  }
+  };
 
   return [
     vscode.commands.registerCommand(previewCommand, (snapshot: SnapshotMetadata) => {
       if (panel) {
-        panel.reveal()
+        panel.reveal();
       } else {
-        panel = vscode.window.createWebviewPanel('view_snapshot', snapshot.name, vscode.ViewColumn.Two, {})
+        panel = vscode.window.createWebviewPanel(
+          'view_snapshot',
+          snapshot.name,
+          vscode.ViewColumn.Two,
+          {}
+        );
 
         panel.onDidDispose(() => {
-          panel = null
-        })
+          panel = null;
+        });
       }
 
-      panel.webview.html = escaped(snapshot.content)
-      panel.title = snapshot.name
+      panel.webview.html = escaped(snapshot.content);
+      panel.title = snapshot.name;
     }),
-  ]
+  ];
 }

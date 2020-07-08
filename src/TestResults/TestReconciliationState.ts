@@ -1,4 +1,4 @@
-export type TestReconciliationState = 'Unknown' | 'KnownSuccess' | 'KnownFail' | 'KnownSkip'
+export type TestReconciliationState = 'Unknown' | 'KnownSuccess' | 'KnownFail' | 'KnownSkip';
 
 // tslint:disable-next-line variable-name
 export const TestReconciliationState = {
@@ -6,4 +6,4 @@ export const TestReconciliationState = {
   KnownSuccess: 'KnownSuccess' as TestReconciliationState,
   KnownFail: 'KnownFail' as TestReconciliationState,
   KnownSkip: 'KnownSkip' as TestReconciliationState,
-}
+};
