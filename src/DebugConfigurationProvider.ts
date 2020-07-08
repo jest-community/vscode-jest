@@ -77,7 +77,10 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
       debugConfiguration.protocol = 'inspector';
     } else {
       // Plain jest setup
-      debugConfiguration.program = '${workspaceFolder}/node_modules/jest/bin/jest';
+      debugConfiguration.program = '${workspaceFolder}/node_modules/.bin/jest';
+      debugConfiguration.windows = {
+        program: '${workspaceFolder}/node_modules/jest/bin/jest',
+      };
     }
 
     return [debugConfiguration];

@@ -220,7 +220,10 @@
               "cwd": "^\"\\${workspaceFolder}\"",
               "console": "integratedTerminal",
               "internalConsoleOptions": "neverOpen",
-              "disableOptimisticBPs": true
+              "disableOptimisticBPs": true,
+              "windows": {
+                "program": "^\"\\${workspaceFolder}/node_modules/jest/bin/jest\""
+              }
             }
           },
           {
