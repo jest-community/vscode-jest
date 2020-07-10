@@ -12,7 +12,7 @@ import skipIcon from 'vscode-codicons/src/icons/debug-step-over.svg';
 import unknownIcon from 'vscode-codicons/src/icons/question.svg';
 import prepareIcon from './prepareIcon';
 
-export class StateDecorations {
+export class TestStatus {
   public passing: TextEditorDecorationType;
   public failing: TextEditorDecorationType;
   public skip: TextEditorDecorationType;
@@ -42,6 +42,7 @@ export class StateDecorations {
     light?: /* optional overrides */ [string, string?]
   ): TextEditorDecorationType {
     const [icon, overviewRulerColor] = dark;
+    const [iconLite, overviewRulerColorLite] = light ?? [];
 
     const options: DecorationRenderOptions = {
       gutterIconPath: icon,
@@ -52,7 +53,7 @@ export class StateDecorations {
         gutterIconPath: icon,
       },
       light: {
-        gutterIconPath: light !== undefined ? light[0] : icon,
+        gutterIconPath: light !== undefined ? iconLite : icon,
       },
     };
 
@@ -61,36 +62,10 @@ export class StateDecorations {
       options['dark']['overviewRulerColor'] = overviewRulerColor;
     }
 
-    if (light !== undefined && light[1] !== undefined) {
-      options['light']['overviewRulerColor'] = light[1];
+    if (overviewRulerColorLite !== undefined) {
+      options['light']['overviewRulerColor'] = overviewRulerColorLite;
     }
 
     return window.createTextEditorDecorationType(options);
-  }
-
-  public failingAssertionStyle(text: string): TextEditorDecorationType {
-    return window.createTextEditorDecorationType({
-      isWholeLine: true,
-      overviewRulerColor: 'red',
-      overviewRulerLane: OverviewRulerLane.Left,
-      light: {
-        before: {
-          color: '#FF564B',
-        },
-        after: {
-          color: '#FF564B',
-          contentText: ' // ' + text,
-        },
-      },
-      dark: {
-        before: {
-          color: '#AD322D',
-        },
-        after: {
-          color: '#AD322D',
-          contentText: ' // ' + text,
-        },
-      },
-    });
   }
 }

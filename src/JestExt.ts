@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import { ProjectWorkspace, JestTotalResults } from 'jest-editor-support';
 
-import { StateDecorations } from './decorations/StateDecorations';
+import { TestStatus } from './decorations/TestStatus';
+import inlineErrorStyle from './decorations/inlineError';
 import { PluginResourceSettings } from './Settings';
 import { statusBar, Status, StatusBar, Mode } from './StatusBar';
 import {
@@ -50,7 +51,7 @@ export class JestExt {
 
   private jestWorkspace: ProjectWorkspace;
   private pluginSettings: PluginResourceSettings;
-  private decorations: StateDecorations;
+  private decorations: TestStatus;
   private workspaceFolder: vscode.WorkspaceFolder;
   private instanceSettings: InstanceSettings;
 
@@ -109,7 +110,7 @@ export class JestExt {
     this.handleJestEditorSupportEvent = this.handleJestEditorSupportEvent.bind(this);
 
     // The theme stuff
-    this.decorations = new StateDecorations(context);
+    this.decorations = new TestStatus(context);
     // The bottom bar thing
     this.setupStatusBar();
     // reset the jest diagnostics
@@ -423,7 +424,7 @@ export class JestExt {
 
     // We have to make a new style for each unique message, this is
     // why we have to remove off of them beforehand
-    const style = this.decorations.failingAssertionStyle(errorMessage);
+    const style = inlineErrorStyle(errorMessage);
     this.failingAssertionDecorators[fileName].push(style);
 
     return { style, decorator };

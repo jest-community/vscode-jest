@@ -4,7 +4,7 @@ import * as vscode from 'vscode';
 import { FileCoverage } from 'istanbul-lib-coverage';
 import { isValidLocation } from '../helpers';
 import prepareIcon from '../../../decorations/prepareIcon';
-import coverageGutterIcon from '../../../../icons/coverage.svg';
+import coverageGutterIcon from './coverage.svg';
 
 export interface CoverageLines {
   covered: vscode.Range[];

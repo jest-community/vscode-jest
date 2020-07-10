@@ -28,7 +28,7 @@ describe('prepareIcon', () => {
 
     prepareIcon(context, 'state', '<svg />');
     expect(fs.writeFileSync).toHaveBeenCalledWith(
-      path.join('out', 'icons', 'state.svg'),
+      path.join('generated-icons', 'state.svg'),
       '<svg />'
     );
     expect(fs.mkdirSync).toHaveBeenCalled();

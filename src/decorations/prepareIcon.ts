@@ -1,11 +1,11 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import { ExtensionContext } from 'vscode';
-const ICONS_PATH = path.join('out', 'icons');
+const ICONS_PATH = path.join('generated-icons');
 
 export default function prepareIcon(
   context: ExtensionContext,
-  state: string,
+  iconName: string,
   source: string,
   color?: string
 ): string {
@@ -13,7 +13,7 @@ export default function prepareIcon(
     return context.asAbsolutePath(path.join(...args));
   };
 
-  const resultIconPath = resolvePath(ICONS_PATH, `${state}.svg`);
+  const resultIconPath = resolvePath(ICONS_PATH, `${iconName}.svg`);
   let result = source.toString();
 
   if (color !== undefined) {

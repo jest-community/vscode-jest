@@ -10,8 +10,11 @@ jest.mock('../src/DebugCodeLens', () => ({
   DebugCodeLensProvider: class MockCodeLensProvider {},
 }));
 jest.mock('os');
-jest.mock('../src/decorations/StateDecorations', () => ({
-  StateDecorations: jest.fn(),
+jest.mock('../src/decorations/TestStatus', () => ({
+  TestStatus: jest.fn(),
+}));
+jest.mock('../src/decorations/inlineError', () => ({
+  default: jest.fn(),
 }));
 
 const update = jest.fn();
@@ -24,17 +27,18 @@ import { JestExt } from '../src/JestExt';
 import { ProjectWorkspace } from 'jest-editor-support';
 import { window, workspace, debug, ExtensionContext, TextEditorDecorationType } from 'vscode';
 import { hasDocument, isOpenInMultipleEditors } from '../src/editor';
-import { StateDecorations } from '../src/decorations/StateDecorations';
+import { TestStatus } from '../src/decorations/TestStatus';
 import { updateCurrentDiagnostics } from '../src/diagnostics';
 import { JestProcessManager, JestProcess } from '../src/JestProcessManagement';
 import * as messaging from '../src/messaging';
 import { CoverageMapProvider } from '../src/Coverage';
+import inlineError from '../src/decorations/inlineError';
 
 /* eslint jest/expect-expect: ["error", { "assertFunctionNames": ["expect", "expectItTakesNoAction"] }] */
 
 describe('JestExt', () => {
   const getConfiguration = workspace.getConfiguration as jest.Mock<any>;
-  const StateDecorationsMock = StateDecorations as jest.Mock;
+  const StateDecorationsMock = TestStatus as jest.Mock;
   const context = { asAbsolutePath: (text) => text } as ExtensionContext;
   const workspaceFolder = { name: 'test-folder' } as any;
   let projectWorkspace: ProjectWorkspace;
@@ -129,9 +133,8 @@ describe('JestExt', () => {
         enableInlineErrorMessages: true,
       };
       const expected = { key: 'value' };
-      StateDecorationsMock.mockImplementation(() => ({
-        failingAssertionStyle: jest.fn().mockReturnValueOnce(expected),
-      }));
+      const failingAssertionStyle = inlineError as jest.Mock;
+      failingAssertionStyle.mockReturnValueOnce(expected);
       const sut = new JestExt(
         context,
         workspaceFolder,
@@ -577,7 +580,7 @@ describe('JestExt', () => {
     let sut: JestExt;
     const mockEditor: any = { document: { uri: { fsPath: `file://a/b/c.js` } } };
     const emptyTestResults = { success: [], fail: [], skip: [], unknown: [] };
-    const failingAssertionStyle = jest.fn();
+    const failingAssertionStyle = inlineError as jest.Mock;
 
     const settings: any = {
       debugCodeLens: {},
@@ -598,7 +601,6 @@ describe('JestExt', () => {
         failing: { key: 'fail' } as TextEditorDecorationType,
         skip: { key: 'skip' } as TextEditorDecorationType,
         unknown: { key: 'unknown' } as TextEditorDecorationType,
-        failingAssertionStyle,
       }));
       const projectWorkspace = new ProjectWorkspace(null, null, null, null);
       sut = new JestExt(

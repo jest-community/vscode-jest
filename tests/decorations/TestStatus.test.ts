@@ -1,4 +1,4 @@
-jest.unmock('../../src/decorations/StateDecorations');
+jest.unmock('../../src/decorations/TestStatus');
 
 jest.mock('vscode', () => {
   return {
@@ -18,7 +18,7 @@ jest.mock('../../src/decorations/prepareIcon', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { StateDecorations } from '../../src/decorations/StateDecorations';
+import { TestStatus } from '../../src/decorations/TestStatus';
 
 const defaultContextMock = {
   asAbsolutePath: (name: string) => name,
@@ -29,7 +29,7 @@ function testStatusStyle(property: string) {
     const mock = (vscode.window.createTextEditorDecorationType as unknown) as jest.Mock;
     mock.mockReturnValue(property);
 
-    const decorations = new StateDecorations(defaultContextMock);
+    const decorations = new TestStatus(defaultContextMock);
 
     expect(decorations[property]).toBe(mock());
   });
@@ -38,7 +38,7 @@ function testStatusStyle(property: string) {
     const mock = (vscode.window.createTextEditorDecorationType as unknown) as jest.Mock;
     mock.mockImplementation((args) => args);
 
-    const decoration = new StateDecorations(defaultContextMock)[property];
+    const decoration = new TestStatus(defaultContextMock)[property];
 
     expect(decoration.rangeBehavior).toBe(vscode.DecorationRangeBehavior.ClosedClosed);
     expect(decoration.overviewRulerLane).toBe(vscode.OverviewRulerLane.Left);
@@ -51,9 +51,9 @@ function testStatusStyle(property: string) {
 
 describe('Decorations', () => {
   it('is initializing a class with public fields and methods', () => {
-    const decorations = new StateDecorations(defaultContextMock);
+    const decorations = new TestStatus(defaultContextMock);
 
-    expect(decorations).toBeInstanceOf(StateDecorations);
+    expect(decorations).toBeInstanceOf(TestStatus);
   });
 
   describe('passing', () => {
@@ -70,30 +70,5 @@ describe('Decorations', () => {
 
   describe('unknown', () => {
     testStatusStyle('unknown');
-  });
-
-  describe('failingAssertionStyle', () => {
-    const decorations = new StateDecorations(defaultContextMock);
-    const failingAssertionStyle = (...args) =>
-      decorations['failingAssertionStyle'].call(decorations, ...args);
-
-    it('should create text editor decoration', () => {
-      const mock = (vscode.window.createTextEditorDecorationType as unknown) as jest.Mock;
-      mock.mockReset();
-      const decoration = failingAssertionStyle('');
-
-      expect(mock).toHaveBeenCalledTimes(1);
-      expect(mock.mock.calls[0][0].overviewRulerLane).toBe(vscode.OverviewRulerLane.Left);
-      expect(decoration).toBe(mock({}));
-    });
-
-    it('should add text to decoration', () => {
-      const mock = (vscode.window.createTextEditorDecorationType as unknown) as jest.Mock;
-      mock.mockReset();
-      failingAssertionStyle('test text');
-
-      expect(mock.mock.calls[0][0].light.after.contentText).toBe(' // test text');
-      expect(mock.mock.calls[0][0].dark.after.contentText).toBe(' // test text');
-    });
   });
 });
