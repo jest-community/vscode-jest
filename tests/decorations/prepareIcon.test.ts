@@ -10,7 +10,7 @@ jest.mock('fs', () => {
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import prepareIcon from '../../src/decorations/prepareIcon';
+import prepareIconFile from '../../src/decorations/prepareIconFile';
 
 const context = {
   asAbsolutePath: (name: string) => name,
@@ -26,7 +26,7 @@ describe('prepareIcon', () => {
   it('is creating icon file from source file if it does not exist', () => {
     (fs.existsSync as jest.Mock).mockReturnValue(false);
 
-    prepareIcon(context, 'state', '<svg />');
+    prepareIconFile(context, 'state', '<svg />');
     expect(fs.writeFileSync).toHaveBeenCalledWith(
       path.join('generated-icons', 'state.svg'),
       '<svg />'
@@ -37,7 +37,7 @@ describe('prepareIcon', () => {
   it('does not write file if it exists and is the same', () => {
     (fs.readFileSync as jest.Mock).mockReturnValue(Buffer.from('<svg />'));
 
-    prepareIcon(context, 'state', '<svg />');
+    prepareIconFile(context, 'state', '<svg />');
     expect(fs.writeFileSync).toHaveBeenCalledTimes(0);
   });
 
@@ -45,15 +45,15 @@ describe('prepareIcon', () => {
     (fs.readFileSync as jest.Mock).mockReturnValue(Buffer.from('<svg fill="currentColor"></svg>'));
     (fs.existsSync as jest.Mock).mockReturnValue(false);
 
-    prepareIcon(context, 'default', '<svg fill="currentColor"></svg>');
+    prepareIconFile(context, 'default', '<svg fill="currentColor"></svg>');
     expect((fs.writeFileSync as jest.Mock).mock.calls[0][1]).toBe(
       '<svg fill="currentColor"></svg>'
     );
 
-    prepareIcon(context, 'gray', '<svg fill="currentColor"></svg>', '#8C8C8C');
+    prepareIconFile(context, 'gray', '<svg fill="currentColor"></svg>', '#8C8C8C');
     expect((fs.writeFileSync as jest.Mock).mock.calls[1][1]).toBe('<svg fill="#8C8C8C"></svg>');
 
-    prepareIcon(context, 'red', '<svg fill="currentColor"></svg>', 'red');
+    prepareIconFile(context, 'red', '<svg fill="currentColor"></svg>', 'red');
     expect((fs.writeFileSync as jest.Mock).mock.calls[2][1]).toBe('<svg fill="red"></svg>');
   });
 });

@@ -3,7 +3,10 @@ import * as fs from 'fs';
 import { ExtensionContext } from 'vscode';
 const ICONS_PATH = path.join('generated-icons');
 
-export default function prepareIcon(
+/**
+ * NOTE: Should not be called repeatedly for the performance reasons. Cache your results.
+ */
+function prepareIconFile(
   context: ExtensionContext,
   iconName: string,
   source: string,
@@ -16,7 +19,7 @@ export default function prepareIcon(
   const resultIconPath = resolvePath(ICONS_PATH, `${iconName}.svg`);
   let result = source.toString();
 
-  if (color !== undefined) {
+  if (color) {
     result = result.replace('fill="currentColor"', `fill="${color}"`);
   }
 
@@ -30,3 +33,5 @@ export default function prepareIcon(
 
   return resultIconPath;
 }
+
+export default prepareIconFile;

@@ -9,8 +9,8 @@ import {
 import passingIcon from 'vscode-codicons/src/icons/check.svg';
 import failingIcon from 'vscode-codicons/src/icons/chrome-close.svg';
 import skipIcon from 'vscode-codicons/src/icons/debug-step-over.svg';
-import unknownIcon from 'vscode-codicons/src/icons/question.svg';
-import prepareIcon from './prepareIcon';
+import unknownIcon from './question.svg';
+import prepareIconFile from './prepareIconFile';
 
 export class TestStatus {
   public passing: TextEditorDecorationType;
@@ -20,20 +20,20 @@ export class TestStatus {
 
   constructor(context: ExtensionContext) {
     this.passing = this.createStateDecoration([
-      prepareIcon(context, 'passing', passingIcon, '#35A15E'),
+      prepareIconFile(context, 'passing', passingIcon, '#35A15E'),
       'green',
     ]);
     this.failing = this.createStateDecoration([
-      prepareIcon(context, 'failing', failingIcon, '#D6443C'),
+      prepareIconFile(context, 'failing', failingIcon, '#D6443C'),
       'red',
     ]);
     this.skip = this.createStateDecoration([
-      prepareIcon(context, 'skip', skipIcon, '#fed37f'),
+      prepareIconFile(context, 'skip', skipIcon, '#fed37f'),
       'yellow',
     ]);
     this.unknown = this.createStateDecoration(
-      [prepareIcon(context, 'unknown', unknownIcon, '#BBBBBB'), 'darkgrey'],
-      [prepareIcon(context, 'unknown-light', unknownIcon, '#555555')]
+      [prepareIconFile(context, 'unknown', unknownIcon, '#BBBBBB'), 'darkgrey'],
+      [prepareIconFile(context, 'unknown-light', unknownIcon, '#555555')]
     );
   }
 
@@ -53,7 +53,7 @@ export class TestStatus {
         gutterIconPath: icon,
       },
       light: {
-        gutterIconPath: light !== undefined ? iconLite : icon,
+        gutterIconPath: iconLite || icon,
       },
     };
 
@@ -62,7 +62,7 @@ export class TestStatus {
       options['dark']['overviewRulerColor'] = overviewRulerColor;
     }
 
-    if (overviewRulerColorLite !== undefined) {
+    if (overviewRulerColorLite) {
       options['light']['overviewRulerColor'] = overviewRulerColorLite;
     }
 
