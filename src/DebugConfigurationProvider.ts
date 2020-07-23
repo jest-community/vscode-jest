@@ -11,7 +11,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
    */
   public prepareTestRun(fileNameToRun: string, testToRun: string) {
     this.fileNameToRun = fileNameToRun;
-    this.testToRun = testToRun;
+    const escapedTestToRun = testToRun.replace(/"/g, '\\"');
+    this.testToRun = escapedTestToRun;
   }
 
   resolveDebugConfiguration(

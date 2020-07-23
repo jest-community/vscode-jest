@@ -52,4 +52,21 @@ describe('DebugConfigurationProvider', () => {
     expect(configuration.env && configuration.env.CI).toBeTruthy();
     expect(configuration.args).toEqual(expected);
   });
+
+  it('should handle "test" names with double quotes', () => {
+    const fileName = 'fileName';
+    const testNamePattern = 'some "double quotes" test name';
+    const escapedFileNamePattern = 'some \\"double quotes\\" test name';
+    const expected = [fileName, '--testNamePattern', escapedFileNamePattern];
+    let configuration: any = { name: 'vscode-jest-tests' };
+
+    const sut = new DebugConfigurationProvider();
+    sut.prepareTestRun(fileName, testNamePattern);
+
+    configuration = sut.resolveDebugConfiguration(undefined, configuration);
+
+    expect(configuration).toBeDefined();
+    expect(configuration.env && configuration.env.CI).toBeTruthy();
+    expect(configuration.args).toEqual(expected);
+  });
 });
