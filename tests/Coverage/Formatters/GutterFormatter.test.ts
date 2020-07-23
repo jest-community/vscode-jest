@@ -26,7 +26,7 @@ jest.mock('vscode', () => {
     },
   };
 });
-jest.mock('../../../src/decorations/prepareIcon', () => ({
+jest.mock('../../../src/decorations/prepareIconFile', () => ({
   default: (icon) => icon,
 }));
 

@@ -1,4 +1,4 @@
-jest.unmock('../../src/decorations/prepareIcon');
+jest.unmock('../../src/decorations/prepareIconFile');
 jest.mock('fs', () => {
   return {
     readFileSync: jest.fn(),
@@ -22,7 +22,7 @@ beforeEach(() => {
   (fs.existsSync as jest.Mock).mockReturnValue(true);
 });
 
-describe('prepareIcon', () => {
+describe('prepareIconFile', () => {
   it('is creating icon file from source file if it does not exist', () => {
     (fs.existsSync as jest.Mock).mockReturnValue(false);
 
