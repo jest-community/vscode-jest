@@ -4,6 +4,7 @@ Please add your own contribution below inside the Master section
 Bug-fixes within the same version aren't needed
 
 ## Master
+* fix tests with names including double quotes which were skipped by escaping them
 
 
 -->
