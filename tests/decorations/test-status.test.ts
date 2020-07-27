@@ -1,4 +1,4 @@
-jest.unmock('../../src/decorations/TestStatus');
+jest.unmock('../../src/decorations/test-status');
 
 jest.mock('vscode', () => {
   return {
@@ -18,7 +18,7 @@ jest.mock('../../src/helpers', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { TestStatus } from '../../src/decorations/TestStatus';
+import { TestStatus } from '../../src/decorations/test-status';
 
 const defaultContextMock = {
   asAbsolutePath: (name: string) => name,

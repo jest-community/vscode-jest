@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { ProjectWorkspace, JestTotalResults } from 'jest-editor-support';
 
-import { TestStatus } from './decorations/TestStatus';
-import inlineErrorStyle from './decorations/inlineError';
+import { TestStatus } from './decorations/test-status';
+import inlineErrorStyle from './decorations/inline-error';
 import { PluginResourceSettings } from './Settings';
 import { statusBar, Status, StatusBar, Mode } from './StatusBar';
 import {

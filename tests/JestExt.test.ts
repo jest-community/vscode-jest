@@ -10,10 +10,10 @@ jest.mock('../src/DebugCodeLens', () => ({
   DebugCodeLensProvider: class MockCodeLensProvider {},
 }));
 jest.mock('os');
-jest.mock('../src/decorations/TestStatus', () => ({
+jest.mock('../src/decorations/test-status', () => ({
   TestStatus: jest.fn(),
 }));
-jest.mock('../src/decorations/inlineError', () => ({
+jest.mock('../src/decorations/inline-error', () => ({
   default: jest.fn(),
 }));
 
@@ -27,12 +27,12 @@ import { JestExt } from '../src/JestExt';
 import { ProjectWorkspace } from 'jest-editor-support';
 import { window, workspace, debug, ExtensionContext, TextEditorDecorationType } from 'vscode';
 import { hasDocument, isOpenInMultipleEditors } from '../src/editor';
-import { TestStatus } from '../src/decorations/TestStatus';
+import { TestStatus } from '../src/decorations/test-status';
 import { updateCurrentDiagnostics } from '../src/diagnostics';
 import { JestProcessManager, JestProcess } from '../src/JestProcessManagement';
 import * as messaging from '../src/messaging';
 import { CoverageMapProvider } from '../src/Coverage';
-import inlineError from '../src/decorations/inlineError';
+import inlineError from '../src/decorations/inline-error';
 
 /* eslint jest/expect-expect: ["error", { "assertFunctionNames": ["expect", "expectItTakesNoAction"] }] */
 

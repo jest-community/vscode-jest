@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import inlineError from '../../src/decorations/inlineError';
+import inlineError from '../../src/decorations/inline-error';
 
-jest.unmock('../../src/decorations/inlineError');
+jest.unmock('../../src/decorations/inline-error');
 
 describe('inlineError', () => {
   it('should create text editor decoration', () => {
