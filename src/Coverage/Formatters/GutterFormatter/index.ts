@@ -3,7 +3,7 @@ import { AbstractFormatter } from '../AbstractFormatter';
 import * as vscode from 'vscode';
 import { FileCoverage } from 'istanbul-lib-coverage';
 import { isValidLocation } from '../helpers';
-import prepareIconFile from '../../../decorations/prepareIconFile';
+import { prepareIconFile } from '../../../helpers';
 import coverageGutterIcon from './coverage.svg';
 
 export interface CoverageLines {

@@ -10,7 +10,7 @@ import passingIcon from 'vscode-codicons/src/icons/check.svg';
 import failingIcon from 'vscode-codicons/src/icons/chrome-close.svg';
 import skipIcon from 'vscode-codicons/src/icons/debug-step-over.svg';
 import unknownIcon from './question.svg';
-import prepareIconFile from './prepareIconFile';
+import { prepareIconFile } from '../helpers';
 
 export class TestStatus {
   public passing: TextEditorDecorationType;
