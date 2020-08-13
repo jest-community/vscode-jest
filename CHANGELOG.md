@@ -5,7 +5,8 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 
-
+* refactor editor decorations and load icons from `vscode-codicons` [@Tymek](https://github.com/Tymek)
+* move test status indicator from editor text to gutter [@Tymek](https://github.com/Tymek)
 -->
 
 ### 4.0.0-alpha.0

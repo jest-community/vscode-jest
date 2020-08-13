@@ -1,6 +1,7 @@
 import { platform } from 'os';
-import { existsSync, readFileSync } from 'fs';
+import { existsSync, readFileSync, mkdirSync, writeFileSync } from 'fs';
 import { normalize, join } from 'path';
+import { ExtensionContext } from 'vscode';
 
 import { PluginResourceSettings, hasUserSetPathToJest } from './Settings';
 
@@ -125,3 +126,39 @@ export function cleanAnsi(str: string): string {
     ''
   );
 }
+
+/**
+ * Generate path to icon used in decorations
+ * NOTE: Should not be called repeatedly for the performance reasons. Cache your results.
+ */
+export function prepareIconFile(
+  context: ExtensionContext,
+  iconName: string,
+  source: string,
+  color?: string
+): string {
+  const iconsPath = join('generated-icons');
+
+  const resolvePath = (...args: string[]): string => {
+    return context.asAbsolutePath(join(...args));
+  };
+
+  const resultIconPath = resolvePath(iconsPath, `${iconName}.svg`);
+  let result = source.toString();
+
+  if (color) {
+    result = result.replace('fill="currentColor"', `fill="${color}"`);
+  }
+
+  if (!existsSync(resultIconPath) || readFileSync(resultIconPath).toString() !== result) {
+    if (!existsSync(resolvePath(iconsPath))) {
+      mkdirSync(resolvePath(iconsPath));
+    }
+
+    writeFileSync(resultIconPath, result);
+  }
+
+  return resultIconPath;
+}
+
+export default prepareIconFile;
