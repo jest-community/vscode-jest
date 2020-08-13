@@ -26,6 +26,9 @@ jest.mock('vscode', () => {
     },
   };
 });
+jest.mock('../../../src/helpers', () => ({
+  prepareIconFile: (icon) => icon,
+}));
 
 import { GutterFormatter } from '../../../src/Coverage/Formatters/GutterFormatter';
 import * as vscode from 'vscode';

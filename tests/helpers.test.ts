@@ -3,9 +3,13 @@ jest.unmock('../src/Settings');
 
 const mockExistsSync = jest.fn();
 const mockReadFileSync = jest.fn();
+const mockWriteFileSync = jest.fn();
+const mockMkdirSync = jest.fn();
 jest.mock('fs', () => ({
   existsSync: mockExistsSync,
   readFileSync: mockReadFileSync,
+  writeFileSync: mockWriteFileSync,
+  mkdirSync: mockMkdirSync,
 }));
 
 const mockPlatform = jest.fn();
@@ -18,11 +22,13 @@ jest.mock('path', () => ({
   normalize: mockNormalize,
 }));
 
+import * as vscode from 'vscode';
 import {
   isCreateReactAppTestCommand,
   pathToJest,
   nodeBinExtension,
   cleanAnsi,
+  prepareIconFile,
 } from '../src/helpers';
 
 // Manually (forcefully) set the executable's file extension to test its addition independendly of the operating system.
@@ -147,6 +153,54 @@ describe('ModuleHelpers', () => {
       expect(cleanAnsi(ansiString)).toBe(
         '<body> <div> <div class="root" > Learn React </div> </div></body>'
       );
+    });
+  });
+
+  describe('prepareIconFile', () => {
+    const context = {
+      asAbsolutePath: (name: string) => name,
+    } as vscode.ExtensionContext;
+
+    beforeEach(() => {
+      jest.resetAllMocks();
+      (mockReadFileSync as jest.Mock).mockReturnValue(Buffer.from(''));
+      (mockExistsSync as jest.Mock).mockReturnValue(true);
+    });
+
+    it('is creating icon file from source file if it does not exist', () => {
+      (mockExistsSync as jest.Mock).mockReturnValue(false);
+
+      prepareIconFile(context, 'state', '<svg />');
+      expect(mockWriteFileSync).toHaveBeenCalledWith(
+        mockJoin('generated-icons', 'state.svg'),
+        '<svg />'
+      );
+      expect(mockMkdirSync).toHaveBeenCalled();
+    });
+
+    it('does not write file if it exists and is the same', () => {
+      (mockReadFileSync as jest.Mock).mockReturnValue(Buffer.from('<svg />'));
+
+      prepareIconFile(context, 'state', '<svg />');
+      expect(mockWriteFileSync).toHaveBeenCalledTimes(0);
+    });
+
+    it('can replace fill color', () => {
+      (mockReadFileSync as jest.Mock).mockReturnValue(
+        Buffer.from('<svg fill="currentColor"></svg>')
+      );
+      (mockExistsSync as jest.Mock).mockReturnValue(false);
+
+      prepareIconFile(context, 'default', '<svg fill="currentColor"></svg>');
+      expect((mockWriteFileSync as jest.Mock).mock.calls[0][1]).toBe(
+        '<svg fill="currentColor"></svg>'
+      );
+
+      prepareIconFile(context, 'gray', '<svg fill="currentColor"></svg>', '#8C8C8C');
+      expect((mockWriteFileSync as jest.Mock).mock.calls[1][1]).toBe('<svg fill="#8C8C8C"></svg>');
+
+      prepareIconFile(context, 'red', '<svg fill="currentColor"></svg>', 'red');
+      expect((mockWriteFileSync as jest.Mock).mock.calls[2][1]).toBe('<svg fill="red"></svg>');
     });
   });
 });
