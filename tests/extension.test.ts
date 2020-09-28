@@ -32,6 +32,7 @@ const extensionManager = {
   register: jest.fn(),
   getByName: jest.fn().mockReturnValue(jestInstance),
   get: jest.fn().mockReturnValue(jestInstance),
+  getPublicApi: jest.fn(),
   unregisterAll: jest.fn(),
   registerCommand: jest.fn().mockImplementation((...args) => args),
 };
