@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { ProjectWorkspace } from 'jest-editor-support';
+import { JestTotalResults, ProjectWorkspace } from 'jest-editor-support';
 import { pathToJest, pathToConfig } from './helpers';
 import { JestExt } from './JestExt';
 import { DebugCodeLensProvider, TestState } from './DebugCodeLens';
@@ -48,6 +48,8 @@ export class ExtensionManager {
   private extByWorkspace: Map<string, JestExt> = new Map();
   private context: vscode.ExtensionContext;
   private commonPluginSettings: PluginWindowSettings;
+  // keep track of any subscribers that want to be notified when there are new test results.
+  private subscribers: Array<(results: JestTotalResults) => void> = [];
 
   constructor(context: vscode.ExtensionContext) {
     this.context = context;
@@ -97,21 +99,21 @@ export class ExtensionManager {
       `Jest (${workspaceFolder.name})`
     );
 
-    this.extByWorkspace.set(
-      workspaceFolder.name,
-      new JestExt(
-        this.context,
-        workspaceFolder,
-        jestWorkspace,
-        channel,
-        pluginSettings,
-        this.debugCodeLensProvider,
-        this.debugConfigurationProvider,
-        failDiagnostics,
-        instanceSettings,
-        this.coverageCodeLensProvider
-      )
+    const jestExt = new JestExt(
+      this.context,
+      workspaceFolder,
+      jestWorkspace,
+      channel,
+      pluginSettings,
+      this.debugCodeLensProvider,
+      this.debugConfigurationProvider,
+      failDiagnostics,
+      instanceSettings,
+      this.coverageCodeLensProvider,
+      this.onTestResultsChanged.bind(this)
     );
+
+    this.extByWorkspace.set(workspaceFolder.name, jestExt);
   }
   registerAll(): void {
     vscode.workspace.workspaceFolders.forEach(this.register, this);
@@ -131,6 +133,8 @@ export class ExtensionManager {
     for (const key of keys) {
       this.unregisterByName(key);
     }
+
+    this.subscribers = [];
   }
   shouldStart(workspaceFolderName: string): boolean {
     const {
@@ -166,6 +170,30 @@ export class ExtensionManager {
       throw new Error(`No Jest instance in ${workspace.name} workspace`);
     }
   }
+
+  /**
+   * Provides the public API for this extension.
+   */
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+  public getPublicApi() {
+    return {
+      /**
+       * Provides a means to subscribe to test results events.
+       *
+       * @param callback method to be called when there are new test results.
+       */
+      subscribeToTestResults: (callback: (results: JestTotalResults) => void): (() => void) => {
+        this.subscribers.push(callback);
+
+        // return an unsubscribe function.
+        // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+        return () => {
+          this.subscribers = this.subscribers.filter((s) => s !== callback);
+        };
+      },
+    };
+  }
+
   registerCommand(
     command: string,
     callback: (extension: JestExt, ...args: unknown[]) => unknown,
@@ -215,5 +243,19 @@ export class ExtensionManager {
     if (ext) {
       ext.onDidChangeTextDocument(event);
     }
+  }
+
+  /**
+   * A handler for when there are new test results from one of the JestExt instances.
+   * @param results the new test results
+   */
+  private onTestResultsChanged(results: JestTotalResults): void {
+    this.subscribers.forEach((subscriber) => {
+      try {
+        subscriber(results);
+      } catch (error) {
+        // swallow the error as we are not responsible for it.
+      }
+    });
   }
 }

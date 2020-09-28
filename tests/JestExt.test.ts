@@ -79,7 +79,8 @@ describe('JestExt', () => {
         debugConfigurationProvider,
         null,
         null,
-        null
+        null,
+        () => {}
       );
 
       sut.canUpdateActiveEditor = jest.fn().mockReturnValueOnce(true);
@@ -145,7 +146,8 @@ describe('JestExt', () => {
         debugConfigurationProvider,
         null,
         null,
-        null
+        null,
+        () => {}
       );
       const editor: any = {
         document: { fileName: 'file.js' },
@@ -196,7 +198,8 @@ describe('JestExt', () => {
         debugConfigurationProvider,
         null,
         null,
-        null
+        null,
+        () => {}
       );
       ((sut.debugConfigurationProvider
         .provideDebugConfigurations as unknown) as jest.Mock<{}>).mockReturnValue([
@@ -230,7 +233,8 @@ describe('JestExt', () => {
       debugConfigurationProvider,
       null,
       null,
-      null
+      null,
+      () => {}
     );
     const document = {} as any;
     sut.removeCachedTestResults = jest.fn();
@@ -259,7 +263,8 @@ describe('JestExt', () => {
       debugConfigurationProvider,
       null,
       null,
-      null
+      null,
+      () => {}
     );
     sut.testResultProvider.removeCachedResults = jest.fn();
 
@@ -295,7 +300,8 @@ describe('JestExt', () => {
       debugConfigurationProvider,
       null,
       null,
-      null
+      null,
+      () => {}
     );
 
     beforeEach(() => {
@@ -331,7 +337,8 @@ describe('JestExt', () => {
       debugConfigurationProvider,
       null,
       null,
-      null
+      null,
+      () => {}
     );
     sut.triggerUpdateActiveEditor = jest.fn();
 
@@ -369,7 +376,8 @@ describe('JestExt', () => {
         debugConfigurationProvider,
         null,
         null,
-        null
+        null,
+        () => {}
       );
     });
 
@@ -447,7 +455,8 @@ describe('JestExt', () => {
         debugConfigurationProvider,
         null,
         null,
-        null
+        null,
+        () => {}
       );
       sut.triggerUpdateSettings = jest.fn();
       sut.toggleCoverageOverlay();
@@ -467,7 +476,8 @@ describe('JestExt', () => {
         debugConfigurationProvider,
         null,
         null,
-        null
+        null,
+        () => {}
       );
       expect(projectWorkspace.collectCoverage).toBe(true);
 
@@ -496,7 +506,8 @@ describe('JestExt', () => {
         debugConfigurationProvider,
         null,
         null,
-        null
+        null,
+        () => {}
       );
       sut.triggerUpdateActiveEditor(editor);
 
@@ -513,7 +524,8 @@ describe('JestExt', () => {
         debugConfigurationProvider,
         null,
         null,
-        null
+        null,
+        () => {}
       );
       sut.updateDecorators = jest.fn();
       const mockEditor: any = {
@@ -554,7 +566,8 @@ describe('JestExt', () => {
         debugConfigurationProvider,
         null,
         null,
-        null
+        null,
+        () => {}
       );
     });
     it('will skip if there is no document in editor', () => {
@@ -613,7 +626,8 @@ describe('JestExt', () => {
         debugConfigurationProvider,
         null,
         null,
-        null
+        null,
+        () => {}
       );
 
       mockEditor.setDecorations = jest.fn();
@@ -685,7 +699,8 @@ describe('JestExt', () => {
         debugConfigurationProvider,
         null,
         null,
-        null
+        null,
+        () => {}
       );
 
       mockEditor.setDecorations = jest.fn();
@@ -725,7 +740,8 @@ describe('JestExt', () => {
         debugConfigurationProvider,
         null,
         instanceSettings,
-        null
+        null,
+        () => {}
       );
       const mockProcessManager: any = (JestProcessManager as jest.Mock).mock.instances[0];
       mockProcessManager.startJestProcess.mockReturnValue(mockProcess);
@@ -809,7 +825,8 @@ describe('JestExt', () => {
         debugConfigurationProvider,
         null,
         null,
-        null
+        null,
+        () => {}
       );
     });
 
@@ -851,7 +868,8 @@ describe('JestExt', () => {
         debugConfigurationProvider,
         null,
         null,
-        coverageCodeLensProvider
+        coverageCodeLensProvider,
+        () => {}
       );
       await sut._updateCoverageMap({});
       expect(coverageCodeLensProvider.coverageChanged).toBeCalled();

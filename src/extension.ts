@@ -7,7 +7,9 @@ import { registerSnapshotCodeLens, registerSnapshotPreview } from './SnapshotCod
 
 let extensionManager: ExtensionManager;
 
-export function activate(context: vscode.ExtensionContext): void {
+export function activate(
+  context: vscode.ExtensionContext
+): ReturnType<typeof ExtensionManager.prototype.getPublicApi> {
   extensionManager = new ExtensionManager(context);
 
   const languages = [
@@ -82,6 +84,8 @@ export function activate(context: vscode.ExtensionContext): void {
       extensionManager
     )
   );
+
+  return extensionManager.getPublicApi();
 }
 
 export function deactivate(): void {

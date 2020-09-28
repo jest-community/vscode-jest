@@ -77,7 +77,8 @@ export class JestExt {
     debugConfigurationProvider: DebugConfigurationProvider,
     failDiagnostics: vscode.DiagnosticCollection,
     instanceSettings: InstanceSettings,
-    coverageCodeLensProvider: CoverageCodeLensProvider
+    coverageCodeLensProvider: CoverageCodeLensProvider,
+    private onTestResultsChanged: (results: JestTotalResults) => void
   ) {
     this.workspaceFolder = workspaceFolder;
     this.jestWorkspace = jestWorkspace;
@@ -515,6 +516,10 @@ export class JestExt {
   private updateWithData(data: JestTotalResults): void {
     const noAnsiData = resultsWithoutAnsiEscapeSequence(data);
     const normalizedData = resultsWithLowerCaseWindowsDriveLetters(noAnsiData);
+
+    // notify that there are new test results.
+    this.onTestResultsChanged(normalizedData);
+
     this._updateCoverageMap(normalizedData.coverageMap);
 
     const statusList = this.testResultProvider.updateTestResults(normalizedData);

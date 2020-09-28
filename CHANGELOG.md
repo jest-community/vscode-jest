@@ -5,6 +5,7 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 
+* add public api to expose interface for other vscode extensions to subscribe to test results updates.
 
 -->
 
