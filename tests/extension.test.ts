@@ -28,11 +28,13 @@ const jestInstance = {
   restartProcess: jest.fn(),
 };
 
+const publicApi = {};
+
 const extensionManager = {
   register: jest.fn(),
   getByName: jest.fn().mockReturnValue(jestInstance),
   get: jest.fn().mockReturnValue(jestInstance),
-  getPublicApi: jest.fn(),
+  getPublicApi: jest.fn().mockReturnValue(publicApi),
   unregisterAll: jest.fn(),
   registerCommand: jest.fn().mockImplementation((...args) => args),
 };
@@ -114,6 +116,15 @@ describe('Extension', () => {
 
       expect(vscode.workspace.onDidChangeWorkspaceFolders).toBeCalled();
       expect(context.subscriptions.push.mock.calls[0]).toContain('onDidChangeWorkspaceFolders');
+    });
+
+    it('should return ExtensionManager.getPublicApi', () => {
+      extensionManager.getPublicApi.mockClear();
+
+      const api = activate(context);
+
+      expect(extensionManager.getPublicApi).toHaveBeenCalledTimes(1);
+      expect(api).toBe(publicApi);
     });
 
     describe('should register a command', () => {

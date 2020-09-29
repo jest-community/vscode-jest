@@ -386,4 +386,80 @@ describe('InstancesManager', () => {
       });
     });
   });
+
+  describe('getPublicApi()', () => {
+    const callbackMock = jest.fn();
+    let api: any;
+    beforeEach(() => {
+      callbackMock.mockClear();
+
+      // grab a reference to the public API each time the extension is recreated.
+      api = extensionManager.getPublicApi();
+    });
+
+    it('should return an object with a "subscribeToTestResults" method on it', () => {
+      expect(typeof api.subscribeToTestResults).toBe('function');
+
+      const unsubscribe = api.subscribeToTestResults(callbackMock);
+
+      expect(callbackMock).not.toBeCalled();
+      expect(typeof unsubscribe).toBe('function');
+    });
+
+    describe('subscribeToTestResults()', () => {
+      const fakeTestResults = {};
+      let notifyNewTestResults: () => void;
+
+      beforeEach(() => {
+        // pretend that an instance of JestExt has called to JestExtension with test results.
+        // alternative ways this could work, is to receive the constructor parameters to the
+        // fake JestExt and invoke the callback there.
+        notifyNewTestResults = () =>
+          (extensionManager as any).onTestResultsChanged(fakeTestResults);
+      });
+
+      it('should not throw an error if the callback throws', () => {
+        callbackMock.mockImplementationOnce(() => {
+          throw new Error();
+        });
+
+        api.subscribeToTestResults(callbackMock);
+        notifyNewTestResults();
+
+        expect(callbackMock).toBeCalledTimes(1);
+        expect(callbackMock).toBeCalledWith(fakeTestResults);
+      });
+
+      it('should invoke subscribe callback when new test results are available', () => {
+        api.subscribeToTestResults(callbackMock);
+
+        notifyNewTestResults();
+
+        expect(callbackMock).toBeCalledTimes(1);
+        expect(callbackMock).toBeCalledWith(fakeTestResults);
+      });
+
+      it('should invoke multiple subscribers when new test results are available', () => {
+        api.subscribeToTestResults(callbackMock);
+        const secondSubscriber = jest.fn();
+        api.subscribeToTestResults(secondSubscriber);
+
+        notifyNewTestResults();
+
+        expect(callbackMock).toBeCalledTimes(1);
+        expect(callbackMock).toBeCalledWith(fakeTestResults);
+        expect(secondSubscriber).toBeCalledTimes(1);
+        expect(secondSubscriber).toBeCalledWith(fakeTestResults);
+      });
+
+      it('should not invoke subscribe callback after unsubscribe', () => {
+        const unsubscribe = api.subscribeToTestResults(callbackMock);
+
+        unsubscribe();
+        notifyNewTestResults();
+
+        expect(callbackMock).not.toBeCalled();
+      });
+    });
+  });
 });

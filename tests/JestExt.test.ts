@@ -24,7 +24,7 @@ const statusBar = {
 jest.mock('../src/StatusBar', () => ({ statusBar }));
 
 import { JestExt } from '../src/JestExt';
-import { ProjectWorkspace } from 'jest-editor-support';
+import { JestTotalResults, ProjectWorkspace } from 'jest-editor-support';
 import { window, workspace, debug, ExtensionContext, TextEditorDecorationType } from 'vscode';
 import { hasDocument, isOpenInMultipleEditors } from '../src/editor';
 import { TestStatus } from '../src/decorations/test-status';
@@ -33,6 +33,8 @@ import { JestProcessManager, JestProcess } from '../src/JestProcessManagement';
 import * as messaging from '../src/messaging';
 import { CoverageMapProvider } from '../src/Coverage';
 import inlineError from '../src/decorations/inline-error';
+import { resultsWithLowerCaseWindowsDriveLetters } from '../src/TestResults';
+import { resultsWithoutAnsiEscapeSequence } from '../src/TestResults/TestResult';
 
 /* eslint jest/expect-expect: ["error", { "assertFunctionNames": ["expect", "expectItTakesNoAction"] }] */
 
@@ -801,6 +803,55 @@ describe('JestExt', () => {
         const msg: string = (messaging.systemErrorMessage as jest.Mock).mock.calls[0][0];
         expect(msg.includes(workspaceFolder.name)).toBeTruthy();
       });
+    });
+  });
+
+  describe('updateWithData', () => {
+    let sut: JestExt;
+    const testResultsCallback = jest.fn();
+
+    const settings: any = {
+      debugCodeLens: {},
+      enableSnapshotUpdateMessages: true,
+    };
+
+    beforeEach(() => {
+      jest.resetAllMocks();
+      const projectWorkspace = new ProjectWorkspace(null, null, null, null);
+      sut = new JestExt(
+        context,
+        workspaceFolder,
+        projectWorkspace,
+        channelStub,
+        settings,
+        debugCodeLensProvider,
+        debugConfigurationProvider,
+        null,
+        null,
+        null,
+        testResultsCallback
+      );
+
+      ((resultsWithLowerCaseWindowsDriveLetters as unknown) as jest.Mock<
+        typeof resultsWithLowerCaseWindowsDriveLetters
+      >).mockImplementationOnce(() => (data: JestTotalResults) => data);
+      ((resultsWithoutAnsiEscapeSequence as unknown) as jest.Mock<
+        typeof resultsWithoutAnsiEscapeSequence
+      >).mockImplementationOnce(() => (data: JestTotalResults) => data);
+    });
+
+    it('should call onTestResultsChanged when new test results are available', () => {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+      // @ts-ignore
+      const testResults: JestTotalResults = {
+        coverageMap: {},
+      };
+      // the _updateCoverageMap method is tested elsewhere.  We just stub it out.
+      (sut as any)._updateCoverageMap = () => Promise.resolve();
+
+      (sut as any).updateWithData(testResults);
+
+      expect(testResultsCallback).toHaveBeenCalled();
     });
   });
 

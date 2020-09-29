@@ -17,6 +17,7 @@ const window = {
   showWorkspaceFolderPick: jest.fn(),
   onDidChangeActiveTextEditor: jest.fn(),
   showInformationMessage: jest.fn(),
+  visibleTextEditors: [],
 }
 
 const workspace = {
