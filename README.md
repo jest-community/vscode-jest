@@ -164,3 +164,7 @@ Hopefully most issues would be pretty obvious after seeing these extra output, a
 ## Want to Contribute?
 
 Thanks for considering! Check [here](CONTRIBUTING.md) for useful tips and guidelines.
+
+## License
+
+vscode-jest is [MIT licensed.](LICENSE)
