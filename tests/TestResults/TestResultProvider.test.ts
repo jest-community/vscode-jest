@@ -209,7 +209,7 @@ describe('TestResultProvider', () => {
       ]);
 
       mockParseTest([testBlock, testBlock3, testBlock2]);
-      assertionsForTestFile.mockReturnValueOnce([
+      const assertions = [
         helper.makeAssertion(testBlock.name, TestReconciliationState.KnownSuccess, [], [1, 0]),
         helper.makeAssertion(
           'template literal I got something like this',
@@ -223,10 +223,20 @@ describe('TestResultProvider', () => {
           [],
           [3, 0]
         ),
-      ]);
+      ];
+      assertionsForTestFile.mockReturnValueOnce(assertions);
       const actual = sut.getResults(filePath);
       expect(actual).toHaveLength(3);
-      expect(actual.map((a) => a.name)).toEqual([testBlock.name, testBlock2.name, testBlock3.name]);
+      expect(actual.map((a) => a.name)).toEqual([
+        assertions[0].fullName,
+        assertions[1].fullName,
+        assertions[2].fullName,
+      ]);
+      expect(actual.map((a) => a.names.src)).toEqual([
+        testBlock.name,
+        testBlock2.name,
+        testBlock3.name,
+      ]);
       expect(actual.map((a) => a.status)).toEqual([
         TestReconciliationState.KnownSuccess,
         TestReconciliationState.KnownFail,
