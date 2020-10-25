@@ -5,7 +5,7 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 
-
+* use assertion's fullName in TestResult instead of the source test name - @connectdotz
 -->
 
 ### 4.0.0-alpha.1

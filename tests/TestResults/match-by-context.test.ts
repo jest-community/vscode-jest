@@ -292,7 +292,7 @@ describe('matchTestAssertions', () => {
         expect(matched[0].status).toEqual('KnownFail');
       });
       describe('if no failed assertion, the first assertion will be used', () => {
-        // use jest .each so we can ensure it worked for our users
+        // eat-our-own-dog-food: use jest .each so we can ensure it worked for our users
         const entries = [
           [['KnownSuccess', 'KnownSuccess'], 'KnownSuccess'],
           [['Unknown', 'Unknown'], 'Unknown'],

@@ -1,6 +1,6 @@
 jest.unmock('../../src/TestResults/TestResult');
 jest.unmock('../../src/helpers');
-jest.mock('path', () => ({ sep: require.requireActual('path').sep }));
+jest.mock('path', () => ({ sep: jest.requireActual('path').sep }));
 
 import * as TestResult from '../../src/TestResults/TestResult';
 import * as path from 'path';

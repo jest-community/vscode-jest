@@ -78,9 +78,9 @@ describe('ModuleHelpers', () => {
     };
 
     beforeEach(() => {
-      mockJoin.mockImplementation(require.requireActual('path').join);
-      mockNormalize.mockImplementation(require.requireActual('path').normalize);
-      mockExistsSync.mockImplementation(require.requireActual('path').existsSync);
+      mockJoin.mockImplementation(jest.requireActual('path').join);
+      mockNormalize.mockImplementation(jest.requireActual('path').normalize);
+      mockExistsSync.mockImplementation(jest.requireActual('path').existsSync);
     });
 
     it('returns "npm test --" when bootstrapped with create-react-app', () => {
@@ -110,14 +110,14 @@ describe('ModuleHelpers', () => {
     it('defaults to "node_modules/.bin/jest" when Jest is locally installed', () => {
       const expected = 'node_modules/.bin/jest.TEST';
 
-      mockJoin.mockImplementation(require.requireActual('path').posix.join);
+      mockJoin.mockImplementation(jest.requireActual('path').posix.join);
       mockNormalize.mockImplementation((arg) => arg);
       mockExistsSync.mockImplementation((path) => path === expected);
 
       expect(pathToJest(defaultSettings)).toBe(`"${expected}"`);
     });
     it('default jestToPath path can preserve special characters', () => {
-      mockJoin.mockImplementation(require.requireActual('path').posix.join);
+      mockJoin.mockImplementation(jest.requireActual('path').posix.join);
       mockNormalize.mockImplementation((arg) => arg);
 
       const testPaths = [
@@ -137,7 +137,7 @@ describe('ModuleHelpers', () => {
     it('defaults to "jest" when Jest is not locally installed', () => {
       const expected = '"jest.TEST"';
 
-      mockJoin.mockImplementation(require.requireActual('path').posix.join);
+      mockJoin.mockImplementation(jest.requireActual('path').posix.join);
       mockNormalize.mockImplementation((arg) => arg);
       mockExistsSync.mockImplementation(() => false);
 
