@@ -134,6 +134,11 @@ describe('buildSourceContainer', () => {
   });
 });
 describe('matchTestAssertions', () => {
+  const mockWarn = jest.fn();
+  beforeEach(() => {
+    jest.resetAllMocks();
+    console.warn = mockWarn;
+  });
   it('tests are matched by context position regardless name and line', () => {
     const t1 = helper.makeItBlock('test-1', [1, 0, 5, 0]);
     const t2 = helper.makeItBlock('test-2-${num}', [6, 0, 7, 0]);
@@ -144,7 +149,10 @@ describe('matchTestAssertions', () => {
     const matched = match.matchTestAssertions('a file', sourceRoot, [a1, a2]);
 
     expect(matched).toHaveLength(2);
-    expect(matched.map((m) => m.name)).toEqual(['test-1', 'test-2-${num}']);
+    expect(matched.map((m) => m.name)).toEqual(['test-1', 'test-2-100']);
+    expect(matched.map((m) => m.names.src)).toEqual(['test-1', 'test-2-${num}']);
+    expect(matched.map((m) => m.names.assertionTitle)).toEqual(['test-1', 'test-2-100']);
+    expect(matched.map((m) => m.names.assertionFullName)).toEqual(['test-1', 'test-2-100']);
     expect(matched.map((m) => m.status)).toEqual(['KnownFail', 'KnownSuccess']);
   });
   it('can match tests with the same name but in different describe blocks', () => {
@@ -156,7 +164,10 @@ describe('matchTestAssertions', () => {
     const a1 = helper.makeAssertion('test-1', 'KnownFail', [], [0, 0]);
     const a2 = helper.makeAssertion('test-1', 'KnownSuccess', ['d-1'], [5, 0]);
     const matched = match.matchTestAssertions('a file', sourceRoot, [a1, a2]);
-    expect(matched.map((m) => m.name)).toEqual(['test-1', 'test-1']);
+    expect(matched.map((m) => m.name)).toEqual(['test-1', 'd-1 test-1']);
+    expect(matched.map((m) => m.names.src)).toEqual(['test-1', 'test-1']);
+    expect(matched.map((m) => m.names.assertionTitle)).toEqual(['test-1', 'test-1']);
+    expect(matched.map((m) => m.names.assertionFullName)).toEqual(['test-1', 'd-1 test-1']);
     expect(matched.map((m) => m.status)).toEqual(['KnownFail', 'KnownSuccess']);
     expect(matched.map((m) => m.start.line)).toEqual([0, 5]);
     expect(matched.map((m) => m.end.line)).toEqual([4, 6]);
@@ -201,9 +212,9 @@ describe('matchTestAssertions', () => {
       const matched = match.matchTestAssertions('a file', sourceRoot, [a1, a2, a4]);
       expect(matched.map((m) => [m.name, m.status])).toEqual([
         ['test-1', 'KnownSuccess'],
-        ['test-2', 'KnownFail'],
+        ['d-1 test-2', 'KnownFail'],
         ['test-3', 'Unknown'],
-        ['test-4', 'KnownSuccess'],
+        ['d-1 d-1-1 test-4', 'KnownSuccess'],
       ]);
     });
     it('describe block will fail if context mismatch and name lookup failed', () => {
@@ -267,6 +278,34 @@ describe('matchTestAssertions', () => {
       expect(matched[0].end).toEqual({ line: 19, column: 0 });
       expect(matched[0].lineNumberOfError).toEqual(12);
     });
+    describe('test result name', () => {
+      it('use the first failed assertion, if exist', () => {
+        const [root, assertions] = createTestData([
+          'KnownSuccess',
+          ['KnownFail', 13],
+          'KnownSuccess',
+          ['KnownFail', 20],
+        ]);
+        const matched = match.matchTestAssertions('a file', root, assertions);
+        expect(matched).toHaveLength(1);
+        expect(matched[0].name).toEqual('test-1');
+        expect(matched[0].status).toEqual('KnownFail');
+      });
+      describe('if no failed assertion, the first assertion will be used', () => {
+        // eat-our-own-dog-food: use jest .each so we can ensure it worked for our users
+        const entries = [
+          [['KnownSuccess', 'KnownSuccess'], 'KnownSuccess'],
+          [['Unknown', 'Unknown'], 'Unknown'],
+        ];
+        it.each(entries)('with test entry %#', (entry, status) => {
+          const [root, assertions] = createTestData(entry as TestReconciliationState[]);
+          const matched = match.matchTestAssertions('a file', root, assertions);
+          expect(matched).toHaveLength(1);
+          expect(matched[0].name).toEqual('test-0');
+          expect(matched[0].status).toEqual(status);
+        });
+      });
+    });
     it('test is succeeded if all assertions are successful', () => {
       const [root, assertions] = createTestData(['KnownSuccess', 'KnownSuccess', 'KnownSuccess']);
       const matched = match.matchTestAssertions('a file', root, assertions);
@@ -283,5 +322,49 @@ describe('matchTestAssertions', () => {
       expect(matched).toHaveLength(1);
       expect(matched[0].status).toEqual(TestReconciliationState.KnownSkip);
     });
+    it('test name', () => {
+      const [root, assertions] = createTestData([
+        TestReconciliationState.KnownSkip,
+        TestReconciliationState.KnownSkip,
+        TestReconciliationState.KnownSkip,
+      ]);
+      const matched = match.matchTestAssertions('a file', root, assertions);
+      expect(matched).toHaveLength(1);
+      expect(matched[0].status).toEqual(TestReconciliationState.KnownSkip);
+    });
+  });
+  it('test name precedence: assertion.fullName > assertion.title > testSource.name', () => {
+    const t1 = helper.makeItBlock('test-1', [1, 0, 5, 0]);
+    const t2 = helper.makeItBlock('test-2-${num}', [6, 0, 7, 0]);
+    const t3 = helper.makeItBlock('test-3-no-assertion', [8, 0, 10, 0]);
+    const d1 = helper.makeDescribeBlock('d-1', [t1, t2]);
+    const sourceRoot = helper.makeRoot([d1, t3]);
+
+    const a1 = helper.makeAssertion('test-1-a', 'KnownFail', ['d-1'], [0, 0]);
+    a1.fullName = undefined;
+    const a2 = helper.makeAssertion('test-2-100', 'KnownSuccess', ['d-1'], [7, 0]);
+    const matched = match.matchTestAssertions('a file', sourceRoot, [a1, a2]);
+
+    expect(matched).toHaveLength(3);
+    expect(matched.map((m) => m.name)).toEqual([
+      'test-3-no-assertion',
+      'test-1-a',
+      'd-1 test-2-100',
+    ]);
+    expect(matched.map((m) => m.status)).toEqual(['Unknown', 'KnownFail', 'KnownSuccess']);
+  });
+  it('duplicate name in the same block should generate warning', () => {
+    const t1 = helper.makeItBlock('test-1', [1, 0, 5, 0]);
+    const t2 = helper.makeItBlock('test-1', [6, 0, 7, 0]);
+    const sourceRoot = helper.makeRoot([t1, t2]);
+
+    const matched = match.matchTestAssertions('a file', sourceRoot, []);
+
+    expect(matched).toHaveLength(2);
+    expect(matched.map((m) => m.name)).toEqual(['test-1', 'test-1']);
+    expect(matched.map((m) => m.status)).toEqual(['Unknown', 'Unknown']);
+    expect(
+      mockWarn.mock.calls.find((call) => call[0].includes('duplicate names'))
+    ).not.toBeUndefined();
   });
 });

@@ -20,6 +20,12 @@ export interface LocationRange {
 export interface TestResult extends LocationRange {
   name: string;
 
+  names: {
+    src: string;
+    assertionTitle?: string;
+    assertionFullName?: string;
+  };
+
   status: TestReconciliationState;
   shortMessage?: string;
   terseMessage?: string;

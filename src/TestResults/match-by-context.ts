@@ -73,7 +73,12 @@ export const toMatchResult = (
 
   // Note the shift from one-based to zero-based line number and columns
   return {
-    name: test.name,
+    name: assertion?.fullName ?? assertion?.title ?? test.name,
+    names: {
+      src: test.name,
+      assertionTitle: assertion?.title,
+      assertionFullName: assertion?.fullName,
+    },
     start: adjustLocation(test.start),
     end: adjustLocation(test.end),
     status: assertion?.status ?? TestReconciliationState.Unknown,

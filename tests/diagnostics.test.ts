@@ -272,6 +272,9 @@ describe('test diagnostics', () => {
       const msg = 'a short error message';
       const testBlock: TestResult = {
         name: 'a',
+        names: {
+          src: 'a',
+        },
         start: { line: 2, column: 3 },
         end: { line: 4, column: 5 },
         lineNumberOfError: 3,
