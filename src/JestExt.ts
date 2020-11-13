@@ -64,6 +64,7 @@ export class JestExt {
 
   private jestProcessManager: JestProcessManager;
   private jestProcess: JestProcess;
+  private context: vscode.ExtensionContext;
 
   private status: ReturnType<StatusBar['bind']>;
 
@@ -90,11 +91,13 @@ export class JestExt {
     this.coverageCodeLensProvider = coverageCodeLensProvider;
 
     this.coverageMapProvider = new CoverageMapProvider();
+    this.context = context;
     this.coverageOverlay = new CoverageOverlay(
       context,
       this.coverageMapProvider,
       pluginSettings.showCoverageOnLoad,
-      pluginSettings.coverageFormatter
+      pluginSettings.coverageFormatter,
+      pluginSettings.coverageColors
     );
     this.jestWorkspace.collectCoverage = pluginSettings.showCoverageOnLoad;
 
@@ -209,10 +212,16 @@ export class JestExt {
     this.testResultProvider.verbose = updatedSettings.debugMode;
 
     // coverage
-    const showCoverage =
-      this.coverageOverlay.enabled === undefined
-        ? updatedSettings.showCoverageOnLoad
-        : this.coverageOverlay.enabled;
+    const showCoverage = this.coverageOverlay.enabled ?? updatedSettings.showCoverageOnLoad;
+    this.coverageOverlay.dispose();
+
+    this.coverageOverlay = new CoverageOverlay(
+      this.context,
+      this.coverageMapProvider,
+      updatedSettings.showCoverageOnLoad,
+      updatedSettings.coverageFormatter,
+      updatedSettings.coverageColors
+    );
     this.jestWorkspace.collectCoverage = showCoverage;
     this.coverageOverlay.enabled = showCoverage;
 

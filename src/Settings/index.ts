@@ -1,4 +1,5 @@
 import { TestState } from '../DebugCodeLens';
+import { CoverageColors } from '../Coverage/CoverageOverlay';
 
 export interface PluginResourceSettings {
   autoEnable?: boolean;
@@ -12,6 +13,7 @@ export interface PluginResourceSettings {
   showCoverageOnLoad: boolean;
   coverageFormatter: string;
   debugMode?: boolean;
+  coverageColors?: CoverageColors;
 }
 
 export interface PluginWindowSettings {

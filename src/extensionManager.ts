@@ -7,7 +7,7 @@ import { DebugCodeLensProvider, TestState } from './DebugCodeLens';
 import { DebugConfigurationProvider } from './DebugConfigurationProvider';
 import { PluginResourceSettings, PluginWindowSettings } from './Settings';
 import { statusBar } from './StatusBar';
-import { CoverageCodeLensProvider } from './Coverage';
+import { CoverageCodeLensProvider, CoverageColors } from './Coverage';
 
 export type GetJestExtByURI = (uri: vscode.Uri) => JestExt | undefined;
 
@@ -37,6 +37,7 @@ export function getExtensionResourceSettings(uri: vscode.Uri): PluginResourceSet
     showCoverageOnLoad: config.get<boolean>('showCoverageOnLoad'),
     coverageFormatter: config.get<string>('coverageFormatter'),
     debugMode: config.get<boolean>('debugMode'),
+    coverageColors: config.get<CoverageColors>('coverageColors'),
   };
 }
 

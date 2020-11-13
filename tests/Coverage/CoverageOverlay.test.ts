@@ -44,7 +44,7 @@ describe('CoverageOverlay', () => {
     it('should set the default overlay formatter', () => {
       const sut = new CoverageOverlay(null, coverageMapProvider);
 
-      expect(DefaultFormatter).toBeCalledWith(coverageMapProvider);
+      expect(DefaultFormatter).toBeCalledWith(coverageMapProvider, undefined);
       expect(sut.formatter).toBeInstanceOf(DefaultFormatter);
     });
   });
