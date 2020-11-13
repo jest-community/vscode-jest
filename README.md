@@ -1,25 +1,30 @@
-# vscode-jest [![Build Status](https://travis-ci.org/jest-community/vscode-jest.svg?branch=master)](https://travis-ci.org/jest-community/vscode-jest) [![Visual Studio Marketplace](https://img.shields.io/visual-studio-marketplace/v/Orta.vscode-jest?color=success&label=Visual%20Studio%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=Orta.vscode-jest)
+# vscode-jest 
+
+[![Build Status](https://travis-ci.org/jest-community/vscode-jest.svg?branch=master)](https://travis-ci.org/jest-community/vscode-jest) [![Coverage Status](https://coveralls.io/repos/github/jest-community/vscode-jest/badge.svg?branch=master)](https://coveralls.io/github/jest-community/vscode-jest?branch=master)[![Visual Studio Marketplace](https://img.shields.io/visual-studio-marketplace/v/Orta.vscode-jest?color=success&label=Visual%20Studio%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=Orta.vscode-jest) 
 
 ---
 
 
 Content
-* [The Aim](#the-aim)
-* [Maintainers](#maintainers)
-* [Features](#features)
-* [How to get it?](#how-to-get-it)
-* [How to get it set up?](#how-to-get-it-set-up)
-* [How to start Jest?](#how-to-start-jest)
-* [How do I debug tests?](#how-do-i-debug-tests)
-	* [Notes for troubleshooting](#notes-for-troubleshooting)
-* [How do I show code coverage?](#how-do-i-show-code-coverage)
-* [Inspiration](#inspiration)
-* [Wanted](#wanted)
-* [Troubleshooting](#troubleshooting)
-	* [start jest from non-root folder](#start-jest-from-non-root-folder)
-	* [non-standard environments](#non-standard-environments)
-	* [plugin not running as expect? try self-diagnosis](#plugin-not-running-as-expect-try-self-diagnosis)
-* [Want to Contribute?](#want-to-contribute)
+- [vscode-jest](#vscode-jest)
+  - [The Aim](#the-aim)
+  - [Maintainers](#maintainers)
+  - [Features](#features)
+  - [How to get it?](#how-to-get-it)
+  - [How to get it set up?](#how-to-get-it-set-up)
+  - [How to start Jest?](#how-to-start-jest)
+  - [How do I debug tests?](#how-do-i-debug-tests)
+    - [Notes for troubleshooting](#notes-for-troubleshooting)
+  - [How do I show code coverage?](#how-do-i-show-code-coverage)
+  - [Inspiration](#inspiration)
+  - [Wanted](#wanted)
+  - [Troubleshooting](#troubleshooting)
+    - [start jest from non-root folder](#start-jest-from-non-root-folder)
+    - [use extension in multiroot environment](#use-extension-in-multiroot-environment)
+    - [non-standard environments](#non-standard-environments)
+    - [plugin not running as expect? try self-diagnosis](#plugin-not-running-as-expect-try-self-diagnosis)
+  - [Want to Contribute?](#want-to-contribute)
+  - [License](#license)
 
 ---
 
