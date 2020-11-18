@@ -1,10 +1,12 @@
-# vscode-jest [![Build Status](https://travis-ci.org/jest-community/vscode-jest.svg?branch=master)](https://travis-ci.org/jest-community/vscode-jest) [![Visual Studio Marketplace](https://img.shields.io/visual-studio-marketplace/v/Orta.vscode-jest?color=success&label=Visual%20Studio%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=Orta.vscode-jest)
+# vscode-jest 
+
+[![Build Status](https://travis-ci.org/jest-community/vscode-jest.svg?branch=master)](https://travis-ci.org/jest-community/vscode-jest) [![Coverage Status](https://coveralls.io/repos/github/jest-community/vscode-jest/badge.svg?branch=master)](https://coveralls.io/github/jest-community/vscode-jest?branch=master) [![Visual Studio Marketplace](https://img.shields.io/visual-studio-marketplace/v/Orta.vscode-jest?color=success&label=Visual%20Studio%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=Orta.vscode-jest) 
 
 ---
 
 
 Content
-- [vscode-jest ![Build Status](https://travis-ci.org/jest-community/vscode-jest) [![Visual Studio Marketplace](https://img.shields.io/visual-studio-marketplace/v/Orta.vscode-jest?color=success&label=Visual%20Studio%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=Orta.vscode-jest)](#vscode-jest-img-srchttpstravis-ciorgjest-communityvscode-jestsvgbranchmaster-altbuild-status-img-srchttpsimgshieldsiovisual-studio-marketplacevortavscode-jestcolorsuccesslabelvisual20studio20marketplace-altvisual-studio-marketplace)
+- [vscode-jest](#vscode-jest)
   - [The Aim](#the-aim)
   - [Maintainers](#maintainers)
   - [Features](#features)
@@ -17,7 +19,6 @@ Content
     - [How do I show code coverage?](#how-do-i-show-code-coverage)
     - [How to customize coverage overlay](#how-to-customize-coverage-overlay)
   - [Inspiration](#inspiration)
-  - [Wanted](#wanted)
   - [Troubleshooting](#troubleshooting)
     - [start jest from non-root folder](#start-jest-from-non-root-folder)
     - [use extension in multiroot environment](#use-extension-in-multiroot-environment)
