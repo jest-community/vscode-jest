@@ -6,6 +6,7 @@ Bug-fixes within the same version aren't needed
 ## Master
 
 * use assertion's fullName in TestResult instead of the source test name - @connectdotz
+* consolidated and simplified coverage formatter parsing logic; added overlay color customization; change coverage formatter/colors will take effect without restarting vscode; updated coverage help in README. - @connectdotz
 -->
 
 ### 4.0.0-alpha.1
