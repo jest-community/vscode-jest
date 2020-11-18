@@ -22,6 +22,7 @@ jest.mock('vscode', () => {
 
 import { CoverageOverlay } from '../../src/Coverage/CoverageOverlay';
 import { DefaultFormatter } from '../../src/Coverage/Formatters/DefaultFormatter';
+import { GutterFormatter } from '../../src/Coverage/Formatters/GutterFormatter';
 import { hasDocument } from '../../src/editor';
 
 describe('CoverageOverlay', () => {
@@ -46,6 +47,14 @@ describe('CoverageOverlay', () => {
 
       expect(DefaultFormatter).toBeCalledWith(coverageMapProvider, undefined);
       expect(sut.formatter).toBeInstanceOf(DefaultFormatter);
+    });
+    it('can be cutomized', () => {
+      const colors = { covered: 'red' };
+      const sut = new CoverageOverlay(null, coverageMapProvider, false, 'GutterFormatter', colors);
+
+      expect(sut.enabled).toBe(false);
+      expect(GutterFormatter).toBeCalledWith(null, coverageMapProvider, colors);
+      expect(sut.formatter).toBeInstanceOf(GutterFormatter);
     });
   });
 
@@ -155,5 +164,10 @@ describe('CoverageOverlay', () => {
 
       expect(sut.formatter.clear).toBeCalledWith(editor);
     });
+  });
+  it('supports formatter dispose', () => {
+    const sut = new CoverageOverlay(null, coverageMapProvider);
+    sut.dispose();
+    expect(sut.formatter.dispose).toBeCalledTimes(1);
   });
 });

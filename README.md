@@ -18,6 +18,7 @@ Content
   - [Coverage](#coverage)
     - [How do I show code coverage?](#how-do-i-show-code-coverage)
     - [How to customize coverage overlay](#how-to-customize-coverage-overlay)
+    - [Understand the coverage overlay](#understand-the-coverage-overlay)
   - [Inspiration](#inspiration)
   - [Troubleshooting](#troubleshooting)
     - [start jest from non-root folder](#start-jest-from-non-root-folder)
@@ -107,16 +108,22 @@ The coverage mode, along with watch mode, are shown in StatusBar:
 
 _(The initial coverage mode is `off` but can be changed by adding `"jest.showCoverageOnLoad": true` in settings.)_ 
 
-### How to customize coverage overlay
-Coverage overlay determines how the coverage info is shown to users. One can choose different coverage formatters and/or the color scheme.
 
-**Formatter**
+### How to customize coverage overlay
+Coverage overlay determines how the coverage info is shown to users. This extension provides 2 customization points: 
+1. coverage style via `jest.coverageFormatter` 
+2. the coverage color scheme via `jest.coverageColors`.
+
+**Coverage Style**
 Use `jest.coverageFormatter` to choose from the following, for example `"jest.coverageFormatter": "GutterFormatter"`. 
 
 - **DefaultFormatter**: high light uncovered and partially-covered code inlilne as well as on the right overview ruler. (this is the default)
 ![coverage-DefaultFormatter.png](./images/coverage-DefaultFormatter.png)
-- **GutterFormatter**: render coverage status ('covered', 'uncovered', 'partially-covered') in vscode editor's gutter as well as the overview ruler. (Note, due to a well-known issue in [vscode](https://github.com/microsoft/vscode/issues/5923), the gutter decorators will interfere with debug breakpoints, it's recommended to disable coverage before debugging or switch to DefaultFormatter)
+- **GutterFormatter**: render coverage status in the gutter as well as the overview ruler. 
+
 ![coverage-GutterFormatter.png](./images/coverage-GutterFormatter.png)
+
+  _(Note, there is an known issue in vscode (microsoft/vscode#5923) that gutter decorators could interfere with debug breakpoints visibility. Therefore, you probably want to disable coverage before debugging or switch to DefaultFormatter)_
 
 **Coverage Colors**
 Besides the formatter, user can also customize the color via `jest.coverageColors` to change color for 3 coverage categories: `"uncovered", "covered", or "partially-covered"`, for example:
@@ -134,6 +141,12 @@ the default color scheme below, note the opacity might differ per formatter:
     "partially-covered": "rgba(235, 198, 52, 0.4)",
   }
 ```
+### Understand the coverage overlay
+Depends on the formatter you choose, there are 3 types of coverage you might see in your source code, distinguished by colors:
+- "covered": if the code is covered. Marked as <span style="color:green">"green"</span> by default. 
+- "not-covered": if the code is not covered. Marked as <span style="color:red">"red"</span> by default.
+- "partially-covered": Usually this mean the branch (such as if, switch statements) only partially tested. Marked as <span style="color:yellow">"yellow"</span> by default.
+  - _Please note, istanbuljs (the library jest used to generate coverage info) reports switch branch coverage with the first "case" statement instead of the "switch" statement._
 ## Inspiration
 
 I'd like to give a shout out to [Wallaby.js](https://wallabyjs.com), which is a significantly more comprehensive and covers a lot more editors, if this extension interests you - check out that too.

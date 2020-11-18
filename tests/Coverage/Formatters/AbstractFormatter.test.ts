@@ -17,6 +17,7 @@ jest.mock('vscode', () => ({
   Range: mockRange,
 }));
 
+import { Range } from 'istanbul-lib-coverage';
 import { CoverageStatus } from '../../../src/Coverage/CoverageOverlay';
 import {
   AbstractFormatter,
@@ -55,6 +56,21 @@ const isEqual = (coverage: CoverageRanges, expected: ExpectedCoverageInfo): bool
   return true;
 };
 
+interface FunctionLineCoverage {
+  line: number;
+  hits: number;
+}
+const generateFunctionCoverage = (fileCoverage: any, ...testData: FunctionLineCoverage[]) => {
+  const fnMap: { [key: number]: { decl: Range } } = {};
+  const f: { [key: number]: number } = {};
+  testData.forEach(({ line, hits }, idx) => {
+    fnMap[idx] = { decl: { start: { line, column: 0 }, end: { line, column: null } } };
+    f[idx] = hits;
+  });
+  fileCoverage.fnMap = fnMap;
+  fileCoverage.f = f;
+};
+
 describe('AbstractFormatter', () => {
   const editor: any = {
     document: { fileName: 'testing' },
@@ -73,6 +89,7 @@ describe('AbstractFormatter', () => {
   };
   beforeEach(() => {
     jest.clearAllMocks();
+    generateFunctionCoverage(fileCoverage);
   });
 
   describe('lineCoverageRanges', () => {
@@ -102,6 +119,15 @@ describe('AbstractFormatter', () => {
       const expected: ExpectedCoverageInfo = { covered: [0] };
       expect(isEqual(coverRanges, expected)).toBeTruthy();
     });
+    it('reflect function coverage status', () => {
+      generateFunctionCoverage(fileCoverage, { hits: 1, line: 1 }, { hits: 0, line: 2 });
+      const formatter = new TestFormatter(coverageMapProvider);
+
+      editor.document.lineCount = 2;
+      const coverRanges = formatter.lineCoverageRanges(editor);
+      const expected: ExpectedCoverageInfo = { covered: [0], uncovered: [1] };
+      expect(isEqual(coverRanges, expected)).toBeTruthy();
+    });
     it('reflect line coverage status', () => {
       mockGetLineCoverage.mockReturnValue({ 1: 1, 2: 0, 3: 2 });
       mockGetFileCoverage.mockReturnValue(fileCoverage);
@@ -115,8 +141,8 @@ describe('AbstractFormatter', () => {
 
     it('reflect branch coverage status', () => {
       const bc = {
-        1: { coverage: 1 },
-        3: { coverage: 0.5 },
+        1: { coverage: 100 },
+        3: { coverage: 50 },
         4: { coverage: 0 },
       };
       mockGetBranchCoverageByLine.mockReturnValue(bc);
@@ -133,11 +159,11 @@ describe('AbstractFormatter', () => {
       };
       expect(isEqual(coverRanges, expected)).toBeTruthy();
     });
-    it('branch coverage trump line coverage if both exist', () => {
+    it('precedence: function > branch > line', () => {
       const bc = {
-        1: { coverage: 1 },
-        3: { coverage: 0.5 },
-        4: { coverage: 0 },
+        1: { coverage: 0 },
+        3: { coverage: 50 },
+        4: { coverage: 100 },
       };
       const lc = {
         2: 1,
@@ -145,6 +171,7 @@ describe('AbstractFormatter', () => {
         4: 0,
         5: 1,
       };
+      generateFunctionCoverage(fileCoverage, { line: 1, hits: 1 }, { line: 2, hits: 0 });
       mockGetBranchCoverageByLine.mockReturnValue(bc);
       mockGetLineCoverage.mockReturnValue(lc);
       mockGetFileCoverage.mockReturnValue(fileCoverage);
@@ -153,16 +180,16 @@ describe('AbstractFormatter', () => {
       editor.document.lineCount = 5;
       const coverRanges = formatter.lineCoverageRanges(editor);
       const expected: ExpectedCoverageInfo = {
-        covered: [0, 1, 4],
+        covered: [0, 3, 4],
         'partially-covered': [2],
-        uncovered: [3],
+        uncovered: [1],
       };
       expect(isEqual(coverRanges, expected)).toBeTruthy();
     });
     describe('for line without any coverage info, i.e. blank line', () => {
       beforeEach(() => {
         const bc = {
-          3: { coverage: 0.5 },
+          3: { coverage: 50 },
           4: { coverage: 0 },
         };
         const lc = {
@@ -222,9 +249,20 @@ describe('AbstractFormatter', () => {
       const formatter = new TestFormatter(coverageMapProvider, {
         covered: 'covered-color',
         uncovered: 'uncovered-color',
+        'partially-covered': 'partially-covered-color',
       });
       expect(formatter.getColorString('covered', 0.93)).toEqual('covered-color');
       expect(formatter.getColorString('uncovered', 0.93)).toEqual('uncovered-color');
+      expect(formatter.getColorString('partially-covered', 0.93)).toEqual(
+        'partially-covered-color'
+      );
+    });
+    it('can customize just part of the coverage types', () => {
+      const formatter = new TestFormatter(coverageMapProvider, {
+        covered: 'covered-color',
+      });
+      expect(formatter.getColorString('covered', 0.93)).toEqual('covered-color');
+      expect(formatter.getColorString('uncovered', 0.93)).toEqual(expect.stringContaining('0.93'));
       expect(formatter.getColorString('partially-covered', 0.93)).toEqual(
         expect.stringContaining('0.93')
       );
