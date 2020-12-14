@@ -61,6 +61,16 @@
         "path": "./syntaxes/jest-snapshot.tmLanguage"
       }
     ],
+    "jsonValidation": [
+      {
+        "fileMatch": "jest.*json",
+        "url": "https://askirmas.github.io/jest.schema.json"
+      },
+      {
+        "fileMatch": "package.json",
+        "url": "./schemas/package.schema.json"
+      }
+    ],
     "configuration": {
       "type": "object",
       "title": "Jest configuration",
