@@ -123,6 +123,11 @@
           "default": "DefaultFormatter",
           "scope": "resource"
         },
+        "jest.coverageColors": {
+          "description": "Coverage indicator color override",
+          "type": "object",
+          "scope": "resource"
+        },
         "jest.enableCodeLens": {
           "description": "Whether codelens for debugging should show",
           "type": "boolean",

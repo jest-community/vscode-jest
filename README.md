@@ -15,9 +15,11 @@ Content
   - [How to start Jest?](#how-to-start-jest)
   - [How do I debug tests?](#how-do-i-debug-tests)
     - [Notes for troubleshooting](#notes-for-troubleshooting)
-  - [How do I show code coverage?](#how-do-i-show-code-coverage)
+  - [Coverage](#coverage)
+    - [How do I show code coverage?](#how-do-i-show-code-coverage)
+    - [How to customize coverage overlay](#how-to-customize-coverage-overlay)
+    - [Understand the coverage overlay](#understand-the-coverage-overlay)
   - [Inspiration](#inspiration)
-  - [Wanted](#wanted)
   - [Troubleshooting](#troubleshooting)
     - [start jest from non-root folder](#start-jest-from-non-root-folder)
     - [use extension in multiroot environment](#use-extension-in-multiroot-environment)
@@ -93,7 +95,8 @@ Starting with debugging is possible by clicking on the `debug` CodeLense above a
 In contrast to previous versions of this plugin the debug settings are now independent from VS Code's `jest.pathToJest` and `jest.pathToConfig` setting. If you had to modify one of these, you pretty surely have to create a custom debug configuration and modify its path. This especially includes cases, in which `jest` isn't at its default location.
 
 
-## How do I show code coverage?
+## Coverage
+### How do I show code coverage?
 
 Starting from [v3.1](https://github.com/jest-community/vscode-jest/releases/tag/v3.1.0), code coverage can be easily turned on/off at runtime without customization. 
 
@@ -105,29 +108,48 @@ The coverage mode, along with watch mode, are shown in StatusBar:
 
 _(The initial coverage mode is `off` but can be changed by adding `"jest.showCoverageOnLoad": true` in settings.)_ 
 
-<!--
-### TODO: Change overlay format
-Use a setting that's one of "", "", etc.
-```json
-{
-    "jest.?": ""
-}
+
+### How to customize coverage overlay
+Coverage overlay determines how the coverage info is shown to users. This extension provides 2 customization points: 
+1. coverage style via `jest.coverageFormatter` 
+2. the coverage color scheme via `jest.coverageColors`.
+
+**Coverage Style**
+Use `jest.coverageFormatter` to choose from the following, for example `"jest.coverageFormatter": "GutterFormatter"`. 
+
+- **DefaultFormatter**: high light uncovered and partially-covered code inlilne as well as on the right overview ruler. (this is the default)
+![coverage-DefaultFormatter.png](./images/coverage-DefaultFormatter.png)
+- **GutterFormatter**: render coverage status in the gutter as well as the overview ruler. 
+
+![coverage-GutterFormatter.png](./images/coverage-GutterFormatter.png)
+
+  _(Note, there is an known issue in vscode (microsoft/vscode#5923) that gutter decorators could interfere with debug breakpoints visibility. Therefore, you probably want to disable coverage before debugging or switch to DefaultFormatter)_
+
+**Coverage Colors**
+Besides the formatter, user can also customize the color via `jest.coverageColors` to change color for 3 coverage categories: `"uncovered", "covered", or "partially-covered"`, for example:
 ```
-
-Screenshots:
-* Default
-* Gutters
--->
-
+  "jest.coverageColors": {
+    "uncovered": "rgba(255,99,71, 0.2)",
+    "partially-covered": "rgba(255,215,0, 0.2)",
+  }
+```
+the default color scheme below, note the opacity might differ per formatter:
+```
+"jest.coverageColors": {
+    "covered": "rgba(9, 156, 65, 0.4)",
+    "uncovered": "rgba(121, 31, 10, 0.4)",
+    "partially-covered": "rgba(235, 198, 52, 0.4)",
+  }
+```
+### Understand the coverage overlay
+Depends on the formatter you choose, there are 3 types of coverage you might see in your source code, distinguished by colors:
+- "covered": if the code is covered. Marked as <span style="color:green">"green"</span> by default. 
+- "not-covered": if the code is not covered. Marked as <span style="color:red">"red"</span> by default.
+- "partially-covered": Usually this mean the branch (such as if, switch statements) only partially tested. Marked as <span style="color:yellow">"yellow"</span> by default.
+  - _Please note, istanbuljs (the library jest used to generate coverage info) reports switch branch coverage with the first "case" statement instead of the "switch" statement._
 ## Inspiration
 
 I'd like to give a shout out to [Wallaby.js](https://wallabyjs.com), which is a significantly more comprehensive and covers a lot more editors, if this extension interests you - check out that too.
-
-
-## Wanted
-
-Someone to take responsibility for ensuring that the default setup for create-react-app is always working. All the current authors use TypeScript and React/React Native and so have very little familiarity with changes to CRA. _Apply via PRs :D_.
-
 
 ## Troubleshooting
 
