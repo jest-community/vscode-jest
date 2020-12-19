@@ -287,7 +287,7 @@
   "dependencies": {
     "istanbul-lib-coverage": "^3.0.0",
     "istanbul-lib-source-maps": "^4.0.0",
-    "jest-editor-support": "^28.0.0-beta",
+    "jest-editor-support": "^28.0.0",
     "jest-snapshot": "^25.5.0",
     "vscode-codicons": "^0.0.4"
   },
