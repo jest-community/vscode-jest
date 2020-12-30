@@ -67,6 +67,8 @@ This extension runs on top of your Jest installation. Upon starting, it has the 
 
 Out of the box, this extension should work for most simple/standard jest and react projects. However, if you have a more sophisticated project or custom jest command, the default configuration most likely won't be sufficient but you can easily customize it with various settings<sup>*</sup>, such as `jest.pathToJest` where you can specify how you usually run your jest tests. 
 
+If your project doesn't live in the root of your repository, you may want to customise the `jest.rootPath` setting to enlighten the extension as to where to look. For instance: `"jest.rootPath": "src/client-app"` will direct the extension to use the `src/client-app` folder as the root for Jest.
+
 If you encountered any difficulty or have suggestions, please do not hesitate to [ask](https://github.com/jest-community/vscode-jest/issues), we have an active community that you might find helpful. 
 
 _*: all settings in this extension are prefixed with `jest`_
@@ -88,7 +90,7 @@ The simplest use cases should be supported out-of-the-box, but at the latest whe
 
 This plugin provides blueprints for debugging plain Jest setups or projects bootstrapped by `create-react-app`. (In the latter case you may have to edit the `runtimeExecutable` to reflect the used `react-scripts` package.) If those don't match your setup, you can modify the blueprints or create a completely new debug configuration, but keep in mind, that the `type` has to be `node` and that the configuration has to be named `"vscode-jest-tests"`. In order to learn more about debug/launch configurations in general, visit [VS Code Docs: Debugging](https://code.visualstudio.com/docs/editor/debugging#_launch-configurations).
 
-Starting with debugging is possible by clicking on the `debug` CodeLense above appendant `it` tests, but you can also debug all tests at once by starting debugging of `"vscode-jest-tests"` within the VS Code Debug Side Bar.
+Starting with debugging is possible by clicking on the `debug` CodeLens above appendant `it` tests, but you can also debug all tests at once by starting debugging of `"vscode-jest-tests"` within the VS Code Debug Side Bar.
 
 ### Notes for troubleshooting
 
@@ -154,7 +156,7 @@ I'd like to give a shout out to [Wallaby.js](https://wallabyjs.com), which is a 
 ## Troubleshooting
 
 ### start jest from non-root folder
-If you don't use the root of your project for your JS with Jest tests, do not worry, you can still use this project. You will need to use the "Jest: Start Runner" command, and maybe have to configure your own `jest.pathToJest` setting inside the `.vscode/settings.json` to whatever you would use.
+If you don't use the root of your project for your JS with Jest tests, do not worry, you can still use this project. You will need to use the "Jest: Start Runner" command, and maybe have to configure your own `jest.pathToJest` / `jest.rootPath` settings inside the `.vscode/settings.json` to whatever you would use.
 
 These are the [activation events](https://code.visualstudio.com/docs/extensionAPI/activation-events) which trigger the runner to start:
 
