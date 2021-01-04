@@ -29,6 +29,8 @@ import {
   nodeBinExtension,
   cleanAnsi,
   prepareIconFile,
+  getJestCommandSettings,
+  pathToConfig,
 } from '../src/helpers';
 
 // Manually (forcefully) set the executable's file extension to test its addition independendly of the operating system.
@@ -201,6 +203,27 @@ describe('ModuleHelpers', () => {
 
       prepareIconFile(context, 'red', '<svg fill="currentColor"></svg>', 'red');
       expect((mockWriteFileSync as jest.Mock).mock.calls[2][1]).toBe('<svg fill="red"></svg>');
+    });
+  });
+  describe('getJestCommandSettings', () => {
+    it('without jestCommandLine, returns pathToJest and pathToConfig', () => {
+      const settings: any = {
+        pathToJest: 'abc',
+        pathToConfig: 'whatever',
+        rootPath: '',
+      };
+      expect(getJestCommandSettings(settings)).toEqual([
+        pathToJest(settings),
+        pathToConfig(settings),
+      ]);
+    });
+    it('with jestCommandLine, ignore both pathToJest and pathToConfig', () => {
+      const settings: any = {
+        jestCommandLine: 'jest --coverage',
+        pathToJest: 'abc',
+        pathToConfig: 'whatever',
+      };
+      expect(getJestCommandSettings(settings)).toEqual([settings.jestCommandLine, undefined]);
     });
   });
 });
