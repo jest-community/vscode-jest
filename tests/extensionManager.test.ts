@@ -20,6 +20,7 @@ import {
 import { TestState } from '../src/DebugCodeLens';
 import { readFileSync } from 'fs';
 import { PluginWindowSettings } from '../src/Settings';
+import { getJestCommandSettings } from '../src/helpers';
 
 vscode.workspace.getConfiguration = jest.fn().mockImplementation((section) => {
   const data = readFileSync('./package.json');
@@ -36,6 +37,8 @@ vscode.workspace.getConfiguration = jest.fn().mockImplementation((section) => {
     get: jest.fn().mockImplementation((key) => defaults[`${section}.${key}`]),
   };
 });
+
+(getJestCommandSettings as jest.Mocked<any>).mockReturnValue([]);
 
 describe('InstancesManager', () => {
   let extensionManager: ExtensionManager;
@@ -365,11 +368,13 @@ describe('InstancesManager', () => {
         enableSnapshotUpdateMessages: true,
         pathToConfig: '',
         pathToJest: null,
+        jestCommandLine: undefined,
         restartJestOnSnapshotUpdate: false,
         rootPath: 'workspaceFolder1',
         runAllTestsFirst: true,
         showCoverageOnLoad: false,
         debugMode: false,
+        coverageColors: undefined,
       });
     });
   });

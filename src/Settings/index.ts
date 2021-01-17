@@ -5,6 +5,7 @@ export interface PluginResourceSettings {
   autoEnable?: boolean;
   enableInlineErrorMessages?: boolean;
   enableSnapshotUpdateMessages?: boolean;
+  jestCommandLine?: string;
   pathToConfig?: string;
   pathToJest?: string;
   restartJestOnSnapshotUpdate?: boolean;

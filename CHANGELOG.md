@@ -4,6 +4,7 @@ Please add your own contribution below inside the Master section
 Bug-fixes within the same version aren't needed
 
 ## Master
+* add a new setting for "jest.jestCommandLine" that supersede "jest.pathToJest" and "jest.pathToConfig" - @connectdotz
 
 -->
 

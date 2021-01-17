@@ -12,7 +12,7 @@ import {
   resultsWithLowerCaseWindowsDriveLetters,
   SortedTestResults,
 } from './TestResults';
-import { pathToJest, pathToConfig, cleanAnsi } from './helpers';
+import { cleanAnsi, getJestCommandSettings } from './helpers';
 import { CoverageMapProvider, CoverageCodeLensProvider } from './Coverage';
 import {
   updateDiagnostics,
@@ -204,8 +204,11 @@ export class JestExt {
     this.pluginSettings = updatedSettings;
 
     this.jestWorkspace.rootPath = updatedSettings.rootPath;
-    this.jestWorkspace.jestCommandLine = pathToJest(updatedSettings);
-    this.jestWorkspace.pathToConfig = pathToConfig(updatedSettings);
+
+    //TODO remove pathToConfig once we fully deprecated them
+    [this.jestWorkspace.jestCommandLine, this.jestWorkspace.pathToConfig] = getJestCommandSettings(
+      updatedSettings
+    );
 
     // debug
     this.jestWorkspace.debug = updatedSettings.debugMode;

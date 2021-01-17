@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { ProjectWorkspace } from 'jest-editor-support';
-import { pathToJest, pathToConfig } from './helpers';
+import { getJestCommandSettings } from './helpers';
 import { JestExt } from './JestExt';
 import { DebugCodeLensProvider, TestState } from './DebugCodeLens';
 import { DebugConfigurationProvider } from './DebugConfigurationProvider';
@@ -30,6 +30,7 @@ export function getExtensionResourceSettings(uri: vscode.Uri): PluginResourceSet
     enableInlineErrorMessages: config.get<boolean>('enableInlineErrorMessages'),
     enableSnapshotUpdateMessages: config.get<boolean>('enableSnapshotUpdateMessages'),
     pathToConfig: config.get<string>('pathToConfig'),
+    jestCommandLine: config.get<string>('jestCommandLine'),
     pathToJest: config.get<string>('pathToJest'),
     restartJestOnSnapshotUpdate: config.get<boolean>('restartJestOnSnapshotUpdate'),
     rootPath: path.join(uri.fsPath, config.get<string>('rootPath')),
@@ -74,8 +75,8 @@ export class ExtensionManager {
       return;
     }
     const pluginSettings = getExtensionResourceSettings(workspaceFolder.uri);
-    const jestPath = pathToJest(pluginSettings);
-    const configPath = pathToConfig(pluginSettings);
+    const [jestCommandLine, pathToConfig] = getJestCommandSettings(pluginSettings);
+
     const currentJestVersion = 20;
     const debugMode = pluginSettings.debugMode;
     const instanceSettings = {
@@ -83,8 +84,8 @@ export class ExtensionManager {
     };
     const jestWorkspace = new ProjectWorkspace(
       pluginSettings.rootPath,
-      jestPath,
-      configPath,
+      jestCommandLine,
+      pathToConfig,
       currentJestVersion,
       workspaceFolder.name,
       null,

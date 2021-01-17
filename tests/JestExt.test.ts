@@ -1,9 +1,12 @@
 jest.unmock('events');
 jest.unmock('../src/JestExt');
+
+const mockGetJestCommandSettings = jest.fn();
 jest.mock('../src/helpers', () => ({
   cleanAnsi: (str: string) => str,
   pathToJest: jest.fn(),
   pathToConfig: jest.fn(),
+  getJestCommandSettings: mockGetJestCommandSettings,
 }));
 
 jest.mock('../src/DebugCodeLens', () => ({
@@ -58,6 +61,7 @@ describe('JestExt', () => {
 
     projectWorkspace = new ProjectWorkspace(null, null, null, null);
     getConfiguration.mockReturnValue({});
+    mockGetJestCommandSettings.mockReturnValue([]);
   });
 
   describe('resetInlineErrorDecorators()', () => {

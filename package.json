@@ -71,14 +71,19 @@
           "default": true,
           "scope": "resource"
         },
+        "jest.jestCommandLine": {
+          "description": "The command line to start jest tests. It should be the same command line users run jest tests from a terminal/shell, with ability to append extra arguments (by the extension at runtime)",
+          "type": "string",
+          "scope": "resource"
+        },
         "jest.pathToJest": {
-          "description": "The path to the Jest binary, or an npm command to run tests suffixed with `--` e.g. `node_modules/.bin/jest` or `npm test --`",
+          "description": "(deprecated) The path to the Jest binary, or an npm command to run tests suffixed with `--` e.g. `node_modules/.bin/jest` or `npm test --`",
           "type": "string",
           "default": null,
           "scope": "resource"
         },
         "jest.pathToConfig": {
-          "description": "The path to your Jest configuration file",
+          "description": "(deprecated) The path to your Jest configuration file",
           "type": "string",
           "default": "",
           "scope": "resource"

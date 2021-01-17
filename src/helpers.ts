@@ -161,4 +161,20 @@ export function prepareIconFile(
   return resultIconPath;
 }
 
+/**
+ * This method retrieve a jest command line, if available, otherwise fall back to the legacy
+ * settings for pathToJest and pathToConfig.
+ *
+ * @param settings
+ */
+//TODO remove pathToJest and pathToConfig once we fully deprecated them
+export function getJestCommandSettings(
+  settings: PluginResourceSettings
+): [string, string | undefined] {
+  if (settings.jestCommandLine?.length > 0) {
+    return [settings.jestCommandLine, undefined];
+  }
+  return [pathToJest(settings), pathToConfig(settings)];
+}
+
 export default prepareIconFile;
