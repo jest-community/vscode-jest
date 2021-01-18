@@ -56,6 +56,20 @@ describe('buildAssertionContainer', () => {
     expect(groupNode.data).toHaveLength(3);
     expect(groupNode.data.map((n) => n.title)).toEqual(['test-1', 'test-3', 'test-2']);
   });
+  it('can group describe blocks with the same line', () => {
+    const a1 = helper.makeAssertion('test-1', 'KnownSuccess', ['d-1'], [2, 0]);
+    const a2 = helper.makeAssertion('test-1', 'KnownSuccess', ['d-2'], [2, 0]);
+    const a3 = helper.makeAssertion('test-1', 'KnownSuccess', ['d-3'], [2, 0]);
+    const a4 = helper.makeAssertion('test-2', 'KnownSuccess', [], [5, 0]);
+    const root = match.buildAssertionContainer([a1, a2, a3, a4]);
+    expect(root.childContainers).toHaveLength(1);
+    expect(root.childData).toHaveLength(1);
+    expect(root.childData[0]).toMatchObject({ zeroBasedLine: 5, name: 'test-2' });
+
+    const describeNode = root.childContainers[0];
+    expect(describeNode).toMatchObject({ zeroBasedLine: 2, name: 'd-1' });
+    expect(describeNode.group?.map((n) => n.name)).toEqual(['d-2', 'd-3']);
+  });
 
   it('create a container based on assertion ancestorTitles structure', () => {
     const a1 = helper.makeAssertion('test-1', 'KnownSuccess', [], [1, 0]);
@@ -150,9 +164,8 @@ describe('matchTestAssertions', () => {
 
     expect(matched).toHaveLength(2);
     expect(matched.map((m) => m.name)).toEqual(['test-1', 'test-2-100']);
-    expect(matched.map((m) => m.names.src)).toEqual(['test-1', 'test-2-${num}']);
-    expect(matched.map((m) => m.names.assertionTitle)).toEqual(['test-1', 'test-2-100']);
-    expect(matched.map((m) => m.names.assertionFullName)).toEqual(['test-1', 'test-2-100']);
+    expect(matched.map((m) => m.identifier.title)).toEqual(['test-1', 'test-2-100']);
+    expect(matched.map((m) => m.identifier.ancestorTitles)).toEqual([[], []]);
     expect(matched.map((m) => m.status)).toEqual(['KnownFail', 'KnownSuccess']);
   });
   it('can match tests with the same name but in different describe blocks', () => {
@@ -165,9 +178,8 @@ describe('matchTestAssertions', () => {
     const a2 = helper.makeAssertion('test-1', 'KnownSuccess', ['d-1'], [5, 0]);
     const matched = match.matchTestAssertions('a file', sourceRoot, [a1, a2]);
     expect(matched.map((m) => m.name)).toEqual(['test-1', 'd-1 test-1']);
-    expect(matched.map((m) => m.names.src)).toEqual(['test-1', 'test-1']);
-    expect(matched.map((m) => m.names.assertionTitle)).toEqual(['test-1', 'test-1']);
-    expect(matched.map((m) => m.names.assertionFullName)).toEqual(['test-1', 'd-1 test-1']);
+    expect(matched.map((m) => m.identifier.title)).toEqual(['test-1', 'test-1']);
+    expect(matched.map((m) => m.identifier.ancestorTitles)).toEqual([[], ['d-1']]);
     expect(matched.map((m) => m.status)).toEqual(['KnownFail', 'KnownSuccess']);
     expect(matched.map((m) => m.start.line)).toEqual([0, 5]);
     expect(matched.map((m) => m.end.line)).toEqual([4, 6]);
@@ -265,72 +277,19 @@ describe('matchTestAssertions', () => {
       });
       return [sourceRoot, assertions];
     };
-    it('any failed assertion will fail the test', () => {
+    it('all assertions will be returned', () => {
       const [root, assertions] = createTestData([
         'KnownSuccess',
         ['KnownFail', 13],
         'KnownSuccess',
       ]);
       const matched = match.matchTestAssertions('a file', root, assertions);
-      expect(matched).toHaveLength(1);
-      expect(matched[0].status).toEqual('KnownFail');
-      expect(matched[0].start).toEqual({ line: 11, column: 0 });
-      expect(matched[0].end).toEqual({ line: 19, column: 0 });
-      expect(matched[0].lineNumberOfError).toEqual(12);
-    });
-    describe('test result name', () => {
-      it('use the first failed assertion, if exist', () => {
-        const [root, assertions] = createTestData([
-          'KnownSuccess',
-          ['KnownFail', 13],
-          'KnownSuccess',
-          ['KnownFail', 20],
-        ]);
-        const matched = match.matchTestAssertions('a file', root, assertions);
-        expect(matched).toHaveLength(1);
-        expect(matched[0].name).toEqual('test-1');
-        expect(matched[0].status).toEqual('KnownFail');
-      });
-      describe('if no failed assertion, the first assertion will be used', () => {
-        // eat-our-own-dog-food: use jest .each so we can ensure it worked for our users
-        const entries = [
-          [['KnownSuccess', 'KnownSuccess'], 'KnownSuccess'],
-          [['Unknown', 'Unknown'], 'Unknown'],
-        ];
-        it.each(entries)('with test entry %#', (entry, status) => {
-          const [root, assertions] = createTestData(entry as TestReconciliationState[]);
-          const matched = match.matchTestAssertions('a file', root, assertions);
-          expect(matched).toHaveLength(1);
-          expect(matched[0].name).toEqual('test-0');
-          expect(matched[0].status).toEqual(status);
-        });
-      });
-    });
-    it('test is succeeded if all assertions are successful', () => {
-      const [root, assertions] = createTestData(['KnownSuccess', 'KnownSuccess', 'KnownSuccess']);
-      const matched = match.matchTestAssertions('a file', root, assertions);
-      expect(matched).toHaveLength(1);
-      expect(matched[0].status).toEqual('KnownSuccess');
-    });
-    it('test is skip when all assertions are skipped', () => {
-      const [root, assertions] = createTestData([
-        TestReconciliationState.KnownSkip,
-        TestReconciliationState.KnownSkip,
-        TestReconciliationState.KnownSkip,
-      ]);
-      const matched = match.matchTestAssertions('a file', root, assertions);
-      expect(matched).toHaveLength(1);
-      expect(matched[0].status).toEqual(TestReconciliationState.KnownSkip);
-    });
-    it('test name', () => {
-      const [root, assertions] = createTestData([
-        TestReconciliationState.KnownSkip,
-        TestReconciliationState.KnownSkip,
-        TestReconciliationState.KnownSkip,
-      ]);
-      const matched = match.matchTestAssertions('a file', root, assertions);
-      expect(matched).toHaveLength(1);
-      expect(matched[0].status).toEqual(TestReconciliationState.KnownSkip);
+      expect(matched).toHaveLength(3);
+      expect(matched.map((m) => m.status)).toEqual(['KnownSuccess', 'KnownFail', 'KnownSuccess']);
+      expect(matched[1].status).toEqual('KnownFail');
+      expect(matched[1].start).toEqual({ line: 11, column: 0 });
+      expect(matched[1].end).toEqual({ line: 19, column: 0 });
+      expect(matched[1].lineNumberOfError).toEqual(12);
     });
   });
   it('test name precedence: assertion.fullName > assertion.title > testSource.name', () => {

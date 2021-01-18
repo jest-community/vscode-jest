@@ -5,6 +5,7 @@
 export interface BaseNodeType {
   zeroBasedLine: number;
   name: string;
+  merge: (another: this) => boolean;
 }
 
 /* interface implementation */
@@ -27,8 +28,8 @@ export class DataNode<T> implements BaseNodeType {
     return true;
   }
 
-  /** return the only element in the list, exception otherwise */
-  only(): T {
+  /** return the single element in the list, exception otherwise */
+  single(): T {
     if (this.data.length !== 1) {
       throw new TypeError(`expect 1 element but got ${this.data.length} elements`);
     }
@@ -48,6 +49,7 @@ export class ContainerNode<T> implements BaseNodeType {
   public childData: DataNode<T>[] = [];
   public zeroBasedLine: number;
   public name: string;
+  public group?: ContainerNode<T>[];
 
   constructor(name: string) {
     this.name = name;
@@ -60,6 +62,18 @@ export class ContainerNode<T> implements BaseNodeType {
 
   public addDataNode(dataNode: DataNode<T>): void {
     this.childData.push(dataNode);
+  }
+
+  merge(another: ContainerNode<T>): boolean {
+    if (another.zeroBasedLine !== this.zeroBasedLine) {
+      return false;
+    }
+    if (!this.group) {
+      this.group = [another];
+    } else {
+      this.group.push(another);
+    }
+    return true;
   }
 
   public findContainer(path: string[], createIfMissing = true): ContainerNode<T> | undefined {
@@ -83,25 +97,29 @@ export class ContainerNode<T> implements BaseNodeType {
   public sort(grouping = false): void {
     const sortByLine = (n1: BaseNodeType, n2: BaseNodeType): number =>
       n1.zeroBasedLine - n2.zeroBasedLine;
-    const groupData = (list: DataNode<T>[], data: DataNode<T>): DataNode<T>[] => {
+    // group nodes after sort
+    const groupNodes = <N extends BaseNodeType>(list: N[], node: N): N[] => {
       if (list.length <= 0) {
-        return [data];
+        return [node];
       }
       // if not able to merge with previous node, i.e . can not group, add it to the list
-      if (!list[list.length - 1].merge(data)) {
-        list.push(data);
+      if (!list[list.length - 1].merge(node)) {
+        list.push(node);
       }
       return list;
     };
 
     this.childData.sort(sortByLine);
     if (grouping) {
-      this.childData = this.childData.reduce(groupData, []);
+      this.childData = this.childData.reduce(groupNodes, []);
     }
 
     // recursive to sort childContainers, which will update its lineNumber and then sort the list itself
     this.childContainers.forEach((c) => c.sort(grouping));
     this.childContainers.sort(sortByLine);
+    if (grouping) {
+      this.childContainers = this.childContainers.reduce(groupNodes, []);
+    }
 
     // if container doesn't have valid line info, use the first child's
     if (this.zeroBasedLine < 0) {

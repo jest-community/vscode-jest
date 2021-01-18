@@ -11,8 +11,15 @@ import {
   TestResult,
   resultsWithLowerCaseWindowsDriveLetters,
   SortedTestResults,
+  TestResultStatusInfo,
 } from './TestResults';
-import { cleanAnsi, getJestCommandSettings } from './helpers';
+import {
+  cleanAnsi,
+  testIdString,
+  IdStringType,
+  getJestCommandSettings,
+  escapeRegExp,
+} from './helpers';
 import { CoverageMapProvider, CoverageCodeLensProvider } from './Coverage';
 import {
   updateDiagnostics,
@@ -20,7 +27,7 @@ import {
   resetDiagnostics,
   failedSuiteCount,
 } from './diagnostics';
-import { DebugCodeLensProvider } from './DebugCodeLens';
+import { DebugCodeLensProvider, DebugTestIdentifier } from './DebugCodeLens';
 import { DebugConfigurationProvider } from './DebugConfigurationProvider';
 import { DecorationOptions } from './types';
 import { isOpenInMultipleEditors } from './editor';
@@ -35,6 +42,9 @@ interface InstanceSettings {
   multirootEnv: boolean;
 }
 
+interface RunTestPickItem extends vscode.QuickPickItem {
+  id: DebugTestIdentifier;
+}
 export class JestExt {
   coverageMapProvider: CoverageMapProvider;
   coverageOverlay: CoverageOverlay;
@@ -297,19 +307,43 @@ export class JestExt {
   public runTest = async (
     workspaceFolder: vscode.WorkspaceFolder,
     fileName: string,
-    identifier: string
+    ...ids: DebugTestIdentifier[]
   ): Promise<void> => {
-    const restart = this.jestProcessManager.numberOfProcesses > 0;
-    this.jestProcessManager.stopAll();
+    const idString = (type: IdStringType, id: DebugTestIdentifier): string =>
+      typeof id === 'string' ? id : testIdString(type, id);
+    const selectTest = async (
+      testIdentifiers: DebugTestIdentifier[]
+    ): Promise<DebugTestIdentifier | undefined> => {
+      const items: RunTestPickItem[] = testIdentifiers.map((id) => ({
+        label: idString('display-reverse', id),
+        id,
+      }));
+      const selected = await vscode.window.showQuickPick<RunTestPickItem>(items, {
+        placeHolder: 'select a test to debug',
+      });
 
-    this.debugConfigurationProvider.prepareTestRun(fileName, identifier);
+      return selected?.id;
+    };
+    let testId: DebugTestIdentifier | undefined;
+    switch (ids.length) {
+      case 0:
+        return;
+      case 1:
+        testId = ids[0];
+        break;
+      default:
+        testId = await selectTest(ids);
+        break;
+    }
 
-    const handle = vscode.debug.onDidTerminateDebugSession(() => {
-      handle.dispose();
-      if (restart) {
-        this.startProcess();
-      }
-    });
+    if (!testId) {
+      return;
+    }
+
+    this.debugConfigurationProvider.prepareTestRun(
+      fileName,
+      escapeRegExp(idString('full-name', testId))
+    );
 
     try {
       // try to run the debug configuration from launch.json
@@ -553,20 +587,10 @@ export class JestExt {
     blocks: TestResult[],
     state: TestReconciliationState
   ): DecorationOptions[] {
-    const nameForState = {
-      [TestReconciliationState.KnownSuccess]: 'Passed',
-      [TestReconciliationState.KnownFail]: 'Failed',
-      [TestReconciliationState.KnownSkip]: 'Skipped',
-      [TestReconciliationState.Unknown]:
-        'Test has not run yet, due to Jest only running tests related to changes.',
-    };
-
-    return blocks.map((it) => {
-      return {
-        range: new vscode.Range(it.start.line, it.start.column, it.start.line, it.start.column + 1),
-        hoverMessage: nameForState[state],
-        identifier: it.name,
-      };
-    });
+    return blocks.map((it) => ({
+      range: new vscode.Range(it.start.line, it.start.column, it.start.line, it.start.column + 1),
+      hoverMessage: TestResultStatusInfo.get(state).desc,
+      identifier: it.name,
+    }));
   }
 }

@@ -66,3 +66,20 @@ export const makeAssertion = (
     location: location ? makeLocation(location) : EmptyLocation,
     ...(override || {}),
   } as TestAssertionStatus);
+
+export const makeTestResult = (
+  title: string,
+  status: TestReconciliationState,
+  ancestorTitles: string[] = [],
+  range?: [number, number, number, number],
+  override?: Partial<TestResult>
+): TestResult => ({
+  name: [...ancestorTitles, title].join(' '),
+  status,
+  identifier: {
+    title,
+    ancestorTitles,
+  },
+  ...(range ? makePositionRange(range) : EmptyLocationRange),
+  ...(override || {}),
+});

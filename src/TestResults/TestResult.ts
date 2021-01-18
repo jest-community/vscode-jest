@@ -17,14 +17,14 @@ export interface LocationRange {
   end: Location;
 }
 
+export interface TestIdentifier {
+  title: string;
+  ancestorTitles: string[];
+}
 export interface TestResult extends LocationRange {
   name: string;
 
-  names: {
-    src: string;
-    assertionTitle?: string;
-    assertionFullName?: string;
-  };
+  identifier: TestIdentifier;
 
   status: TestReconciliationState;
   shortMessage?: string;
@@ -32,6 +32,9 @@ export interface TestResult extends LocationRange {
 
   /** Zero-based line number */
   lineNumberOfError?: number;
+
+  // multiple results for the given range, common for parameterized (.each) tests
+  multiResults?: TestResult[];
 }
 
 export const withLowerCaseWindowsDriveLetter = (filePath: string): string | undefined => {
@@ -131,3 +134,22 @@ export const resultsWithoutAnsiEscapeSequence = (data: JestTotalResults): JestTo
     })),
   };
 };
+
+// export type StatusInfo<T> = {[key in TestReconciliationState]: T};
+export interface StatusInfo {
+  precedence: number;
+  desc: string;
+}
+
+export const TestResultStatusInfo: Map<TestReconciliationState, StatusInfo> = new Map([
+  [TestReconciliationState.KnownFail, { precedence: 1, desc: 'Failed' }],
+  [
+    TestReconciliationState.Unknown,
+    {
+      precedence: 2,
+      desc: 'Test has not run yet, due to Jest only running tests related to changes.',
+    },
+  ],
+  [TestReconciliationState.KnownSkip, { precedence: 3, desc: 'Skipped' }],
+  [TestReconciliationState.KnownSuccess, { precedence: 4, desc: 'Passed' }],
+]);

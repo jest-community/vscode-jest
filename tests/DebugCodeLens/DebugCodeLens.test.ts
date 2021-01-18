@@ -29,6 +29,6 @@ describe('DebugCodeLens', () => {
   });
 
   it('should specify the test name', () => {
-    expect(sut.testName).toBe(testName);
+    expect(sut.testIds).toEqual([testName]);
   });
 });
