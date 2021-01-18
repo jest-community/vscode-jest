@@ -51,6 +51,7 @@ export class TestResultProvider {
     // build a range based map
     const byRange: Map<string, TestResult[]> = new Map();
     results.forEach((r) => {
+      // Q: is there a better/efficient way to index the range?
       const key = `${r.start.line}-${r.start.column}-${r.end.line}-${r.end.column}`;
       const list = byRange.get(key);
       if (!list) {

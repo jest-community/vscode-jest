@@ -162,7 +162,7 @@ const ContextMatch = (messaging: Messaging): ContextMatchAlgorithm => {
         return [toMatchResult(itBlock, assertion)];
       }
       default: {
-        // 1-to-many
+        // 1-to-many: parameterized tests
         return a.data.map((a) => toMatchResult(itBlock, a));
       }
     }

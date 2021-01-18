@@ -111,6 +111,13 @@ export function pathToConfig(pluginSettings: PluginResourceSettings): string {
 }
 
 /**
+ *  Taken From https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
+ */
+export function escapeRegExp(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+}
+
+/**
  * ANSI colors/characters cleaning based on http://stackoverflow.com/questions/25245716/remove-all-ansi-colors-styles-from-strings
  */
 export function cleanAnsi(str: string): string {
@@ -119,13 +126,6 @@ export function cleanAnsi(str: string): string {
     /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g,
     ''
   );
-}
-
-/**
- *  Taken From https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
- */
-export function escapeRegExp(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
 }
 
 export type IdStringType = 'display' | 'display-reverse' | 'full-name';
