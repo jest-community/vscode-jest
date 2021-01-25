@@ -4,7 +4,7 @@ jest.unmock('../test-helper');
 
 import * as helper from '../test-helper';
 import * as match from '../../src/TestResults/match-by-context';
-import { TestReconciliationState } from '../../src/TestResults';
+import { TestReconciliationStateType } from '../../src/TestResults';
 import { TestAssertionStatus, ParsedNode } from 'jest-editor-support';
 
 describe('buildAssertionContainer', () => {
@@ -257,14 +257,14 @@ describe('matchTestAssertions', () => {
   });
   describe('1-many (jest.each) match', () => {
     const createTestData = (
-      statusList: (TestReconciliationState | [TestReconciliationState, number])[]
+      statusList: (TestReconciliationStateType | [TestReconciliationStateType, number])[]
     ): [ParsedNode, TestAssertionStatus[]] => {
       const t1 = helper.makeItBlock('', [12, 1, 20, 1]);
       const sourceRoot = helper.makeRoot([t1]);
 
       // this match jest.each with 2 assertions
       const assertions = statusList.map((s, idx) => {
-        let state: TestReconciliationState;
+        let state: TestReconciliationStateType;
         let override: Partial<TestAssertionStatus>;
         if (typeof s === 'string') {
           state = s;

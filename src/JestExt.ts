@@ -12,6 +12,7 @@ import {
   resultsWithLowerCaseWindowsDriveLetters,
   SortedTestResults,
   TestResultStatusInfo,
+  TestReconciliationStateType,
 } from './TestResults';
 import {
   cleanAnsi,
@@ -585,11 +586,11 @@ export class JestExt {
 
   private generateDotsForItBlocks(
     blocks: TestResult[],
-    state: TestReconciliationState
+    state: TestReconciliationStateType
   ): DecorationOptions[] {
     return blocks.map((it) => ({
       range: new vscode.Range(it.start.line, it.start.column, it.start.line, it.start.column + 1),
-      hoverMessage: TestResultStatusInfo.get(state).desc,
+      hoverMessage: TestResultStatusInfo[state].desc,
       identifier: it.name,
     }));
   }

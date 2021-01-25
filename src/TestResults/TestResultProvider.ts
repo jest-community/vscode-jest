@@ -23,9 +23,7 @@ const sortByStatus = (a: TestResult, b: TestResult): number => {
   if (a.status === b.status) {
     return 0;
   }
-  return (
-    TestResultStatusInfo.get(a.status).precedence - TestResultStatusInfo.get(b.status).precedence
-  );
+  return TestResultStatusInfo[a.status].precedence - TestResultStatusInfo[b.status].precedence;
 };
 export class TestResultProvider {
   verbose: boolean;

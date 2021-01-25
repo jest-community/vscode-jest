@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { extensionName } from '../appGlobals';
 import { basename } from 'path';
 import { DebugCodeLens } from './DebugCodeLens';
-import { TestReconciliationState } from '../TestResults';
+import { TestReconciliationStateType } from '../TestResults';
 import { TestState, TestStateByTestReconciliationState } from './TestState';
 import { GetJestExtByURI } from '../extensionManager';
 
@@ -59,7 +59,7 @@ export class DebugCodeLensProvider implements vscode.CodeLensProvider {
     return result;
   }
 
-  showCodeLensAboveTest(test: { status: TestReconciliationState }): boolean {
+  showCodeLensAboveTest(test: { status: TestReconciliationStateType }): boolean {
     const state = TestStateByTestReconciliationState[test.status];
     return this._showWhenTestStateIn.includes(state);
   }

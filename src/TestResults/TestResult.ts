@@ -1,4 +1,4 @@
-import { TestReconciliationState } from './TestReconciliationState';
+import { TestReconciliationStateType } from './TestReconciliationState';
 import { JestFileResults, JestTotalResults } from 'jest-editor-support';
 import { FileCoverage } from 'istanbul-lib-coverage';
 import * as path from 'path';
@@ -26,7 +26,7 @@ export interface TestResult extends LocationRange {
 
   identifier: TestIdentifier;
 
-  status: TestReconciliationState;
+  status: TestReconciliationStateType;
   shortMessage?: string;
   terseMessage?: string;
 
@@ -141,15 +141,12 @@ export interface StatusInfo {
   desc: string;
 }
 
-export const TestResultStatusInfo: Map<TestReconciliationState, StatusInfo> = new Map([
-  [TestReconciliationState.KnownFail, { precedence: 1, desc: 'Failed' }],
-  [
-    TestReconciliationState.Unknown,
-    {
-      precedence: 2,
-      desc: 'Test has not run yet, due to Jest only running tests related to changes.',
-    },
-  ],
-  [TestReconciliationState.KnownSkip, { precedence: 3, desc: 'Skipped' }],
-  [TestReconciliationState.KnownSuccess, { precedence: 4, desc: 'Passed' }],
-]);
+export const TestResultStatusInfo: { [key in TestReconciliationStateType]: StatusInfo } = {
+  KnownFail: { precedence: 1, desc: 'Failed' },
+  Unknown: {
+    precedence: 2,
+    desc: 'Test has not run yet, due to Jest only running tests related to changes.',
+  },
+  KnownSkip: { precedence: 3, desc: 'Skipped' },
+  KnownSuccess: { precedence: 4, desc: 'Passed' },
+};
