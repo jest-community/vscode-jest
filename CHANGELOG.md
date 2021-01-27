@@ -4,12 +4,13 @@ Please add your own contribution below inside the Master section
 Bug-fixes within the same version aren't needed
 
 ## Master
-* fully support parameterized tests in matching, diagnosis and debugging - @connectdotz
-* optimization: remove stop/start the internal jest tests process during debug - @connectdotz
-* add a new setting for "jest.jestCommandLine" that supersede "jest.pathToJest" and "jest.pathToConfig" - @connectdotz
 
 -->
 
+### 4.0.0-alpha.3
+* fully support parameterized tests in matching, diagnosis and debugging - @connectdotz
+* optimization: remove stop/start the internal jest tests process during debug - @connectdotz
+* add a new setting for "jest.jestCommandLine" that supersede "jest.pathToJest" and "jest.pathToConfig" - @connectdotz
 ### 4.0.0-alpha.2
 * use assertion's fullName in TestResult instead of the source test name - @connectdotz
 * consolidated and simplified coverage formatter parsing logic; added overlay color customization; change coverage formatter/colors will take effect without restarting vscode; updated coverage help in README. - @connectdotz
