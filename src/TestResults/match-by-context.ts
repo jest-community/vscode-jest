@@ -74,10 +74,9 @@ export const toMatchResult = (
   // Note the shift from one-based to zero-based line number and columns
   return {
     name: assertion?.fullName ?? assertion?.title ?? test.name,
-    names: {
-      src: test.name,
-      assertionTitle: assertion?.title,
-      assertionFullName: assertion?.fullName,
+    identifier: {
+      title: assertion?.title,
+      ancestorTitles: assertion?.ancestorTitles,
     },
     start: adjustLocation(test.start),
     end: adjustLocation(test.end),
@@ -90,7 +89,7 @@ export const toMatchResult = (
 
 /** mark all data and child containers unmatched */
 const toUnmatchedResults = (tContainer: ContainerNode<ItBlock>, err: string): TestResult[] => {
-  const results = tContainer.childData.map((n) => toMatchResult(n.only(), err));
+  const results = tContainer.childData.map((n) => toMatchResult(n.single(), err));
   tContainer.childContainers.forEach((c) => results.push(...toUnmatchedResults(c, err)));
   return results;
 };
@@ -146,31 +145,25 @@ const ContextMatch = (messaging: Messaging): ContextMatchAlgorithm => {
   const handleTestBlockMatch = (
     t: DataNode<ItBlock>,
     matched: DataNode<TestAssertionStatus>[]
-  ): TestResult => {
+  ): TestResult[] => {
     if (matched.length !== 1) {
-      return toMatchResult(t.only(), `found ${matched.length} matched assertion(s)`);
+      return [toMatchResult(t.single(), `found ${matched.length} matched assertion(s)`)];
     }
     const a = matched[0];
-    const itBlock = t.only();
+    const itBlock = t.single();
     switch (a.data.length) {
       case 0:
         throw new TypeError(`invalid state: assertion data should not be empty if it is a match!`);
       case 1: {
-        const assertion = a.only();
+        const assertion = a.single();
         if (a.name !== t.name && !matchPos(itBlock, assertion)) {
           messaging('unusual-match', 'data', t, a, 'neither name nor line matched');
         }
-        return toMatchResult(itBlock, assertion);
+        return [toMatchResult(itBlock, assertion)];
       }
       default: {
-        // 1-to-many
-        messaging('unusual-match', 'data', t, a, '1-to-many match, jest.each perhaps?');
-
-        // TODO: support multiple errorLine
-        // until we support multiple errors, choose the first error assertion, if any
-        const assertions =
-          a.data.find((assertion) => assertion.status === 'KnownFail') || a.first();
-        return toMatchResult(itBlock, assertions);
+        // 1-to-many: parameterized tests
+        return a.data.map((a) => toMatchResult(itBlock, a));
       }
     }
   };
@@ -231,11 +224,15 @@ const ContextMatch = (messaging: Messaging): ContextMatchAlgorithm => {
   ): TestResult[] => {
     const matchResults: TestResult[] = [];
     matchChildren('data', tContainer, aContainer, (t, a) =>
-      matchResults.push(handleTestBlockMatch(t, a))
+      matchResults.push(...handleTestBlockMatch(t, a))
     );
     matchChildren('container', tContainer, aContainer, (t, a) =>
       matchResults.push(...handleDescribeBlockMatch(t, a))
     );
+
+    if (aContainer.group) {
+      aContainer.group.forEach((c) => matchResults.push(...matchContainers(tContainer, c)));
+    }
 
     return matchResults;
   };

@@ -232,10 +232,15 @@ describe('TestResultProvider', () => {
         assertions[1].fullName,
         assertions[2].fullName,
       ]);
-      expect(actual.map((a) => a.names.src)).toEqual([
-        testBlock.name,
-        testBlock2.name,
-        testBlock3.name,
+      expect(actual.map((a) => a.identifier.title)).toEqual([
+        assertions[0].title,
+        assertions[1].title,
+        assertions[2].title,
+      ]);
+      expect(actual.map((a) => a.identifier.ancestorTitles)).toEqual([
+        assertions[0].ancestorTitles,
+        assertions[1].ancestorTitles,
+        assertions[2].ancestorTitles,
       ]);
       expect(actual.map((a) => a.status)).toEqual([
         TestReconciliationState.KnownSuccess,
@@ -322,7 +327,6 @@ describe('TestResultProvider', () => {
         expect(actual).toHaveLength(1);
         expect(actual[0].status).toBe(TestReconciliationState.KnownSuccess);
         expect(actual[0].shortMessage).toBeUndefined();
-        expect(consoleWarning).toHaveBeenCalled();
       });
       it('when all goes according to plan, no warning', () => {
         const sut = new TestResultProvider();
@@ -336,6 +340,162 @@ describe('TestResultProvider', () => {
         expect(actual[0].status).toBe(TestReconciliationState.KnownFail);
         expect(actual[0].shortMessage).toBeUndefined();
         expect(consoleWarning).not.toHaveBeenCalled();
+      });
+    });
+    describe('parameterized tests', () => {
+      let sut: TestResultProvider;
+      const testBlock2 = helper.makeItBlock('p-test-$status', [8, 0, 20, 20]);
+      beforeEach(() => {
+        sut = new TestResultProvider();
+        mockParseTest([testBlock, testBlock2]);
+      });
+      it('test results shared the same range will be grouped', () => {
+        const assertions = [
+          helper.makeAssertion(testBlock.name, TestReconciliationState.KnownFail, [], [1, 12]),
+          helper.makeAssertion('p-test-success', TestReconciliationState.KnownSuccess, [], [8, 20]),
+          helper.makeAssertion('p-test-fail-1', TestReconciliationState.KnownFail, [], [8, 20]),
+          helper.makeAssertion('p-test-fail-2', TestReconciliationState.KnownFail, [], [8, 20]),
+        ];
+        assertionsForTestFile.mockReturnValueOnce(assertions);
+        const actual = sut.getResults(filePath);
+
+        // should only have 2 test results returned, as the last 3 assertions match to the same test block
+        expect(actual).toHaveLength(2);
+        expect(actual.map((a) => a.name)).toEqual([testBlock.name, 'p-test-fail-1']);
+        expect(actual.map((a) => a.status)).toEqual([
+          TestReconciliationState.KnownFail,
+          TestReconciliationState.KnownFail,
+        ]);
+
+        // the parameterized test use the first failed results as its "primary" result and
+        // put the other 2 tests in "extraResults" sorted by test precedence: fail > sucess
+        const pResult = actual[1];
+        expect(pResult.multiResults).toHaveLength(2);
+        expect(pResult.multiResults.map((a) => [a.name, a.status])).toEqual([
+          ['p-test-fail-2', TestReconciliationState.KnownFail],
+          ['p-test-success', TestReconciliationState.KnownSuccess],
+        ]);
+      });
+      it('grouped test results are sorted by status precedence fail > unknown > skip > success', () => {
+        const assertions = [
+          helper.makeAssertion(testBlock.name, TestReconciliationState.KnownFail, [], [1, 12]),
+          helper.makeAssertion('p-test-success', TestReconciliationState.KnownSuccess, [], [8, 20]),
+          helper.makeAssertion('p-test-skip', TestReconciliationState.KnownSkip, [], [8, 20]),
+          helper.makeAssertion('p-test-fail', TestReconciliationState.KnownFail, [], [8, 20]),
+          helper.makeAssertion('p-test-unknown', TestReconciliationState.Unknown, [], [8, 20]),
+        ];
+        assertionsForTestFile.mockReturnValueOnce(assertions);
+        const actual = sut.getResults(filePath);
+
+        // should only have 2 test results returned, as the last 4 assertions match to the same test block
+        expect(actual).toHaveLength(2);
+
+        const pResult = actual[1];
+        expect(pResult.name).toEqual('p-test-fail');
+        expect(pResult.multiResults).toHaveLength(3);
+        expect(pResult.multiResults.map((a) => a.name)).toEqual([
+          'p-test-unknown',
+          'p-test-skip',
+          'p-test-success',
+        ]);
+      });
+      it('parameterized test is consider failed/skip/unknown if any of its test has the corresponding status', () => {
+        const assertions = [
+          helper.makeAssertion(testBlock.name, TestReconciliationState.KnownFail, [], [1, 12]),
+          helper.makeAssertion('p-test-success', TestReconciliationState.KnownSuccess, [], [8, 20]),
+          helper.makeAssertion('p-test-skip', TestReconciliationState.KnownSkip, [], [8, 20]),
+          helper.makeAssertion('p-test-unknown', TestReconciliationState.Unknown, [], [8, 20]),
+        ];
+        assertionsForTestFile.mockReturnValueOnce(assertions);
+        const actual = sut.getResults(filePath);
+
+        // should only have 2 test results returned, as the last 4 assertions match to the same test block
+        expect(actual).toHaveLength(2);
+
+        const pResult = actual[1];
+        expect(pResult.name).toEqual('p-test-unknown');
+        expect(pResult.multiResults).toHaveLength(2);
+        expect(pResult.multiResults.map((a) => a.name)).toEqual(['p-test-skip', 'p-test-success']);
+      });
+      it('parameterized test are successful only if all of its tests succeeded', () => {
+        const assertions = [
+          helper.makeAssertion(testBlock.name, TestReconciliationState.KnownFail, [], [1, 12]),
+          helper.makeAssertion(
+            'p-test-success-1',
+            TestReconciliationState.KnownSuccess,
+            [],
+            [8, 20]
+          ),
+          helper.makeAssertion(
+            'p-test-success-2',
+            TestReconciliationState.KnownSuccess,
+            [],
+            [8, 20]
+          ),
+        ];
+        assertionsForTestFile.mockReturnValueOnce(assertions);
+        const actual = sut.getResults(filePath);
+
+        // should only have 2 test results returned, as the last 4 assertions match to the same test block
+        expect(actual).toHaveLength(2);
+
+        const pResult = actual[1];
+        expect(pResult.name).toEqual('p-test-success-1');
+        expect(pResult.multiResults).toHaveLength(1);
+        expect(pResult.multiResults.map((a) => a.name)).toEqual(['p-test-success-2']);
+      });
+    });
+    describe('paramertized describes', () => {
+      let sut: TestResultProvider;
+      const tBlock = helper.makeItBlock('p-test-$count', [8, 0, 20, 20]);
+      const dBlock = helper.makeDescribeBlock('p-describe-scount', [tBlock]);
+      beforeEach(() => {
+        sut = new TestResultProvider();
+        mockParseTest([dBlock]);
+      });
+      it('test from different parameter block can still be grouped', () => {
+        const assertions = [
+          helper.makeAssertion(
+            'p-test-1',
+            TestReconciliationState.KnownSuccess,
+            ['p-describe-1'],
+            [8, 20]
+          ),
+          helper.makeAssertion(
+            'p-test-2',
+            TestReconciliationState.KnownFail,
+            ['p-describe-1'],
+            [8, 20]
+          ),
+          helper.makeAssertion(
+            'p-test-1',
+            TestReconciliationState.KnownSuccess,
+            ['p-describe-2'],
+            [8, 20]
+          ),
+          helper.makeAssertion(
+            'p-test-2',
+            TestReconciliationState.KnownSuccess,
+            ['p-describe-2'],
+            [8, 20]
+          ),
+        ];
+        assertionsForTestFile.mockReturnValueOnce(assertions);
+        const actual = sut.getResults(filePath);
+
+        expect(actual).toHaveLength(1);
+
+        const pResult = actual[0];
+        expect([pResult.name, pResult.status]).toEqual([
+          'p-describe-1 p-test-2',
+          TestReconciliationState.KnownFail,
+        ]);
+        expect(pResult.multiResults).toHaveLength(3);
+        expect(pResult.multiResults.map((a) => a.name)).toEqual([
+          'p-describe-1 p-test-1',
+          'p-describe-2 p-test-1',
+          'p-describe-2 p-test-2',
+        ]);
       });
     });
   });

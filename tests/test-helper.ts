@@ -1,6 +1,6 @@
 /* istanbul ignore file */
 import { Location, LocationRange, TestResult } from '../src/TestResults/TestResult';
-import { TestReconciliationState } from '../src/TestResults';
+import { TestReconciliationStateType } from '../src/TestResults';
 import { ItBlock, TestAssertionStatus } from 'jest-editor-support';
 
 export const EmptyLocation = {
@@ -53,7 +53,7 @@ export const makeRoot = (children: any[]): any => ({
 });
 export const makeAssertion = (
   title: string,
-  status: TestReconciliationState,
+  status: TestReconciliationStateType,
   ancestorTitles: string[] = [],
   location?: [number, number],
   override?: Partial<TestAssertionStatus>
@@ -66,3 +66,20 @@ export const makeAssertion = (
     location: location ? makeLocation(location) : EmptyLocation,
     ...(override || {}),
   } as TestAssertionStatus);
+
+export const makeTestResult = (
+  title: string,
+  status: TestReconciliationStateType,
+  ancestorTitles: string[] = [],
+  range?: [number, number, number, number],
+  override?: Partial<TestResult>
+): TestResult => ({
+  name: [...ancestorTitles, title].join(' '),
+  status,
+  identifier: {
+    title,
+    ancestorTitles,
+  },
+  ...(range ? makePositionRange(range) : EmptyLocationRange),
+  ...(override || {}),
+});

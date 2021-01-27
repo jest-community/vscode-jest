@@ -4,6 +4,7 @@ import { extensionName } from './appGlobals';
 import { statusBar } from './StatusBar';
 import { ExtensionManager, getExtensionWindowSettings } from './extensionManager';
 import { registerSnapshotCodeLens, registerSnapshotPreview } from './SnapshotCodeLens';
+import { DebugTestIdentifier } from './DebugCodeLens';
 
 let extensionManager: ExtensionManager;
 
@@ -39,9 +40,9 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.commands.registerCommand(
       `${extensionName}.run-test`,
-      (document: vscode.TextDocument, filename: string, identifier: string) => {
+      (document: vscode.TextDocument, filename: string, ...identifiers: DebugTestIdentifier[]) => {
         const workspace = vscode.workspace.getWorkspaceFolder(document.uri);
-        extensionManager.getByName(workspace.name).runTest(workspace, filename, identifier);
+        extensionManager.getByName(workspace.name).runTest(workspace, filename, ...identifiers);
       }
     ),
     ...registerSnapshotCodeLens(getExtensionWindowSettings().enableSnapshotPreviews),

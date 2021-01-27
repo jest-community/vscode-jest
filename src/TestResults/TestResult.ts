@@ -1,4 +1,4 @@
-import { TestReconciliationState } from './TestReconciliationState';
+import { TestReconciliationStateType } from './TestReconciliationState';
 import { JestFileResults, JestTotalResults } from 'jest-editor-support';
 import { FileCoverage } from 'istanbul-lib-coverage';
 import * as path from 'path';
@@ -17,21 +17,24 @@ export interface LocationRange {
   end: Location;
 }
 
+export interface TestIdentifier {
+  title: string;
+  ancestorTitles: string[];
+}
 export interface TestResult extends LocationRange {
   name: string;
 
-  names: {
-    src: string;
-    assertionTitle?: string;
-    assertionFullName?: string;
-  };
+  identifier: TestIdentifier;
 
-  status: TestReconciliationState;
+  status: TestReconciliationStateType;
   shortMessage?: string;
   terseMessage?: string;
 
   /** Zero-based line number */
   lineNumberOfError?: number;
+
+  // multiple results for the given range, common for parameterized (.each) tests
+  multiResults?: TestResult[];
 }
 
 export const withLowerCaseWindowsDriveLetter = (filePath: string): string | undefined => {
@@ -130,4 +133,20 @@ export const resultsWithoutAnsiEscapeSequence = (data: JestTotalResults): JestTo
       })),
     })),
   };
+};
+
+// export type StatusInfo<T> = {[key in TestReconciliationState]: T};
+export interface StatusInfo {
+  precedence: number;
+  desc: string;
+}
+
+export const TestResultStatusInfo: { [key in TestReconciliationStateType]: StatusInfo } = {
+  KnownFail: { precedence: 1, desc: 'Failed' },
+  Unknown: {
+    precedence: 2,
+    desc: 'Test has not run yet, due to Jest only running tests related to changes.',
+  },
+  KnownSkip: { precedence: 3, desc: 'Skipped' },
+  KnownSuccess: { precedence: 4, desc: 'Passed' },
 };

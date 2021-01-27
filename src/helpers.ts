@@ -4,6 +4,7 @@ import { normalize, join } from 'path';
 import { ExtensionContext } from 'vscode';
 
 import { PluginResourceSettings, hasUserSetPathToJest } from './Settings';
+import { TestIdentifier } from './TestResults';
 
 /**
  * Known binary names of `react-scripts` forks
@@ -83,7 +84,7 @@ function isBootstrappedWithCreateReactApp(rootPath: string): boolean {
  * @returns {string}
  */
 // tslint:disable-next-line no-shadowed-variable
-export function pathToJest({ pathToJest, rootPath }: PluginResourceSettings) {
+export function pathToJest({ pathToJest, rootPath }: PluginResourceSettings): string {
   if (hasUserSetPathToJest(pathToJest)) {
     return normalize(pathToJest);
   }
@@ -101,7 +102,7 @@ export function pathToJest({ pathToJest, rootPath }: PluginResourceSettings) {
  *
  * @returns {string}
  */
-export function pathToConfig(pluginSettings: PluginResourceSettings) {
+export function pathToConfig(pluginSettings: PluginResourceSettings): string {
   if (pluginSettings.pathToConfig !== '') {
     return normalize(pluginSettings.pathToConfig);
   }
@@ -125,6 +126,22 @@ export function cleanAnsi(str: string): string {
     /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g,
     ''
   );
+}
+
+export type IdStringType = 'display' | 'display-reverse' | 'full-name';
+export function testIdString(type: IdStringType, identifier: TestIdentifier): string {
+  if (!identifier.ancestorTitles.length) {
+    return identifier.title;
+  }
+  const parts = [...identifier.ancestorTitles, identifier.title];
+  switch (type) {
+    case 'display':
+      return parts.join(' > ');
+    case 'display-reverse':
+      return parts.reverse().join(' < ');
+    case 'full-name':
+      return parts.join(' ');
+  }
 }
 
 /**
@@ -176,5 +193,3 @@ export function getJestCommandSettings(
   }
   return [pathToJest(settings), pathToConfig(settings)];
 }
-
-export default prepareIconFile;

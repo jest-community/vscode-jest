@@ -29,8 +29,10 @@ import {
   nodeBinExtension,
   cleanAnsi,
   prepareIconFile,
+  testIdString,
   getJestCommandSettings,
   pathToConfig,
+  escapeRegExp,
 } from '../src/helpers';
 
 // Manually (forcefully) set the executable's file extension to test its addition independendly of the operating system.
@@ -225,5 +227,34 @@ describe('ModuleHelpers', () => {
       };
       expect(getJestCommandSettings(settings)).toEqual([settings.jestCommandLine, undefined]);
     });
+  });
+});
+
+describe('escapeRegExp', () => {
+  it.each`
+    str                    | expected
+    ${'no special char'}   | ${'no special char'}
+    ${'with (a)'}          | ${'with \\(a\\)'}
+    ${'with {} and $sign'} | ${'with \\{\\} and \\$sign'}
+    ${'with []'}           | ${'with \\[\\]'}
+  `('escapeRegExp: $str', ({ str, expected }) => {
+    expect(escapeRegExp(str)).toEqual(expected);
+  });
+});
+describe('testIdString', () => {
+  it.each`
+    type                 | id                                                            | expected
+    ${'display'}         | ${{ title: 'test', ancestorTitles: [] }}                      | ${'test'}
+    ${'display-reverse'} | ${{ title: 'test', ancestorTitles: [] }}                      | ${'test'}
+    ${'full-name'}       | ${{ title: 'test', ancestorTitles: [] }}                      | ${'test'}
+    ${'display'}         | ${{ title: 'regexp (a) $x/y', ancestorTitles: [] }}           | ${'regexp (a) $x/y'}
+    ${'display-reverse'} | ${{ title: 'regexp (a) $x/y', ancestorTitles: [] }}           | ${'regexp (a) $x/y'}
+    ${'full-name'}       | ${{ title: 'regexp (a) $x/y', ancestorTitles: [] }}           | ${'regexp (a) $x/y'}
+    ${'display'}         | ${{ title: 'test', ancestorTitles: ['d-1', 'd-1-1'] }}        | ${'d-1 > d-1-1 > test'}
+    ${'display-reverse'} | ${{ title: 'test', ancestorTitles: ['d-1', 'd-1-1'] }}        | ${'test < d-1-1 < d-1'}
+    ${'full-name'}       | ${{ title: 'test', ancestorTitles: ['d-1', 'd-1-1'] }}        | ${'d-1 d-1-1 test'}
+    ${'full-name'}       | ${{ title: 'regexp ($a)', ancestorTitles: ['d-1', 'd-1-1'] }} | ${'d-1 d-1-1 regexp ($a)'}
+  `('$type: $expected', ({ type, id, expected }) => {
+    expect(testIdString(type, id)).toEqual(expected);
   });
 });

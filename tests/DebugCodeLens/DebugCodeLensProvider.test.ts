@@ -1,6 +1,7 @@
 jest.unmock('../../src/DebugCodeLens/DebugCodeLensProvider');
 jest.unmock('../../src/DebugCodeLens/DebugCodeLens');
 jest.unmock('../../src/helpers');
+jest.unmock('../test-helper');
 jest.mock('path');
 
 // tslint:disable max-classes-per-file
@@ -54,6 +55,7 @@ import { extensionName } from '../../src/appGlobals';
 import { basename } from 'path';
 import * as vscode from 'vscode';
 import { TestState } from '../../src/DebugCodeLens';
+import * as helper from '../test-helper';
 
 describe('DebugCodeLensProvider', () => {
   const testResultProvider = new TestResultProvider();
@@ -128,6 +130,10 @@ describe('DebugCodeLensProvider', () => {
     const testResults = [
       ({
         name: 'should fail',
+        identifier: {
+          title: 'should fail',
+          ancestorTitles: [],
+        },
         start: {
           line: 1,
           column: 2,
@@ -228,7 +234,31 @@ describe('DebugCodeLensProvider', () => {
       const actual = sut.provideCodeLenses(document, token);
 
       expect(actual).toHaveLength(1);
-      expect((actual[0] as DebugCodeLens).testName).toBe(testResults[0].name);
+      expect((actual[0] as DebugCodeLens).testIds).toEqual([testResults[0].identifier]);
+    });
+
+    describe('parameterized tests', () => {
+      const tr1 = helper.makeTestResult('test-1', TestReconciliationState.KnownSuccess, []);
+      const tr2 = helper.makeTestResult('test-2', TestReconciliationState.KnownSuccess, []);
+      const tr3 = helper.makeTestResult('test-3', TestReconciliationState.KnownFail, []);
+      const tr4 = helper.makeTestResult('test-4', TestReconciliationState.KnownFail, []);
+      tr3.multiResults = [tr4, tr1, tr2];
+      beforeEach(() => {
+        jest.clearAllMocks();
+        getResults.mockReturnValueOnce([tr3]);
+      });
+
+      it.each`
+        showTestStates                      | expected
+        ${[TestState.Fail]}                 | ${[tr3.identifier, tr4.identifier]}
+        ${[TestState.Fail, TestState.Pass]} | ${[tr3.identifier, tr4.identifier, tr1.identifier, tr2.identifier]}
+        ${[TestState.Pass]}                 | ${[tr1.identifier, tr2.identifier]}
+      `('pass qualified test results: $showTestStates', ({ showTestStates, expected }) => {
+        const sut = new DebugCodeLensProvider(provideJestExt, showTestStates);
+        const list = sut.provideCodeLenses(document, token);
+        expect(list).toHaveLength(1);
+        expect(list[0].testIds).toEqual(expected);
+      });
     });
   });
 
@@ -245,23 +275,6 @@ describe('DebugCodeLensProvider', () => {
 
       expect(codeLens.command).toEqual({
         arguments: [document, fileName, testName],
-        command: `${extensionName}.run-test`,
-        title: 'Debug',
-      });
-    });
-
-    it('should escape testName for regex', () => {
-      const sut = new DebugCodeLensProvider(provideJestExt, allTestStates);
-      const document = {} as any;
-      const range = {} as any;
-      const fileName = 'fileName';
-      const testName = 'testName()';
-      const codeLens = new DebugCodeLens(document, range, fileName, testName);
-      const token = {} as any;
-      sut.resolveCodeLens(codeLens, token);
-
-      expect(codeLens.command).toEqual({
-        arguments: [document, fileName, 'testName\\(\\)'],
         command: `${extensionName}.run-test`,
         title: 'Debug',
       });

@@ -499,7 +499,7 @@
     source-map "^0.6.1"
     write-file-atomic "^3.0.0"
 
-"@jest/types@^24.8.0", "@jest/types@^24.9.0":
+"@jest/types@^24.9.0":
   version "24.9.0"
   resolved "https://registry.yarnpkg.com/@jest/types/-/types-24.9.0.tgz#63cb26cb7500d069e5a389441a7c6ab5e909fc59"
   integrity sha512-XKK7ze1apu5JWQ5eZjHITP66AX+QsLlbaJRBGYr8pNzwcAE2JVkwnf0yqjHTsDRcjR0mujy/NmZMXw5kl+kGBw==
@@ -3950,15 +3950,15 @@ jest-each@^26.6.2:
     jest-util "^26.6.2"
     pretty-format "^26.6.2"
 
-jest-editor-support@^28.0.0:
-  version "28.0.0"
-  resolved "https://registry.yarnpkg.com/jest-editor-support/-/jest-editor-support-28.0.0.tgz#bef5f030c8ce725e34eabb81238d5b2c39b7dafd"
-  integrity sha512-Q4dc96HI0Y9eBkN0RwZL4PEZhKU4VHOKetsu1AsuNe+aypV44p2wa9RrYgZN0JQQ6FSyV00cSX/2BfPiOsutNw==
+jest-editor-support@^28.1.0:
+  version "28.1.0"
+  resolved "https://registry.yarnpkg.com/jest-editor-support/-/jest-editor-support-28.1.0.tgz#983b067436be81075907b47a9136265c5a59da69"
+  integrity sha512-h6Afk3+B+30HHq/UBmJdRqVC7B6rzw9lmFnlEvoKe2Bq73+Cr9FxuxSzi/znezi97nmVuS0AMcynFkemk9gmkg==
   dependencies:
     "@babel/parser" "^7.8.3"
     "@babel/traverse" "^7.6.2"
     "@babel/types" "^7.8.3"
-    "@jest/types" "^24.8.0"
+    "@jest/types" "^26.6.2"
     core-js "^3.2.1"
     jest-snapshot "^24.7.0"
 
