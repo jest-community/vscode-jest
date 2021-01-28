@@ -209,34 +209,53 @@ describe('wizard-tasks', () => {
           expect(mockHelper.showInputBox).toBeCalledTimes(1);
         });
       });
-      describe('when there is an existing jestCommandLine', () => {
+      describe('when existing jestCommandLine is invalid: shows a warning panel', () => {
         beforeEach(() => {
           wizardSettings = { jestCommandLine: 'npm test' };
-          mockShowActionMessage('warning', CLSetupActionId.editInvalidCmdLine);
         });
-        it('if jestCommandLine setting is invalid, user will see the warning panel', async () => {
+        it('use can still choose to accept the command line', async () => {
           expect.hasAssertions();
 
+          mockShowActionMessage('warning', CLSetupActionId.acceptInvalidCmdLine);
           await expect(setupJestCmdLine(context)).resolves.toEqual('success');
+
           // showing warniing
           expect(mockHelper.showActionMessage).toBeCalledTimes(1);
-          // show input box for editing
-          expect(mockHelper.showInputBox).toBeCalledTimes(1);
+
+          // no input box
+          expect(mockHelper.showInputBox).not.toBeCalled();
 
           // no menu will be shown
           expect(mockHelper.showActionMenu).not.toHaveBeenCalled();
         });
-        it('if user choose edit but entered an invalid cmdLine, the warning panel will be shown as well', async () => {
-          expect.hasAssertions();
-          mockHelper.validateCommandLine.mockReturnValueOnce('invalid command still');
-          await expect(setupJestCmdLine(context)).resolves.toEqual('success');
-          // showing warniing twice
-          expect(mockHelper.showActionMessage).toBeCalledTimes(2);
-          // show input box for editing twice
-          expect(mockHelper.showInputBox).toBeCalledTimes(2);
+        describe('use can choose to edit the command line', () => {
+          beforeEach(() => {
+            mockShowActionMessage('warning', CLSetupActionId.editInvalidCmdLine);
+          });
+          it('an input box will be prompt', async () => {
+            expect.hasAssertions();
 
-          // no menu will be shown
-          expect(mockHelper.showActionMenu).not.toHaveBeenCalled();
+            await expect(setupJestCmdLine(context)).resolves.toEqual('success');
+            // showing warniing
+            expect(mockHelper.showActionMessage).toBeCalledTimes(1);
+            // show input box for editing
+            expect(mockHelper.showInputBox).toBeCalledTimes(1);
+
+            // no menu will be shown
+            expect(mockHelper.showActionMenu).not.toHaveBeenCalled();
+          });
+          it('if user still input an invalid cmdLine, the warning panel will be shown again', async () => {
+            expect.hasAssertions();
+            mockHelper.validateCommandLine.mockReturnValueOnce('invalid command still');
+            await expect(setupJestCmdLine(context)).resolves.toEqual('success');
+            // showing warniing twice
+            expect(mockHelper.showActionMessage).toBeCalledTimes(2);
+            // show input box for editing twice
+            expect(mockHelper.showInputBox).toBeCalledTimes(2);
+
+            // no menu will be shown
+            expect(mockHelper.showActionMenu).not.toHaveBeenCalled();
+          });
         });
       });
     });

@@ -4,13 +4,6 @@ jest.unmock('./task-test-helper');
 
 import * as vscode from 'vscode';
 
-const mockIsAbsolutePath = jest.fn();
-jest.mock('path', () => ({
-  normalize: (p: string) => p,
-  join: (...args: string[]) => args.join('/'),
-  isAbsolute: mockIsAbsolutePath,
-}));
-
 import * as helper from '../../../src/setup-wizard/wizard-helper';
 import * as SetupJestDebug from '../../../src/setup-wizard/tasks/setup-jest-debug';
 import { setupJestCmdLine } from '../../../src/setup-wizard/tasks/setup-jest-cmdline';
@@ -211,8 +204,12 @@ describe('wizard-tasks', () => {
     });
     describe('when there is existing jest debug config and jestCommandLine', () => {
       const existingConfig: any = { name: DEBUG_CONFIG_NAME };
+      const otherConfig: any = { name: 'other-config' };
       beforeEach(() => {
-        wizardSettings = { jestCommandLine: 'whatever', configurations: [existingConfig] };
+        wizardSettings = {
+          jestCommandLine: 'whatever',
+          configurations: [existingConfig, otherConfig],
+        };
       });
       it.each`
         desc                      | menuId                               | isConfigUpdated | expected
@@ -228,8 +225,23 @@ describe('wizard-tasks', () => {
         if (isConfigUpdated) {
           expect(isMergedWithCommandLine(wizardSettings.jestCommandLine)).toBeTruthy();
 
-          validateConfigUpdate((debugConfig) => expect(debugConfig).toEqual(expected));
+          // launch.json file will be shown
           expect(hasShownLaunchFile('/_uri_/.vscode/launch.json')).toBeTruthy();
+
+          // validate config update
+          validateConfigUpdate((debugConfig) => expect(debugConfig).toEqual(expected));
+
+          // validate config update entries
+          const entries = mockSaveConfig.mock.calls[0];
+          expect(entries).toHaveLength(1);
+          const { name, value: configs } = entries[0];
+          expect(name).toEqual('launch.configurations');
+          expect(configs).toHaveLength(wizardSettings.configurations.length + 1);
+          expect(configs.find((c) => c.name === 'other-config')).not.toBeUndefined();
+          expect(
+            configs.find((c) => c.name.startsWith(`${existingConfig.name}-`))
+          ).not.toBeUndefined();
+          expect(configs.find((c) => c.name === existingConfig.name)).not.toBeUndefined();
         } else {
           // the rest of methods are not invoked
           expect(mockHelper.mergeDebugConfigWithCmdLine).not.toBeCalled();
