@@ -111,6 +111,8 @@ The coverage mode, along with watch mode, are shown in StatusBar:
 _(The initial coverage mode is `off` but can be changed by adding `"jest.showCoverageOnLoad": true` in settings.)_ 
 
 
+**Warning**
+Coverage info might be less than what it actual is in "watch" mode (with `--watch` flag), where only changed files/tests are run (see facebook/jest#1284). To ensure absolutely correct coverage, we did consider using `--watchAll` with coverage, which could have significant performance impact. Not sure which problem is worse, therefore no change has been made, we are still default to `--watch` even with coverage on. (Maybe a new customization setting to override it if enough people want it... PR is welcome.)
 ### How to customize coverage overlay
 Coverage overlay determines how the coverage info is shown to users. This extension provides 2 customization points: 
 1. coverage style via `jest.coverageFormatter` 
