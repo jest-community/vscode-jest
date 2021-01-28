@@ -38,6 +38,8 @@ import { isWatchNotSupported, WatchMode } from './Jest';
 import * as messaging from './messaging';
 import { resultsWithoutAnsiEscapeSequence } from './TestResults/TestResult';
 import { CoverageMap, CoverageMapData } from 'istanbul-lib-coverage';
+import { extensionName } from './appGlobals';
+import { WizardTaskId } from './setup-wizard';
 
 interface InstanceSettings {
   multirootEnv: boolean;
@@ -138,6 +140,16 @@ export class JestExt {
     }
   }
 
+  private setupWizardAction(taskId: WizardTaskId): messaging.MessageAction {
+    return {
+      title: 'Run Setup Wizard',
+      action: (): unknown =>
+        vscode.commands.executeCommand(`${extensionName}.setup-extension`, {
+          workspace: this.workspaceFolder,
+          taskId,
+        }),
+    };
+  }
   public startProcess(): void {
     if (this.jestProcessManager.numberOfProcesses > 0) {
       // tslint:disable-next-line no-console
@@ -168,7 +180,7 @@ export class JestExt {
               `${msg}\n see troubleshooting: ${messaging.TROUBLESHOOTING_URL}`
             );
             this.channel.show(true);
-            messaging.systemErrorMessage(msg, messaging.showTroubleshootingAction);
+            messaging.systemErrorMessage(msg, this.setupWizardAction('cmdLine'));
           }
         }
       },
@@ -346,17 +358,18 @@ export class JestExt {
       escapeRegExp(idString('full-name', testId))
     );
 
-    try {
-      // try to run the debug configuration from launch.json
-      await vscode.debug.startDebugging(workspaceFolder, 'vscode-jest-tests');
-    } catch {
-      // if that fails, there (probably) isn't any debug configuration (at least no correctly named one)
-      // therefore debug the test using the default configuration
-      const debugConfiguration = this.debugConfigurationProvider.provideDebugConfigurations(
-        workspaceFolder
-      )[0];
-      await vscode.debug.startDebugging(workspaceFolder, debugConfiguration);
+    let debugConfig = vscode.workspace
+      .getConfiguration('launch', workspaceFolder.uri)
+      ?.get<vscode.DebugConfiguration[]>('configurations')
+      ?.filter((config) => config.name === 'vscode-jest-tests')[0];
+    if (!debugConfig) {
+      messaging.systemWarningMessage(
+        'No debug config named "vscode-jest-tests" found in launch.json, will use a default config.\nIf you encountered debugging problems, feel free to try the setup wizard below',
+        this.setupWizardAction('debugConfig')
+      );
+      debugConfig = this.debugConfigurationProvider.provideDebugConfigurations(workspaceFolder)[0];
     }
+    vscode.debug.startDebugging(workspaceFolder, debugConfig);
   };
 
   onDidCloseTextDocument(document: vscode.TextDocument): void {

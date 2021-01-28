@@ -4,7 +4,9 @@ import { extensionName } from './appGlobals';
 import { statusBar } from './StatusBar';
 import { ExtensionManager, getExtensionWindowSettings } from './extensionManager';
 import { registerSnapshotCodeLens, registerSnapshotPreview } from './SnapshotCodeLens';
+import { startWizard } from './setup-wizard';
 import { DebugTestIdentifier } from './DebugCodeLens';
+import { WizardTaskId } from './setup-wizard/start-wizard';
 
 let extensionManager: ExtensionManager;
 
@@ -37,6 +39,15 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     extensionManager.registerCommand(`${extensionName}.coverage.toggle`, (extension) =>
       extension.toggleCoverageOverlay()
+    ),
+    vscode.commands.registerCommand(
+      `${extensionName}.setup-extension`,
+      (options?: { workspace: vscode.WorkspaceFolder; taskId: WizardTaskId }) =>
+        startWizard(
+          extensionManager.debugConfigurationProvider,
+          options?.workspace,
+          options?.taskId
+        )
     ),
     vscode.commands.registerCommand(
       `${extensionName}.run-test`,

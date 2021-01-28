@@ -1,5 +1,6 @@
 jest.unmock('events');
 jest.unmock('../src/JestExt');
+jest.unmock('../src/appGlobals');
 
 jest.mock('../src/DebugCodeLens', () => ({
   DebugCodeLensProvider: class MockCodeLensProvider {},
@@ -31,6 +32,7 @@ import { CoverageMapProvider } from '../src/Coverage';
 import inlineError from '../src/decorations/inline-error';
 import * as helper from '../src/helpers';
 import { TestIdentifier } from '../src/TestResults';
+import { extensionName } from '../src/appGlobals';
 
 /* eslint jest/expect-expect: ["error", { "assertFunctionNames": ["expect", "expectItTakesNoAction"] }] */
 const mockHelpers = helper as jest.Mocked<any>;
@@ -178,25 +180,21 @@ describe('JestExt', () => {
     const fileName = 'fileName';
 
     let sut: JestExt;
-    let startDebugging, debugConfiguration;
+    let startDebugging, debugConfiguration, mockConfigurations;
     const mockShowQuickPick = jest.fn();
 
     beforeEach(() => {
       startDebugging = (debug.startDebugging as unknown) as jest.Mock<{}>;
-      ((startDebugging as unknown) as jest.Mock<{}>).mockImplementation(
-        async (_folder: any, nameOrConfig: any) => {
-          // trigger fallback to default configuration
-          if (typeof nameOrConfig === 'string') {
-            throw null;
-          }
-        }
-      );
-
       debugConfiguration = { type: 'dummyconfig' };
       debugConfigurationProvider.provideDebugConfigurations.mockReturnValue([debugConfiguration]);
       vscode.window.showQuickPick = mockShowQuickPick;
       mockHelpers.escapeRegExp.mockImplementation((s) => s);
       mockHelpers.testIdString.mockImplementation((_, s) => s);
+
+      mockConfigurations = [];
+      vscode.workspace.getConfiguration = jest.fn().mockReturnValue({
+        get: jest.fn(() => mockConfigurations),
+      });
 
       sut = new JestExt(
         context,
@@ -216,17 +214,65 @@ describe('JestExt', () => {
       const testNamePattern = 'testNamePattern';
       await sut.runTest(workspaceFolder, fileName, testNamePattern);
 
-      expect(debug.startDebugging).toHaveBeenCalledWith(workspaceFolder, debugConfiguration);
-
-      const configuration = startDebugging.mock.calls[startDebugging.mock.calls.length - 1][1];
-      expect(configuration).toBeDefined();
-      expect(configuration.type).toBe('dummyconfig');
+      expect(startDebugging).toBeCalledTimes(1);
+      expect(debug.startDebugging).toHaveBeenLastCalledWith(workspaceFolder, debugConfiguration);
 
       expect(sut.debugConfigurationProvider.prepareTestRun).toBeCalledWith(
         fileName,
         testNamePattern
       );
     });
+    it.each`
+      configNames                        | shouldShowWarning
+      ${undefined}                       | ${true}
+      ${[]}                              | ${true}
+      ${['a', 'b']}                      | ${true}
+      ${['a', 'vscode-jest-tests', 'b']} | ${false}
+    `(
+      'provides setup wizard in warning message if no "vscode-jest-tests" in launch.json: $configNames',
+      async ({ configNames, shouldShowWarning }) => {
+        expect.hasAssertions();
+        const testNamePattern = 'testNamePattern';
+        mockConfigurations = configNames ? configNames.map((name) => ({ name })) : undefined;
+        await sut.runTest(workspaceFolder, fileName, testNamePattern);
+
+        expect(startDebugging).toBeCalledTimes(1);
+        if (shouldShowWarning) {
+          // debug with generated config
+          expect(debug.startDebugging).toHaveBeenLastCalledWith(
+            workspaceFolder,
+            debugConfiguration
+          );
+        } else {
+          // debug with existing config
+          expect(debug.startDebugging).toHaveBeenLastCalledWith(workspaceFolder, {
+            name: 'vscode-jest-tests',
+          });
+        }
+
+        expect(sut.debugConfigurationProvider.prepareTestRun).toBeCalledWith(
+          fileName,
+          testNamePattern
+        );
+
+        if (shouldShowWarning) {
+          expect(messaging.systemWarningMessage).toHaveBeenCalled();
+
+          //verify the message button does invoke the setup wizard command
+          const button = (messaging.systemWarningMessage as jest.Mocked<any>).mock.calls[0][1];
+          expect(button.action).not.toBeUndefined();
+          vscode.commands.executeCommand = jest.fn();
+          button.action();
+          expect(vscode.commands.executeCommand).toBeCalledWith(
+            `${extensionName}.setup-extension`,
+            { workspace: workspaceFolder, taskId: 'debugConfig' }
+          );
+        } else {
+          expect(messaging.systemWarningMessage).not.toHaveBeenCalled();
+        }
+      }
+    );
+
     it('can handle testIdentifier argument', async () => {
       const tId = makeIdentifier('test-1', ['d-1', 'd-1-1']);
       const fullName = 'd-1 d-1-1 test-1';

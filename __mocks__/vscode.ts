@@ -1,9 +1,9 @@
 const languages = {
   createDiagnosticCollection: jest.fn(),
   registerCodeLensProvider: jest.fn(),
-}
+};
 
-const StatusBarAlignment = { Left: 1, Right: 2 }
+const StatusBarAlignment = { Left: 1, Right: 2 };
 
 const window = {
   createStatusBarItem: jest.fn(() => ({
@@ -17,7 +17,7 @@ const window = {
   showWorkspaceFolderPick: jest.fn(),
   onDidChangeActiveTextEditor: jest.fn(),
   showInformationMessage: jest.fn(),
-}
+};
 
 const workspace = {
   getConfiguration: jest.fn(),
@@ -27,32 +27,41 @@ const workspace = {
   onDidChangeConfiguration: jest.fn(),
   onDidChangeTextDocument: jest.fn(),
   onDidChangeWorkspaceFolders: jest.fn(),
-}
+};
 
 const OverviewRulerLane = {
   Left: null,
-}
+};
 
 const Uri = {
   file: (f) => f,
   parse: jest.fn(),
-}
-const Range = jest.fn()
-const Diagnostic = jest.fn()
-const DiagnosticSeverity = { Error: 0, Warning: 1, Information: 2, Hint: 3 }
+  joinPath: jest.fn(),
+};
+const Range = jest.fn();
+const Position = jest.fn();
+const Diagnostic = jest.fn();
+const ThemeIcon = jest.fn();
+const DiagnosticSeverity = { Error: 0, Warning: 1, Information: 2, Hint: 3 };
+const ConfigurationTarget = { Global: 1, Workspace: 2, WorkspaceFolder: 3 };
 
 const debug = {
   onDidTerminateDebugSession: jest.fn(),
   startDebugging: jest.fn(),
   registerDebugConfigurationProvider: jest.fn(),
-}
+};
 
 const commands = {
   executeCommand: jest.fn(),
   registerCommand: jest.fn(),
-}
+};
 
-const CodeLens = function CodeLens() {}
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type,@typescript-eslint/no-empty-function
+const CodeLens = function CodeLens() {};
+
+const QuickInputButtons = {
+  Back: {},
+};
 
 export {
   CodeLens,
@@ -63,8 +72,12 @@ export {
   OverviewRulerLane,
   Uri,
   Range,
+  Position,
   Diagnostic,
+  ThemeIcon,
   DiagnosticSeverity,
+  ConfigurationTarget,
   debug,
   commands,
-}
+  QuickInputButtons,
+};

@@ -5,7 +5,7 @@
   "version": "4.0.0-alpha.3",
   "publisher": "Orta",
   "engines": {
-    "vscode": "^1.23.0"
+    "vscode": "^1.45.0"
   },
   "author": {
     "name": "Orta Therox, ConnectDotz & Sean Poulter",
@@ -203,6 +203,10 @@
       {
         "command": "io.orta.jest.coverage.toggle",
         "title": "Jest: Toggle Coverage Overlay"
+      },
+      {
+        "command": "io.orta.jest.setup-extension",
+        "title": "Jest: Setup Extension"
       }
     ],
     "debuggers": [
@@ -301,7 +305,7 @@
     "@types/istanbul-lib-source-maps": "^4.0.1",
     "@types/jest": "^26.0.15",
     "@types/node": "^8.0.31",
-    "@types/vscode": "^1.23.0",
+    "@types/vscode": "^1.45.0",
     "@typescript-eslint/eslint-plugin": "^2.32.0",
     "@typescript-eslint/parser": "^2.32.0",
     "copy-webpack-plugin": "^6.0.2",
