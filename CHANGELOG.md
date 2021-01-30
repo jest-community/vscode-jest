@@ -5,6 +5,7 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 * added setup extension wizard - @connectdotz
+* update doc to give warning on potential incorrect coverage in watch mode - @connectdotz
 
 -->
 
