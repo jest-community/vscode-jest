@@ -151,6 +151,7 @@ export const setupJestDebug: SetupTask = async (context: WizardContext): Promise
       title: 'Set up Debug Config',
       enableBackButton: true,
       placeholder: 'No existing jest debug config found',
+      verbose: context.verbose,
     });
   };
   const withExistingConfig = async (): Promise<WizardStatus> => {
@@ -183,10 +184,11 @@ export const setupJestDebug: SetupTask = async (context: WizardContext): Promise
       title: 'Set up Debug Config',
       enableBackButton: true,
       placeholder: `Found existing debug config: "${DEBUG_CONFIG_NAME}"`,
+      verbose: context.verbose,
     });
   };
 
-  message(`Set up jest debug config for workspace "${workspace.name}"`);
+  message(`Set up jest debug config for workspace "${workspace.name}"`, 'setupJestDebug');
 
   const jestDebug = launchConfigs?.find((c) => c.name === DEBUG_CONFIG_NAME);
 

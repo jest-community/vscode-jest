@@ -8,15 +8,19 @@ import {
   WizardAction,
   ActionableMenuItem,
   ActionMenuOptions,
-  ActionableResult,
   ActionableButton,
-  AllowBackButton,
   WizardSettings,
   JestSettings,
   ConfigEntry,
   ActionableMessageItem,
   WizardContext,
   ActionMessageType,
+  ActionInputBoxOptions,
+  ActionInputResult,
+  ActionableMenuResult,
+  ActionMenuInput,
+  ActionInput,
+  isActionableButton,
 } from './types';
 
 export const jsonOut = (json: unknown): string => JSON.stringify(json, undefined, 4);
@@ -39,10 +43,10 @@ export const actionItem = <T = WizardStatus>(
  * @param options
  * @returns the selected item or undefined if no selection (esc or backButton click)
  */
-export const showActionMenu = <T = WizardStatus>(
+export const showActionMenu = async <T = WizardStatus>(
   items: ActionableMenuItem<T>[],
   options: ActionMenuOptions<T> = {}
-): Promise<ActionableResult<T>> => {
+): Promise<ActionableMenuResult<T>> => {
   const quickPick = vscode.window.createQuickPick<ActionableMenuItem<T>>();
   quickPick.items = items;
   quickPick.title = options.title;
@@ -58,51 +62,38 @@ export const showActionMenu = <T = WizardStatus>(
     quickPick.buttons = [vscode.QuickInputButtons.Back, ...(quickPick.buttons || [])];
   }
 
-  const show = (): Promise<ActionableResult<T>> =>
-    new Promise<ActionableResult<T>>((resolve, reject) => {
-      const exec = async (f: () => Promise<unknown>): Promise<void> => {
-        try {
-          await f();
-        } catch (e) {
-          reject(e);
-        } finally {
-          quickPick.dispose();
-        }
-      };
-      quickPick.onDidChangeSelection(async (selectedItems) => {
-        exec(async () => {
-          if (selectedItems.length !== 1) {
-            return resolve(undefined);
-          }
-          const result = selectedItems[0].action();
-          resolve(result);
-        });
-      });
-      quickPick.onDidTriggerButton(async (button: ActionableButton<T>) => {
-        exec(async () => {
-          if (button === vscode.QuickInputButtons.Back) {
-            resolve(undefined);
-          }
-          resolve(await button.action());
-        });
-      });
+  const logging = options?.verbose
+    ? (msg): void => console.log(`<showActionMenu> ${msg}`)
+    : undefined;
+  try {
+    const input = await new Promise<ActionMenuInput<T>>((resolve) => {
+      quickPick.onDidChangeSelection((selectedItems) =>
+        selectedItems.length === 1 ? resolve(selectedItems[0]) : resolve(undefined)
+      );
+      quickPick.onDidTriggerButton((button: ActionableButton<T>) => resolve(button));
 
       quickPick.show();
       if (options.selectItemIdx >= 0 && options.selectItemIdx < items.length) {
         quickPick.selectedItems = [items[options.selectItemIdx]];
       }
     });
-
-  return show();
+    if (!input) {
+      logging?.('no selection is made');
+      return undefined;
+    }
+    if (input === vscode.QuickInputButtons.Back) {
+      logging?.('back button is clicked');
+      return undefined;
+    }
+    logging?.(`"${isActionableButton(input) ? `button ${input.id}` : input.label}" is selected`);
+    return input.action();
+  } catch (e) {
+    return Promise.reject(e);
+  } finally {
+    quickPick.dispose();
+  }
 };
 
-export interface InputBoxOptions<T> extends AllowBackButton {
-  title?: string;
-  prompt?: string;
-  value?: string;
-  rightButtons?: ActionableButton<T>[];
-}
-type InputReturnType<T> = T | string | undefined;
 /**
  *
  * @param title
@@ -110,9 +101,9 @@ type InputReturnType<T> = T | string | undefined;
  * @param options
  * @returns string if "enter", undefined if "ESC" or backButton click
  */
-export const showInputBox = <T = WizardStatus>(
-  options?: InputBoxOptions<T>
-): Promise<InputReturnType<T>> => {
+export const showActionInputBox = async <T = WizardStatus>(
+  options?: ActionInputBoxOptions<T>
+): Promise<ActionInputResult<T>> => {
   const inputBox = vscode.window.createInputBox();
   inputBox.title = options.title;
   inputBox.value = options.value;
@@ -123,59 +114,42 @@ export const showInputBox = <T = WizardStatus>(
     inputBox.buttons = [vscode.QuickInputButtons.Back, ...inputBox.buttons];
   }
 
-  let done = false;
-  const show = (): Promise<InputReturnType<T>> =>
-    new Promise<InputReturnType<T>>((resolve, reject) => {
-      const exec = async (f: () => unknown): Promise<void> => {
-        try {
-          await f();
-        } catch (e) {
-          reject(e);
-        } finally {
-          inputBox.dispose();
-        }
-      };
-      inputBox.onDidAccept(() => {
-        exec(() => {
-          if (done) {
-            return;
-          }
-          const value = inputBox.value;
-          done = true;
-          resolve(value);
-        });
-      });
-      inputBox.onDidHide(() => {
-        exec(() => {
-          if (done) {
-            return;
-          }
-          done = true;
-          resolve(undefined);
-        });
-      });
-      inputBox.onDidTriggerButton(async (button: ActionableButton<T>) => {
-        exec(async () => {
-          done = true;
-
-          if (button === vscode.QuickInputButtons.Back) {
-            resolve(undefined);
-          }
-          resolve(await button.action());
-        });
-      });
-
+  const logging = options?.verbose
+    ? (msg): void => console.log(`<ShowActionInputBox> ${msg}`)
+    : undefined;
+  try {
+    const input = await new Promise<ActionInput<T>>((resolve) => {
+      inputBox.onDidAccept(() => resolve(inputBox.value));
+      inputBox.onDidHide(() => resolve(undefined));
+      inputBox.onDidTriggerButton((button: ActionableButton<T>) => resolve(button));
       inputBox.show();
     });
-
-  return show();
+    if (!input) {
+      logging?.(`no input received`);
+      return undefined;
+    }
+    if (input === vscode.QuickInputButtons.Back) {
+      logging?.(`back button is clicked`);
+      return undefined;
+    }
+    if (isActionableButton(input)) {
+      logging?.(`button ${input.id} is clicked: `);
+      return input.action();
+    }
+    logging?.(`input box received "${input}"`);
+    return input;
+  } catch (e) {
+    return Promise.reject(e);
+  } finally {
+    inputBox.dispose();
+  }
 };
 
 export const showActionMessage = async <T = WizardStatus>(
   type: ActionMessageType,
   message: string,
   ...buttons: ActionableMessageItem<T>[]
-): Promise<ActionableResult<T>> => {
+): Promise<ActionableMenuResult<T>> => {
   let button;
   switch (type) {
     case 'info':

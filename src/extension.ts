@@ -4,9 +4,8 @@ import { extensionName } from './appGlobals';
 import { statusBar } from './StatusBar';
 import { ExtensionManager, getExtensionWindowSettings } from './extensionManager';
 import { registerSnapshotCodeLens, registerSnapshotPreview } from './SnapshotCodeLens';
-import { startWizard } from './setup-wizard';
+import { startWizard, StartWizardOptions } from './setup-wizard';
 import { DebugTestIdentifier } from './DebugCodeLens';
-import { WizardTaskId } from './setup-wizard/start-wizard';
 
 let extensionManager: ExtensionManager;
 
@@ -42,12 +41,8 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.commands.registerCommand(
       `${extensionName}.setup-extension`,
-      (options?: { workspace: vscode.WorkspaceFolder; taskId: WizardTaskId }) =>
-        startWizard(
-          extensionManager.debugConfigurationProvider,
-          options?.workspace,
-          options?.taskId
-        )
+      (options: StartWizardOptions = { verbose: true }) =>
+        startWizard(extensionManager.debugConfigurationProvider, options)
     ),
     vscode.commands.registerCommand(
       `${extensionName}.run-test`,

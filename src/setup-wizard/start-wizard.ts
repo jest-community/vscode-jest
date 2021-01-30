@@ -9,39 +9,30 @@ import {
 import { jsonOut, actionItem, showActionMenu } from './wizard-helper';
 import { setupJestCmdLine, setupJestDebug } from './tasks';
 
-export const createWizardContext = (
-  workspace: vscode.WorkspaceFolder,
-  debugConfigProvider: vscode.DebugConfigurationProvider,
-  message: (msg: string, section?: string) => void
-): WizardContext => {
-  return {
-    debugConfigProvider,
-    workspace,
-    message,
-  };
-};
-
 export const StartWizardActionId = {
   cmdLine: 0,
   debugConfig: 1,
   exit: 2,
 };
+
+// wizard tasks - right now only 2, could easily add more
 export type WizardTaskId = 'cmdLine' | 'debugConfig';
-const TaskActionMap: { [key in WizardTaskId]: number } = {
-  ['cmdLine']: StartWizardActionId.cmdLine,
-  ['debugConfig']: StartWizardActionId.debugConfig,
+export const WizardTasks: { [key in WizardTaskId]: { task: SetupTask; actionId: number } } = {
+  ['cmdLine']: { task: setupJestCmdLine, actionId: StartWizardActionId.cmdLine },
+  ['debugConfig']: { task: setupJestDebug, actionId: StartWizardActionId.debugConfig },
 };
 
-export const WizardTasks: { [key in WizardTaskId]: SetupTask } = {
-  ['cmdLine']: setupJestCmdLine,
-  ['debugConfig']: setupJestDebug,
-};
-
+export interface StartWizardOptions {
+  workspace?: vscode.WorkspaceFolder;
+  taskId?: WizardTaskId;
+  verbose?: boolean;
+}
 export const startWizard = (
   debugConfigProvider: vscode.DebugConfigurationProvider,
-  ws?: vscode.WorkspaceFolder,
-  taskId?: WizardTaskId
+  options: StartWizardOptions = {}
 ): Promise<WizardStatus> => {
+  const { workspace, taskId, verbose } = options;
+
   const _output = vscode.window.createOutputChannel('vscode-jest Setup');
 
   const dispose = (): void => {
@@ -50,14 +41,25 @@ export const startWizard = (
 
   const message = (msg: string, section?: string): void => {
     if (section) {
-      _output.appendLine(`\n===== ${section} =====\n`);
+      const m = `\n===== ${section} =====\n`;
+      _output.appendLine(m);
+      if (verbose) {
+        console.log(`<SetupWizard> ${m}`);
+      }
+    }
+    if (verbose) {
+      console.log(`<SetupWizard> ${msg}`);
     }
     _output.appendLine(msg);
     _output.show(true);
   };
 
-  const runTask = async (context: WizardContext, taskId: WizardTaskId): Promise<WizardStatus> =>
-    WizardTasks[taskId](context);
+  const runTask = async (context: WizardContext, taskId: WizardTaskId): Promise<WizardStatus> => {
+    message(`starting ${taskId} task...`);
+    const result = await WizardTasks[taskId].task(context);
+    message(`${taskId} task returns ${result}`);
+    return result;
+  };
 
   const showMainMenu = async (context: WizardContext): Promise<WizardStatus> => {
     const menuItems: ActionableMenuItem<WizardStatus>[] = [
@@ -79,12 +81,13 @@ export const startWizard = (
     ];
 
     let result: WizardStatus;
-    let selectItemIdx = menuItems.findIndex((item) => item.id === TaskActionMap[taskId]);
+    let selectItemIdx = menuItems.findIndex((item) => item.id === WizardTasks[taskId]?.actionId);
     do {
       result = await showActionMenu(menuItems, {
         title: 'vscode-jest Setup Wizard',
         placeholder: 'select a set up action below',
         selectItemIdx,
+        verbose,
       });
       selectItemIdx = undefined;
     } while (result !== 'exit' && result !== 'error');
@@ -108,15 +111,16 @@ export const startWizard = (
     message(`Welcome to vscode-jest setup wizard!`);
     message(`\t(More info about the setup wizard: ${WIZARD_HELP_URL})`);
 
-    const workspace = ws || (await selectWorkspace());
+    const ws = workspace || (await selectWorkspace());
 
-    if (workspace) {
-      message(`=> workspace "${workspace.name}" is selected`);
+    if (ws) {
+      message(`=> workspace "${ws.name}" is selected`);
 
       const context: WizardContext = {
         debugConfigProvider,
-        workspace,
+        workspace: ws,
         message,
+        verbose,
       };
 
       try {

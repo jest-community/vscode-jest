@@ -8,7 +8,7 @@ import * as path from 'path';
 
 import {
   showActionMenu,
-  showInputBox,
+  showActionInputBox,
   getConfirmation,
   mergeDebugConfigWithCmdLine,
   DEBUG_CONFIG_PLATFORMS,
@@ -30,6 +30,7 @@ describe('QuickInput Proxy', () => {
   };
 
   const mockButton = (action?: () => Promise<WizardStatus>): any => ({
+    iconPath: {},
     action: action || (() => Promise.resolve('success')),
   });
 
@@ -40,14 +41,9 @@ describe('QuickInput Proxy', () => {
 
     let mockQuickPick: any;
 
-    const mockItem = (label: string, action: boolean | (() => Promise<WizardStatus>)): any => ({
+    const mockItem = (label: string, action: () => Promise<WizardStatus>): any => ({
       label,
-      action: jest.fn().mockImplementation(() => {
-        if (typeof action === 'boolean') {
-          return action ? Promise.resolve('success') : Promise.reject('mock failure');
-        }
-        return action();
-      }),
+      action,
     });
     const triggerSelection = async (selected: any) => {
       await handleSelection(Array.isArray(selected) ? selected : [selected]);
@@ -77,7 +73,7 @@ describe('QuickInput Proxy', () => {
       const items = [];
       const p = showActionMenu(items, options);
       expect(mockShow).toBeCalledTimes(1);
-      await triggerSelection(mockItem('selected-item', true));
+      await triggerSelection(mockItem('selected-item', () => Promise.resolve('success')));
 
       await p;
 
@@ -126,7 +122,7 @@ describe('QuickInput Proxy', () => {
       enableBackButton | expected
       ${true}          | ${undefined}
       ${false}         | ${'success'}
-    `('with back button: $enableBackButton', async ({ enableBackButton, expected }) => {
+    `('can have a back button: $enableBackButton', async ({ enableBackButton, expected }) => {
       expect.hasAssertions();
 
       const p = showActionMenu([], { enableBackButton });
@@ -144,7 +140,7 @@ describe('QuickInput Proxy', () => {
       expect(result).toEqual(expected);
       expect(mockDispose).toBeCalledTimes(1);
     });
-    describe('with action buttons', () => {
+    describe('can have action buttons', () => {
       it.each`
         action                              | expected
         ${() => Promise.resolve('success')} | ${'success'}
@@ -211,8 +207,42 @@ describe('QuickInput Proxy', () => {
         }
       }
     );
+    describe('can be verbose', () => {
+      let options;
+      beforeEach(() => {
+        console.log = jest.fn();
+        options = {
+          verbose: true,
+          enableBackButton: true,
+        };
+      });
+      it('logging which menu item is selected', async () => {
+        expect.hasAssertions();
+
+        const item = mockItem('item-1', () => Promise.resolve('success'));
+        const p = showActionMenu([item], options);
+
+        await triggerSelection(item);
+        await expect(p).resolves.toEqual('success');
+
+        expect(mockShow).toBeCalledTimes(1);
+        expect(console.log).toBeCalledWith(expect.stringMatching('item-1'));
+      });
+      it('when back button is triggered', async () => {
+        expect.hasAssertions();
+
+        const item = mockItem('item-1', () => Promise.resolve('success'));
+        const p = showActionMenu([item], options);
+
+        await triggerButton(vscode.QuickInputButtons.Back);
+        await expect(p).resolves.toEqual(undefined);
+
+        expect(mockDispose).toBeCalledTimes(1);
+        expect(console.log).toBeCalledWith(expect.stringMatching('back button'));
+      });
+    });
   });
-  describe('showInputBox', () => {
+  describe('showActionInputBox', () => {
     const mockShow = jest.fn();
     const mockOnDidAccept = jest.fn();
     const mockOnDidHide = jest.fn();
@@ -247,7 +277,7 @@ describe('QuickInput Proxy', () => {
       expect.hasAssertions();
 
       const inputValue = 'something';
-      const p = showInputBox(options);
+      const p = showActionInputBox(options);
 
       expect(mockShow).toBeCalledTimes(1);
       await triggerInput(inputValue);
@@ -261,7 +291,7 @@ describe('QuickInput Proxy', () => {
     it('"escape" input returns undefined', async () => {
       expect.hasAssertions();
 
-      const p = showInputBox(options);
+      const p = showActionInputBox(options);
       await triggerInput();
       const result = await p;
 
@@ -276,7 +306,7 @@ describe('QuickInput Proxy', () => {
       expect.hasAssertions();
 
       const inputValue = 'something2';
-      const p = showInputBox(options);
+      const p = showActionInputBox(options);
 
       expect(mockShow).toBeCalledTimes(1);
       await triggerInput(inputValue);
@@ -286,7 +316,7 @@ describe('QuickInput Proxy', () => {
       expect(result).toEqual(inputValue);
       expect(mockInputBox.title).toEqual(options.title);
       expect(mockInputBox.prompt).toEqual(options.prompt);
-      expect(mockDispose).toBeCalledTimes(2);
+      expect(mockDispose).toBeCalledTimes(1);
     });
     it.each`
       enableBackButton | expected
@@ -295,7 +325,7 @@ describe('QuickInput Proxy', () => {
     `('with back button: $enableBackButton', async ({ enableBackButton, expected }) => {
       expect.hasAssertions();
 
-      const p = showInputBox({ ...options, rightButtons: undefined, enableBackButton });
+      const p = showActionInputBox({ ...options, rightButtons: undefined, enableBackButton });
 
       if (enableBackButton) {
         expect(mockInputBox.buttons).toEqual([vscode.QuickInputButtons.Back]);
@@ -319,7 +349,7 @@ describe('QuickInput Proxy', () => {
         expect.hasAssertions();
 
         const button = mockButton(action);
-        const p = showInputBox({ ...options, rightButtons: [button] });
+        const p = showActionInputBox({ ...options, rightButtons: [button] });
         await triggerButton(button);
 
         const result = await p;
@@ -335,12 +365,45 @@ describe('QuickInput Proxy', () => {
         expect.hasAssertions();
 
         const button = mockButton(action);
-        const p = showInputBox({ ...options, rightButtons: [button] });
+        const p = showActionInputBox({ ...options, rightButtons: [button] });
         await triggerButton(button);
 
         await expect(p).rejects.toEqual(expected);
         expect(mockShow).toBeCalledTimes(1);
         expect(mockDispose).toBeCalledTimes(1);
+      });
+    });
+    describe('can be verbose', () => {
+      let verboseOptions;
+      beforeEach(() => {
+        console.log = jest.fn();
+        verboseOptions = {
+          prompt: 'a title',
+          value: 'initial vlaue',
+          title: 'an inputBox',
+          verbose: true,
+          enableBackButton: true,
+        };
+      });
+      it('logging which user enters data', async () => {
+        expect.hasAssertions();
+
+        const p = showActionInputBox(verboseOptions);
+        await triggerInput('some value');
+
+        await expect(p).resolves.toEqual('some value');
+
+        expect(mockShow).toBeCalledTimes(1);
+        expect(console.log).toBeCalledWith(expect.stringMatching('some value'));
+      });
+      it('when back button is triggered', async () => {
+        const p = showActionInputBox(verboseOptions);
+        await triggerButton(vscode.QuickInputButtons.Back);
+
+        await expect(p).resolves.toEqual(undefined);
+
+        expect(mockShow).toBeCalledTimes(1);
+        expect(console.log).toBeCalledWith(expect.stringMatching('back button'));
       });
     });
   });

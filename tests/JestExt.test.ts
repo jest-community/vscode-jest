@@ -182,6 +182,7 @@ describe('JestExt', () => {
     let sut: JestExt;
     let startDebugging, debugConfiguration, mockConfigurations;
     const mockShowQuickPick = jest.fn();
+    let mockProjectWorkspace;
 
     beforeEach(() => {
       startDebugging = (debug.startDebugging as unknown) as jest.Mock<{}>;
@@ -195,11 +196,12 @@ describe('JestExt', () => {
       vscode.workspace.getConfiguration = jest.fn().mockReturnValue({
         get: jest.fn(() => mockConfigurations),
       });
+      mockProjectWorkspace = { ...projectWorkspace };
 
       sut = new JestExt(
         context,
         workspaceFolder,
-        projectWorkspace,
+        mockProjectWorkspace,
         channelStub,
         extensionSettings,
         debugCodeLensProvider,
@@ -223,17 +225,20 @@ describe('JestExt', () => {
       );
     });
     it.each`
-      configNames                        | shouldShowWarning
-      ${undefined}                       | ${true}
-      ${[]}                              | ${true}
-      ${['a', 'b']}                      | ${true}
-      ${['a', 'vscode-jest-tests', 'b']} | ${false}
+      configNames                        | shouldShowWarning | debugMode
+      ${undefined}                       | ${true}           | ${true}
+      ${[]}                              | ${true}           | ${true}
+      ${['a', 'b']}                      | ${true}           | ${false}
+      ${['a', 'vscode-jest-tests', 'b']} | ${false}          | ${false}
     `(
       'provides setup wizard in warning message if no "vscode-jest-tests" in launch.json: $configNames',
-      async ({ configNames, shouldShowWarning }) => {
+      async ({ configNames, shouldShowWarning, debugMode }) => {
         expect.hasAssertions();
         const testNamePattern = 'testNamePattern';
         mockConfigurations = configNames ? configNames.map((name) => ({ name })) : undefined;
+
+        mockProjectWorkspace.debug = debugMode;
+
         await sut.runTest(workspaceFolder, fileName, testNamePattern);
 
         expect(startDebugging).toBeCalledTimes(1);
@@ -265,7 +270,7 @@ describe('JestExt', () => {
           button.action();
           expect(vscode.commands.executeCommand).toBeCalledWith(
             `${extensionName}.setup-extension`,
-            { workspace: workspaceFolder, taskId: 'debugConfig' }
+            { workspace: workspaceFolder, taskId: 'debugConfig', verbose: debugMode }
           );
         } else {
           expect(messaging.systemWarningMessage).not.toHaveBeenCalled();

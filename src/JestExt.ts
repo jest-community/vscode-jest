@@ -147,6 +147,7 @@ export class JestExt {
         vscode.commands.executeCommand(`${extensionName}.setup-extension`, {
           workspace: this.workspaceFolder,
           taskId,
+          verbose: this.jestWorkspace.debug,
         }),
     };
   }

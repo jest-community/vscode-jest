@@ -3,7 +3,7 @@
 
 This is an interactive tool to help users set up vscode-jest extension if the default configuration is not sufficient. 
 
-_(As in v4, wizard is released as a beta product. We appreciate you trying out and help improving it so it can be more useful for the community 👍)_
+_(The setup wizard is released as a beta product in v4. Thank you for trying it out! 👍  Please don't hesitate to make suggestion or file issues so we can quickly improve and make it more useful for the community.)_
 
 
 ---
@@ -20,11 +20,11 @@ _(As in v4, wizard is released as a beta product. We appreciate you trying out a
 
 It helps users to set up the essential configurations of the extension via a simple UI. While the extension provides default configurations that work for the common standard environments, such as CRA and plain jest, the more sophisticated projects are most likely needed to customize the extension for their environments. And this is where the setup wizard comes in.
 
-The wizard asks questions and collects answers to update user's workspace `settings.json` and `launch.json` accordingly ( [How does it work ?](#how-does-it-work)). It works for single and multi-root workspaces. It creates an OUTPUT channel `vscode-jest Setup` with progress, instructions and status, which also will be handy for reporting and diagnosis issues.
+The wizard asks questions and collects answers to update user's workspace `settings.json` and `launch.json` accordingly ( [How does it work ?](#how-does-it-work)). It works for single and multi-root workspaces. It creates an OUTPUT channel `"vscode-jest Setup"` showing progress, and tips to make wizard easier to use and diagnose should there be an issue. 
 
 Users can run the wizard any time they want ([How to run it ?](how-to-run-it)) and safely abort if desired. 
 
-The wizard tries its best to create accurate configurations but it will not be able to cover all the use cases out there. However, it always strikes for transparency, and shows where and what the configuration will be updated so users can easily modify it if needed.
+The wizard tries its best to create accurate configurations but it will not be able to cover all the use cases out there. However, it always strikes for transparency, and shows where and what the configuration will be updated so users can easily modify it later manually if needed.
 
 _(Note: the wizard is not to set up [jest](https://jestjs.io) itself. Actually, a working jest environment (such as you can run jest tests in terminal) is a prerequisite of running `vscode-jest` extension.)_
 ## How to run it
@@ -45,7 +45,14 @@ The extension start jest tests process on behave of the users by issuing the sam
 
 Please be aware that all relative paths in the settings are resolved against the `rootPath`, which by default is the current workspace folder unless you customize it with `"jest.rootPath"`.
 
-This command line is required to configure the debug config below. 
+
+While users can pass any jest CLI options in the `"jest.jestCommandLine"`, it is recommended NOT to pass the following:
+- the watch options (--watch, --watchAll): the extension will append watch flag when needed. 
+- the coverage option (--coverage): user can easily toggle on/off coverage via command so no need to add it on the commandLine.
+
+Because the extension appends additional options to this commandLine at run time, please make sure these additional options can be passed through, for example, if your command-line is `"npm test"`, make sure you add `"--"` at the end to pass through the additional options: `"npm test --"`
+
+**Please note, `"jest.jestCommandLine"` setting is required to configure the debug config below.**
 
 ### Debug Config
 When clicked on the debug codeLens, the extension will look for a debug config named `"vscode-jest-tests"`, and append the additional arguments (such as `--testNamePattern`) when launching the debugger.
@@ -54,9 +61,9 @@ If there is no existing `"jest.jestCommandLine"`, it will suggest to set one up 
 
 The wizard will examine the `launch.json` for existing config. If found, users can choose to use it as it is, replace (rename the old one and generate a new one) or manually editing it; if not found, wizard will try to [generate](#note-2) a new one. 
 
-The debug config is saved in `launch.json` in workspace folder and shown at the end of the setup for review/adjustment. If you choose "replace" the existing config, the old configure will be renamed to `vscode-jest-tests-xxxxx` for reference purpose only, which can be safely deleted if you don't need it.
+The debug config is saved in `launch.json` in workspace folder and shown at the end of the setup for review or adjustment. If the user chooses to "replace" the existing config, the old configure will be renamed to `vscode-jest-tests-xxxxx` for reference purpose only, which can be safely deleted if not needed.
 
-The generated config probably work fine for most projects, but could require further adjustment for some other projects including but not limited to
+The generated config probably work fine for most projects, but could require further adjustment for projects including but not limited to the following:
 - projects use different jest config between debug and regular test run
 - projects with [platform specific properties](#note-3). 
 
@@ -87,7 +94,7 @@ Check out [here](#note-4) if you are having problem running vscode-jest debug co
   - obtain a debug template from `DebugConfigurationProvider`
   - merge the jest command and arguments with the template.
     - if the command is `npm` or `yarn` it updates `runtimeExecutable` property; otherwise updates `program`
-    - the arguments will be added to the `args` property, plus jest debug specific flag such as `--runInBand`.
+    - the arguments will be added to the `args` property, plus jest debug specific flags such as `--runInBand`.
   - update `cwd` property with either `jest.rootPath` if defined, otherwise the vscode variable `"${workspaceFolder}"`
 
   
@@ -113,19 +120,15 @@ Check out [here](#note-4) if you are having problem running vscode-jest debug co
   ]
   ```
   See more details and examples in [vscode: platform specific properties](https://code.visualstudio.com/docs/editor/debugging#_platformspecific-properties).
-  
-  The wizard can preserve the existing platform specific properties while merging the new `jest.jestCommandLine` but does not guarantee they are consistent. Therefore, it is advise to always double check the debug config upon `jest.jestCommandLine` changes.  
+    
 
 - <a id="note-4">**vscode-jest debug codeLens failed, now what?**</a>
   
-  If your regular jest run was fine but you can't debug the test with debug codeLens after running wizard. There should be some error message in your terminal that might help you pinpoint the culprit. There are many information online about how to setup vscode debug config for specific environments/frameworks, you might also find the following helpful:
+  If your regular jest run was fine but you can't debug the test with debug codeLens after running wizard. There should be some error message in your terminal that might help you pinpoint the culprit. 
+
+  There are many information online about how to setup vscode debug config for specific environments/frameworks, you might find the following helpful:
   - [vscode debug config properties](https://code.visualstudio.com/docs/nodejs/nodejs-debugging#_launch-configuration-properties) 
   - [Launch configurations for common scenarios](https://code.visualstudio.com/docs/nodejs/nodejs-debugging#_launch-configurations-for-common-scenarios)
   - [vscode-recipes for debug jest tests](https://github.com/microsoft/vscode-recipes/tree/master/debugging-jest-tests)
   
-  If you think your use case is quite common, feel free to create a discussion/issue for enhancing the wizard or contribute your example debug config.
-
- 
- 
-
-  
+  While you can manually correct the debug config and move on, if you think your use case is actually quite common, feel free to create a discussion/issue so we might be able to enhance the wizard or include your example config to help others.

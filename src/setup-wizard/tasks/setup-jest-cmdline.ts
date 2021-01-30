@@ -1,7 +1,7 @@
 import * as path from 'path';
 
 import {
-  showInputBox,
+  showActionInputBox,
   showActionMessage,
   getConfirmation,
   showActionMenu,
@@ -65,16 +65,19 @@ export const setupJestCmdLine: SetupTask = async (
   };
 
   const edit = async (cmdLine?: string): Promise<WizardStatus> => {
-    let editedValue = await showInputBox({
+    let editedValue = await showActionInputBox({
       title: 'Enter Jest Command Line',
       value: cmdLine,
       prompt: 'Note: the command line should match how you run jest tests in terminal ',
       enableBackButton: true,
+      verbose: context.verbose,
     });
     editedValue = editedValue?.trim();
     if (!editedValue) {
       message(
-        `jest command line did not change: jest.jestCommandLine = "${settings.jestCommandLine}"`
+        `jest command line did not change: jest.jestCommandLine = ${
+          settings.jestCommandLine ? `"${settings.jestCommandLine}"` : settings.jestCommandLine
+        }`
       );
       return 'abort';
     }
@@ -149,6 +152,7 @@ export const setupJestCmdLine: SetupTask = async (
       title: 'Set up Jest Command Line',
       placeholder,
       enableBackButton: true,
+      verbose: context.verbose,
     });
   };
   const withoutExistingSettings = async (): Promise<WizardStatus> => {
@@ -174,7 +178,7 @@ export const setupJestCmdLine: SetupTask = async (
     return edit();
   };
 
-  message(`Setup jest command line for workspace "${workspace.name}"`);
+  message(`Setup jest command line for workspace "${workspace.name}"`, 'setupJestCmdLine');
   return settings.jestCommandLine || settings.pathToJest
     ? withExistingSettings()
     : withoutExistingSettings();

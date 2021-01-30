@@ -16,6 +16,7 @@ describe('startWizard', () => {
   beforeEach(() => {
     jest.resetAllMocks();
 
+    console.log = jest.fn();
     mockHelperSetup();
     vscode.window.createOutputChannel = jest.fn().mockReturnValue({
       show: jest.fn(),
@@ -55,7 +56,7 @@ describe('startWizard', () => {
         console.error = jest.fn();
         (vscode.workspace as any).workspaceFolders = [workspaceFolder('single-root')];
         mockShowActionMenu(menuId, StartWizardActionId.exit);
-        const task = WizardTasks[taskId];
+        const task = WizardTasks[taskId].task;
         task.mockImplementation(() => {
           if (typeof taskResult === 'function') {
             return taskResult();
@@ -78,8 +79,7 @@ describe('startWizard', () => {
       expect.hasAssertions();
       console.error = jest.fn();
       const workspace = workspaceFolder('w-1');
-      (vscode.workspace as any).workspaceFolders = [workspaceFolder('single-root')];
-      const task = WizardTasks[taskId];
+      const task = WizardTasks[taskId].task;
       task.mockImplementation(() => {
         if (typeof taskResult === 'function') {
           return taskResult();
@@ -89,11 +89,31 @@ describe('startWizard', () => {
 
       // exit the wizard via menu
       mockShowActionMenu(menuId, StartWizardActionId.exit);
-      await expect(startWizard(mockDebugConfigProvider, workspace, taskId)).resolves.toEqual(
+      await expect(startWizard(mockDebugConfigProvider, { workspace, taskId })).resolves.toEqual(
         wizardResult
       );
 
       expect(task).toBeCalledTimes(1);
     });
+  });
+  it('has a verbose mode', async () => {
+    expect.hasAssertions();
+    (vscode.workspace as any).workspaceFolders = [workspaceFolder('single-root')];
+    const mockLog = jest.fn();
+    console.log = mockLog;
+
+    // exit the wizard via menu
+    mockShowActionMenu(StartWizardActionId.exit);
+    await expect(startWizard(mockDebugConfigProvider, { verbose: true })).resolves.toEqual(
+      'success'
+    );
+    expect(console.log).toHaveBeenCalled();
+
+    mockLog.mockClear();
+    mockShowActionMenu(StartWizardActionId.exit);
+    await expect(startWizard(mockDebugConfigProvider, { verbose: false })).resolves.toEqual(
+      'success'
+    );
+    expect(console.log).not.toHaveBeenCalled();
   });
 });

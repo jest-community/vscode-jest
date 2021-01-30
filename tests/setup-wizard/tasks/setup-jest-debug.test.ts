@@ -69,7 +69,7 @@ describe('wizard-tasks', () => {
 
     // default helper function
     mockHelper.showActionMenu.mockReturnValue('success');
-    mockHelper.showInputBox.mockImplementation(({ value }) => value);
+    mockHelper.showActionInputBox.mockImplementation(({ value }) => value);
     mockSaveConfig.mockImplementation(() => Promise.resolve());
 
     mockHelper.mergeDebugConfigWithCmdLine.mockImplementation((config) => config);

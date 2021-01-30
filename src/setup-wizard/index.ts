@@ -1,1 +1,1 @@
-export { startWizard, WizardTaskId } from './start-wizard';
+export { startWizard, StartWizardOptions, WizardTaskId } from './start-wizard';

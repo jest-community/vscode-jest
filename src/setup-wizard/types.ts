@@ -5,6 +5,7 @@ export interface WizardContext {
   workspace: vscode.WorkspaceFolder;
 
   message: (msg: string, section?: string) => void;
+  verbose?: boolean;
 }
 
 export type WizardStatus = 'success' | 'error' | 'abort' | 'exit' | undefined;
@@ -17,10 +18,19 @@ export type ActionableMenuItem<T = WizardStatus> = vscode.QuickPickItem & Action
 export type ActionableButton<T = WizardStatus> = vscode.QuickInputButton & ActionableComp<T>;
 export type ActionableMessageItem<T> = vscode.MessageItem & ActionableComp<T>;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const isActionableButton = (arg: any): arg is ActionableButton<unknown> =>
+  arg && arg.iconPath && typeof arg.action === 'function';
+
 export type ActionMessageType = 'info' | 'warning' | 'error';
 
 export type AllowBackButton = { enableBackButton?: boolean };
-export interface ActionMenuOptions<T = WizardStatus> extends AllowBackButton {
+export type Verbose = { verbose?: boolean };
+
+// actionable menu
+export type ActionMenuInput<T> = ActionableMenuItem<T> | ActionableButton<T> | undefined;
+export type ActionableMenuResult<T = WizardStatus> = T | undefined;
+export interface ActionMenuOptions<T = WizardStatus> extends AllowBackButton, Verbose {
   title?: string;
   placeholder?: string;
   value?: string;
@@ -28,7 +38,15 @@ export interface ActionMenuOptions<T = WizardStatus> extends AllowBackButton {
   selectItemIdx?: number;
 }
 
-export type ActionableResult<T = WizardStatus> = T | undefined;
+// actionable input box
+export type ActionInputResult<T> = T | string | undefined;
+export type ActionInput<T> = ActionInputResult<T> | ActionableButton<T> | undefined;
+export interface ActionInputBoxOptions<T> extends AllowBackButton, Verbose {
+  title?: string;
+  prompt?: string;
+  value?: string;
+  rightButtons?: ActionableButton<T>[];
+}
 
 export type SetupTask = (context: WizardContext) => Promise<WizardStatus>;
 
