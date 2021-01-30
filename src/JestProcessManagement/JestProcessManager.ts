@@ -42,7 +42,7 @@ export class JestProcessManager {
         }
         this.removeJestProcessReference(exitedJestProcess);
         const jestProcessInWatchMode = this.run({
-          watchMode: WatchMode.Watch,
+          watchMode,
           keepAlive,
           exitCallback,
         });

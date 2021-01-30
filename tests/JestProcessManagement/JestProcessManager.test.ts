@@ -161,36 +161,46 @@ describe('JestProcessManager', () => {
       );
     });
 
-    it('binds the provided exit handler to the both jest processes', () => {
-      const eventEmitterForWatchMode = new EventEmitter();
-      const onExitMock = jest
-        .fn()
-        .mockImplementationOnce((callback) => {
-          eventEmitter.on('debuggerProcessExit', callback);
-        })
-        .mockImplementationOnce((callback) => {
-          eventEmitterForWatchMode.on('debuggerProcessExit', callback);
+    it.each([[WatchMode.Watch], [WatchMode.WatchAll]])(
+      'pass watchMode $s and bind the provided exit handler to the both jest processes',
+      (watchMode) => {
+        const eventEmitterForWatchMode = new EventEmitter();
+        const onExitMock = jest
+          .fn()
+          .mockImplementationOnce((callback) => {
+            eventEmitter.on('debuggerProcessExit', callback);
+          })
+          .mockImplementationOnce((callback) => {
+            eventEmitterForWatchMode.on('debuggerProcessExit', callback);
+          });
+
+        jestProcessMock.mockImplementation(() => ({
+          onExit: onExitMock,
+        }));
+
+        jestProcessManager.startJestProcess({
+          exitCallback: exitHandler,
+          watchMode,
         });
 
-      jestProcessMock.mockImplementation(() => ({
-        onExit: onExitMock,
-      }));
+        eventEmitter.emit('debuggerProcessExit', { stopRequested: () => false, watchMode: false });
+        eventEmitterForWatchMode.emit('debuggerProcessExit', {
+          stopRequested: () => false,
+          watchMode: true,
+        });
 
-      jestProcessManager.startJestProcess({
-        exitCallback: exitHandler,
-        watchMode: WatchMode.Watch,
-      });
+        //verify watchMode has been passed on correctly
+        expect(jestProcessMock).toHaveBeenCalledTimes(2);
+        expect(jestProcessMock.mock.calls.map((c) => c[0].watchMode)).toEqual([
+          WatchMode.None,
+          watchMode,
+        ]);
 
-      eventEmitter.emit('debuggerProcessExit', { stopRequested: () => false, watchMode: false });
-      eventEmitterForWatchMode.emit('debuggerProcessExit', {
-        stopRequested: () => false,
-        watchMode: true,
-      });
-
-      expect(exitHandler).toHaveBeenCalledTimes(2);
-      expect(exitHandler.mock.calls[0][0].watchMode).toBe(false);
-      expect(exitHandler.mock.calls[1][0].watchMode).toBe(true);
-    });
+        expect(exitHandler).toHaveBeenCalledTimes(2);
+        expect(exitHandler.mock.calls[0][0].watchMode).toBe(false);
+        expect(exitHandler.mock.calls[1][0].watchMode).toBe(true);
+      }
+    );
 
     it('the exit handler for the non-watch mode passes the jest process representing the watch mode as the second argument', () => {
       const eventEmitterForWatchMode = new EventEmitter();
