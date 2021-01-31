@@ -529,7 +529,8 @@ describe('validateCommandLine', () => {
   });
 });
 
-const makePath = (...parts: string[]) => parts.join(path.sep);
+// const makePath = (...parts: string[]) => parts.join(path.sep);
+const makePath = (...parts: string[]) => path.join(...parts);
 const quote = (cmdLine: string) => `"${cmdLine}"`;
 
 describe('update debug config with existing settings', () => {
@@ -565,16 +566,16 @@ describe('update debug config with existing settings', () => {
     });
   });
   describe.each`
-    cmdLine                                                                       | expected
-    ${'jest'}                                                                     | ${{ cmd: 'jest', args: [], isAbsolute: false }}
-    ${makePath('.', 'node_modules', '.bin', 'jest')}                              | ${{ cmd: makePath('.', 'node_modules', '.bin', 'jest'), args: [], isAbsolute: false }}
-    ${makePath('..', 'jest --config ./jest-config.json')}                         | ${{ cmd: makePath('..', 'jest'), args: ['--config', './jest-config.json'], isAbsolute: false }}
-    ${makePath('jest --config "../dir with space/jest-config.json"')}             | ${{ cmd: 'jest', args: ['--config', '"../dir with space/jest-config.json"'], isAbsolute: false }}
-    ${makePath('', 'absolute', 'jest --runInBand')}                               | ${{ cmd: makePath('', 'absolute', 'jest'), args: ['--runInBand'], isAbsolute: true }}
-    ${quote(makePath('', 'dir with space', 'jest'))}                              | ${{ cmd: makePath('', 'dir with space', 'jest'), args: [], isAbsolute: true }}
-    ${[quote(makePath('', 'dir with space', 'jest')), '--runInBand'].join(' ')}   | ${{ cmd: makePath('', 'dir with space', 'jest'), args: ['--runInBand'], isAbsolute: true }}
-    ${[quote(makePath('..', 'dir with space', 'jest')), '--runInBand'].join(' ')} | ${{ cmd: makePath('..', 'dir with space', 'jest'), args: ['--runInBand'], isAbsolute: false }}
-    ${makePath("'dir with space", "abc.js' --arg1 1 --arg2 '/a dir/config.js'")}  | ${{ cmd: makePath('dir with space', 'abc.js'), args: ['--arg1', '1', '--arg2', "'/a dir/config.js'"], isAbsolute: false }}
+    cmdLine                                                                           | expected
+    ${'jest'}                                                                         | ${{ cmd: 'jest', args: [], isAbsolute: false }}
+    ${makePath('.', 'node_modules', '.bin', 'jest')}                                  | ${{ cmd: makePath('.', 'node_modules', '.bin', 'jest'), args: [], isAbsolute: false }}
+    ${makePath('..', 'jest --config ./jest-config.json')}                             | ${{ cmd: makePath('..', 'jest'), args: ['--config', './jest-config.json'], isAbsolute: false }}
+    ${makePath('jest --config "../dir with space/jest-config.json"')}                 | ${{ cmd: 'jest', args: ['--config', '"../dir with space/jest-config.json"'], isAbsolute: false }}
+    ${makePath(path.sep, 'absolute', 'jest --runInBand')}                             | ${{ cmd: makePath(path.sep, 'absolute', 'jest'), args: ['--runInBand'], isAbsolute: true }}
+    ${quote(makePath(path.sep, 'dir with space', 'jest'))}                            | ${{ cmd: makePath(path.sep, 'dir with space', 'jest'), args: [], isAbsolute: true }}
+    ${[quote(makePath(path.sep, 'dir with space', 'jest')), '--runInBand'].join(' ')} | ${{ cmd: makePath(path.sep, 'dir with space', 'jest'), args: ['--runInBand'], isAbsolute: true }}
+    ${[quote(makePath('..', 'dir with space', 'jest')), '--runInBand'].join(' ')}     | ${{ cmd: makePath('..', 'dir with space', 'jest'), args: ['--runInBand'], isAbsolute: false }}
+    ${makePath("'dir with space", "abc.js' --arg1=1 --arg2 '/a dir/config.js'")}      | ${{ cmd: makePath('dir with space', 'abc.js'), args: ['--arg1=1', '--arg2', "'/a dir/config.js'"], isAbsolute: false }}
   `('with valid cmdLine: $cmdLine', ({ cmdLine, expected }) => {
     it('can parseCmdLine', () => {
       const [actualCmd, ...actualArgs] = parseCmdLine(cmdLine);
@@ -716,12 +717,12 @@ describe('getWizardSettings', () => {
     expect(getWizardSettings(workspace)).toEqual(expectedSettings);
   });
   it.each`
-    rootPath                                      | absoluteRootPath
-    ${undefined}                                  | ${undefined}
-    ${makePath('..', 'parent')}                   | ${makePath('', 'parent')}
-    ${makePath('', 'root')}                       | ${makePath('', 'root')}
-    ${quote(makePath('', 'root with space'))}     | ${makePath('', 'root with space')}
-    ${quote(makePath('dir with space', 'tests'))} | ${makePath(workspace.uri.fsPath, 'dir with space', 'tests')}
+    rootPath                                        | absoluteRootPath
+    ${undefined}                                    | ${undefined}
+    ${makePath('..', 'parent')}                     | ${makePath(path.sep, 'parent')}
+    ${makePath(path.sep, 'root')}                   | ${makePath(path.sep, 'root')}
+    ${quote(makePath(path.sep, 'root with space'))} | ${makePath(path.sep, 'root with space')}
+    ${quote(makePath('dir with space', 'tests'))}   | ${makePath(workspace.uri.fsPath, 'dir with space', 'tests')}
   `(
     'compute absoluteRootPath: $rootPath => $absoluteRootPath',
     ({ rootPath, absoluteRootPath }) => {

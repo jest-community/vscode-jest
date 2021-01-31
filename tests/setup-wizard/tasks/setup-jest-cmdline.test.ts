@@ -12,6 +12,7 @@ import {
 
 import { mockWizardHelper } from '../test-helper';
 import { validateTaskConfigUpdate, createWizardContext } from './task-test-helper';
+import * as path from 'path';
 
 const mockHelper = helper as jest.Mocked<any>;
 const { mockShowActionMenu, mockShowActionMessage, mockHelperSetup } = mockWizardHelper(mockHelper);
@@ -121,9 +122,9 @@ describe('wizard-tasks', () => {
       });
     });
     describe.each`
-      desc                             | settings                                                         | expectedCmdLine
-      ${'pathToJest'}                  | ${{ pathToJest: 'abc -x' }}                                      | ${'abc -x'}
-      ${'pathToJest and pathToConfig'} | ${{ pathToJest: 'abc -x', pathToConfig: '../shared-jest.json' }} | ${'abc -x --config ../shared-jest.json'}
+      desc                             | settings                                                                                          | expectedCmdLine
+      ${'pathToJest'}                  | ${{ pathToJest: 'abc -x' }}                                                                       | ${'abc -x'}
+      ${'pathToJest and pathToConfig'} | ${{ pathToJest: 'abc -x', pathToConfig: `"${path.join('dir with space', 'shared-jest.json')}"` }} | ${`abc -x --config "${path.join('dir with space', 'shared-jest.json')}"`}
     `('with legacy command settings: $desc', ({ settings, expectedCmdLine }) => {
       it.each`
         menuId                     | result
