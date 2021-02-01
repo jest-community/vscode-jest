@@ -333,7 +333,7 @@ export class JestExt {
         id,
       }));
       const selected = await vscode.window.showQuickPick<RunTestPickItem>(items, {
-        placeHolder: 'select a test to debug',
+        placeHolder: 'Select a test to debug',
       });
 
       return selected?.id;

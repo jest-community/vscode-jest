@@ -72,7 +72,7 @@ export class DebugCodeLensProvider implements vscode.CodeLensProvider {
       codeLens.command = {
         arguments: [codeLens.document, codeLens.fileName, ...codeLens.testIds],
         command: `${extensionName}.run-test`,
-        title: codeLens.testIds.length > 1 ? `Debug(${codeLens.testIds.length})` : 'Debug',
+        title: codeLens.testIds.length > 1 ? `Debug (${codeLens.testIds.length})` : 'Debug',
       };
     }
 
