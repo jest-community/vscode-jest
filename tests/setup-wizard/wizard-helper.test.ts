@@ -595,6 +595,9 @@ describe('mergeDebugConfigWithCmdLine', () => {
       ${true}  | ${'c:\\jest --arg1 "escaped \\"this\\" string" --arg2 2'}     | ${{ cmd: 'c:\\jest', args: ['--arg1', '"escaped \\"this\\" string"', '--arg2', '2'], program: 'c:\\jest' }}
     `('$cmdLine', ({ cmdLine, expected, isWin32 }) => {
       it('can parseCmdLine', () => {
+        if (!canRunTest(isWin32)) {
+          return;
+        }
         const [actualCmd, ...actualArgs] = parseCmdLine(cmdLine);
         expect(actualCmd).toEqual(expected.cmd);
         expect(actualArgs).toEqual(expected.args);
@@ -671,7 +674,7 @@ describe('mergeDebugConfigWithCmdLine', () => {
     ${false} | ${'/absolute/root/path'}      | ${'./jest'}    | ${{ program: '/absolute/root/path/jest' }}
     ${false} | ${'/absolute/root/path'}      | ${'../jest'}   | ${{ program: '/absolute/root/jest' }}
     ${false} | ${'/absolute/root/path'}      | ${'yarn test'} | ${{ runtimeExecutable: 'yarn' }}
-    ${true}  | ${undefined}                  | ${'jest'}      | ${{ program: '${workspaceFolder}\\jest' }}
+    ${true}  | ${undefined}                  | ${'jest'}      | ${{ program: '${workspaceFolder}\\jest', cwd: '${workspaceFolder}' }}
     ${true}  | ${'c:\\absolute\\root\\path'} | ${'..\\jest'}  | ${{ program: 'c:\\absolute\\root\\jest' }}
     ${true}  | ${'\\absolute\\root\\path'}   | ${'yarn test'} | ${{ runtimeExecutable: 'yarn' }}
   `('with rootPath: $absoluteRootPath', ({ isWin32, absoluteRootPath, cmdLine, expected }) => {
