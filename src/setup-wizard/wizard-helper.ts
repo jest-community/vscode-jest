@@ -207,8 +207,8 @@ const getRuntimeExecutable = (
   }
 };
 
-// regex to match surrounding quotes and escape characters
-const cmdQuotesRegex = /^["'\\]+|["'\\]+$/g;
+// regex to match surrounding quotes
+const cmdQuotesRegex = /^["']+|["']+$/g;
 export const cleanupCommand = (command: string): string => command.replace(cmdQuotesRegex, '');
 
 // regex that match single, double quotes and "\" escape char"
@@ -217,7 +217,7 @@ export const parseCmdLine = (cmdLine: string): string[] => {
   const parts = cmdLine.match(cmdSplitRegex) || [];
   // clean up command
   if (parts.length > 0) {
-    parts[0] = cleanupCommand(parts[0]);
+    parts[0] = cleanupCommand(path.normalize(parts[0]));
   }
   return parts;
 };
@@ -278,7 +278,9 @@ export const mergeDebugConfigWithCmdLine = (
     // convert the cmd to absolute path
     const p = path.isAbsolute(cmd)
       ? cmd
-      : path.join(...[absoluteRootPath ? absoluteRootPath : '${workspaceFolder}', cmd]);
+      : absoluteRootPath
+      ? path.join(absoluteRootPath, cmd)
+      : ['${workspaceFolder}', cmd].join(path.sep);
     finalConfig = { ...restConfig, cwd: _cwd, program: p, args: [...cmdArgs, ...configArgs] };
   }
 

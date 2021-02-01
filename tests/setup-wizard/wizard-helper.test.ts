@@ -5,6 +5,7 @@ jest.unmock('./test-helper');
 import * as vscode from 'vscode';
 
 import * as path from 'path';
+import * as os from 'os';
 
 import {
   showActionMenu,
@@ -529,11 +530,10 @@ describe('validateCommandLine', () => {
   });
 });
 
-// const makePath = (...parts: string[]) => parts.join(path.sep);
-const makePath = (...parts: string[]) => path.join(...parts);
-const quote = (cmdLine: string) => `"${cmdLine}"`;
+const canRunTest = (isWin32: boolean) =>
+  (isWin32 && os.platform() === 'win32') || (!isWin32 && os.platform() !== 'win32');
 
-describe('update debug config with existing settings', () => {
+describe('mergeDebugConfigWithCmdLine', () => {
   const hasPlatformSection = (config: vscode.DebugConfiguration): boolean =>
     DEBUG_CONFIG_PLATFORMS.find((p) => config[p] != null) != null;
   const config = {
@@ -551,54 +551,71 @@ describe('update debug config with existing settings', () => {
     },
   };
 
-  describe('cleanupCommand', () => {
-    it.each`
-      cmdLine                                 | expected
-      ${'cleanCmd'}                           | ${'cleanCmd'}
-      ${'"with double quote"'}                | ${'with double quote'}
-      ${"'with single quote'"}                | ${'with single quote'}
-      ${'\\"with escaped double quote\\"'}    | ${'with escaped double quote'}
-      ${"\\'with escaped single quote\\'"}    | ${'with escaped single quote'}
-      ${"'quotes in 'the middle' is fine\\'"} | ${"quotes in 'the middle' is fine"}
-      ${"'c:\\quoted\\window\\command'"}      | ${'c:\\quoted\\window\\command'}
-    `('remove surrouding quotes: $cmdLine', ({ cmdLine, expected }) => {
-      expect(cleanupCommand(cmdLine)).toEqual(expected);
-    });
-  });
-  describe.each`
-    cmdLine                                                                           | expected
-    ${'jest'}                                                                         | ${{ cmd: 'jest', args: [], isAbsolute: false }}
-    ${makePath('.', 'node_modules', '.bin', 'jest')}                                  | ${{ cmd: makePath('.', 'node_modules', '.bin', 'jest'), args: [], isAbsolute: false }}
-    ${makePath('..', 'jest --config ./jest-config.json')}                             | ${{ cmd: makePath('..', 'jest'), args: ['--config', './jest-config.json'], isAbsolute: false }}
-    ${makePath('jest --config "../dir with space/jest-config.json"')}                 | ${{ cmd: 'jest', args: ['--config', '"../dir with space/jest-config.json"'], isAbsolute: false }}
-    ${makePath(path.sep, 'absolute', 'jest --runInBand')}                             | ${{ cmd: makePath(path.sep, 'absolute', 'jest'), args: ['--runInBand'], isAbsolute: true }}
-    ${quote(makePath(path.sep, 'dir with space', 'jest'))}                            | ${{ cmd: makePath(path.sep, 'dir with space', 'jest'), args: [], isAbsolute: true }}
-    ${[quote(makePath(path.sep, 'dir with space', 'jest')), '--runInBand'].join(' ')} | ${{ cmd: makePath(path.sep, 'dir with space', 'jest'), args: ['--runInBand'], isAbsolute: true }}
-    ${[quote(makePath('..', 'dir with space', 'jest')), '--runInBand'].join(' ')}     | ${{ cmd: makePath('..', 'dir with space', 'jest'), args: ['--runInBand'], isAbsolute: false }}
-    ${makePath("'dir with space", "abc.js' --arg1=1 --arg2 '/a dir/config.js'")}      | ${{ cmd: makePath('dir with space', 'abc.js'), args: ['--arg1=1', '--arg2', "'/a dir/config.js'"], isAbsolute: false }}
-  `('with valid cmdLine: $cmdLine', ({ cmdLine, expected }) => {
-    it('can parseCmdLine', () => {
-      const [actualCmd, ...actualArgs] = parseCmdLine(cmdLine);
-      expect(actualCmd).toEqual(expected.cmd);
-      expect(actualArgs).toEqual(expected.args);
-      expect(path.isAbsolute(actualCmd)).toEqual(expected.isAbsolute);
-    });
-    it('can mergeDebugConfigWithCmdLine', () => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { args, program, windows, ...restConfig } = config;
-      const { args: newArgs, program: newProgram, ...restNewConfig } = mergeDebugConfigWithCmdLine(
-        config,
-        cmdLine
-      );
-      expect(newArgs).toContain('--runInBand');
-      expect(newArgs).toEqual([...expected.args, ...args]);
-      if (path.isAbsolute(expected.cmd)) {
-        expect(newProgram).toEqual(expected.cmd);
-      } else {
-        expect(newProgram).toEqual(path.join('${workspaceFolder}', expected.cmd));
-      }
-      expect(hasPlatformSection({ ...restNewConfig })).toBeFalsy();
-      expect(restNewConfig).toEqual(restConfig);
+  it.each`
+    command                                      | expected
+    ${'cleanCmd'}                                | ${'cleanCmd'}
+    ${'"with double quote"'}                     | ${'with double quote'}
+    ${"'with single quote'"}                     | ${'with single quote'}
+    ${'"with quotes "in the middle" is fine"'}   | ${'with quotes "in the middle" is fine'}
+    ${"'with quotes 'in the middle' is fine'"}   | ${"with quotes 'in the middle' is fine"}
+    ${'with quotes "in the middle" is fine'}     | ${'with quotes "in the middle" is fine'}
+    ${'with escape "in the \'middle\'" is fine'} | ${'with escape "in the \'middle\'" is fine'}
+    ${'with escape "in the "middle"" is fine'}   | ${'with escape "in the "middle"" is fine'}
+    ${"'c:\\quoted root\\window\\command'"}      | ${'c:\\quoted root\\window\\command'}
+    ${"'\\quoted root\\window\\command'"}        | ${'\\quoted root\\window\\command'}
+  `(
+    'uses cleanupCommand to remove surrouding quotes for command: $command',
+    ({ command, expected }) => {
+      expect(cleanupCommand(command)).toEqual(expected);
+    }
+  );
+
+  describe('when merge should succeed', () => {
+    describe.each`
+      isWin32  | cmdLine                                                       | expected
+      ${false} | ${'jest'}                                                     | ${{ cmd: 'jest', args: [], program: '${workspaceFolder}/jest' }}
+      ${false} | ${'./node_modules/.bin/jest'}                                 | ${{ cmd: 'node_modules/.bin/jest', args: [], program: '${workspaceFolder}/node_modules/.bin/jest' }}
+      ${false} | ${'./node_modules/.bin/..//jest'}                             | ${{ cmd: 'node_modules/jest', args: [], program: '${workspaceFolder}/node_modules/jest' }}
+      ${false} | ${'../jest --config ../jest-config.json'}                     | ${{ cmd: '../jest', args: ['--config', '../jest-config.json'], program: '${workspaceFolder}/../jest' }}
+      ${false} | ${'../jest --config "../jest-config.json"'}                   | ${{ cmd: '../jest', args: ['--config', '"../jest-config.json"'], program: '${workspaceFolder}/../jest' }}
+      ${false} | ${'../jest --config=../jest-config.json'}                     | ${{ cmd: '../jest', args: ['--config=../jest-config.json'], program: '${workspaceFolder}/../jest' }}
+      ${false} | ${'../jest --config="../jest-config.json"'}                   | ${{ cmd: '../jest', args: ['--config=', '"../jest-config.json"'], program: '${workspaceFolder}/../jest' }}
+      ${false} | ${'../jest --config "a dir/jest-config.json" --coverage'}     | ${{ cmd: '../jest', args: ['--config', '"a dir/jest-config.json"', '--coverage'], program: '${workspaceFolder}/../jest' }}
+      ${false} | ${'jest --config "../dir with space/jest-config.json"'}       | ${{ cmd: 'jest', args: ['--config', '"../dir with space/jest-config.json"'], program: '${workspaceFolder}/jest' }}
+      ${false} | ${'/absolute/jest --runInBand'}                               | ${{ cmd: '/absolute/jest', args: ['--runInBand'], program: '/absolute/jest' }}
+      ${false} | ${'"dir with space/jest" --arg1=1 --arg2 2 "some string"'}    | ${{ cmd: 'dir with space/jest', args: ['--arg1=1', '--arg2', '2', '"some string"'], program: '${workspaceFolder}/dir with space/jest' }}
+      ${false} | ${'"/dir with space/jest" --arg1=1 --arg2 2 "some string"'}   | ${{ cmd: '/dir with space/jest', args: ['--arg1=1', '--arg2', '2', '"some string"'], program: '/dir with space/jest' }}
+      ${false} | ${"'/dir with space/jest' --arg1=1 --arg2 2 'some string'"}   | ${{ cmd: '/dir with space/jest', args: ['--arg1=1', '--arg2', '2', "'some string'"], program: '/dir with space/jest' }}
+      ${false} | ${'jest --arg1 "escaped \\"this\\" string" --arg2 2'}         | ${{ cmd: 'jest', args: ['--arg1', '"escaped \\"this\\" string"', '--arg2', '2'], program: '${workspaceFolder}/jest' }}
+      ${true}  | ${'.\\node_modules\\.bin\\jest'}                              | ${{ cmd: '.\\node_modules\\.bin\\jest', args: [], program: '${workspaceFolder}\\node_modules\\.bin\\jest' }}
+      ${true}  | ${'..\\jest --config="..\\jest-config.json"'}                 | ${{ cmd: '..\\jest', args: ['--config=', '"..\\jest-config.json"'], program: '${workspaceFolder}\\..\\jest' }}
+      ${true}  | ${'jest --config "..\\dir with space\\jest-config.json"'}     | ${{ cmd: 'jest', args: ['--config', '"..\\dir with space\\jest-config.json"'], program: '${workspaceFolder}\\jest' }}
+      ${true}  | ${'\\absolute\\jest --runInBand'}                             | ${{ cmd: '\\absolute\\jest', args: ['--runInBand'], program: '\\absolute\\jest' }}
+      ${true}  | ${'"\\dir with space\\jest" --arg1=1 --arg2 2 "some string"'} | ${{ cmd: '\\dir with space\\jest', args: ['--arg1=1', '--arg2', '2', '"some string"'], program: '\\dir with space\\jest' }}
+      ${true}  | ${'c:\\jest --arg1 "escaped \\"this\\" string" --arg2 2'}     | ${{ cmd: 'c:\\jest', args: ['--arg1', '"escaped \\"this\\" string"', '--arg2', '2'], program: 'c:\\jest' }}
+    `('$cmdLine', ({ cmdLine, expected, isWin32 }) => {
+      it('can parseCmdLine', () => {
+        const [actualCmd, ...actualArgs] = parseCmdLine(cmdLine);
+        expect(actualCmd).toEqual(expected.cmd);
+        expect(actualArgs).toEqual(expected.args);
+      });
+      it('can mergeDebugConfigWithCmdLine (for win32 only? $isWin32)', () => {
+        if (!canRunTest(isWin32)) {
+          return;
+        }
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { args, program, windows, ...restConfig } = config;
+        const {
+          args: newArgs,
+          program: newProgram,
+          ...restNewConfig
+        } = mergeDebugConfigWithCmdLine(config, cmdLine);
+        expect(newArgs).toContain('--runInBand');
+        expect(newArgs).toEqual([...expected.args, ...args]);
+        expect(newProgram).toEqual(expected.program);
+        expect(hasPlatformSection({ ...restNewConfig })).toBeFalsy();
+        expect(restNewConfig).toEqual(restConfig);
+      });
     });
   });
   it.each`
@@ -647,33 +664,37 @@ describe('update debug config with existing settings', () => {
     expect(newConfig.windows).toEqual(config.windows);
   });
 
-  describe('with rootPath', () => {
+  describe.each`
+    isWin32  | absoluteRootPath              | cmdLine        | expected
+    ${false} | ${undefined}                  | ${'jest'}      | ${{ program: '${workspaceFolder}/jest', cwd: '${workspaceFolder}' }}
+    ${false} | ${'/absolute/root/path'}      | ${'jest'}      | ${{ program: '/absolute/root/path/jest' }}
+    ${false} | ${'/absolute/root/path'}      | ${'./jest'}    | ${{ program: '/absolute/root/path/jest' }}
+    ${false} | ${'/absolute/root/path'}      | ${'../jest'}   | ${{ program: '/absolute/root/jest' }}
+    ${false} | ${'/absolute/root/path'}      | ${'yarn test'} | ${{ runtimeExecutable: 'yarn' }}
+    ${true}  | ${undefined}                  | ${'jest'}      | ${{ program: '${workspaceFolder}\\jest' }}
+    ${true}  | ${'c:\\absolute\\root\\path'} | ${'..\\jest'}  | ${{ program: 'c:\\absolute\\root\\jest' }}
+    ${true}  | ${'\\absolute\\root\\path'}   | ${'yarn test'} | ${{ runtimeExecutable: 'yarn' }}
+  `('with rootPath: $absoluteRootPath', ({ isWin32, absoluteRootPath, cmdLine, expected }) => {
     it('debugConfig.cwd will be based on absolute rootPath', () => {
-      const absoluteRootPath = makePath('', 'absolute', 'root', 'path');
-      const { cwd } = mergeDebugConfigWithCmdLine(config, 'yarn srat', absoluteRootPath);
-      expect(cwd).toEqual(absoluteRootPath);
-
-      const { cwd: cwd2 } = mergeDebugConfigWithCmdLine(config, 'yarn srat');
-      expect(cwd2).toEqual(config.cwd);
+      if (!canRunTest(isWin32)) {
+        return;
+      }
+      const { cwd } = mergeDebugConfigWithCmdLine(config, cmdLine, absoluteRootPath);
+      expect(cwd).toEqual(expected.cwd ?? absoluteRootPath);
     });
-    it('relative commandLine will be adjust by rootPath', () => {
-      const absoluteRootPath = makePath('', 'root', 'sub-1');
-      const command = makePath('..', 'jest');
-      const expectedCmd = makePath('', 'root', 'jest');
-      const args = '--config ./whatever.json';
-      const commandLine = `${command} ${args}`;
-      const { cwd, program } = mergeDebugConfigWithCmdLine(config, commandLine, absoluteRootPath);
-      expect(cwd).toEqual(absoluteRootPath);
-      expect(program).toEqual(expectedCmd);
+    it('program will be adjust by rootPath', () => {
+      if (!canRunTest(isWin32)) {
+        return;
+      }
+      const { program } = mergeDebugConfigWithCmdLine(config, cmdLine, absoluteRootPath);
+      expect(program).toEqual(expected.program);
     });
-    it('absolute commandLine will not change regardless of rootPath', () => {
-      const absoluteRootPath = '/absolutely/root/path';
-      const command = '/project/node_module/.bin/jest';
-      const args = '--config ./whatever.json';
-      const commandLine = `${command} ${args}`;
-      const { cwd, program } = mergeDebugConfigWithCmdLine(config, commandLine, absoluteRootPath);
-      expect(cwd).toEqual(absoluteRootPath);
-      expect(program).toEqual(`${command}`);
+    it('runtimeExecutable will NOT be adjusted by rootPath', () => {
+      if (!canRunTest(isWin32)) {
+        return;
+      }
+      const { runtimeExecutable } = mergeDebugConfigWithCmdLine(config, cmdLine, absoluteRootPath);
+      expect(runtimeExecutable).toEqual(expected.runtimeExecutable);
     });
   });
 });
@@ -717,15 +738,23 @@ describe('getWizardSettings', () => {
     expect(getWizardSettings(workspace)).toEqual(expectedSettings);
   });
   it.each`
-    rootPath                                        | absoluteRootPath
-    ${undefined}                                    | ${undefined}
-    ${makePath('..', 'parent')}                     | ${makePath(path.sep, 'parent')}
-    ${makePath(path.sep, 'root')}                   | ${makePath(path.sep, 'root')}
-    ${quote(makePath(path.sep, 'root with space'))} | ${makePath(path.sep, 'root with space')}
-    ${quote(makePath('dir with space', 'tests'))}   | ${makePath(workspace.uri.fsPath, 'dir with space', 'tests')}
+    isWin32  | rootPath                      | absoluteRootPath
+    ${false} | ${undefined}                  | ${undefined}
+    ${false} | ${'../parent'}                | ${'/parent'}
+    ${false} | ${'/root'}                    | ${'/root'}
+    ${false} | ${'"/root with space/dir"'}   | ${'/root with space/dir'}
+    ${false} | ${'dir with space/tests'}     | ${'/workspace/dir with space/tests'}
+    ${true}  | ${undefined}                  | ${undefined}
+    ${true}  | ${'..\\parent'}               | ${'\\parent'}
+    ${true}  | ${'\\root'}                   | ${'\\root'}
+    ${true}  | ${'"\\root with space\\dir"'} | ${'\\root with space\\dir'}
+    ${true}  | ${'dir with space\\tests'}    | ${'\\workspace\\dir with space\\tests'}
   `(
     'compute absoluteRootPath: $rootPath => $absoluteRootPath',
-    ({ rootPath, absoluteRootPath }) => {
+    ({ isWin32, rootPath, absoluteRootPath }) => {
+      if (!canRunTest(isWin32)) {
+        return;
+      }
       vscodeSettings['rootPath'] = rootPath;
       expect(getWizardSettings(workspace)).toEqual({ rootPath, absoluteRootPath });
     }
