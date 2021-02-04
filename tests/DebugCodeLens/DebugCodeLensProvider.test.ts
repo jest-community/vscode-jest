@@ -60,7 +60,13 @@ import * as helper from '../test-helper';
 describe('DebugCodeLensProvider', () => {
   const testResultProvider = new TestResultProvider();
   const provideJestExt: any = () => ({ testResultProvider });
-  const allTestStates = [TestState.Fail, TestState.Pass, TestState.Skip, TestState.Unknown];
+  const allTestStates = [
+    TestState.Fail,
+    TestState.Pass,
+    TestState.Skip,
+    TestState.Unknown,
+    TestState.Todo,
+  ];
 
   describe('constructor()', () => {
     it('should set the jest extension provider', () => {
@@ -195,6 +201,15 @@ describe('DebugCodeLensProvider', () => {
     it('should not show the CodeLens above unknown tests unless configured', () => {
       const testStates = allTestStates.filter((s) => s !== TestState.Unknown);
       const status = TestReconciliationState.Unknown;
+      const sut = new DebugCodeLensProvider(provideJestExt, testStates);
+      getResults.mockReturnValueOnce([{ status }]);
+
+      expect(sut.provideCodeLenses(document, token)).toEqual([]);
+    });
+
+    it('should not show the CodeLens above todo tests unless configured (which would be silly)', () => {
+      const testStates = allTestStates.filter((s) => s !== TestState.Todo);
+      const status = TestReconciliationState.KnownTodo;
       const sut = new DebugCodeLensProvider(provideJestExt, testStates);
       getResults.mockReturnValueOnce([{ status }]);
 

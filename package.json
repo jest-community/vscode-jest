@@ -297,7 +297,7 @@
     "vscode-codicons": "^0.0.4"
   },
   "devDependencies": {
-    "@types/istanbul-lib-coverage": "^2.0.2",
+    "@types/istanbul-lib-coverage": "^2.0.3",
     "@types/istanbul-lib-source-maps": "^4.0.1",
     "@types/jest": "^26.0.15",
     "@types/node": "^8.0.31",

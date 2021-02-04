@@ -149,4 +149,5 @@ export const TestResultStatusInfo: { [key in TestReconciliationStateType]: Statu
   },
   KnownSkip: { precedence: 3, desc: 'Skipped' },
   KnownSuccess: { precedence: 4, desc: 'Passed' },
+  KnownTodo: { precedence: 5, desc: 'Todo' },
 };

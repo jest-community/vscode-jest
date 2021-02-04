@@ -1,10 +1,5 @@
 import { createSourceMapStore, MapStore } from 'istanbul-lib-source-maps';
-import {
-  createCoverageMap,
-  CoverageMap,
-  CoverageMapData,
-  FileCoverage,
-} from 'istanbul-lib-coverage';
+import { createCoverageMap, CoverageMap, CoverageMapData } from 'istanbul-lib-coverage';
 
 export class CoverageMapProvider {
   private mapStore: MapStore;
@@ -41,7 +36,7 @@ export class CoverageMapProvider {
   setFileCoverage(filePath: string, map: CoverageMap): void {
     this._map.data[filePath] = map.fileCoverageFor(filePath);
   }
-  public getFileCoverage(filePath: string): FileCoverage {
+  public getFileCoverage(filePath: string): any {
     return this._map.data[filePath];
   }
   public onVisibilityChanged(visible: boolean): void {
