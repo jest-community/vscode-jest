@@ -28,8 +28,8 @@ const sortByStatus = (a: TestResult, b: TestResult): number => {
 export class TestResultProvider {
   verbose: boolean;
   private reconciler: TestReconciler;
-  private resultsByFilePath: TestResultsMap;
-  private sortedResultsByFilePath: SortedTestResultsMap;
+  private resultsByFilePath: TestResultsMap = {};
+  private sortedResultsByFilePath: SortedTestResultsMap = {};
 
   constructor(verbose = false) {
     this.reconciler = new TestReconciler();
@@ -80,18 +80,15 @@ export class TestResultProvider {
     let matchResult: TestResult[] = [];
 
     try {
+      // TODO this would parse any file, whether it is a test or not, because we don't know which file is actually included in jest test run! Should optimize this to only run for test files included in jest run
+      const { root, itBlocks } = parseTest(filePath);
       const assertions = this.reconciler.assertionsForTestFile(filePath);
-      if (!assertions) {
-        if (this.verbose) {
-          console.log(`no assertion found, perhaps not a test file? '${filePath}'`);
-        }
-      } else if (assertions.length <= 0) {
-        // no assertion, all tests are unknown
-        const { itBlocks } = parseTest(filePath);
-        matchResult = itBlocks.map((t) => match.toMatchResult(t, 'no assertion found'));
-      } else {
-        const { root } = parseTest(filePath);
+      if (assertions?.length > 0) {
         matchResult = match.matchTestAssertions(filePath, root, assertions, this.verbose);
+      } else {
+        matchResult = itBlocks.map((t) =>
+          match.toMatchResult(t, 'no assertion found', 'no-matched-assertion')
+        );
       }
     } catch (e) {
       console.warn(`failed to get test result for ${filePath}:`, e);
@@ -136,7 +133,7 @@ export class TestResultProvider {
   }
 
   removeCachedResults(filePath: string): void {
-    this.resultsByFilePath[filePath] = null;
-    this.sortedResultsByFilePath[filePath] = null;
+    delete this.resultsByFilePath[filePath];
+    delete this.sortedResultsByFilePath[filePath];
   }
 }

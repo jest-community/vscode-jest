@@ -326,4 +326,88 @@ describe('matchTestAssertions', () => {
       mockWarn.mock.calls.find((call) => call[0].includes('duplicate names'))
     ).not.toBeUndefined();
   });
+
+  // test.todo will generate null for location that could confuses the context matching
+  describe('unknown location and test result reason', () => {
+    const t1 = helper.makeItBlock('test-${i}', [1, 0, 5, 0]); // under d-1
+    const t2 = helper.makeItBlock('test.todo 1', [6, 0, 7, 0]); // under d-1
+    const t3 = helper.makeItBlock('test.todo 2', [9, 0, 10, 0]); // under d-1
+    const t4 = helper.makeItBlock('test-2', [12, 0, 20, 0]); // under d-1
+    const t5 = helper.makeItBlock('some weird test', [22, 0, 22, 100]); // under d-2
+    const d1 = helper.makeDescribeBlock('d-1', [t1, t2, t3, t4]);
+    const d2 = helper.makeDescribeBlock('d-2', [t5]);
+
+    const a1 = helper.makeAssertion('test-1', 'KnownSuccess', ['d-1'], [1, 0]);
+    const a2 = helper.makeAssertion('test.todo 1', 'Unknown', ['d-1'], undefined, {
+      location: null,
+    });
+    const a3 = helper.makeAssertion('test.todo 2', 'Unknown', ['d-1'], undefined, {
+      location: null,
+    });
+    const a4 = helper.makeAssertion('test-2', 'KnownFail', ['d-1'], [12, 0]);
+    const a5 = helper.makeAssertion('some weird test', 'KnownFail', ['d-2'], undefined, {
+      location: null,
+    });
+
+    it('nodes with unknown locations can still be merged by name', () => {
+      const sourceRoot = helper.makeRoot([d1]);
+      const matched = match.matchTestAssertions('a file', sourceRoot, [a1, a2, a3, a4]);
+      expect(matched).toHaveLength(4);
+      expect(matched.map((m) => [m.name, m.status, m.reason])).toEqual(
+        expect.arrayContaining([
+          [a1.fullName, a1.status, 'match-by-context'],
+          [a2.fullName, a2.status, 'match-by-name'],
+          [a3.fullName, a3.status, 'match-by-name'],
+          [a4.fullName, a4.status, 'match-by-context'],
+        ])
+      );
+      // no merge
+      expect(matched.every((m) => !m.multiResults)).toBeTruthy();
+    });
+    it('block with only unknown location tests can still be matched by name', () => {
+      const sourceRoot = helper.makeRoot([d1, d2]);
+      const matched = match.matchTestAssertions('a file', sourceRoot, [a1, a2, a3, a4, a5]);
+      expect(matched).toHaveLength(5);
+      expect(matched.map((m) => [m.name, m.status, m.reason])).toEqual(
+        expect.arrayContaining([
+          [a1.fullName, a1.status, 'match-by-context'],
+          [a2.fullName, a2.status, 'match-by-name'],
+          [a3.fullName, a3.status, 'match-by-name'],
+          [a4.fullName, a4.status, 'match-by-context'],
+          [a5.fullName, a5.status, 'match-by-name'],
+        ])
+      );
+    });
+    it('if unknown location test failed to match by name, they will show up as unknown and may impacted other test matching', () => {
+      const a3Unmatched = helper.makeAssertion(
+        'test.todo 2 unmatched',
+        'KnownSuccess',
+        ['d-1'],
+        undefined,
+        {
+          location: null,
+        }
+      );
+      const sourceRoot = helper.makeRoot([d1]);
+      const matched = match.matchTestAssertions('a file', sourceRoot, [a1, a2, a4, a3Unmatched]);
+      expect(matched).toHaveLength(4);
+      expect(matched.map((m) => [m.name, m.status, m.reason])).toEqual(
+        expect.arrayContaining([
+          [a2.fullName, a2.status, 'match-by-name'],
+          [a4.fullName, a4.status, 'match-by-name'],
+          [t1.name, 'Unknown', 'no-matched-assertion'],
+          [t3.name, 'Unknown', 'no-matched-assertion'],
+        ])
+      );
+    });
+    it('match result reason can pass through the hierarchy', () => {
+      const deep2 = helper.makeDescribeBlock('layer-2', [t1]);
+      const deep1 = helper.makeDescribeBlock('layer-1', [deep2]);
+      const matched = match.matchTestAssertions('a file', helper.makeRoot([deep1]), []);
+      expect(matched).toHaveLength(1);
+      expect(matched.map((m) => [m.name, m.status, m.reason])).toEqual([
+        [t1.name, 'Unknown', 'no-matched-assertion'],
+      ]);
+    });
+  });
 });

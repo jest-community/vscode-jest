@@ -82,7 +82,7 @@ describe('TestResultProvider', () => {
       const actual = sut.getResults(filePath);
 
       expect(actual).toHaveLength(1);
-      expect(actual[0].lineNumberOfError).toBe(assertion.line - 1);
+      expect(actual[0].lineNumberOfError).toBe(assertion.line! - 1);
       expect(actual[0].start).toEqual({
         line: testBlock.start.line - 1,
         column: testBlock.start.column - 1,
@@ -371,7 +371,7 @@ describe('TestResultProvider', () => {
         // put the other 2 tests in "extraResults" sorted by test precedence: fail > sucess
         const pResult = actual[1];
         expect(pResult.multiResults).toHaveLength(2);
-        expect(pResult.multiResults.map((a) => [a.name, a.status])).toEqual([
+        expect(pResult.multiResults!.map((a) => [a.name, a.status])).toEqual([
           ['p-test-fail-2', TestReconciliationState.KnownFail],
           ['p-test-success', TestReconciliationState.KnownSuccess],
         ]);
@@ -393,7 +393,7 @@ describe('TestResultProvider', () => {
         const pResult = actual[1];
         expect(pResult.name).toEqual('p-test-fail');
         expect(pResult.multiResults).toHaveLength(3);
-        expect(pResult.multiResults.map((a) => a.name)).toEqual([
+        expect(pResult.multiResults!.map((a) => a.name)).toEqual([
           'p-test-unknown',
           'p-test-skip',
           'p-test-success',
@@ -415,7 +415,7 @@ describe('TestResultProvider', () => {
         const pResult = actual[1];
         expect(pResult.name).toEqual('p-test-unknown');
         expect(pResult.multiResults).toHaveLength(2);
-        expect(pResult.multiResults.map((a) => a.name)).toEqual(['p-test-skip', 'p-test-success']);
+        expect(pResult.multiResults!.map((a) => a.name)).toEqual(['p-test-skip', 'p-test-success']);
       });
       it('parameterized test are successful only if all of its tests succeeded', () => {
         const assertions = [
@@ -442,7 +442,7 @@ describe('TestResultProvider', () => {
         const pResult = actual[1];
         expect(pResult.name).toEqual('p-test-success-1');
         expect(pResult.multiResults).toHaveLength(1);
-        expect(pResult.multiResults.map((a) => a.name)).toEqual(['p-test-success-2']);
+        expect(pResult.multiResults!.map((a) => a.name)).toEqual(['p-test-success-2']);
       });
     });
     describe('paramertized describes', () => {
@@ -491,12 +491,32 @@ describe('TestResultProvider', () => {
           TestReconciliationState.KnownFail,
         ]);
         expect(pResult.multiResults).toHaveLength(3);
-        expect(pResult.multiResults.map((a) => a.name)).toEqual([
+        expect(pResult.multiResults!.map((a) => a.name)).toEqual([
           'p-describe-1 p-test-1',
           'p-describe-2 p-test-1',
           'p-describe-2 p-test-2',
         ]);
       });
+    });
+    describe('when no assertions returned', () => {
+      let sut: TestResultProvider;
+      const tBlock = helper.makeItBlock('a test', [8, 0, 20, 20]);
+      beforeEach(() => {
+        sut = new TestResultProvider();
+        mockParseTest([tBlock]);
+      });
+      it.each([[[]], [undefined]])(
+        'all source test block should be marked unknown if assertions = %s',
+        (assertions) => {
+          assertionsForTestFile.mockReturnValueOnce(assertions);
+          const actual = sut.getResults(filePath);
+          expect(actual).toHaveLength(1);
+          const { name, status, reason } = actual[0];
+          expect(name).toEqual(tBlock.name);
+          expect(status).toEqual('Unknown');
+          expect(reason).toEqual('no-matched-assertion');
+        }
+      );
     });
   });
 
@@ -560,5 +580,24 @@ describe('TestResultProvider', () => {
 
     const actual = sut.getResults('whatever');
     expect(actual).toEqual([]);
+  });
+  it('removeCachedResults', () => {
+    jest.resetAllMocks();
+
+    mockParseTest([]);
+    assertionsForTestFile.mockReturnValue([]);
+
+    const sut = new TestResultProvider();
+
+    sut.getResults('whatever');
+    expect(parseTest).toHaveBeenCalledTimes(1);
+    // 2nd time would use the cache value, no need to parse again
+    sut.getResults('whatever');
+    expect(parseTest).toHaveBeenCalledTimes(1);
+
+    //if we remove the cache then it will need to parse again
+    sut.removeCachedResults('whatever');
+    sut.getResults('whatever');
+    expect(parseTest).toHaveBeenCalledTimes(2);
   });
 });

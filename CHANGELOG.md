@@ -5,6 +5,8 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 * update doc to give warning on potential incorrect coverage in watch mode - @connectdotz
+* fix unknown location bug such as for jest.todo tests (#657) - @connectdotz
+* fix no debug codeLens if autoEnable is false (#658) - @connectdotz
 
 -->
 
