@@ -38,6 +38,7 @@ import { TestReconciliationState } from '../../src/TestResults';
 import { parseTest } from '../../src/TestParser';
 import * as helper from '../test-helper';
 import { ItBlock } from 'jest-editor-support';
+import * as match from '../../src/TestResults/match-by-context';
 
 const mockParseTest = (itBlocks: ItBlock[]) => {
   ((parseTest as unknown) as jest.Mock<{}>).mockReturnValueOnce({
@@ -517,6 +518,35 @@ describe('TestResultProvider', () => {
           expect(reason).toEqual('no-matched-assertion');
         }
       );
+    });
+    it('when test file parse failed, no results is returned and only report when in debug mode', () => {
+      (parseTest as jest.Mocked<any>).mockImplementation(() => {
+        throw new Error('parse failed');
+      });
+
+      let sut = new TestResultProvider();
+      let results = sut.getResults('whatever');
+      expect(results).toHaveLength(0);
+      expect(console.warn).not.toHaveBeenCalled();
+
+      sut = new TestResultProvider(true);
+      results = sut.getResults('whatever');
+      expect(results).toHaveLength(0);
+      expect(console.warn).toHaveBeenCalled();
+    });
+    it('when match logic failed, all tests should be marked as Unknown', () => {
+      const mockMatchByContext = jest.spyOn(match, 'matchTestAssertions').mockImplementation(() => {
+        throw new Error('match failed');
+      });
+      const tBlock = helper.makeItBlock('a test', [8, 0, 20, 20]);
+      mockParseTest([tBlock]);
+      const aBlock = helper.makeAssertion('a test', 'KnownSuccess', [], [8, 20]);
+      assertionsForTestFile.mockReturnValueOnce([aBlock]);
+      const sut = new TestResultProvider();
+      const results = sut.getResults('whatever');
+      expect(results.map((r) => [r.name, r.status])).toEqual([['a test', 'Unknown']]);
+      expect(console.warn).toHaveBeenCalled();
+      mockMatchByContext.mockRestore();
     });
   });
 

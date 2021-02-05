@@ -1,4 +1,9 @@
-import { TestReconciler, JestTotalResults, TestFileAssertionStatus } from 'jest-editor-support';
+import {
+  TestReconciler,
+  JestTotalResults,
+  TestFileAssertionStatus,
+  IParseResults,
+} from 'jest-editor-support';
 import { TestReconciliationState } from './TestReconciliationState';
 import { TestResult, TestResultStatusInfo } from './TestResult';
 import { parseTest } from '../TestParser';
@@ -72,30 +77,48 @@ export class TestResultProvider {
     return consolidated;
   }
 
+  private matchResults(filePath: string, { root, itBlocks }: IParseResults): TestResult[] {
+    try {
+      const assertions = this.reconciler.assertionsForTestFile(filePath);
+      if (assertions && assertions.length > 0) {
+        return this.groupByRange(
+          match.matchTestAssertions(filePath, root, assertions, this.verbose)
+        );
+      }
+    } catch (e) {
+      console.warn(`failed to match test results for ${filePath}:`, e);
+    }
+    // no need to do groupByRange as the source block will not have blocks under the same location
+    return itBlocks.map((t) =>
+      match.toMatchResult(t, 'no assertion found', 'no-matched-assertion')
+    );
+  }
+  private parseFile(filePath: string): IParseResults | undefined {
+    try {
+      // TODO this would parse any file, whether it is a test or not, because we don't know which file is actually included in jest test run! Should optimize this to only run for test files included in jest run
+      return parseTest(filePath);
+    } catch (e) {
+      // it is possible to have parse error espeically during development phase where the code might not even compiled
+      if (this.verbose) {
+        console.warn(`failed to parse file ${filePath}:`, e);
+      }
+    }
+  }
   getResults(filePath: string): TestResult[] {
     if (this.resultsByFilePath[filePath]) {
       return this.resultsByFilePath[filePath];
     }
 
-    let matchResult: TestResult[] = [];
-
+    let matchResults: TestResult[] = [];
     try {
-      // TODO this would parse any file, whether it is a test or not, because we don't know which file is actually included in jest test run! Should optimize this to only run for test files included in jest run
-      const { root, itBlocks } = parseTest(filePath);
-      const assertions = this.reconciler.assertionsForTestFile(filePath);
-      if (assertions?.length > 0) {
-        matchResult = match.matchTestAssertions(filePath, root, assertions, this.verbose);
-      } else {
-        matchResult = itBlocks.map((t) =>
-          match.toMatchResult(t, 'no assertion found', 'no-matched-assertion')
-        );
-      }
+      const parseResult = this.parseFile(filePath);
+      matchResults = parseResult ? this.matchResults(filePath, parseResult) : matchResults;
     } catch (e) {
-      console.warn(`failed to get test result for ${filePath}:`, e);
+      console.warn(`failed to get test results for ${filePath}:`, e);
     }
-    const testResults = this.groupByRange(matchResult);
-    this.resultsByFilePath[filePath] = testResults;
-    return testResults;
+
+    this.resultsByFilePath[filePath] = matchResults;
+    return matchResults;
   }
 
   getSortedResults(filePath: string): SortedTestResults {
