@@ -28,8 +28,8 @@ const sortByStatus = (a: TestResult, b: TestResult): number => {
 export class TestResultProvider {
   verbose: boolean;
   private reconciler: TestReconciler;
-  private resultsByFilePath: TestResultsMap = {};
-  private sortedResultsByFilePath: SortedTestResultsMap = {};
+  private resultsByFilePath!: TestResultsMap;
+  private sortedResultsByFilePath!: SortedTestResultsMap;
 
   constructor(verbose = false) {
     this.reconciler = new TestReconciler();
