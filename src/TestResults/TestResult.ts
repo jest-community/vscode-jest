@@ -21,6 +21,13 @@ export interface TestIdentifier {
   title: string;
   ancestorTitles: string[];
 }
+
+export type MatchResultReason =
+  | 'match-by-context'
+  | 'match-by-name'
+  | 'duplicate-names'
+  | 'no-matched-assertion';
+
 export interface TestResult extends LocationRange {
   name: string;
 
@@ -35,6 +42,8 @@ export interface TestResult extends LocationRange {
 
   // multiple results for the given range, common for parameterized (.each) tests
   multiResults?: TestResult[];
+  // record match or unmatch reason for this test result
+  reason?: MatchResultReason;
 }
 
 export const withLowerCaseWindowsDriveLetter = (filePath: string): string | undefined => {
@@ -78,12 +87,15 @@ function fileCoverageWithLowerCaseWindowsDriveLetter(fileCoverage: FileCoverage)
   return fileCoverage;
 }
 
-export const coverageMapWithLowerCaseWindowsDriveLetters = (data: JestTotalResults) => {
+// TODO should fix jest-editor-support type declaration, the coverageMap should not be "any"
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const coverageMapWithLowerCaseWindowsDriveLetters = (data: JestTotalResults): any => {
   if (!data.coverageMap) {
     return;
   }
 
-  const result = {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const result: any = {};
   const filePaths = Object.keys(data.coverageMap);
   for (const filePath of filePaths) {
     const newFileCoverage = fileCoverageWithLowerCaseWindowsDriveLetter(data.coverageMap[filePath]);
