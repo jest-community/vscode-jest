@@ -17,6 +17,11 @@ module.exports = {
   ],
   rules: {
     'prettier/prettier': 'error',
+    // too many tests to fix, disable for now
+    '@typescript-eslint/ban-types': 'off',
+    // customize argument ignore pattern
+    'no-unused-vars': 'off',
+    '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
   },
   overrides: [
     {

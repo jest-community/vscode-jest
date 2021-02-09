@@ -39,9 +39,7 @@ describe('CoverageMapProvider', () => {
     it('should be a read-only property', () => {
       const sut = new CoverageMapProvider();
 
-      // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
-      // @ts-ignore: Writing to readonly property
-      expect(() => (sut.map = {} as any)).toThrow(TypeError);
+      expect(() => ((sut as any).map = {} as any)).toThrow(TypeError);
     });
   });
 

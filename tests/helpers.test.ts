@@ -36,6 +36,7 @@ import {
 } from '../src/helpers';
 
 // Manually (forcefully) set the executable's file extension to test its addition independendly of the operating system.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 (nodeBinExtension as string) = '.TEST';
 
 describe('ModuleHelpers', () => {
@@ -44,12 +45,14 @@ describe('ModuleHelpers', () => {
     it('should return an empty string on Linux', () => {
       jest.resetModules();
       mockPlatform.mockReturnValueOnce('linux');
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
       expect(require('../src/helpers').nodeBinExtension).toBe('');
     });
 
     it('should equal ".cmd" on Windows', () => {
       jest.resetModules();
       mockPlatform.mockReturnValueOnce('win32');
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
       expect(require('../src/helpers').nodeBinExtension).toBe('.cmd');
     });
   });
@@ -225,7 +228,7 @@ describe('ModuleHelpers', () => {
         pathToJest: 'abc',
         pathToConfig: 'whatever',
       };
-      expect(getJestCommandSettings(settings)).toEqual([settings.jestCommandLine, undefined]);
+      expect(getJestCommandSettings(settings)).toEqual([settings.jestCommandLine, '']);
     });
   });
 });

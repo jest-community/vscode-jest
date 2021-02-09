@@ -31,7 +31,7 @@ export class DebugCodeLensProvider implements vscode.CodeLensProvider {
   }
 
   provideCodeLenses(document: vscode.TextDocument, _: vscode.CancellationToken): DebugCodeLens[] {
-    const result = [];
+    const result: DebugCodeLens[] = [];
     const ext = this.getJestExt(document.uri);
     if (!ext || this._showWhenTestStateIn.length === 0 || document.isUntitled) {
       return result;

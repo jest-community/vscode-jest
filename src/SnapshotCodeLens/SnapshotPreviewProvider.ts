@@ -5,8 +5,8 @@ import { extensionName } from '../appGlobals';
 
 export const previewCommand = `${extensionName}.snapshot.preview`;
 
-export function registerSnapshotPreview() {
-  let panel: vscode.WebviewPanel = null;
+export function registerSnapshotPreview(): vscode.Disposable[] {
+  let panel: vscode.WebviewPanel | null = null;
 
   const escaped = (snapshot: string) => {
     if (snapshot) {
@@ -38,7 +38,7 @@ export function registerSnapshotPreview() {
         });
       }
 
-      panel.webview.html = escaped(snapshot.content);
+      panel.webview.html = (snapshot.content && escaped(snapshot.content)) || '';
       panel.title = snapshot.name;
     }),
   ];

@@ -62,7 +62,7 @@ export const buildSourceContainer = (sourceRoot: ParsedNode): ContainerNode<ItBl
 const adjustLocation = (l: Location): Location => ({ column: l.column - 1, line: l.line - 1 });
 const matchPos = (t: ItBlock, a: TestAssertionStatus, forError = false): boolean => {
   const line = forError ? a.line : a.line ?? a.location?.line;
-  return (line >= t.start.line && line <= t.end.line) || false;
+  return (line != null && line >= t.start.line && line <= t.end.line) || false;
 };
 export const toMatchResult = (
   test: ItBlock,

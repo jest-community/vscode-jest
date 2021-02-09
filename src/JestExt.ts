@@ -74,7 +74,7 @@ export class JestExt {
   // We have to keep track of our inline assert fails to remove later
 
   private jestProcessManager: JestProcessManager;
-  private jestProcess: JestProcess;
+  private jestProcess!: JestProcess;
   private context: vscode.ExtensionContext;
 
   private status: ReturnType<StatusBar['bind']>;
@@ -223,7 +223,7 @@ export class JestExt {
 
     // debug
     this.jestWorkspace.debug = updatedSettings.debugMode;
-    this.testResultProvider.verbose = updatedSettings.debugMode;
+    this.testResultProvider.verbose = updatedSettings.debugMode || false;
 
     // coverage
     const showCoverage = this.coverageOverlay.enabled ?? updatedSettings.showCoverageOnLoad;
@@ -465,13 +465,14 @@ export class JestExt {
     test: TestResult
   ): { decorator: vscode.DecorationOptions; style: vscode.TextEditorDecorationType } {
     const errorMessage = test.terseMessage || test.shortMessage;
+    // TODO use better typing to indicate for error TestResult, the lineNumberOfError and errorMessage should never be null
     const decorator = {
-      range: new vscode.Range(test.lineNumberOfError, 0, test.lineNumberOfError, 0),
+      range: new vscode.Range(test.lineNumberOfError!, 0, test.lineNumberOfError!, 0),
     };
 
     // We have to make a new style for each unique message, this is
     // why we have to remove off of them beforehand
-    const style = inlineErrorStyle(errorMessage);
+    const style = inlineErrorStyle(errorMessage!);
     this.failingAssertionDecorators[fileName].push(style);
 
     return { style, decorator };
