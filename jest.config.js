@@ -1,5 +1,11 @@
 module.exports = {
   preset: 'ts-jest',
+  globals: {
+    'ts-jest': {
+      // ts-jest configuration goes here
+      tsconfig: 'tests/tsconfig.json',
+    },
+  },
   testEnvironment: 'node',
   testRegex: 'tests/.*\\.test\\.ts$',
   collectCoverageFrom: ['src/**/*.ts'],

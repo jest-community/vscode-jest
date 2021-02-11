@@ -13,13 +13,17 @@ export type GetJestExtByURI = (uri: vscode.Uri) => JestExt | undefined;
 
 export function getExtensionWindowSettings(): PluginWindowSettings {
   const config = vscode.workspace.getConfiguration('jest');
+
   return {
     debugCodeLens: {
-      enabled: config.get<boolean>('enableCodeLens'),
-      showWhenTestStateIn: config.get<TestState[]>('debugCodeLens.showWhenTestStateIn'),
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      enabled: config.get<boolean>('enableCodeLens')!,
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      showWhenTestStateIn: config.get<TestState[]>('debugCodeLens.showWhenTestStateIn')!,
     },
     enableSnapshotPreviews: config.get<boolean>('enableSnapshotPreviews'),
-    disabledWorkspaceFolders: config.get<string[]>('disabledWorkspaceFolders'),
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    disabledWorkspaceFolders: config.get<string[]>('disabledWorkspaceFolders')!,
   };
 }
 
@@ -33,10 +37,13 @@ export function getExtensionResourceSettings(uri: vscode.Uri): PluginResourceSet
     jestCommandLine: config.get<string>('jestCommandLine'),
     pathToJest: config.get<string>('pathToJest'),
     restartJestOnSnapshotUpdate: config.get<boolean>('restartJestOnSnapshotUpdate'),
-    rootPath: path.join(uri.fsPath, config.get<string>('rootPath')),
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    rootPath: path.join(uri.fsPath, config.get<string>('rootPath')!),
     runAllTestsFirst: config.get<boolean>('runAllTestsFirst'),
-    showCoverageOnLoad: config.get<boolean>('showCoverageOnLoad'),
-    coverageFormatter: config.get<string>('coverageFormatter'),
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    showCoverageOnLoad: config.get<boolean>('showCoverageOnLoad')!,
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    coverageFormatter: config.get<string>('coverageFormatter')!,
     debugMode: config.get<boolean>('debugMode'),
     coverageColors: config.get<CoverageColors>('coverageColors'),
   };
@@ -80,7 +87,9 @@ export class ExtensionManager {
     const currentJestVersion = 20;
     const debugMode = pluginSettings.debugMode;
     const instanceSettings = {
-      multirootEnv: vscode.workspace.workspaceFolders.length > 1,
+      multirootEnv:
+        (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 1) ||
+        false,
     };
     const jestWorkspace = new ProjectWorkspace(
       pluginSettings.rootPath,
@@ -88,7 +97,7 @@ export class ExtensionManager {
       pathToConfig,
       currentJestVersion,
       workspaceFolder.name,
-      null,
+      undefined,
       debugMode
     );
 
@@ -116,7 +125,7 @@ export class ExtensionManager {
     );
   }
   registerAll(): void {
-    vscode.workspace.workspaceFolders.forEach(this.register, this);
+    vscode.workspace.workspaceFolders?.forEach(this.register, this);
   }
   unregister(workspaceFolder: vscode.WorkspaceFolder): void {
     this.unregisterByName(workspaceFolder.name);
@@ -155,9 +164,9 @@ export class ExtensionManager {
       return this.getByName(workspace.name);
     }
   };
-  async get(): Promise<JestExt> {
+  async get(): Promise<JestExt | undefined> {
     const workspace =
-      vscode.workspace.workspaceFolders.length <= 1
+      vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length <= 1
         ? vscode.workspace.workspaceFolders[0]
         : await vscode.window.showWorkspaceFolderPick();
 
@@ -185,7 +194,7 @@ export class ExtensionManager {
       this.applySettings(getExtensionWindowSettings());
       this.registerAll();
     }
-    vscode.workspace.workspaceFolders.forEach((workspaceFolder) => {
+    vscode.workspace.workspaceFolders?.forEach((workspaceFolder) => {
       const jestExt = this.getByName(workspaceFolder.name);
       if (jestExt && e.affectsConfiguration('jest', workspaceFolder.uri)) {
         const updatedSettings = getExtensionResourceSettings(workspaceFolder.uri);
@@ -203,7 +212,7 @@ export class ExtensionManager {
       ext.onDidCloseTextDocument(document);
     }
   }
-  onDidChangeActiveTextEditor(editor: vscode.TextEditor): void {
+  onDidChangeActiveTextEditor(editor?: vscode.TextEditor): void {
     if (editor && editor.document) {
       statusBar.onDidChangeActiveTextEditor(editor);
       const ext = this.getByDocUri(editor.document.uri);

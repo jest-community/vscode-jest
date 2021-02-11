@@ -10,11 +10,11 @@ export class JestProcess {
   static readonly stopHangTimeout = 500;
   public keepAlive: boolean;
   public watchMode: WatchMode;
-  private runner: Runner;
+  private runner!: Runner;
   private projectWorkspace: ProjectWorkspace;
-  private onExitCallback: ExitCallback;
-  private jestSupportEvents: Map<string, (...args: any[]) => void>;
-  private stopResolveCallback: () => void | null;
+  private onExitCallback?: ExitCallback;
+  private jestSupportEvents: Map<string, (...args: unknown[]) => void>;
+  private stopResolveCallback: (() => void) | null = null;
   private keepAliveCounter: number;
 
   constructor({
@@ -35,11 +35,11 @@ export class JestProcess {
     this.startRunner();
   }
 
-  public onExit(callback: ExitCallback) {
+  public onExit(callback: ExitCallback): void {
     this.onExitCallback = callback;
   }
 
-  public onJestEditorSupportEvent(event: string, callback: (...args: any[]) => void) {
+  public onJestEditorSupportEvent(event: string, callback: (...args: any[]) => void): this {
     this.jestSupportEvents.set(event, callback);
     this.runner.on(event, callback);
     return this;
@@ -59,7 +59,7 @@ export class JestProcess {
     });
   }
 
-  public runJestWithUpdateForSnapshots(callback: () => void) {
+  public runJestWithUpdateForSnapshots(callback: () => void): void {
     this.runner.runJestWithUpdateForSnapshots(callback);
   }
 
@@ -70,7 +70,7 @@ export class JestProcess {
     this.stopResolveCallback = null;
     let exited = false;
 
-    const extensionPath = vscode.extensions.getExtension(extensionId).extensionPath;
+    const extensionPath = vscode.extensions.getExtension(extensionId)!.extensionPath;
     const reporterPath = join(extensionPath, 'out', 'reporter.js');
 
     const options = {

@@ -24,6 +24,10 @@ interface SpinnableStatusBarItem
   hide(): void;
 }
 
+export interface StatusBarUpdater {
+  update: (status: Status, details?: string, modes?: Mode[]) => void;
+}
+
 const createStatusBarItem = (type: StatusType, priority: number): SpinnableStatusBarItem => {
   const item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, priority);
   return {
@@ -47,7 +51,7 @@ const createStatusBarItem = (type: StatusType, priority: number): SpinnableStatu
     set text(_text: string) {
       item.text = _text;
     },
-    set tooltip(_tooltip: string) {
+    set tooltip(_tooltip: string | undefined) {
       item.tooltip = _tooltip;
     },
   };
@@ -68,7 +72,7 @@ export class StatusBar {
     this.activeStatusItem.tooltip = 'Jest status of the active folder';
   }
 
-  register(getExtension: (name: string) => JestExt | undefined) {
+  register(getExtension: (name: string) => JestExt | undefined): vscode.Disposable[] {
     const showSummaryOutput = `${extensionName}.show-summary-output`;
     const showActiveOutput = `${extensionName}.show-active-output`;
     this.summaryStatusItem.command = showSummaryOutput;
@@ -90,7 +94,7 @@ export class StatusBar {
       }),
     ];
   }
-  bind(source: string) {
+  bind(source: string): StatusBarUpdater {
     return {
       update: (status: Status, details?: string, modes?: Mode[]) => {
         this.request(source, status, details, modes);
@@ -98,7 +102,7 @@ export class StatusBar {
     };
   }
 
-  onDidChangeActiveTextEditor(editor: vscode.TextEditor) {
+  onDidChangeActiveTextEditor(editor: vscode.TextEditor): void {
     if (editor && editor.document) {
       const folder = vscode.workspace.getWorkspaceFolder(editor.document.uri);
       if (folder && folder.name !== this._activeFolder) {
@@ -125,7 +129,7 @@ export class StatusBar {
 
   private get activeFolder() {
     if (!this._activeFolder) {
-      if (vscode.workspace.workspaceFolders.length === 1) {
+      if (vscode.workspace.workspaceFolders?.length === 1) {
         // there's only one workspaceFolder, so let's take it
         this._activeFolder = vscode.workspace.workspaceFolders[0].name;
       } else if (vscode.window.activeTextEditor) {
@@ -214,7 +218,7 @@ export class StatusBar {
     }
     this.summaryOutput.clear();
 
-    const messages = [];
+    const messages: string[] = [];
     this.requests.forEach((item) => {
       const details = item.details ? `: ${item.details}` : '';
       messages.push(`${item.source}: ${item.status} ${details}`);

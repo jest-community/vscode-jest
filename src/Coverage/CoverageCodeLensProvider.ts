@@ -13,7 +13,9 @@ export class CoverageCodeLensProvider implements vscode.CodeLensProvider {
     this.onDidChangeCodeLenses = this.onDidChange.event;
   }
 
-  public provideCodeLenses(document: vscode.TextDocument): vscode.CodeLens[] {
+  public provideCodeLenses(
+    document: vscode.TextDocument
+  ): vscode.ProviderResult<vscode.CodeLens[]> {
     const ext = this.getJestExt(document.uri);
     const coverage =
       ext &&
@@ -25,14 +27,14 @@ export class CoverageCodeLensProvider implements vscode.CodeLensProvider {
 
     const summary = coverage.toSummary();
     const json = summary.toJSON();
-    const metrics = Object.keys(json).reduce((previous, metric) => {
+    const metrics = (Object.keys(json) as Array<keyof typeof json>).reduce((previous, metric) => {
       return `${previous}${previous ? ', ' : ''}${metric}: ${json[metric].pct}%`;
     }, '');
 
     const range = new vscode.Range(0, 0, 0, 0);
     const command: vscode.Command = {
       title: metrics,
-      command: null,
+      command: '',
     };
 
     return [new vscode.CodeLens(range, command)];

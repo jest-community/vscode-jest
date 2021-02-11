@@ -68,7 +68,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     };
 
     const testCommand = folder && getTestCommand(folder.uri.fsPath);
-    if (isCreateReactAppTestCommand(testCommand)) {
+    if (testCommand && isCreateReactAppTestCommand(testCommand)) {
       const craCommand = testCommand.split(' ');
       // Settings specific for projects bootstrapped with `create-react-app`
       debugConfiguration.runtimeExecutable =

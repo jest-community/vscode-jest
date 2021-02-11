@@ -42,10 +42,14 @@ export function activate(context: vscode.ExtensionContext): void {
       `${extensionName}.run-test`,
       (document: vscode.TextDocument, filename: string, ...identifiers: DebugTestIdentifier[]) => {
         const workspace = vscode.workspace.getWorkspaceFolder(document.uri);
-        extensionManager.getByName(workspace.name).runTest(workspace, filename, ...identifiers);
+        if (!workspace) {
+          console.error(`no workspace found for the given document: ${document.uri.fsPath}`);
+          return;
+        }
+        extensionManager.getByName(workspace.name)?.runTest(workspace, filename, ...identifiers);
       }
     ),
-    ...registerSnapshotCodeLens(getExtensionWindowSettings().enableSnapshotPreviews),
+    ...registerSnapshotCodeLens(getExtensionWindowSettings()?.enableSnapshotPreviews ?? false),
     ...registerSnapshotPreview(),
     vscode.languages.registerCodeLensProvider(languages, extensionManager.coverageCodeLensProvider),
     vscode.languages.registerCodeLensProvider(languages, extensionManager.debugCodeLensProvider),

@@ -14,7 +14,12 @@ function _extractActionTitles(actions?: MessageAction[]): string[] {
   return actions ? actions.map((a) => a.title) : [];
 }
 // expose the internal function so we can unit testing it
+// eslint-disable-next-line @typescript-eslint/no-empty-function
+const doNothing = () => {};
 export function _handleMessageActions(actions?: MessageAction[]): (action?: string) => void {
+  if (!actions || actions.length <= 0) {
+    return doNothing;
+  }
   return (action?: string) => {
     if (!action) {
       return;
@@ -35,13 +40,13 @@ export interface MessageAction {
   action: () => void;
 }
 
-export function systemErrorMessage(message: string, ...actions: MessageAction[]) {
+export function systemErrorMessage(message: string, ...actions: MessageAction[]): void {
   vscode.window
     .showErrorMessage(message, ..._extractActionTitles(actions))
     .then(_handleMessageActions(actions));
 }
 
-export function systemWarningMessage(message: string, ...actions: MessageAction[]) {
+export function systemWarningMessage(message: string, ...actions: MessageAction[]): void {
   vscode.window
     .showWarningMessage(message, ..._extractActionTitles(actions))
     .then(_handleMessageActions(actions));

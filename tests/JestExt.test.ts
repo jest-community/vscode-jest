@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-types */
 jest.unmock('events');
 jest.unmock('../src/JestExt');
 
@@ -292,7 +293,7 @@ describe('JestExt', () => {
           const [items] = mockShowQuickPick.mock.calls[0];
           expect(items).toHaveLength(3);
 
-          if (identifierIdCount) {
+          const hasIds = () => {
             // id string is called 4 times: 3 to construt the quickPickIems, the last one is for jest test fullName
             expect(mockHelpers.testIdString).toBeCalledTimes(identifierIdCount + 1);
             const calls = mockHelpers.testIdString.mock.calls;
@@ -300,8 +301,15 @@ describe('JestExt', () => {
               calls.slice(0, identifierIdCount).every((c) => c[0] === 'display-reverse')
             ).toBeTruthy();
             expect(calls[calls.length - 1][0]).toEqual('full-name');
-          } else {
+          };
+          const hasNoId = () => {
             expect(mockHelpers.testIdString).toBeCalledTimes(0);
+          };
+
+          if (identifierIdCount) {
+            hasIds();
+          } else {
+            hasNoId();
           }
           const selected = [tId1, tId2, tId3][selectIdx];
           expect(mockHelpers.escapeRegExp).toBeCalledWith(selected);
@@ -750,18 +758,18 @@ describe('JestExt', () => {
       sut.updateDecorators(testResults2, mockEditor);
       expect(mockEditor.setDecorations).toHaveBeenCalledTimes(4);
       for (const args of mockEditor.setDecorations.mock.calls) {
+        let expectedLength = -1;
         switch (args[0].key) {
           case 'fail':
           case 'pass':
-            expect(args[1].length).toBe(1);
+            expectedLength = 1;
             break;
           case 'skip':
           case 'unknown':
-            expect(args[1].length).toBe(0);
+            expectedLength = 0;
             break;
-          default:
-            expect(args[0].key).toBe('never be here');
         }
+        expect(args[1].length).toBe(expectedLength);
       }
     });
 

@@ -9,7 +9,7 @@ export interface PluginResourceSettings {
   pathToConfig?: string;
   pathToJest?: string;
   restartJestOnSnapshotUpdate?: boolean;
-  rootPath?: string;
+  rootPath: string;
   runAllTestsFirst?: boolean;
   showCoverageOnLoad: boolean;
   coverageFormatter: string;
@@ -26,10 +26,10 @@ export interface PluginWindowSettings {
   disabledWorkspaceFolders: string[];
 }
 
-export function isDefaultPathToJest(str) {
+export function isDefaultPathToJest(str?: string | null): boolean {
   return str === null || str === '';
 }
 
-export function hasUserSetPathToJest(str) {
+export function hasUserSetPathToJest(str?: string | null): boolean {
   return !isDefaultPathToJest(str);
 }
