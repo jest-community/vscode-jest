@@ -4,13 +4,14 @@ Please add your own contribution below inside the Master section
 Bug-fixes within the same version aren't needed
 
 ## Master
+
+-->
+
+### 4.0.0-alpha.4
 * update doc to give warning on potential incorrect coverage in watch mode - @connectdotz
 * fix unknown location bug such as for jest.todo tests (#657) - @connectdotz
 * fix no debug codeLens if autoEnable is false (#658) - @connectdotz
 * turn typescript strict mode on, upgrade tooling and clean up the conflict - @connectdotz
-
--->
-
 ### 4.0.0-alpha.3
 * fully support parameterized tests in matching, diagnosis and debugging - @connectdotz
 * optimization: remove stop/start the internal jest tests process during debug - @connectdotz
