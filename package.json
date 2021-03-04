@@ -80,13 +80,15 @@
           "description": "(deprecated) The path to the Jest binary, or an npm command to run tests suffixed with `--` e.g. `node_modules/.bin/jest` or `npm test --`",
           "type": "string",
           "default": null,
-          "scope": "resource"
+          "scope": "resource",
+          "markdownDeprecationMessage": "**Deprecated**: please use `#jest.jestCommandLine#` instead."
         },
         "jest.pathToConfig": {
           "description": "(deprecated) The path to your Jest configuration file",
           "type": "string",
           "default": "",
-          "scope": "resource"
+          "scope": "resource",
+          "markdownDeprecationMessage": "**Deprecated**: please use `#jest.jestCommandLine#` instead."
         },
         "jest.rootPath": {
           "description": "The path to your frontend src folder",
@@ -131,6 +133,7 @@
         "jest.coverageColors": {
           "description": "Coverage indicator color override",
           "type": "object",
+          "default": null,
           "scope": "resource"
         },
         "jest.enableCodeLens": {
@@ -166,7 +169,8 @@
           "description": "Restart Jest runner after updating the snapshots",
           "type": "boolean",
           "default": false,
-          "scope": "resource"
+          "scope": "resource",
+          "markdownDeprecationMessage": "**Deprecated**: no need to restart jest after snapshot update"
         },
         "jest.debugMode": {
           "description": "Enable debug mode to diagnose plugin issues. (see developer console)",
@@ -180,29 +184,110 @@
           "items": "string",
           "default": [],
           "scope": "window"
+        },
+        "jest.autoRun": {
+          "markdownDescription": "Control when jest should run (changed) tests. For example:`\"off\"` for full manual control; `{\"watch\": true, \"onStartup\":[\"all-tests\"]}` matches the previous jest watch mode;<br /> `{\"watch\": false, \"onSave\": \"test-file\"]}` will trigger test run only for the changed test-file upon saving... See [AutoRun](https://github.com/jest-community/vscode-jest/blob/master/README.md#AutoRun) for more details",
+          "type": "object",
+          "default": null,
+          "scope": "resource"
         }
       }
     },
     "commands": [
       {
+        "command": "io.orta.jest.workspace.start",
+        "title": "Jest: Start Runner (Select Workspace)"
+      },
+      {
+        "command": "io.orta.jest.workspace.stop",
+        "title": "Jest: Stop Runner (Select Workspace)"
+      },
+      {
+        "command": "io.orta.jest.workspace.toggle-coverage",
+        "title": "Jest: Toggle Coverage (Select Workspace)"
+      },
+      {
+        "command": "io.orta.jest.workspace.run-all-tests",
+        "title": "Jest: Run All Tests (Select Workspace)"
+      },
+      {
+        "command": "io.orta.jest.run-all-tests",
+        "title": "Jest: Run All Tests"
+      },
+      {
         "command": "io.orta.jest.start",
-        "title": "Jest: Start Runner"
+        "title": "Jest: Start All Runners"
       },
       {
         "command": "io.orta.jest.stop",
-        "title": "Jest: Stop Runner"
+        "title": "Jest: Stop All Runners"
       },
       {
-        "command": "io.orta.jest.restart",
-        "title": "Jest: Restart Runner"
+        "command": "io.orta.jest.toggle-coverage",
+        "title": "Jest: Toggle Coverage"
       },
       {
-        "command": "io.orta.jest.show-channel",
-        "title": "Jest: Show Test Output Channel"
+        "command": "io.orta.jest.editor.workspace.run-all-tests",
+        "title": "Jest: Run All Tests in Current Workspace"
       },
       {
-        "command": "io.orta.jest.coverage.toggle",
-        "title": "Jest: Toggle Coverage Overlay"
+        "command": "io.orta.jest.editor.run-all-tests",
+        "title": "Jest: Run Related Tests"
+      },
+      {
+        "command": "io.orta.jest.editor.workspace.toggle-coverage",
+        "title": "Jest: Toggle Coverage for Current Workspace"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "io.orta.jest.workspace.start",
+          "when": "workspaceFolderCount > 1"
+        },
+        {
+          "command": "io.orta.jest.workspace.stop",
+          "when": "workspaceFolderCount > 1"
+        },
+        {
+          "command": "io.orta.jest.workspace.toggle-coverage",
+          "when": "workspaceFolderCount > 1"
+        },
+        {
+          "command": "io.orta.jest.editor.workspace.toggle-coverage",
+          "when": "workspaceFolderCount > 1"
+        },
+        {
+          "command": "io.orta.jest.workspace.run-all-tests",
+          "when": "jest:run.interactive && workspaceFolderCount > 1"
+        },
+        {
+          "command": "io.orta.jest.run-all-tests",
+          "when": "jest:run.interactive"
+        },
+        {
+          "command": "io.orta.jest.editor.workspace.run-all-tests",
+          "when": "jest:run.interactive && workspaceFolderCount > 1"
+        },
+        {
+          "command": "io.orta.jest.editor.run-all-tests",
+          "when": "jest:never"
+        }
+      ],
+      "editor/context": [
+        {
+          "when": "jest:run.interactive && editorLangId =~ /(javascript|javascriptreact|typescript|typescriptreact)/ ",
+          "command": "io.orta.jest.editor.run-all-tests",
+          "group": "Jest"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "io.orta.jest.editor.run-all-tests",
+        "key": "ctrl+t",
+        "mac": "cmd+t",
+        "when": "jest:run.interactive && editorLangId =~ /(javascript|javascriptreact|typescript|typescriptreact)/ "
       }
     ],
     "debuggers": [
@@ -287,7 +372,8 @@
     "watch": "webpack --mode development --watch --info-verbosity verbose",
     "lint": "eslint \"src/**/*.ts\" \"tests/**/*.ts\" \"*.json\"  \"*.js\" ",
     "test": "jest",
-    "watch-test": "yarn test -- --watch"
+    "watch-test": "yarn test -- --watch",
+    "tsc": "tsc --noEmit"
   },
   "dependencies": {
     "istanbul-lib-coverage": "^3.0.0",
@@ -318,9 +404,9 @@
     "prettier": "^2.2.1",
     "raw-loader": "^4.0.1",
     "rimraf": "^3.0.2",
-    "ts-jest": "^26.4.4",
+    "ts-jest": "^26.5.2",
     "ts-loader": "^7.0.1",
-    "typescript": "^4.1.2",
+    "typescript": "^4.2.2",
     "vscode-test": "^1.3.0",
     "webpack": "^4.43.0",
     "webpack-cli": "^3.3.11"

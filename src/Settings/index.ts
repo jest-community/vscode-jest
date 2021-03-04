@@ -1,6 +1,24 @@
 import { TestState } from '../DebugCodeLens';
 import { CoverageColors } from '../Coverage/CoverageOverlay';
 
+export type JestTestProcessType =
+  | 'all-tests'
+  | 'watch-tests'
+  | 'watch-all-tests'
+  | 'by-file'
+  | 'by-file-test'
+  | 'not-test';
+
+export type OnStartupType = Extract<JestTestProcessType, 'all-tests'>[];
+export type OnSaveFileType = 'test-file' | 'any-file';
+export type JestExtAutoRunConfig =
+  | 'off'
+  | { watch: true; onStartup?: OnStartupType }
+  | {
+      watch: false;
+      onStartup?: OnStartupType;
+      onSave?: OnSaveFileType;
+    };
 export interface PluginResourceSettings {
   autoEnable?: boolean;
   enableInlineErrorMessages?: boolean;
@@ -15,6 +33,7 @@ export interface PluginResourceSettings {
   coverageFormatter: string;
   debugMode?: boolean;
   coverageColors?: CoverageColors;
+  autoRun?: JestExtAutoRunConfig;
 }
 
 export interface PluginWindowSettings {

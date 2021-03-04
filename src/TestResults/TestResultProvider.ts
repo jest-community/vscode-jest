@@ -3,15 +3,23 @@ import {
   JestTotalResults,
   TestFileAssertionStatus,
   IParseResults,
+  parse,
 } from 'jest-editor-support';
-import { TestReconciliationState } from './TestReconciliationState';
+import { TestReconciliationState, TestReconciliationStateType } from './TestReconciliationState';
 import { TestResult, TestResultStatusInfo } from './TestResult';
-import { parseTest } from '../TestParser';
 import * as match from './match-by-context';
+import { JestExtSessionAware } from '../JestExt';
+import { TestStats } from '../types';
+import { emptyTestStats } from '../helpers';
 
-interface TestResultsMap {
-  [filePath: string]: TestResult[];
+interface TestSuiteResult {
+  status: TestReconciliationStateType;
+  results?: TestResult[];
+  sorted?: SortedTestResults;
 }
+type TestSuiteResultMap = {
+  [filePath: string]: TestSuiteResult;
+};
 
 export interface SortedTestResults {
   fail: TestResult[];
@@ -20,21 +28,17 @@ export interface SortedTestResults {
   unknown: TestResult[];
 }
 
-interface SortedTestResultsMap {
-  [filePath: string]: SortedTestResults;
-}
-
 const sortByStatus = (a: TestResult, b: TestResult): number => {
   if (a.status === b.status) {
     return 0;
   }
   return TestResultStatusInfo[a.status].precedence - TestResultStatusInfo[b.status].precedence;
 };
-export class TestResultProvider {
+export class TestResultProvider implements JestExtSessionAware {
   verbose: boolean;
   private reconciler: TestReconciler;
-  private resultsByFilePath!: TestResultsMap;
-  private sortedResultsByFilePath!: SortedTestResultsMap;
+  private testSuites: TestSuiteResultMap = {};
+  private testFiles?: string[];
 
   constructor(verbose = false) {
     this.reconciler = new TestReconciler();
@@ -42,9 +46,13 @@ export class TestResultProvider {
     this.verbose = verbose;
   }
 
+  public onSessionStart(): void {
+    this.resetCache();
+    this.reconciler = new TestReconciler();
+  }
+
   resetCache(): void {
-    this.resultsByFilePath = {};
-    this.sortedResultsByFilePath = {};
+    this.testSuites = {};
   }
 
   private groupByRange(results: TestResult[]): TestResult[] {
@@ -77,53 +85,91 @@ export class TestResultProvider {
     return consolidated;
   }
 
-  private matchResults(filePath: string, { root, itBlocks }: IParseResults): TestResult[] {
+  updateTestFileList(testFiles?: string[]): void {
+    this.testFiles = testFiles;
+
+    // clear the cache in case we have cached some non-test files prior
+    this.testSuites = {};
+  }
+
+  private matchResults(filePath: string, { root, itBlocks }: IParseResults): TestSuiteResult {
     try {
       const assertions = this.reconciler.assertionsForTestFile(filePath);
       if (assertions && assertions.length > 0) {
-        return this.groupByRange(
-          match.matchTestAssertions(filePath, root, assertions, this.verbose)
-        );
+        const status = this.reconciler.stateForTestFile(filePath);
+        return {
+          status,
+          results: this.groupByRange(
+            match.matchTestAssertions(filePath, root, assertions, this.verbose)
+          ),
+        };
       }
     } catch (e) {
       console.warn(`failed to match test results for ${filePath}:`, e);
     }
     // no need to do groupByRange as the source block will not have blocks under the same location
-    return itBlocks.map((t) =>
-      match.toMatchResult(t, 'no assertion found', 'no-matched-assertion')
-    );
+    return {
+      status: 'Unknown',
+      results: itBlocks.map((t) =>
+        match.toMatchResult(t, 'no assertion found', 'no-matched-assertion')
+      ),
+    };
   }
-  private parseFile(filePath: string): IParseResults | undefined {
-    try {
-      // TODO this would parse any file, whether it is a test or not, because we don't know which file is actually included in jest test run! Should optimize this to only run for test files included in jest run
-      return parseTest(filePath);
-    } catch (e) {
-      // it is possible to have parse error espeically during development phase where the code might not even compiled
-      if (this.verbose) {
-        console.warn(`failed to parse file ${filePath}:`, e);
-      }
-    }
+
+  /**
+   * if we have test file list, returns true if the file is NOT in the list; otherwise always returns false since we can't be sure
+   * @param filePath
+   */
+  private notTestFile(filePath: string): boolean {
+    return (this.testFiles && !this.testFiles.includes(filePath)) ?? false;
   }
-  getResults(filePath: string): TestResult[] {
-    if (this.resultsByFilePath[filePath]) {
-      return this.resultsByFilePath[filePath];
+  /**
+   * returns matched test results for the given file
+   * @param filePath
+   * @returns valid test result list or undefined if the file is not a test.
+   *  In the case when file can not be parsed or match error, empty results will be returned.
+   * @throws if parsing or matching internal error
+   */
+  getResults(filePath: string): TestResult[] | undefined {
+    const results = this.testSuites[filePath]?.results;
+    if (results) {
+      return results;
     }
 
-    let matchResults: TestResult[] = [];
+    if (this.notTestFile(filePath)) {
+      return;
+    }
+
+    let suiteResult: TestSuiteResult = { status: 'Unknown', results: [] };
     try {
-      const parseResult = this.parseFile(filePath);
-      matchResults = parseResult ? this.matchResults(filePath, parseResult) : matchResults;
+      const parseResult = parse(filePath);
+      suiteResult = this.matchResults(filePath, parseResult);
     } catch (e) {
       console.warn(`failed to get test results for ${filePath}:`, e);
+      suiteResult = { status: 'KnownFail', results: [] };
+      throw e;
+    } finally {
+      this.testSuites[filePath] = suiteResult;
     }
 
-    this.resultsByFilePath[filePath] = matchResults;
-    return matchResults;
+    return suiteResult.results;
   }
 
-  getSortedResults(filePath: string): SortedTestResults {
-    if (this.sortedResultsByFilePath[filePath]) {
-      return this.sortedResultsByFilePath[filePath];
+  /**
+   * returns sorted test results for the given file
+   * @param filePath
+   * @returns valid sorted test result or undefined if the file is not a test.
+   * @throws if encountered internal error for test files
+   */
+
+  getSortedResults(filePath: string): SortedTestResults | undefined {
+    const cached = this.testSuites[filePath]?.sorted;
+    if (cached) {
+      return cached;
+    }
+
+    if (this.notTestFile(filePath)) {
+      return;
     }
 
     const result: SortedTestResults = {
@@ -133,30 +179,68 @@ export class TestResultProvider {
       unknown: [],
     };
 
-    const testResults = this.getResults(filePath);
-    for (const test of testResults) {
-      if (test.status === TestReconciliationState.KnownFail) {
-        result.fail.push(test);
-      } else if (test.status === TestReconciliationState.KnownSkip) {
-        result.skip.push(test);
-      } else if (test.status === TestReconciliationState.KnownSuccess) {
-        result.success.push(test);
-      } else {
-        result.unknown.push(test);
+    try {
+      const testResults = this.getResults(filePath);
+      if (!testResults) {
+        return;
+      }
+
+      for (const test of testResults) {
+        if (test.status === TestReconciliationState.KnownFail) {
+          result.fail.push(test);
+        } else if (test.status === TestReconciliationState.KnownSkip) {
+          result.skip.push(test);
+        } else if (test.status === TestReconciliationState.KnownSuccess) {
+          result.success.push(test);
+        } else {
+          result.unknown.push(test);
+        }
+      }
+    } finally {
+      if (this.testSuites[filePath]) {
+        this.testSuites[filePath].sorted = result;
       }
     }
-
-    this.sortedResultsByFilePath[filePath] = result;
     return result;
   }
 
   updateTestResults(data: JestTotalResults): TestFileAssertionStatus[] {
-    this.resetCache();
-    return this.reconciler.updateFileWithJestStatus(data);
+    const results = this.reconciler.updateFileWithJestStatus(data);
+    results?.forEach((r) => {
+      this.testSuites[r.file] = { status: r.status };
+    });
+    return results;
   }
 
   removeCachedResults(filePath: string): void {
-    delete this.resultsByFilePath[filePath];
-    delete this.sortedResultsByFilePath[filePath];
+    delete this.testSuites[filePath];
+  }
+  invalidateTestResults(filePath: string): void {
+    this.removeCachedResults(filePath);
+    this.reconciler.removeTestFile(filePath);
+  }
+
+  // test stats
+  getTestSuiteStats(): TestStats {
+    const stats = emptyTestStats();
+    for (const suite of Object.values(this.testSuites)) {
+      if (suite.status === 'KnownSuccess') {
+        stats.success += 1;
+      } else if (suite.status === 'KnownFail') {
+        stats.fail += 1;
+      } else {
+        stats.unknown += 1;
+      }
+    }
+
+    if (this.testFiles) {
+      if (this.testFiles.length > stats.fail + stats.success + stats.unknown) {
+        return {
+          ...stats,
+          unknown: this.testFiles.length - stats.fail - stats.success,
+        };
+      }
+    }
+    return stats;
   }
 }

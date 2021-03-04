@@ -5,6 +5,7 @@ import { ExtensionContext } from 'vscode';
 
 import { PluginResourceSettings, hasUserSetPathToJest } from './Settings';
 import { TestIdentifier } from './TestResults';
+import { TestStats } from './types';
 
 /**
  * Known binary names of `react-scripts` forks
@@ -178,16 +179,11 @@ export function prepareIconFile(
   return resultIconPath;
 }
 
-/**
- * This method retrieve a jest command line, if available, otherwise fall back to the legacy
- * settings for pathToJest and pathToConfig.
- *
- * @param settings
- */
-//TODO remove pathToJest and pathToConfig once we fully deprecated them
-export function getJestCommandSettings(settings: PluginResourceSettings): [string, string] {
-  if (settings.jestCommandLine) {
-    return [settings.jestCommandLine, ''];
-  }
-  return [pathToJest(settings), pathToConfig(settings)];
-}
+const SurroundingQuoteRegex = /^["']+|["']+$/g;
+export const removeSurroundingQuote = (command: string): string =>
+  command.replace(SurroundingQuoteRegex, '');
+
+// TestStats
+export const emptyTestStats = (): TestStats => {
+  return { success: 0, fail: 0, unknown: 0 };
+};

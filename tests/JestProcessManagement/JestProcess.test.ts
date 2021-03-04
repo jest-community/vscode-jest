@@ -1,10 +1,15 @@
 jest.unmock('../../src/JestProcessManagement/JestProcess');
+jest.unmock('../test-helper');
+jest.unmock('../../src/JestProcessManagement/helper');
+jest.unmock('../../src/helpers');
 
-import { Runner, ProjectWorkspace } from 'jest-editor-support';
-import { JestProcess } from '../../src/JestProcessManagement/JestProcess';
+import { Runner } from 'jest-editor-support';
+import { JestProcess, RunnerEvents } from '../../src/JestProcessManagement/JestProcess';
 import { EventEmitter } from 'events';
-import { WatchMode } from '../../src/Jest';
+import { mockProcessRequest, mockJestExtContext } from '../test-helper';
 import { normalize } from 'path';
+import { JestProcessRequest } from '../../src/JestProcessManagement/types';
+import { JestTestProcessType } from '../../src/Settings';
 jest.unmock('path');
 jest.mock('vscode', () => ({
   extensions: {
@@ -15,487 +20,222 @@ jest.mock('vscode', () => ({
 }));
 
 describe('JestProcess', () => {
-  let projectWorkspaceMock;
   let jestProcess;
-  const runnerMock = (Runner as any) as jest.Mock<any>;
-  let runnerMockImplementation;
+  const RunnerClassMock = Runner as jest.Mocked<any>;
+  let mockRunner;
   let eventEmitter;
+  const mockListener = { onEvent: jest.fn() };
+  let extContext;
+
+  const mockRequest = (type: JestTestProcessType, override?: Partial<JestProcessRequest>) =>
+    mockProcessRequest(type, { listener: mockListener, ...(override ?? {}) });
+
+  const closeRunner = () => eventEmitter.emit('processClose');
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    projectWorkspaceMock = new ProjectWorkspace(null, null, null, null);
-    runnerMockImplementation = {
-      on: jest.fn(() => this),
+    jest.resetAllMocks();
+
+    // runner mock
+    eventEmitter = new EventEmitter();
+    mockRunner = {
+      on: jest.fn().mockImplementation((event, callback) => {
+        eventEmitter.on(event, callback);
+        return this;
+      }),
       start: jest.fn(),
-      runJestWithUpdateForSnapshots: jest.fn(),
+      closeProcess: jest.fn(),
     };
+    RunnerClassMock.mockReturnValueOnce(mockRunner);
+    extContext = mockJestExtContext();
   });
 
-  describe('Runner', () => {
-    it('loads reporter from path', () => {
-      new JestProcess(projectWorkspaceMock);
-      expect(runnerMock).toHaveBeenCalledWith(undefined, {
-        noColor: true,
-        reporters: ['default', `"${normalize('/my/vscode/extensions/out/reporter.js')}"`],
-      });
-    });
+  it('can report its own state via toString()', () => {
+    const request = mockProcessRequest('all-tests');
+    jestProcess = new JestProcess(extContext, request);
+    expect(`${jestProcess}`).toEqual(jestProcess.toString());
+    expect(jestProcess.toString()).toMatchInlineSnapshot(
+      `"JestProcess: id: 0, request: {\\"type\\":\\"all-tests\\",\\"schedule\\":{\\"queue\\":\\"blocking\\"},\\"listener\\":\\"function\\"}; stopReason: undefined"`
+    );
   });
-
   describe('when creating', () => {
-    beforeEach(() => {
-      runnerMock.mockImplementation(() => runnerMockImplementation);
+    it('create instance with a readonly request', () => {
+      const request = mockProcessRequest('all-tests');
+      jestProcess = new JestProcess(extContext, request);
+      expect(jestProcess.request).toEqual(request);
+      expect(jestProcess.stopReason).toBeUndefined();
     });
+    it('uses loggingFactory to create logging', async () => {
+      const request = mockProcessRequest('all-tests');
 
-    it('accepts a project workspace argument', () => {
-      jestProcess = new JestProcess({
-        projectWorkspace: projectWorkspaceMock,
-      });
-      expect(jestProcess).not.toBe(null);
+      jestProcess = new JestProcess(extContext, request);
+      expect(extContext.loggingFactory.create).toBeCalledTimes(1);
     });
-
-    it('clears the stopRequested flag', () => {
-      jestProcess = new JestProcess({
-        projectWorkspace: projectWorkspaceMock,
-      });
-      expect(jestProcess.stopRequested()).toBeFalsy();
-    });
-
-    it('records watchMode in the watchMode property', () => {
-      const expected = WatchMode.Watch;
-
-      jestProcess = new JestProcess({
-        projectWorkspace: projectWorkspaceMock,
-        watchMode: expected,
-      });
-
-      expect(jestProcess.watchMode).toBe(expected);
-    });
-
-    it('creates an instance of jest-editor-support runner', () => {
-      jestProcess = new JestProcess({
-        projectWorkspace: projectWorkspaceMock,
-      });
-      expect(runnerMock.mock.instances.length).toBe(1);
-    });
-
-    it('passes the workspace argument to the jest-editor-support Runner', () => {
-      jestProcess = new JestProcess({
-        projectWorkspace: projectWorkspaceMock,
-      });
-      expect(runnerMock.mock.calls[0][0]).toBe(projectWorkspaceMock);
-    });
-
-    it('starts the jest-editor-support Runner without watch mode by default', () => {
-      jestProcess = new JestProcess({
-        projectWorkspace: projectWorkspaceMock,
-      });
-      expect(runnerMockImplementation.start).toHaveBeenCalledTimes(1);
-      expect(runnerMockImplementation.start.mock.calls[0]).toEqual([false, false]);
-    });
-
-    it('starts the jest-editor-support Runner in --watch mode', () => {
-      jestProcess = new JestProcess({
-        projectWorkspace: projectWorkspaceMock,
-        watchMode: WatchMode.Watch,
-      });
-      expect(runnerMockImplementation.start.mock.calls[0]).toEqual([true, false]);
-    });
-
-    it('starts the jest-editor-support Runner in --watchAll mode', () => {
-      jestProcess = new JestProcess({
-        projectWorkspace: projectWorkspaceMock,
-        watchMode: WatchMode.WatchAll,
-      });
-      expect(runnerMockImplementation.start.mock.calls[0]).toEqual([true, true]);
+    it('does not start runner upon creation', () => {
+      const request = mockProcessRequest('all-tests');
+      jestProcess = new JestProcess(extContext, request);
+      expect(RunnerClassMock).not.toHaveBeenCalled();
     });
   });
+  describe('when start', () => {
+    it('reeturns a promise that resolved when process closed', async () => {
+      expect.hasAssertions();
+      const request = mockRequest('all-tests');
+      const jp = new JestProcess(extContext, request);
+      const p = jp.start();
 
-  describe('when jest-editor-support runner exits', () => {
-    let onExit;
+      expect(RunnerClassMock).toHaveBeenCalled();
 
-    beforeEach(() => {
-      eventEmitter = new EventEmitter();
-      runnerMockImplementation = {
-        ...runnerMockImplementation,
-        on: (event, callback) => {
-          eventEmitter.on(event, callback);
-        },
-      };
-      runnerMock.mockImplementation(() => runnerMockImplementation);
-      jestProcess = new JestProcess({
-        projectWorkspace: projectWorkspaceMock,
-      });
-      onExit = jest.fn();
-      jestProcess.onExit(onExit);
+      closeRunner();
+      await expect(p).resolves.not.toThrow();
+      expect(jp.stopReason).toEqual('process-end');
     });
+    it('will emit processStart event upon starting', () => {
+      expect.hasAssertions();
+      const request = mockRequest('all-tests');
+      const jp = new JestProcess(extContext, request);
+      jp.start();
 
-    it('calls the callback provided to onExit', () => {
-      eventEmitter.emit('debuggerProcessExit');
-
-      expect(onExit).toHaveBeenCalledTimes(1);
+      expect(RunnerClassMock).toHaveBeenCalled();
+      const [, event] = mockListener.onEvent.mock.calls[0];
+      expect(event).toEqual('processStarting');
     });
+    it.each`
+      event                 | willEndProcess
+      ${'processClose'}     | ${true}
+      ${'processExit'}      | ${false}
+      ${'executableJSON'}   | ${false}
+      ${'executableStdErr'} | ${false}
+      ${'executableOutput'} | ${false}
+      ${'terminalError'}    | ${false}
+    `(
+      'register and propagate $event to the request.listener',
+      async ({ event, willEndProcess }) => {
+        expect.hasAssertions();
+        const request = mockRequest('all-tests');
+        const jp = new JestProcess(extContext, request);
+        const p = jp.start();
 
-    it('does not set the stopRequested flag', () => {
-      eventEmitter.emit('debuggerProcessExit');
+        // register for each event
+        expect(mockRunner.on).toHaveBeenCalledTimes(RunnerEvents.length);
 
-      expect(jestProcess.stopRequested()).toBeFalsy();
-    });
+        eventEmitter.emit(event);
+        const [process, _event] = mockListener.onEvent.mock.calls[1];
+        expect(process).toBe(jp);
+        expect(_event).toEqual(event);
 
-    it('calls the callback with the argument being the instance of the jest process', () => {
-      eventEmitter.emit('debuggerProcessExit');
-
-      expect(onExit.mock.calls[0][0]).toBe(jestProcess);
-    });
-
-    it('only responds to first debuggerProcessExit event from the runner', () => {
-      eventEmitter.emit('debuggerProcessExit');
-      eventEmitter.emit('debuggerProcessExit');
-
-      expect(onExit).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  describe('when subscribing to regular jest-editor-support events', () => {
-    let eventHandler;
-    const jestEditorSupportedEvent = 'jest-editor-supported-event';
-
-    beforeEach(() => {
-      eventEmitter = new EventEmitter();
-      runnerMockImplementation = {
-        ...runnerMockImplementation,
-        on: (event, callback) => {
-          eventEmitter.on(event, callback);
-        },
-      };
-      runnerMock.mockImplementation(() => runnerMockImplementation);
-      jestProcess = new JestProcess({
-        projectWorkspace: projectWorkspaceMock,
-      });
-      eventHandler = jest.fn();
-    });
-
-    it('simply forwards the events to event emitter', () => {
-      jestProcess.onJestEditorSupportEvent(jestEditorSupportedEvent, eventHandler);
-      eventEmitter.emit(jestEditorSupportedEvent);
-
-      expect(eventHandler).toHaveBeenCalledTimes(1);
-    });
-
-    it('forwards any argument to the provider event handler', () => {
-      jestProcess.onJestEditorSupportEvent(jestEditorSupportedEvent, eventHandler);
-      eventEmitter.emit(jestEditorSupportedEvent, 'arg1', { value: 'arg2' });
-
-      expect(eventHandler).toHaveBeenCalledTimes(1);
-      expect(eventHandler.mock.calls[0][0]).toBe('arg1');
-      expect(eventHandler.mock.calls[0][1]).toEqual({ value: 'arg2' });
-    });
-  });
-
-  describe('when stopping', () => {
-    const closeProcessMock = jest.fn();
-
-    beforeEach(() => {
-      eventEmitter = new EventEmitter();
-      runnerMockImplementation = {
-        ...runnerMockImplementation,
-        on: (event, callback) => {
-          eventEmitter.on(event, callback);
-        },
-        closeProcess: closeProcessMock,
-      };
-      runnerMock.mockImplementation(() => runnerMockImplementation);
-      jestProcess = new JestProcess({
-        projectWorkspace: projectWorkspaceMock,
-      });
-      jest.useFakeTimers();
-    });
-
-    it('calls closeProcess on the underlying runner from jest-editor-support', () => {
-      jestProcess.stop();
-
-      expect(closeProcessMock).toHaveBeenCalledTimes(1);
-    });
-
-    it('sets the stopRequested flag', () => {
-      jestProcess.stop();
-
-      expect(jestProcess.stopRequested()).toBeTruthy();
-    });
-
-    it('resolves promise when recieving debuggerProcessExit event', async () => {
-      expect.assertions(1);
-      const promise = jestProcess.stop();
-      eventEmitter.emit('debuggerProcessExit');
-      await expect(promise).resolves.toBeUndefined();
-    });
-
-    it('resolves promise by timeout', async () => {
-      expect.assertions(1);
-      const promise = jestProcess.stop();
-      jest.runAllTimers();
-      await expect(promise).resolves.toBeUndefined();
-    });
-
-    it('do not hangs on multiple stop() calls', async () => {
-      expect.assertions(1);
-      const promise = jestProcess.stop();
-      jestProcess.stop();
-      jest.runAllTimers();
-      await expect(promise).resolves.toBeUndefined();
-    });
-  });
-
-  describe('when process is created with keepAlive set to true', () => {
-    let onExit;
-
-    beforeEach(() => {
-      eventEmitter = new EventEmitter();
-      runnerMockImplementation = {
-        ...runnerMockImplementation,
-        on: (event, callback) => {
-          eventEmitter.on(event, callback);
-        },
-        removeAllListeners: jest.fn(() => eventEmitter.removeAllListeners()),
-        closeProcess: jest.fn(),
-      };
-      runnerMock.mockImplementation(() => runnerMockImplementation);
-      onExit = jest.fn();
-    });
-
-    it('provides public attribute providing the keepAlive setting', () => {
-      jestProcess = new JestProcess({
-        projectWorkspace: projectWorkspaceMock,
-        keepAlive: true,
-      });
-
-      expect(jestProcess.keepAlive).toBeTruthy();
-
-      jestProcess = new JestProcess({
-        projectWorkspace: projectWorkspaceMock,
-        keepAlive: false,
-      });
-
-      expect(jestProcess.keepAlive).toBeFalsy();
-    });
-
-    it('creates new instance of jest-editor-support Runner', () => {
-      jestProcess = new JestProcess({
-        projectWorkspace: projectWorkspaceMock,
-        keepAlive: true,
-      });
-      jestProcess.onExit(onExit);
-      eventEmitter.emit('debuggerProcessExit');
-      expect(runnerMock.mock.instances.length).toBe(2);
-    });
-
-    it('limits number of restarts (keepAlive boundary)', () => {
-      const limit = JestProcess.keepAliveLimit;
-      jestProcess = new JestProcess({
-        projectWorkspace: projectWorkspaceMock,
-        keepAlive: true,
-      });
-      jestProcess.onExit(onExit);
-      Array.from(Array(limit + 1).keys()).forEach((_) => {
-        eventEmitter.emit('debuggerProcessExit');
-      });
-      expect(runnerMock.mock.instances.length).toBe(limit);
-    });
-
-    it('does not restart the process if stopped explicitely', () => {
-      jestProcess = new JestProcess({
-        projectWorkspace: projectWorkspaceMock,
-        keepAlive: true,
-      });
-      jestProcess.onExit(onExit);
-      eventEmitter.emit('debuggerProcessExit');
-      eventEmitter.emit('debuggerProcessExit');
-      jestProcess.stop();
-      eventEmitter.emit('debuggerProcessExit');
-      expect(runnerMock.mock.instances.length).toBe(3);
-    });
-
-    it('passes the workspace argument to the jest-editor-support Runner', () => {
-      jestProcess = new JestProcess({
-        projectWorkspace: projectWorkspaceMock,
-        keepAlive: true,
-      });
-      jestProcess.onExit(onExit);
-      eventEmitter.emit('debuggerProcessExit');
-      expect(runnerMock.mock.calls[1][0]).toBe(projectWorkspaceMock);
-    });
-
-    it('starts the jest-editor-support runner', () => {
-      jestProcess = new JestProcess({
-        projectWorkspace: projectWorkspaceMock,
-        keepAlive: true,
-      });
-      jestProcess.onExit(onExit);
-      eventEmitter.emit('debuggerProcessExit');
-      expect(runnerMockImplementation.start).toHaveBeenCalledTimes(2);
-    });
-
-    it('passes the watchMode argument to the new runner instance when it is true', () => {
-      jestProcess = new JestProcess({
-        projectWorkspace: projectWorkspaceMock,
-        watchMode: WatchMode.WatchAll,
-        keepAlive: true,
-      });
-      jestProcess.onExit(onExit);
-      eventEmitter.emit('debuggerProcessExit');
-
-      expect(runnerMockImplementation.start.mock.calls[1]).toEqual([true, true]);
-    });
-
-    it('removes all event listeners from the previous instance of the runner', () => {
-      jestProcess = new JestProcess({
-        projectWorkspace: projectWorkspaceMock,
-        keepAlive: true,
-      });
-      jestProcess.onExit(onExit);
-      eventEmitter.emit('debuggerProcessExit');
-
-      expect(runnerMockImplementation.removeAllListeners).toHaveBeenCalledTimes(1);
-    });
-
-    it('does not call the exit callback if number of restart attempts did not reach JestProcess.keepAliveLimit', () => {
-      jestProcess = new JestProcess({
-        projectWorkspace: projectWorkspaceMock,
-        keepAlive: true,
-      });
-      jestProcess.onExit(onExit);
-      for (let i = 0; i < JestProcess.keepAliveLimit - 1; i++) {
-        eventEmitter.emit('debuggerProcessExit');
-      }
-      expect(onExit).not.toHaveBeenCalled();
-    });
-
-    it('call the exit callback if number of restart attempts is equal or greater than JestProcess.keepAliveLimit', () => {
-      jestProcess = new JestProcess({
-        projectWorkspace: projectWorkspaceMock,
-        keepAlive: true,
-      });
-      jestProcess.onExit(onExit);
-      for (let i = 0; i < JestProcess.keepAliveLimit; i++) {
-        eventEmitter.emit('debuggerProcessExit');
-      }
-      expect(onExit).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  describe('restoring jest events', () => {
-    let jestEvents;
-
-    beforeEach(() => {
-      eventEmitter = new EventEmitter();
-      jestEvents = new Map<
-        string,
-        {
-          callback: (...args: any[]) => void;
-          count: number;
+        if (!willEndProcess) {
+          // end the test
+          closeRunner();
         }
-      >();
 
-      runnerMockImplementation = {
-        ...runnerMockImplementation,
-        on: (event, callback) => {
-          if (event === 'debuggerProcessExit') {
-            eventEmitter.on(event, callback);
-          }
-          let count = 0;
-          if (jestEvents.has(event)) {
-            count = jestEvents.get(event).count;
-          }
-          jestEvents.set(event, {
-            callback,
-            count: count + 1,
-          });
-        },
-        removeAllListeners: jest.fn(() => eventEmitter.removeAllListeners()),
-        closeProcess: jest.fn(),
-      };
-      runnerMock.mockImplementation(() => runnerMockImplementation);
+        await expect(p).resolves.not.toThrow();
+      }
+    );
+
+    it.each`
+      type                 | extraProperty                                                    | startArgs         | includeReporter
+      ${'all-tests'}       | ${undefined}                                                     | ${[false, false]} | ${true}
+      ${'watch-tests'}     | ${undefined}                                                     | ${[true, false]}  | ${true}
+      ${'watch-all-tests'} | ${undefined}                                                     | ${[true, true]}   | ${true}
+      ${'by-file'}         | ${{ testFileNamePattern: '"abc def"' }}                          | ${[false, false]} | ${true}
+      ${'by-file-test'}    | ${{ testFileNamePattern: '"abc def"', testNamePattern: 'test' }} | ${[false, false]} | ${true}
+      ${'not-test'}        | ${{ args: ['--listTests'] }}                                     | ${[false, false]} | ${false}
+    `(
+      'supports jest process request: $type',
+      async ({ type, extraProperty, startArgs, includeReporter }) => {
+        expect.hasAssertions();
+        const request = mockRequest(type, extraProperty);
+        jestProcess = new JestProcess(extContext, request);
+        const p = jestProcess.start();
+        const [, options] = RunnerClassMock.mock.calls[0];
+        if (includeReporter) {
+          expect(options.reporters).toEqual([
+            'default',
+            `"${normalize('/my/vscode/extensions/out/reporter.js')}"`,
+          ]);
+        } else {
+          expect(options.reporters).toBeUndefined();
+        }
+        expect(options).toEqual(expect.objectContaining(extraProperty ?? {}));
+        expect(mockRunner.start).toBeCalledWith(...startArgs);
+        closeRunner();
+        await p;
+      }
+    );
+    it.each`
+      request                                                                                               | expectUpdate
+      ${{ type: 'all-tests', updateSnapshot: true }}                                                        | ${true}
+      ${{ type: 'all-tests', updateSnapshot: false }}                                                       | ${false}
+      ${{ type: 'by-file', updateSnapshot: true, testFileNamePattern: 'abc' }}                              | ${true}
+      ${{ type: 'by-file-test', updateSnapshot: true, testFileNamePattern: 'abc', testNamePattern: 'xyz' }} | ${true}
+      ${{ type: 'watch-tests', updateSnapshot: true }}                                                      | ${false}
+      ${{ type: 'watch-all-tests', updateSnapshot: true }}                                                  | ${false}
+    `('can update snapshot with request $request', ({ request, expectUpdate }) => {
+      expect.hasAssertions();
+      const _request = mockRequest(request.type, request);
+      jestProcess = new JestProcess(extContext, _request);
+      jestProcess.start();
+      const [, options] = RunnerClassMock.mock.calls[0];
+      if (expectUpdate) {
+        expect(options.extraArgs).toContain('--updateSnapshot');
+      } else {
+        expect(options.extraArgs).toBeUndefined();
+      }
     });
+    it('starting on a running process does nothing but returns the same promise', async () => {
+      expect.hasAssertions();
+      const request = mockRequest('all-tests');
+      jestProcess = new JestProcess(extContext, request);
+      const p1 = jestProcess.start();
+      const p2 = jestProcess.start();
 
-    it('restores the previously registered jest event', () => {
-      jestProcess = new JestProcess({
-        projectWorkspace: projectWorkspaceMock,
-        keepAlive: true,
-      });
-
-      const handler = () => jestProcess;
-
-      jestProcess.onJestEditorSupportEvent('event', handler);
-      eventEmitter.emit('debuggerProcessExit');
-
-      expect(jestEvents.has('event')).toBeTruthy();
-      expect(jestEvents.get('event').count).toBe(2);
-      expect(jestEvents.get('event').callback).toBe(handler);
-    });
-
-    it('restores the previously registered multiple jest events', () => {
-      jestProcess = new JestProcess({
-        projectWorkspace: projectWorkspaceMock,
-        keepAlive: true,
-      });
-
-      const handler1 = () => jestProcess;
-      const handler2 = () => jestProcess;
-
-      jestProcess.onJestEditorSupportEvent('event1', handler1);
-      jestProcess.onJestEditorSupportEvent('event2', handler2);
-      eventEmitter.emit('debuggerProcessExit');
-
-      expect(jestEvents.has('event1')).toBeTruthy();
-      expect(jestEvents.get('event1').count).toBe(2);
-      expect(jestEvents.get('event1').callback).toBe(handler1);
-
-      expect(jestEvents.has('event2')).toBeTruthy();
-      expect(jestEvents.get('event2').count).toBe(2);
-      expect(jestEvents.get('event2').callback).toBe(handler2);
-    });
-
-    it('does not restore the previously registered jest event if keepAlive is false', () => {
-      jestProcess = new JestProcess({
-        projectWorkspace: projectWorkspaceMock,
-        keepAlive: false,
-      });
-
-      const handler = () => jestProcess;
-
-      jestProcess.onJestEditorSupportEvent('event', handler);
-      eventEmitter.emit('debuggerProcessExit');
-
-      expect(jestEvents.get('event').count).toBe(1);
-    });
-
-    it('does not restore any events when explicitely stopped', () => {
-      jestProcess = new JestProcess({
-        projectWorkspace: projectWorkspaceMock,
-        keepAlive: true,
-      });
-
-      const handler = () => jestProcess;
-
-      jestProcess.onJestEditorSupportEvent('event', handler);
-      jestProcess.stop();
-      eventEmitter.emit('debuggerProcessExit');
-
-      expect(jestEvents.get('event').count).toBe(1);
+      expect(RunnerClassMock).toBeCalledTimes(1);
+      expect(mockRunner.start).toBeCalledTimes(1);
+      expect(p1).toBe(p2);
     });
   });
 
-  describe('updating snapshots', () => {
-    beforeEach(() => {
-      runnerMock.mockImplementation(() => runnerMockImplementation);
-      jestProcess = new JestProcess({
-        projectWorkspace: projectWorkspaceMock,
-      });
-    });
+  describe('to interrupt the process', () => {
+    //   const closeProcessMock = jest.fn();
 
-    it('calls runJestWithUpdateForSnapshots on the underlying runner from jest-editor-support', () => {
-      const callback = () => {};
-      jestProcess.runJestWithUpdateForSnapshots(callback);
-      expect(runnerMockImplementation.runJestWithUpdateForSnapshots).toHaveBeenCalledWith(callback);
+    beforeEach(() => {
+      const request = mockRequest('all-tests');
+      jestProcess = new JestProcess(extContext, request);
+    });
+    it('call stop() to force the runner to exit and update the stopReason accordingly', async () => {
+      expect.hasAssertions();
+      let startDone = false;
+      let stopDone = false;
+      const pStart = jestProcess.start();
+      pStart.then(() => {
+        startDone = true;
+      });
+      const pStop = jestProcess.stop();
+      pStop.then(() => {
+        stopDone = true;
+      });
+
+      // they are the same promise actually
+      expect(pStart).toBe(pStop);
+
+      expect(mockRunner.closeProcess).toHaveBeenCalledTimes(1);
+      expect(startDone).toBeFalsy();
+      expect(stopDone).toBeFalsy();
+      expect(jestProcess.stopReason).toEqual('on-demand');
+
+      closeRunner();
+
+      await expect(pStart).resolves.not.toThrow();
+      await expect(pStop).resolves.not.toThrow();
+
+      expect(startDone).toBeTruthy();
+      expect(stopDone).toBeTruthy();
+      expect(jestProcess.stopReason).toEqual('on-demand');
+    });
+    it('call stop before start will resolve right away', async () => {
+      expect.hasAssertions();
+      await expect(jestProcess.stop()).resolves.not.toThrow();
+      expect(jestProcess.stopReason).toEqual('on-demand');
     });
   });
 });

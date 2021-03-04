@@ -20,5 +20,6 @@
       }
     ]
   },
+  "include": ["**/*"],
   "exclude": ["__mocks__", "node_modules", "tests"]
 }

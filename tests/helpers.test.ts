@@ -30,9 +30,8 @@ import {
   cleanAnsi,
   prepareIconFile,
   testIdString,
-  getJestCommandSettings,
-  pathToConfig,
   escapeRegExp,
+  removeSurroundingQuote,
 } from '../src/helpers';
 
 // Manually (forcefully) set the executable's file extension to test its addition independendly of the operating system.
@@ -210,27 +209,6 @@ describe('ModuleHelpers', () => {
       expect((mockWriteFileSync as jest.Mock).mock.calls[2][1]).toBe('<svg fill="red"></svg>');
     });
   });
-  describe('getJestCommandSettings', () => {
-    it('without jestCommandLine, returns pathToJest and pathToConfig', () => {
-      const settings: any = {
-        pathToJest: 'abc',
-        pathToConfig: 'whatever',
-        rootPath: '',
-      };
-      expect(getJestCommandSettings(settings)).toEqual([
-        pathToJest(settings),
-        pathToConfig(settings),
-      ]);
-    });
-    it('with jestCommandLine, ignore both pathToJest and pathToConfig', () => {
-      const settings: any = {
-        jestCommandLine: 'jest --coverage',
-        pathToJest: 'abc',
-        pathToConfig: 'whatever',
-      };
-      expect(getJestCommandSettings(settings)).toEqual([settings.jestCommandLine, '']);
-    });
-  });
 });
 
 describe('escapeRegExp', () => {
@@ -259,5 +237,17 @@ describe('testIdString', () => {
     ${'full-name'}       | ${{ title: 'regexp ($a)', ancestorTitles: ['d-1', 'd-1-1'] }} | ${'d-1 d-1-1 regexp ($a)'}
   `('$type: $expected', ({ type, id, expected }) => {
     expect(testIdString(type, id)).toEqual(expected);
+  });
+});
+
+describe('removeSurroundingQuote', () => {
+  it.each`
+    str                          | expected
+    ${'no quote'}                | ${'no quote'}
+    ${'"double quote"'}          | ${'double quote'}
+    ${"'single quote'"}          | ${'single quote'}
+    ${"''single single quote''"} | ${'single single quote'}
+  `('can remove surrounding quotes from $str', ({ str, expected }) => {
+    expect(removeSurroundingQuote(str)).toEqual(expected);
   });
 });

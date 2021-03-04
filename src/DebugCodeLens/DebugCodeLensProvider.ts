@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import { extensionName } from '../appGlobals';
-import { basename } from 'path';
 import { DebugCodeLens } from './DebugCodeLens';
 import { TestReconciliationStateType } from '../TestResults';
 import { TestState, TestStateByTestReconciliationState } from './TestState';
@@ -31,6 +30,10 @@ export class DebugCodeLensProvider implements vscode.CodeLensProvider {
   }
 
   provideCodeLenses(document: vscode.TextDocument, _: vscode.CancellationToken): DebugCodeLens[] {
+    if (document.isDirty) {
+      return [];
+    }
+
     const result: DebugCodeLens[] = [];
     const ext = this.getJestExt(document.uri);
     if (!ext || this._showWhenTestStateIn.length === 0 || document.isUntitled) {
@@ -39,7 +42,9 @@ export class DebugCodeLensProvider implements vscode.CodeLensProvider {
 
     const filePath = document.fileName;
     const testResults = ext.testResultProvider.getResults(filePath);
-    const fileName = basename(document.fileName);
+    if (!testResults) {
+      return result;
+    }
 
     for (const test of testResults) {
       const results = test.multiResults ? [test, ...test.multiResults] : [test];
@@ -53,7 +58,7 @@ export class DebugCodeLensProvider implements vscode.CodeLensProvider {
       const end = new vscode.Position(test.end.line, test.start.column + 5);
       const range = new vscode.Range(start, end);
 
-      result.push(new DebugCodeLens(document, range, fileName, ...allIds));
+      result.push(new DebugCodeLens(document, range, ...allIds));
     }
 
     return result;
@@ -70,9 +75,9 @@ export class DebugCodeLensProvider implements vscode.CodeLensProvider {
   ): vscode.ProviderResult<vscode.CodeLens> {
     if (codeLens instanceof DebugCodeLens) {
       codeLens.command = {
-        arguments: [codeLens.document, codeLens.fileName, ...codeLens.testIds],
-        command: `${extensionName}.run-test`,
-        title: codeLens.testIds.length > 1 ? `Debug(${codeLens.testIds.length})` : 'Debug',
+        arguments: [...codeLens.testIds],
+        command: `${extensionName}.editor.debug-tests`,
+        title: codeLens.testIds.length > 1 ? `Debug (${codeLens.testIds.length})` : 'Debug',
       };
     }
 

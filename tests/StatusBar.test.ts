@@ -2,43 +2,63 @@ jest.unmock('../src/StatusBar');
 jest.useFakeTimers();
 
 /* eslint jest/expect-expect: ["error", { "assertFunctionNames": ["expect", "assertRender"] }] */
-const newStatusBarItem = () => ({
+const newStatusBarItem = (type: StatusType) => ({
   text: '',
   command: '',
   show: jest.fn(),
   hide: jest.fn(),
   tooltip: '',
+  type,
 });
 
-const statusBarItem = newStatusBarItem();
-
 import * as vscode from 'vscode';
-import { StatusBar, StatusType, Status } from '../src/StatusBar';
+import { StatusBar, StatusType, ProcessState } from '../src/StatusBar';
+import { TestStats } from '../src/types';
 
-const createStatusBarItem = jest.fn().mockReturnValue(statusBarItem);
-
-const mockedChannel = { append: () => {}, clear: () => {} } as any;
-vscode.window.createOutputChannel = jest.fn(() => mockedChannel);
-((vscode.window.createStatusBarItem as unknown) as jest.Mock<{}>) = createStatusBarItem;
+const mockSummaryChannel = { append: jest.fn(), clear: jest.fn() } as any;
+const makeStats = (success: number, fail: number, unknown: number): TestStats => ({
+  success,
+  fail,
+  unknown,
+});
 
 describe('StatusBar', () => {
   let statusBar: StatusBar;
-  const updateStatusSpy = jest.spyOn(StatusBar.prototype as any, 'updateStatus');
-  const renderSpy = jest.spyOn(StatusBar.prototype as any, 'render');
-  beforeEach(() => {
-    statusBar = new StatusBar();
-    updateStatusSpy.mockClear();
-    renderSpy.mockClear();
-    statusBarItem.text = '';
-  });
+  let updateSpy;
+  let renderSpy;
+  let mockActiveSBItem;
+  let mockSummarySBItem;
 
-  const assertRender = (nth: number, request: any, type: StatusType) => {
-    const n = nth < 0 ? renderSpy.mock.calls.length - 1 : nth;
-    const args = renderSpy.mock.calls[n];
-
-    expect(args[0]).toEqual(request);
-    expect((args[1] as any).type).toEqual(type);
+  const setupWorkspace = (active: string, ...additional: string[]) => {
+    const folders = [active, ...additional].map((ws) => ({ name: ws }));
+    (vscode.workspace as any).workspaceFolders = folders;
+    (vscode.window.activeTextEditor as any) = { document: { uri: 'whatever' } };
+    vscode.workspace.getWorkspaceFolder = jest.fn().mockReturnValue(folders[0]);
   };
+
+  beforeEach(() => {
+    jest.resetAllMocks();
+
+    mockActiveSBItem = newStatusBarItem(StatusType.active);
+    mockSummarySBItem = newStatusBarItem(StatusType.summary);
+
+    vscode.window.createOutputChannel = jest.fn(() => mockSummaryChannel);
+    vscode.window.createStatusBarItem = jest.fn().mockImplementation((_, priority) => {
+      if (priority === 2) {
+        return mockActiveSBItem;
+      }
+      if (priority === 1) {
+        return mockSummarySBItem;
+      }
+      throw new Error(`unexpected createStatusBarItem priority ${priority}`);
+    });
+
+    statusBar = new StatusBar();
+    updateSpy = jest.spyOn(statusBar as any, 'handleUpdate');
+    renderSpy = jest.spyOn(statusBar as any, 'render');
+    updateSpy.mockClear();
+    renderSpy.mockClear();
+  });
 
   describe('register', () => {
     it('should add 2 commands', () => {
@@ -53,150 +73,202 @@ describe('StatusBar', () => {
   });
 
   describe('bind()', () => {
-    it('returns binded helpers', () => {
+    it('returns binded helpers for each workspace (source) to update its status', () => {
       const source = 'testSource';
       const helpers = statusBar.bind(source);
-      ['initial', 'running', 'success', 'failed', 'stopped'].forEach((status) => {
-        helpers.update(status as Status);
-        expect(updateStatusSpy).toHaveBeenCalledWith({ source, status });
+      ['initial', 'running', 'success', 'failed', 'stopped'].forEach((state) => {
+        helpers.update({ state: state as ProcessState });
+        expect(updateSpy).toHaveBeenCalledWith(source, { state });
       });
     });
   });
 
-  describe('request()', () => {
-    it('should update status', () => {
-      statusBar.bind('testSource1').update('initial');
+  describe('update()', () => {
+    describe('single workspace', () => {
+      beforeEach(() => {
+        setupWorkspace('testSource1');
+      });
+      describe('will update both active and summary items', () => {
+        const alertStats = { success: 1, fail: 2, unknown: 3 };
+        const passStats = { success: 10, fail: 0, unknown: 0 };
+        const emptyStatsString = `$(pass) 0 $(error) 0 $(question) 0`;
 
-      expect(updateStatusSpy).toHaveBeenCalled();
+        it.each`
+          seq  | update                                          | active                    | summary
+          ${1} | ${{ state: 'running' }}                         | ${'$(sync~spin)'}         | ${emptyStatsString}
+          ${2} | ${{ state: 'done' }}                            | ${''}                     | ${emptyStatsString}
+          ${3} | ${{ mode: ['auto-run-watch', 'coverage'] }}     | ${'$(eye) $(color-mode)'} | ${emptyStatsString}
+          ${4} | ${{ stats: alertStats }}                        | ${''}                     | ${'$(pass) 1 $(error) 2 $(question) 3'}
+          ${5} | ${{ mode: ['auto-run-off'], stats: passStats }} | ${'$(wrench)'}            | ${'$(check)'}
+        `('update: $update', ({ update, active, summary }) => {
+          statusBar.bind('testSource1').update(update);
+          expect(renderSpy).toBeCalledTimes(2);
+          expect(mockActiveSBItem.text).toContain(active);
+          expect(mockSummarySBItem.text).toContain(summary);
+        });
+        it.each`
+          stats                                                 | summary
+          ${{ success: 1, fail: 2, unknown: 3 }}                | ${'$(pass) 1 $(error) 2 $(question) 3'}
+          ${{ success: 1, fail: 0, unknown: 0 }}                | ${'$(check)'}
+          ${{ success: 3, fail: 1, unknown: 0 }}                | ${'$(pass) 3 $(error) 1 $(question) 0'}
+          ${{ success: 0, fail: 0, unknown: 0 }}                | ${'$(pass) 0 $(error) 0 $(question) 0'}
+          ${{ isDirty: true, success: 0, fail: 0, unknown: 0 }} | ${'$(sync-ignored) | $(pass) 0 $(error) 0 $(question) 0'}
+        `('shows stats summary: $stats => $summary', ({ stats, summary }) => {
+          statusBar.bind('testSource1').update({ stats });
+          expect(renderSpy).toBeCalledTimes(2);
+          expect(mockActiveSBItem.text).not.toContain(`Jest: ${summary}`);
+          expect(mockSummarySBItem.text).toContain(`Jest-WS: ${summary}`);
+        });
+        it('shows tooltip by the actual status', () => {
+          statusBar
+            .bind('testSource1')
+            .update({ mode: ['auto-run-on-save'], stats: { success: 1, fail: 2, unknown: 3 } });
+          expect(mockActiveSBItem.tooltip).toContain('auto-run-on-save');
+          expect(mockSummarySBItem.tooltip).toContain('success 1, fail 2, unknown 3');
+        });
+      });
     });
   });
-
-  describe('updateStatus()', () => {
-    it('should pick most relevant status', () => {
-      // first instance failed, display it as folder status
-      statusBar.bind('testSource1').update('failed');
-      assertRender(0, { source: 'testSource1', status: 'failed' }, StatusType.active);
-
-      // then second is running, this status is more important then previous, will display as workspace status
-      statusBar.bind('testSource2').update('running');
-      assertRender(1, { source: 'testSource2', status: 'running' }, StatusType.summary);
-
-      // second is ok, display first instance fail as it is more important, will display as workspace status
-      statusBar.bind('testSource2').update('success');
-      assertRender(2, { source: 'testSource1', status: 'failed' }, StatusType.summary);
-    });
-    it('can display modes', () => {
-      // first instance failed, display it as folder status
-      statusBar.bind('testSource1').update('failed', 'some reason', ['watch', 'coverage']);
-      expect(statusBarItem.text).toEqual('Jest: $(alert) some reason $(eye) $(color-mode)');
-
-      statusBar.bind('testSource1').update('success', undefined, ['watch']);
-      expect(statusBarItem.text).toEqual('Jest: $(check) $(eye)');
-    });
-  });
-
-  describe('multiroot status', () => {
-    const statusBarItem2 = newStatusBarItem();
+  describe('multiroot workspace', () => {
     const editor: any = {
       document: { uri: 'whatever' },
     };
-    const getStatusBarItems = () => {
-      if (statusBarItem.tooltip.includes('summary')) {
-        return { active: statusBarItem2, summary: statusBarItem };
-      }
-      return { active: statusBarItem, summary: statusBarItem2 };
-    };
-    const getWorkspaceFolder = jest.fn();
-    ((vscode.workspace.getWorkspaceFolder as unknown) as jest.Mock<{}>) = getWorkspaceFolder;
 
     beforeEach(() => {
-      jest.clearAllMocks();
-      jest.clearAllTimers();
-      createStatusBarItem.mockReturnValueOnce(statusBarItem).mockReturnValueOnce(statusBarItem2);
-      statusBar = new StatusBar();
-      statusBarItem.text = '';
-      statusBarItem2.text = '';
+      setupWorkspace('testSource1', 'testSource2');
     });
-    it('create 2 statusBarItem', () => {
-      expect(createStatusBarItem).toBeCalledTimes(2);
+
+    it('will update both active and summary status', () => {
+      statusBar.bind('testSource1').update({ state: 'initial' });
+      expect(mockActiveSBItem.text).toEqual('Jest: ...');
+      expect(mockActiveSBItem.show).toBeCalled();
+      expect(mockSummarySBItem.text).toEqual('Jest-WS: $(pass) 0 $(error) 0 $(question) 0');
+      expect(mockSummarySBItem.show).toBeCalled();
     });
-    it('only update active status for single root', () => {
-      statusBar.bind('testSource').update('initial');
-      const { active, summary } = getStatusBarItems();
-      expect(active.text).toEqual('Jest: ...');
-      expect(summary.text).toEqual('');
+    it('when multiple workspace status updated', () => {
+      statusBar.bind('testSource1').update({ state: 'initial' });
+      expect(mockActiveSBItem.show).toBeCalledTimes(1);
+      expect(mockActiveSBItem.text).toEqual('Jest: ...');
+      expect(mockSummarySBItem.show).toBeCalledTimes(1);
+
+      statusBar.bind('testSource2').update({ state: 'initial' });
+      expect(mockSummarySBItem.show).toBeCalledTimes(2);
+      expect(mockSummarySBItem.text).toMatchInlineSnapshot(
+        `"Jest-WS: $(pass) 0 $(error) 0 $(question) 0"`
+      );
+
+      expect(mockActiveSBItem.hide).toBeCalledTimes(0);
     });
-    it('update both status for multiroot', () => {
-      const { active, summary } = getStatusBarItems();
+    it('will not show active status if no active workspace can be determined', () => {
+      vscode.window.activeTextEditor = undefined;
+      statusBar.bind('testSource1').update({ state: 'initial' });
+      expect(mockActiveSBItem.show).toBeCalledTimes(1);
+      mockActiveSBItem.show.mockClear();
 
-      statusBar.bind('testSource1').update('initial');
-      expect(active.show).toBeCalledTimes(1);
-      expect(active.text).toEqual('Jest: ...');
-
-      statusBar.bind('testSource2').update('initial');
-      expect(summary.show).toBeCalledTimes(1);
-      expect(summary.text).toEqual('Jest-WS: ...');
-
-      // without active folder, the active status will be hidden in multiroot
-      expect(active.hide).toBeCalledTimes(1);
+      // with boh workspaces reported and no active text editor, can't determine the active workspace
+      statusBar.bind('testSource2').update({ state: 'initial' });
+      expect(mockActiveSBItem.show).toBeCalledTimes(0);
+      expect(mockActiveSBItem.hide).toBeCalledTimes(1);
     });
-    it('can show active status from active editor', () => {
-      const { active } = getStatusBarItems();
+    describe('onDidChangeActiveTextEditor', () => {
+      beforeEach(() => {
+        statusBar.bind('testSource1').update({ state: 'initial' });
+        statusBar.bind('testSource2').update({ state: 'running' });
+        mockActiveSBItem.show.mockClear();
+      });
 
-      statusBar.bind('testSource1').update('initial');
-      statusBar.bind('testSource2').update('initial');
+      it('can switch to new active workspace status when active editor changed', () => {
+        // active workspace is 'testSource1' so testSource1 status is displayed
+        expect(mockActiveSBItem.text).toEqual('Jest: ...');
 
-      // without active folder, the active status will be hidden in multiroot
-      expect(active.show).toBeCalledTimes(1);
-      expect(active.hide).toBeCalledTimes(1);
-
-      getWorkspaceFolder.mockReturnValue({ name: 'testSource1' });
-      statusBar.onDidChangeActiveTextEditor(editor);
-
-      expect(active.show).toBeCalledTimes(2);
-      expect(active.hide).toBeCalledTimes(1);
+        // now switch to testSource2, testSource2 status (running) should be displayed
+        vscode.workspace.getWorkspaceFolder = jest
+          .fn()
+          .mockReturnValueOnce({ name: 'testSource2' });
+        statusBar.onDidChangeActiveTextEditor(editor);
+        expect(mockActiveSBItem.text).toEqual('Jest: $(sync~spin)');
+        expect(mockActiveSBItem.show).toHaveBeenCalledTimes(1);
+      });
+      it('nothing will happen if switch to an empty editor', () => {
+        vscode.workspace.getWorkspaceFolder = jest
+          .fn()
+          .mockReturnValueOnce({ name: 'testSource2' });
+        statusBar.onDidChangeActiveTextEditor({} as any);
+        expect(mockActiveSBItem.show).not.toHaveBeenCalled();
+      });
+      it('nothing will happen if switch switch to an the editor under the same workspace', () => {
+        vscode.workspace.getWorkspaceFolder = jest
+          .fn()
+          .mockReturnValueOnce({ name: 'testSource1' });
+        statusBar.onDidChangeActiveTextEditor(editor);
+        expect(mockActiveSBItem.show).not.toHaveBeenCalled();
+      });
     });
-    it('can animate both running status', () => {
-      getWorkspaceFolder.mockReturnValue({ name: 'testSource1' });
-      statusBar.onDidChangeActiveTextEditor(editor);
-
-      statusBar.bind('testSource1').update('running');
-      statusBar.bind('testSource2').update('running');
-
-      expect(renderSpy).toHaveBeenCalledTimes(2);
-
-      const calls: any[][] = renderSpy.mock.calls;
-      expect(calls.every((c) => c[0].status === 'running')).toBe(true);
-      expect(calls.some((c) => c[1].type === StatusType.active)).toBe(true);
-      expect(calls.some((c) => c[1].type !== StatusType.active)).toBe(true);
+    describe('summary render', () => {
+      beforeEach(() => {
+        setupWorkspace('testSource1', 'testSource2', 'testSource3');
+        statusBar.bind('testSource1').update({
+          state: 'initial',
+          mode: ['auto-run-off'],
+        });
+        statusBar.bind('testSource2').update({
+          state: 'running',
+          mode: ['auto-run-watch', 'coverage'],
+        });
+        statusBar.bind('testSource3').update({
+          state: 'done',
+          mode: ['auto-run-on-save-test', 'coverage'],
+        });
+      });
+      it.each`
+        stats1                | stats2                | stats3                | expectedText
+        ${makeStats(0, 0, 3)} | ${makeStats(1, 2, 0)} | ${makeStats(7, 1, 3)} | ${'$(pass) 8 $(error) 3 $(question) 6'}
+        ${makeStats(0, 0, 3)} | ${makeStats(0, 0, 0)} | ${undefined}          | ${'$(pass) 0 $(error) 0 $(question) 3'}
+        ${makeStats(0, 0, 0)} | ${makeStats(0, 0, 0)} | ${makeStats(1, 0, 0)} | ${'$(check)'}
+      `('show total stats in statusBar', ({ stats1, stats2, stats3, expectedText }) => {
+        statusBar.bind('testSource1').update({ stats: stats1 });
+        statusBar.bind('testSource2').update({ stats: stats2 });
+        statusBar.bind('testSource3').update({ stats: stats3 });
+        expect(mockSummarySBItem.text).toContain(expectedText);
+      });
+      describe('output channel', () => {
+        it('display status in plain text', () => {
+          mockSummaryChannel.append.mockClear();
+          statusBar.bind('testSource1').update({
+            state: 'running',
+            mode: ['auto-run-watch', 'coverage'],
+            stats: makeStats(1, 2, 3),
+          });
+          const output = mockSummaryChannel.append.mock.calls[0][0];
+          expect(output).toMatchInlineSnapshot(`
+            "testSource1:		warning | success 1, fail 2, unknown 3; mode: auto-run-watch, coverage; state: running
+            testSource2:		mode: auto-run-watch, coverage; state: running
+            testSource3:		mode: auto-run-on-save-test, coverage; state: idle"
+          `);
+        });
+      });
     });
-    it('when hiding status, spinner should be stopped too', () => {
-      const { active, summary } = getStatusBarItems();
-
-      // sending 2 request without activeFolder should disable the active status
-      statusBar.bind('testSource1').update('running');
-      expect(active.show).toBeCalledTimes(1);
-      expect(summary.show).toBeCalledTimes(0);
-
-      jest.clearAllMocks();
-      jest.clearAllTimers();
-
-      statusBar.bind('testSource2').update('initial');
-      expect(active.show).toBeCalledTimes(0);
-      expect(summary.show).toBeCalledTimes(1);
-
-      expect(active.hide).toBeCalledTimes(1);
+  });
+  describe('when no active workspace', () => {
+    beforeEach(() => {
+      (vscode.workspace as any).workspaceFolders = [];
+      vscode.workspace.getWorkspaceFolder = jest.fn().mockReturnValueOnce(undefined);
+    });
+    it('will still show active if only one workspace reported', () => {
+      statusBar.bind('testSource1').update({ state: 'running' });
+      expect(mockActiveSBItem.show).toBeCalledTimes(1);
+      expect(mockActiveSBItem.hide).not.toBeCalled();
+    });
+    it('active status bar should be hidden if multiple workspaces reported', () => {
+      statusBar.bind('testSource1').update({ state: 'running' });
+      statusBar.bind('testSource2').update({ state: 'done' });
+      expect(mockActiveSBItem.hide).toBeCalledTimes(1);
     });
   });
 
   describe('StatusBarItem', () => {
     const registerCommand = (vscode.commands.registerCommand as unknown) as jest.Mock<{}>;
 
-    beforeEach(() => {
-      // reset statusBar to clear its internal `activeFolder`
-      statusBar = new StatusBar();
-      registerCommand.mockReset();
-    });
     afterEach(() => {
       (vscode.workspace as any).workspaceFolders = [];
       vscode.window.activeTextEditor = undefined;

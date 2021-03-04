@@ -1,13 +1,11 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
-import { ProjectWorkspace } from 'jest-editor-support';
-import { getJestCommandSettings } from './helpers';
 import { JestExt } from './JestExt';
 import { DebugCodeLensProvider, TestState } from './DebugCodeLens';
 import { DebugConfigurationProvider } from './DebugConfigurationProvider';
-import { PluginResourceSettings, PluginWindowSettings } from './Settings';
+import { PluginWindowSettings } from './Settings';
 import { statusBar } from './StatusBar';
-import { CoverageCodeLensProvider, CoverageColors } from './Coverage';
+import { CoverageCodeLensProvider } from './Coverage';
+import { extensionName } from './appGlobals';
 
 export type GetJestExtByURI = (uri: vscode.Uri) => JestExt | undefined;
 
@@ -27,28 +25,32 @@ export function getExtensionWindowSettings(): PluginWindowSettings {
   };
 }
 
-export function getExtensionResourceSettings(uri: vscode.Uri): PluginResourceSettings {
-  const config = vscode.workspace.getConfiguration('jest', uri);
-  return {
-    autoEnable: config.get<boolean>('autoEnable'),
-    enableInlineErrorMessages: config.get<boolean>('enableInlineErrorMessages'),
-    enableSnapshotUpdateMessages: config.get<boolean>('enableSnapshotUpdateMessages'),
-    pathToConfig: config.get<string>('pathToConfig'),
-    jestCommandLine: config.get<string>('jestCommandLine'),
-    pathToJest: config.get<string>('pathToJest'),
-    restartJestOnSnapshotUpdate: config.get<boolean>('restartJestOnSnapshotUpdate'),
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    rootPath: path.join(uri.fsPath, config.get<string>('rootPath')!),
-    runAllTestsFirst: config.get<boolean>('runAllTestsFirst'),
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    showCoverageOnLoad: config.get<boolean>('showCoverageOnLoad')!,
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    coverageFormatter: config.get<string>('coverageFormatter')!,
-    debugMode: config.get<boolean>('debugMode'),
-    coverageColors: config.get<CoverageColors>('coverageColors'),
-  };
-}
-
+export type RegisterCommand =
+  | {
+      type: 'all-workspaces';
+      name: string;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      callback: (extension: JestExt, ...args: any[]) => any;
+    }
+  | {
+      type: 'select-workspace';
+      name: string;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      callback: (extension: JestExt, ...args: any[]) => any;
+    }
+  | {
+      type: 'active-text-editor' | 'active-text-editor-workspace';
+      name: string;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      callback: (extension: JestExt, textEditor: vscode.TextEditor, ...args: any[]) => any;
+    };
+type CommandType = RegisterCommand['type'];
+const CommandPrefix: Record<CommandType, string> = {
+  'all-workspaces': `${extensionName}`,
+  'select-workspace': `${extensionName}.workspace`,
+  'active-text-editor': `${extensionName}.editor`,
+  'active-text-editor-workspace': `${extensionName}.editor.workspace`,
+};
 export class ExtensionManager {
   debugCodeLensProvider: DebugCodeLensProvider;
   debugConfigurationProvider: DebugConfigurationProvider;
@@ -81,48 +83,16 @@ export class ExtensionManager {
     if (!this.shouldStart(workspaceFolder.name)) {
       return;
     }
-    const pluginSettings = getExtensionResourceSettings(workspaceFolder.uri);
-    const [jestCommandLine, pathToConfig] = getJestCommandSettings(pluginSettings);
 
-    const currentJestVersion = 20;
-    const debugMode = pluginSettings.debugMode;
-    const instanceSettings = {
-      multirootEnv:
-        (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 1) ||
-        false,
-    };
-    const jestWorkspace = new ProjectWorkspace(
-      pluginSettings.rootPath,
-      jestCommandLine,
-      pathToConfig,
-      currentJestVersion,
-      workspaceFolder.name,
-      undefined,
-      debugMode
+    const jestExt = new JestExt(
+      this.context,
+      workspaceFolder,
+      this.debugCodeLensProvider,
+      this.debugConfigurationProvider,
+      this.coverageCodeLensProvider
     );
-
-    // Create our own console
-    const channel = vscode.window.createOutputChannel(`Jest (${workspaceFolder.name})`);
-
-    const failDiagnostics = vscode.languages.createDiagnosticCollection(
-      `Jest (${workspaceFolder.name})`
-    );
-
-    this.extByWorkspace.set(
-      workspaceFolder.name,
-      new JestExt(
-        this.context,
-        workspaceFolder,
-        jestWorkspace,
-        channel,
-        pluginSettings,
-        this.debugCodeLensProvider,
-        this.debugConfigurationProvider,
-        failDiagnostics,
-        instanceSettings,
-        this.coverageCodeLensProvider
-      )
-    );
+    this.extByWorkspace.set(workspaceFolder.name, jestExt);
+    jestExt.startSession();
   }
   registerAll(): void {
     vscode.workspace.workspaceFolders?.forEach(this.register, this);
@@ -164,7 +134,7 @@ export class ExtensionManager {
       return this.getByName(workspace.name);
     }
   };
-  async get(): Promise<JestExt | undefined> {
+  async selectExtension(): Promise<JestExt | undefined> {
     const workspace =
       vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length <= 1
         ? vscode.workspace.workspaceFolders[0]
@@ -177,28 +147,61 @@ export class ExtensionManager {
       throw new Error(`No Jest instance in ${workspace.name} workspace`);
     }
   }
-  registerCommand(
-    command: string,
-    callback: (extension: JestExt, ...args: unknown[]) => unknown,
-    thisArg?: unknown
-  ): vscode.Disposable {
-    return vscode.commands.registerCommand(command, async (...args) => {
-      const extension = await this.get();
-      if (extension) {
-        callback.call(thisArg, extension, ...args);
+
+  /**
+   * register commands in the context of workspaces
+   * @param command
+   * @param callback
+   * @param thisArg
+   */
+  registerCommand(command: RegisterCommand, thisArg?: unknown): vscode.Disposable {
+    const commandName = `${CommandPrefix[command.type]}.${command.name}`;
+    switch (command.type) {
+      case 'all-workspaces': {
+        return vscode.commands.registerCommand(commandName, async (...args) => {
+          vscode.workspace.workspaceFolders?.forEach((ws) => {
+            const extension = this.getByName(ws.name);
+            if (extension) {
+              command.callback.call(thisArg, extension, ...args);
+            }
+          });
+        });
       }
-    });
+      case 'select-workspace': {
+        return vscode.commands.registerCommand(commandName, async (...args) => {
+          const extension = await this.selectExtension();
+          if (extension) {
+            command.callback.call(thisArg, extension, ...args);
+          }
+        });
+      }
+      case 'active-text-editor':
+      case 'active-text-editor-workspace': {
+        return vscode.commands.registerTextEditorCommand(
+          commandName,
+          (editor: vscode.TextEditor, _edit, ...args: unknown[]) => {
+            const workspace = vscode.workspace.getWorkspaceFolder(editor.document.uri);
+            if (!workspace) {
+              return;
+            }
+            const extension = this.getByName(workspace.name);
+            if (extension) {
+              command.callback.call(thisArg, extension, editor, ...args);
+            }
+          }
+        );
+      }
+    }
   }
+
   onDidChangeConfiguration(e: vscode.ConfigurationChangeEvent): void {
     if (e.affectsConfiguration('jest')) {
       this.applySettings(getExtensionWindowSettings());
-      this.registerAll();
     }
     vscode.workspace.workspaceFolders?.forEach((workspaceFolder) => {
       const jestExt = this.getByName(workspaceFolder.name);
       if (jestExt && e.affectsConfiguration('jest', workspaceFolder.uri)) {
-        const updatedSettings = getExtensionResourceSettings(workspaceFolder.uri);
-        jestExt.triggerUpdateSettings(updatedSettings);
+        jestExt.triggerUpdateSettings();
       }
     });
   }
@@ -225,6 +228,33 @@ export class ExtensionManager {
     const ext = this.getByDocUri(event.document.uri);
     if (ext) {
       ext.onDidChangeTextDocument(event);
+    }
+  }
+  private onFilesChange(files: readonly vscode.Uri[], handler: (ext: JestExt) => void) {
+    const exts = files.map((f) => this.getByDocUri(f)).filter((ext) => ext != null) as JestExt[];
+    const set = new Set<JestExt>(exts);
+    set.forEach(handler);
+  }
+
+  onDidCreateFiles(event: vscode.FileCreateEvent): void {
+    this.onFilesChange(event.files, (ext) => ext.onDidCreateFiles(event));
+  }
+  onDidDeleteFiles(event: vscode.FileDeleteEvent): void {
+    this.onFilesChange(event.files, (ext) => ext.onDidDeleteFiles(event));
+  }
+  onDidRenameFiles(event: vscode.FileRenameEvent): void {
+    const files = event.files.reduce((list, f) => {
+      list.push(f.newUri, f.oldUri);
+      return list;
+    }, [] as vscode.Uri[]);
+    this.onFilesChange(files, (ext) => ext.onDidRenameFiles(event));
+  }
+  activate(): void {
+    if (vscode.window.activeTextEditor?.document.uri) {
+      const ext = this.getByDocUri(vscode.window.activeTextEditor.document.uri);
+      if (ext) {
+        ext.onDidChangeActiveTextEditor(vscode.window.activeTextEditor);
+      }
     }
   }
 }
