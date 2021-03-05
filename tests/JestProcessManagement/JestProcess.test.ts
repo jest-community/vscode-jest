@@ -133,16 +133,16 @@ describe('JestProcess', () => {
     );
 
     it.each`
-      type                 | extraProperty                                                    | startArgs         | includeReporter
-      ${'all-tests'}       | ${undefined}                                                     | ${[false, false]} | ${true}
-      ${'watch-tests'}     | ${undefined}                                                     | ${[true, false]}  | ${true}
-      ${'watch-all-tests'} | ${undefined}                                                     | ${[true, true]}   | ${true}
-      ${'by-file'}         | ${{ testFileNamePattern: '"abc def"' }}                          | ${[false, false]} | ${true}
-      ${'by-file-test'}    | ${{ testFileNamePattern: '"abc def"', testNamePattern: 'test' }} | ${[false, false]} | ${true}
-      ${'not-test'}        | ${{ args: ['--listTests'] }}                                     | ${[false, false]} | ${false}
+      type                 | extraProperty                                                    | startArgs         | includeReporter | extraRunnerOptions
+      ${'all-tests'}       | ${undefined}                                                     | ${[false, false]} | ${true}         | ${undefined}
+      ${'watch-tests'}     | ${undefined}                                                     | ${[true, false]}  | ${true}         | ${undefined}
+      ${'watch-all-tests'} | ${undefined}                                                     | ${[true, true]}   | ${true}         | ${undefined}
+      ${'by-file'}         | ${{ testFileNamePattern: '"abc def"' }}                          | ${[false, false]} | ${true}         | ${undefined}
+      ${'by-file-test'}    | ${{ testFileNamePattern: '"abc def"', testNamePattern: 'test' }} | ${[false, false]} | ${true}         | ${undefined}
+      ${'not-test'}        | ${{ args: ['--listTests'] }}                                     | ${[false, false]} | ${false}        | ${{ args: { args: ['--listTests'], replace: true } }}
     `(
       'supports jest process request: $type',
-      async ({ type, extraProperty, startArgs, includeReporter }) => {
+      async ({ type, extraProperty, startArgs, includeReporter, extraRunnerOptions }) => {
         expect.hasAssertions();
         const request = mockRequest(type, extraProperty);
         jestProcess = new JestProcess(extContext, request);
@@ -156,7 +156,7 @@ describe('JestProcess', () => {
         } else {
           expect(options.reporters).toBeUndefined();
         }
-        expect(options).toEqual(expect.objectContaining(extraProperty ?? {}));
+        expect(options).toEqual(expect.objectContaining(extraRunnerOptions ?? extraProperty ?? {}));
         expect(mockRunner.start).toBeCalledWith(...startArgs);
         closeRunner();
         await p;
@@ -177,9 +177,9 @@ describe('JestProcess', () => {
       jestProcess.start();
       const [, options] = RunnerClassMock.mock.calls[0];
       if (expectUpdate) {
-        expect(options.extraArgs).toContain('--updateSnapshot');
+        expect(options.args.args).toContain('--updateSnapshot');
       } else {
-        expect(options.extraArgs).toBeUndefined();
+        expect(options.args).toBeUndefined();
       }
     });
     it('starting on a running process does nothing but returns the same promise', async () => {
