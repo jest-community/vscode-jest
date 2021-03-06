@@ -69,7 +69,8 @@
           "description": "Automatically start Jest for this project",
           "type": "boolean",
           "default": true,
-          "scope": "resource"
+          "scope": "resource",
+          "markdownDeprecationMessage": "**Deprecated**: please use `#jest.autoRun#` instead."
         },
         "jest.jestCommandLine": {
           "description": "The command line to start jest tests. It should be the same command line users run jest tests from a terminal/shell, with ability to append extra arguments (by the extension at runtime)",
@@ -100,7 +101,8 @@
           "description": "Whether errors should be reported inline on a file",
           "type": "boolean",
           "default": false,
-          "scope": "resource"
+          "scope": "resource",
+          "markdownDeprecationMessage": "**Deprecated**: in favor of vscode hovering message"
         },
         "jest.enableSnapshotUpdateMessages": {
           "description": "Whether snapshot update messages should show",
@@ -112,7 +114,8 @@
           "description": "Run all tests before starting Jest in watch mode",
           "type": "boolean",
           "default": true,
-          "scope": "resource"
+          "scope": "resource",
+          "markdownDeprecationMessage": "**Deprecated**: in favor of `#jest.autoRun#`"
         },
         "jest.showCoverageOnLoad": {
           "description": "Show code coverage when extension starts (if collected)",
@@ -131,10 +134,11 @@
           "scope": "resource"
         },
         "jest.coverageColors": {
-          "description": "Coverage indicator color override",
+          "markdownDescription": "Coverage indicator color override. See [Coverage Colors](https://github.com/jest-community/vscode-jest/blob/master/README.md#coverageColors) for details and examples",
           "type": "object",
           "default": null,
           "scope": "resource"
+          
         },
         "jest.enableCodeLens": {
           "description": "Whether codelens for debugging should show",
@@ -186,7 +190,7 @@
           "scope": "window"
         },
         "jest.autoRun": {
-          "markdownDescription": "Control when jest should run (changed) tests. For example:`\"off\"` for full manual control; `{\"watch\": true, \"onStartup\":[\"all-tests\"]}` matches the previous jest watch mode;<br /> `{\"watch\": false, \"onSave\": \"test-file\"]}` will trigger test run only for the changed test-file upon saving... See [AutoRun](https://github.com/jest-community/vscode-jest/blob/master/README.md#AutoRun) for more details",
+          "markdownDescription": "Control when jest should run (changed) tests. It supports multiple models, such as fully automated, fully manual and onSave... See [AutoRun](https://github.com/jest-community/vscode-jest/blob/master/README.md#how-to-trigger-the-test-run) for details and examples",
           "type": "object",
           "default": null,
           "scope": "resource"
@@ -194,6 +198,18 @@
       }
     },
     "commands": [
+      {
+        "command": "io.orta.jest.start",
+        "title": "Jest: Start All Runners"
+      },
+      {
+        "command": "io.orta.jest.stop",
+        "title": "Jest: Stop All Runners"
+      },
+      {
+        "command": "io.orta.jest.toggle-coverage",
+        "title": "Jest: Toggle Coverage"
+      },
       {
         "command": "io.orta.jest.workspace.start",
         "title": "Jest: Start Runner (Select Workspace)"
@@ -213,18 +229,6 @@
       {
         "command": "io.orta.jest.run-all-tests",
         "title": "Jest: Run All Tests"
-      },
-      {
-        "command": "io.orta.jest.start",
-        "title": "Jest: Start All Runners"
-      },
-      {
-        "command": "io.orta.jest.stop",
-        "title": "Jest: Stop All Runners"
-      },
-      {
-        "command": "io.orta.jest.toggle-coverage",
-        "title": "Jest: Toggle Coverage"
       },
       {
         "command": "io.orta.jest.editor.workspace.run-all-tests",

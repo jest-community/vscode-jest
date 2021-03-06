@@ -22,7 +22,7 @@ const autoRunMode = (autoRun: JestExtAutoRunConfig): AutoRunMode => {
   if (autoRun.watch === true) {
     return 'auto-run-watch';
   }
-  if (autoRun.onSave === 'any-file') {
+  if (autoRun.onSave === 'test-src-file') {
     return 'auto-run-on-save';
   }
   if (autoRun.onSave === 'test-file') {

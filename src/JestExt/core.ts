@@ -422,7 +422,7 @@ export class JestExt {
     }
     if (
       this.extContext.autoRun.onSave &&
-      (this.extContext.autoRun.onSave === 'any-file' ||
+      (this.extContext.autoRun.onSave === 'test-src-file' ||
         !this.testFiles ||
         this.testFiles.includes(document.fileName))
     ) {

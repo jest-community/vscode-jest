@@ -508,16 +508,16 @@ describe('JestExt', () => {
     });
     describe('should handle onSave run', () => {
       describe.each`
-        runConfig                                | languageId      | fileName    | withTestFiles     | withoutTestFiles
-        ${'off'}                                 | ${'javascript'} | ${'t1'}     | ${[false, true]}  | ${[false, true]}
-        ${{ watch: true }}                       | ${'javascript'} | ${'t1'}     | ${[false, false]} | ${[false, false]}
-        ${{ watch: false }}                      | ${'javascript'} | ${'t1'}     | ${[false, true]}  | ${[false, true]}
-        ${{ watch: false, onSave: 'any-file' }}  | ${'javascript'} | ${'t3'}     | ${[true, false]}  | ${[true, false]}
-        ${{ watch: false, onSave: 'any-file' }}  | ${'javascript'} | ${'t1'}     | ${[true, false]}  | ${[true, false]}
-        ${{ watch: false, onSave: 'any-file' }}  | ${'json'}       | ${'t.json'} | ${[false, false]} | ${[false, false]}
-        ${{ watch: false, onSave: 'test-file' }} | ${'javascript'} | ${'t3'}     | ${[false, true]}  | ${[true, false]}
-        ${{ watch: false, onSave: 'test-file' }} | ${'javascript'} | ${'t1'}     | ${[true, false]}  | ${[true, false]}
-        ${{ watch: false, onSave: 'test-file' }} | ${'json'}       | ${'t1'}     | ${[false, false]} | ${[false, false]}
+        runConfig                                    | languageId      | fileName    | withTestFiles     | withoutTestFiles
+        ${'off'}                                     | ${'javascript'} | ${'t1'}     | ${[false, true]}  | ${[false, true]}
+        ${{ watch: true }}                           | ${'javascript'} | ${'t1'}     | ${[false, false]} | ${[false, false]}
+        ${{ watch: false }}                          | ${'javascript'} | ${'t1'}     | ${[false, true]}  | ${[false, true]}
+        ${{ watch: false, onSave: 'test-src-file' }} | ${'javascript'} | ${'t3'}     | ${[true, false]}  | ${[true, false]}
+        ${{ watch: false, onSave: 'test-src-file' }} | ${'javascript'} | ${'t1'}     | ${[true, false]}  | ${[true, false]}
+        ${{ watch: false, onSave: 'test-src-file' }} | ${'json'}       | ${'t.json'} | ${[false, false]} | ${[false, false]}
+        ${{ watch: false, onSave: 'test-file' }}     | ${'javascript'} | ${'t3'}     | ${[false, true]}  | ${[true, false]}
+        ${{ watch: false, onSave: 'test-file' }}     | ${'javascript'} | ${'t1'}     | ${[true, false]}  | ${[true, false]}
+        ${{ watch: false, onSave: 'test-file' }}     | ${'json'}       | ${'t1'}     | ${[false, false]} | ${[false, false]}
       `(
         'with autoRun: $runConfig $languageId $fileName',
         ({ runConfig: autoRun, languageId, fileName, withTestFiles, withoutTestFiles }) => {
@@ -622,14 +622,14 @@ describe('JestExt', () => {
       expect(updateCurrentDiagnostics).toBeCalled();
     });
     it.each`
-      autoRun                                             | isInteractive
-      ${'off'}                                            | ${true}
-      ${{ watch: true }}                                  | ${false}
-      ${{ watch: false }}                                 | ${true}
-      ${{ onStartup: ['all-tests'] }}                     | ${true}
-      ${{ onSave: 'test-file' }}                          | ${true}
-      ${{ onSave: 'any-file' }}                           | ${true}
-      ${{ onSave: 'any-file', onStartup: ['all-tests'] }} | ${true}
+      autoRun                                                  | isInteractive
+      ${'off'}                                                 | ${true}
+      ${{ watch: true }}                                       | ${false}
+      ${{ watch: false }}                                      | ${true}
+      ${{ onStartup: ['all-tests'] }}                          | ${true}
+      ${{ onSave: 'test-file' }}                               | ${true}
+      ${{ onSave: 'test-src-file' }}                           | ${true}
+      ${{ onSave: 'test-src-file', onStartup: ['all-tests'] }} | ${true}
     `('should update vscode editor context', ({ autoRun, isInteractive }) => {
       const sut = newJestExt({ settings: { autoRun } });
       const editor = mockEditor('a');

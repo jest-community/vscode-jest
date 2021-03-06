@@ -10,7 +10,7 @@ export type JestTestProcessType =
   | 'not-test';
 
 export type OnStartupType = Extract<JestTestProcessType, 'all-tests'>[];
-export type OnSaveFileType = 'test-file' | 'any-file';
+export type OnSaveFileType = 'test-file' | 'test-src-file';
 export type JestExtAutoRunConfig =
   | 'off'
   | { watch: true; onStartup?: OnStartupType }

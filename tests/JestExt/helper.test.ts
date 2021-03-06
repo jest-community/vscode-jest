@@ -26,13 +26,13 @@ describe('createJestExtContext', () => {
       expect(autoRun.config).toEqual(expectedConfig);
     });
     it.each`
-      autoRunConfig                            | mode
-      ${'off'}                                 | ${'auto-run-off'}
-      ${{ watch: true }}                       | ${'auto-run-watch'}
-      ${{ watch: false }}                      | ${'auto-run-off'}
-      ${{ watch: false, onSave: undefined }}   | ${'auto-run-off'}
-      ${{ watch: false, onSave: 'test-file' }} | ${'auto-run-on-save-test'}
-      ${{ watch: false, onSave: 'any-file' }}  | ${'auto-run-on-save'}
+      autoRunConfig                                | mode
+      ${'off'}                                     | ${'auto-run-off'}
+      ${{ watch: true }}                           | ${'auto-run-watch'}
+      ${{ watch: false }}                          | ${'auto-run-off'}
+      ${{ watch: false, onSave: undefined }}       | ${'auto-run-off'}
+      ${{ watch: false, onSave: 'test-file' }}     | ${'auto-run-on-save-test'}
+      ${{ watch: false, onSave: 'test-src-file' }} | ${'auto-run-on-save'}
     `('$autoRunConfig => $mode', ({ autoRunConfig, mode }) => {
       const settings: any = { autoRun: autoRunConfig };
       const { autoRun } = createJestExtContext(workspaceFolder, settings);
@@ -45,7 +45,7 @@ describe('createJestExtContext', () => {
       ${{ watch: true, onStartup: ['all-tests'] }}                       | ${{ isOff: false, isWatch: true, onStartup: ['all-tests'] }}
       ${{ watch: false, onStartup: ['all-tests'] }}                      | ${{ isOff: false, isWatch: false, onStartup: ['all-tests'] }}
       ${{ watch: false, onStartup: ['all-tests'], onSave: 'test-file' }} | ${{ isOff: false, isWatch: false, onStartup: ['all-tests'], onSave: 'test-file' }}
-      ${{ watch: false, onSave: 'any-file' }}                            | ${{ isOff: false, isWatch: false, onSave: 'any-file' }}
+      ${{ watch: false, onSave: 'test-src-file' }}                       | ${{ isOff: false, isWatch: false, onSave: 'test-src-file' }}
     `('isOff', ({ autoRunConfig, accessor }) => {
       const settings: any = { autoRun: autoRunConfig };
       const { autoRun } = createJestExtContext(workspaceFolder, settings);
