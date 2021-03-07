@@ -138,7 +138,6 @@
           "type": "object",
           "default": null,
           "scope": "resource"
-          
         },
         "jest.enableCodeLens": {
           "description": "Whether codelens for debugging should show",
