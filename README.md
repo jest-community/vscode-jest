@@ -66,6 +66,7 @@ A comprehensive experience when using [Facebook's Jest](https://github.com/faceb
 * Track and shows overall workspace/project test stats
 
 ## How To ...
+Most features should be pretty straight forward without much configuration. But in case you want to change the default behavior or encountered some difficulty with the extension, please checkout these common how-to guides. 
 ### How to get it?
 
 Simply open [Jest - Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=Orta.vscode-jest) and click "Install".
@@ -81,7 +82,7 @@ Out of the box, this extension should work for most simple/standard jest and rea
 
  but you can easily customize it with various [settings](#customization). 
 
-Check out the [customization settings](#customization) below should you encounter any issue or prefer different behaviors. Please do not hesitate to [ask](https://github.com/jest-community/vscode-jest/issues), we have an active community that you might find helpful.  
+Check out the [customization settings](#customization) below should you encounter any issue or prefer different behaviors. 
 
 ### How to start Jest? 
 
@@ -98,18 +99,12 @@ You can also customize many aspects of how the extension should run jest tests f
 ### How to trigger the test run?
 This extension supports multiple execution models through setting [jest.autoRun](#settings-auto-run)
 #### fully automated 
-Basically running jest with `--watch` or `--watchAll`. The change is determined by a separate process [watchman](https://facebook.github.io/watchman/) behind the scene, which triggers related tests run for any source or test file changes. This is the default mode prior to v4. Example:
-```
-"jest.autoRun": {"watch": true}
-```
-will start the jest with the watch flag and leave all tests at "unknown" state until changes are detected.
-```
-"jest.autoRun": {"watch": true, "onStartup": ["all-tests"]}
-```
-will start running all tests upon project launch to update overall project test stats, followed by the jest watch for changes.
+No need to manually trigger any test run, all changes will be monitored and related tests will be run accordingly. It is basically running jest with `--watch` or `--watchAll`. This is the default mode prior to v4. Example:
+- `"jest.autoRun": {"watch": true}` => will start the jest with the watch flag and leave all tests at "unknown" state until changes are detected.
+- `"jest.autoRun": {"watch": true, "onStartup": ["all-tests"]}` => will start running all tests upon project launch to update overall project test stats, followed by the jest watch for changes.
 
 #### interactive mode
-This is introduced in v4, which added new [commands](#commands) and [menu](#menu) to run tests by-file or by-workspace on demand. 
+Allow users to control test run completely either through commands/menu manually or use vscode's onSave event to automate related test runs:
 - fully manual
   - there will be no automatic test run, users will trigger test run by either command or context-menu.
   - Example: `"jest.autoRun": "off"`
@@ -295,13 +290,18 @@ This extension contributes the following commands and can be accessed via [Comma
 |Jest: Run All Tests (Select Workspace)| run all tests for the selected workspace|interactive mode and multi-root workspace
 |Jest: Run All Tests in Current Workspace| run all tests for the current workspace based on the active editor| interactive
 |Jest: Toggle Coverage for Current Workspace| toggle coverage mode for the current workspace based on the active editor| interactive
-|Jest: Setup Extension| start the setup wizard|always
+|Jest: Setup Extension| start the setup wizard|always|
+
+One can assign keyboard shortcut to any of these commands, see [vscode Key Bindings](https://code.visualstudio.com/docs/getstarted/keybindings)
 
 ## Menu
-In inactive mode, text editor will show the following context-menu
-|menu|description|
-|---|---|
-|Jest: Run Related Tests| if in test file, run all tests in the file; if in source file, run all tests with dependency to the file|
+In interactive mode, user can trigger the following action from the text editor context-menu
+|menu|description|keyboard shortcut
+|---|---|---|
+|Jest: Run Related Tests| if in test file, run all tests in the file; if in source file, run all tests with dependency to the file|Cmd-t or Ctrl-t|
+
+Please see [vscode Key Bindings](https://code.visualstudio.com/docs/getstarted/keybindings) if you want to change the keyboard shortcut. 
+
 
 ## Troubleshooting
 Sorry you are having trouble with the extension. If your issue did not get resolved after checking out the [how-to](#how-to-) section and the tips below, feel free to [ask](https://github.com/jest-community/vscode-jest/issues) the community, chances are some one else had a similar experience and could help resolving it. 
@@ -322,7 +322,7 @@ Sorry you are having trouble with the extension. If your issue did not get resol
 
   If you see error about not able to find `jest` or some other jest related runtime error: if you can run jest from terminal then you can use the "Run Setup Wizard" button in the error panel to help resolving the configuration issue. There could be other causes, such as jest test root path is different from the project's, which can be fixed by setting `jest.rootPath`. Feel free to check out the [customization](#customization) section to manually adjust the extension if needed. 
 
-- **It seems to make my vscode sluggish or use lots of CPU**
+- **It seems to make my vscode sluggish**
   By default the extension will run all tests when it is launched followed by a jest watch process. If you have many resource extensive tests or source files that can trigger many tests when changed, this could be the reason. Check out [jest.autoRun](#autoRun) to see how you can change and control when and what tests should be run.
 
 - <a id='self-diagnosis'></a>**The extension is not behaving as expected, what is going on?** 
