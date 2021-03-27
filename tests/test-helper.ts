@@ -2,6 +2,9 @@
 import { Location, LocationRange, TestResult } from '../src/TestResults/TestResult';
 import { TestReconciliationStateType } from '../src/TestResults';
 import { ItBlock, TestAssertionStatus } from 'jest-editor-support';
+import { JestProcessRequest } from '../src/JestProcessManagement';
+import { JestTestProcessType } from '../src/Settings';
+import { AutoRunAccessor } from '../src/JestExt';
 
 export const EmptyLocation = {
   line: 0,
@@ -83,3 +86,59 @@ export const makeTestResult = (
   ...(range ? makePositionRange(range) : EmptyLocationRange),
   ...(override || {}),
 });
+
+export const mockProcessRequest = (
+  type: JestTestProcessType,
+  override?: Partial<JestProcessRequest>
+): any /*JestProcessRequest */ => {
+  return {
+    type,
+    schedule: { queue: 'blocking' },
+    listener: jest.fn(),
+    ...(override || {}),
+  };
+};
+
+export const mockProjectWorkspace = (...args: any[]): any => {
+  const [
+    rootPath,
+    jestCommandLine,
+    pathToConfig,
+    localJestMajorVersion,
+    outputFileSuffix,
+    collectCoverage,
+    debug,
+    nodeEnv,
+  ] = args;
+  return {
+    rootPath,
+    jestCommandLine,
+    pathToConfig,
+    localJestMajorVersion,
+    outputFileSuffix,
+    collectCoverage,
+    debug,
+    nodeEnv,
+  };
+};
+
+export const mockWworkspaceLogging = (): any => ({ create: () => jest.fn() });
+
+export const mockJestExtContext = (autoRun?: AutoRunAccessor): any => {
+  return {
+    workspace: jest.fn(),
+    runnerWorkspace: jest.fn(),
+    settings: jest.fn(),
+    loggingFactory: { create: jest.fn(() => jest.fn()) },
+    autoRun: autoRun ?? jest.fn(),
+  };
+};
+
+export const mockJestProcessContext = (): any => {
+  return {
+    ...mockJestExtContext(),
+    output: { appendLine: jest.fn(), clear: jest.fn() },
+    updateStatusBar: jest.fn(),
+    updateWithData: jest.fn(),
+  };
+};

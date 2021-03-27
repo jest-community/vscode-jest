@@ -4,11 +4,22 @@ Please add your own contribution below inside the Master section
 Bug-fixes within the same version aren't needed
 
 ## Master
-* added setup extension wizard - @connectdotz
-* update doc to give warning on potential incorrect coverage in watch mode - @connectdotz
-
+* added setup extension wizard - @connectdotz (#655)
+* update doc to give warning on potential incorrect coverage in watch mode - @connectdotz(#655)
+* Introducing a new interactive mode, in addition to the current "watch" mode, to run jest tests. Use the new `jest.autoRun` settings to control when and what tests should be run automatically, or not. - @connectdotz (#674) 
+* refactor jest process management to adopt queue-based model with promise-based process execution.  - @connectdotz (#674) 
+* enhance statusBar to display autoRun and workspace stats  - @connectdotz (#674)
+* added new commands, context menu, keybinding to better support interactive mode.  - @connectdotz (#674)
+* added ability to update snapshot without restarting jest.  - @connectdotz (#674)
+* added ability to get jest metadata such as all test files.  - @connectdotz (#674)
+* change editor decorators to reflect when tests are changed but tests have not been run (which might be common in the new interactive mode)  - @connectdotz (#674)
 -->
 
+### 4.0.0-alpha.4
+* update doc to give warning on potential incorrect coverage in watch mode - @connectdotz
+* fix unknown location bug such as for jest.todo tests (#657) - @connectdotz
+* fix no debug codeLens if autoEnable is false (#658) - @connectdotz
+* turn typescript strict mode on, upgrade tooling and clean up the conflict - @connectdotz
 ### 4.0.0-alpha.3
 * fully support parameterized tests in matching, diagnosis and debugging - @connectdotz
 * optimization: remove stop/start the internal jest tests process during debug - @connectdotz

@@ -7,12 +7,12 @@ import {
 } from 'istanbul-lib-coverage';
 
 export class CoverageMapProvider {
-  private mapStore: MapStore;
+  private mapStore!: MapStore;
 
   /**
    * Transformed coverage map
    */
-  private _map: CoverageMap;
+  private _map!: CoverageMap;
 
   constructor() {
     this.reset();

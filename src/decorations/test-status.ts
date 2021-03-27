@@ -59,11 +59,15 @@ export class TestStatus {
 
     if (overviewRulerColor) {
       options['overviewRulerColor'] = overviewRulerColor;
-      options['dark']['overviewRulerColor'] = overviewRulerColor;
+      if (options['dark']) {
+        options['dark']['overviewRulerColor'] = overviewRulerColor;
+      }
     }
 
     if (overviewRulerColorLite) {
-      options['light']['overviewRulerColor'] = overviewRulerColorLite;
+      if (options['light']) {
+        options['light']['overviewRulerColor'] = overviewRulerColorLite;
+      }
     }
 
     return window.createTextEditorDecorationType(options);

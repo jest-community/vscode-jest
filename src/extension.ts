@@ -5,13 +5,11 @@ import { statusBar } from './StatusBar';
 import { ExtensionManager, getExtensionWindowSettings } from './extensionManager';
 import { registerSnapshotCodeLens, registerSnapshotPreview } from './SnapshotCodeLens';
 import { startWizard, StartWizardOptions } from './setup-wizard';
-import { DebugTestIdentifier } from './DebugCodeLens';
+import { JestExt } from './JestExt';
 
 let extensionManager: ExtensionManager;
 
-export function activate(context: vscode.ExtensionContext): void {
-  extensionManager = new ExtensionManager(context);
-
+const addSubscriptions = (context: vscode.ExtensionContext): void => {
   const languages = [
     { language: 'javascript' },
     { language: 'javascriptreact' },
@@ -19,39 +17,85 @@ export function activate(context: vscode.ExtensionContext): void {
     { language: 'typescriptreact' },
   ];
 
+  // command function
+  const startSession = (extension: JestExt) => {
+    extension.startSession();
+  };
+  const stopSession = (extension: JestExt) => extension.stopSession();
+  const toggleCoverage = (extension: JestExt) => extension.toggleCoverageOverlay();
+  const runAllTests = (extension: JestExt) => extension.runAllTests();
+
   context.subscriptions.push(
     ...statusBar.register((folder: string) => extensionManager.getByName(folder)),
 
-    extensionManager.registerCommand(`${extensionName}.start`, (extension) => {
-      vscode.window.showInformationMessage('Started Jest, press escape to hide this message.');
-      extension.startProcess();
+    extensionManager.registerCommand({
+      type: 'all-workspaces',
+      name: 'start',
+      callback: startSession,
     }),
-    extensionManager.registerCommand(`${extensionName}.stop`, (extension) =>
-      extension.stopProcess()
-    ),
-    extensionManager.registerCommand(`${extensionName}.restart`, (extension) =>
-      extension.restartProcess()
-    ),
-    // dublicate of "show-output" maybe remove?
-    extensionManager.registerCommand(`${extensionName}.show-channel`, (extension) =>
-      extension.channel.show()
-    ),
-    extensionManager.registerCommand(`${extensionName}.coverage.toggle`, (extension) =>
-      extension.toggleCoverageOverlay()
-    ),
+    extensionManager.registerCommand({
+      type: 'select-workspace',
+      name: 'start',
+      callback: startSession,
+    }),
+    extensionManager.registerCommand({
+      type: 'all-workspaces',
+      name: 'stop',
+      callback: stopSession,
+    }),
+    extensionManager.registerCommand({
+      type: 'select-workspace',
+      name: 'stop',
+      callback: stopSession,
+    }),
+    extensionManager.registerCommand({
+      type: 'all-workspaces',
+      name: 'toggle-coverage',
+      callback: toggleCoverage,
+    }),
+    extensionManager.registerCommand({
+      type: 'select-workspace',
+      name: 'toggle-coverage',
+      callback: toggleCoverage,
+    }),
+    extensionManager.registerCommand({
+      type: 'active-text-editor-workspace',
+      name: 'toggle-coverage',
+      callback: toggleCoverage,
+    }),
+    extensionManager.registerCommand({
+      type: 'all-workspaces',
+      name: 'run-all-tests',
+      callback: runAllTests,
+    }),
+    extensionManager.registerCommand({
+      type: 'select-workspace',
+      name: 'run-all-tests',
+      callback: runAllTests,
+    }),
+    extensionManager.registerCommand({
+      type: 'active-text-editor-workspace',
+      name: 'run-all-tests',
+      callback: (extension) => extension.runAllTests(),
+    }),
+    extensionManager.registerCommand({
+      type: 'active-text-editor',
+      name: 'run-all-tests',
+      callback: (extension, editor) => extension.runAllTests(editor),
+    }),
+    extensionManager.registerCommand({
+      type: 'active-text-editor',
+      name: 'debug-tests',
+      callback: (extension, editor, ...identifiers) => {
+        extension.debugTests(editor.document, ...identifiers);
+      },
+    }),
     vscode.commands.registerCommand(
       `${extensionName}.setup-extension`,
       (options: StartWizardOptions = { verbose: true }) =>
         startWizard(extensionManager.debugConfigurationProvider, options)
     ),
-    vscode.commands.registerCommand(
-      `${extensionName}.run-test`,
-      (document: vscode.TextDocument, filename: string, ...identifiers: DebugTestIdentifier[]) => {
-        const workspace = vscode.workspace.getWorkspaceFolder(document.uri);
-        extensionManager.getByName(workspace.name).runTest(workspace, filename, ...identifiers);
-      }
-    ),
-    ...registerSnapshotCodeLens(getExtensionWindowSettings().enableSnapshotPreviews),
+    ...registerSnapshotCodeLens(getExtensionWindowSettings()?.enableSnapshotPreviews ?? false),
     ...registerSnapshotPreview(),
     vscode.languages.registerCodeLensProvider(languages, extensionManager.coverageCodeLensProvider),
     vscode.languages.registerCodeLensProvider(languages, extensionManager.debugCodeLensProvider),
@@ -87,10 +131,18 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.workspace.onDidChangeTextDocument(
       extensionManager.onDidChangeTextDocument,
       extensionManager
-    )
+    ),
+    vscode.workspace.onDidCreateFiles(extensionManager.onDidCreateFiles, extensionManager),
+    vscode.workspace.onDidRenameFiles(extensionManager.onDidRenameFiles, extensionManager),
+    vscode.workspace.onDidDeleteFiles(extensionManager.onDidDeleteFiles, extensionManager)
   );
-}
+};
 
+export function activate(context: vscode.ExtensionContext): void {
+  extensionManager = new ExtensionManager(context);
+  addSubscriptions(context);
+  extensionManager.activate();
+}
 export function deactivate(): void {
   extensionManager.unregisterAll();
 }

@@ -17,11 +17,11 @@ export abstract class AbstractFormatter {
     this.colors = colors;
   }
 
-  abstract format(editor: vscode.TextEditor);
+  abstract format(editor: vscode.TextEditor): void;
   /** remove decoractors for the given editor */
-  abstract clear(editor: vscode.TextEditor);
+  abstract clear(editor: vscode.TextEditor): void;
   /** dispose decoractors for all editors */
-  abstract dispose();
+  abstract dispose(): void;
 
   /**
    * returns rgba color string similar to istanbul html report color scheme
@@ -103,7 +103,7 @@ export abstract class AbstractFormatter {
 
       const range = new vscode.Range(zeroBasedLineNumber, 0, zeroBasedLineNumber, 0);
       if (ranges[status] != null) {
-        ranges[status].push(range);
+        ranges[status]!.push(range);
       } else {
         ranges[status] = [range];
       }

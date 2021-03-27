@@ -2,11 +2,30 @@
  * internal classes used by `match-by-context`
  */
 
-export interface BaseNodeType {
+export interface PositionNode {
   zeroBasedLine: number;
+}
+export interface BaseNodeType extends PositionNode {
   name: string;
   merge: (another: this) => boolean;
 }
+
+export const hasUnknownLocation = (node: PositionNode): boolean => node.zeroBasedLine < 0;
+
+const sortByLine = (n1: PositionNode, n2: PositionNode): number =>
+  n1.zeroBasedLine - n2.zeroBasedLine;
+
+// group nodes after sort
+const groupNodes = <N extends BaseNodeType>(list: N[], node: N): N[] => {
+  if (list.length <= 0) {
+    return [node];
+  }
+  // if not able to merge with previous node, i.e . can not group, add it to the list
+  if (!list[list.length - 1].merge(node)) {
+    list.push(node);
+  }
+  return list;
+};
 
 /* interface implementation */
 export class DataNode<T> implements BaseNodeType {
@@ -21,7 +40,12 @@ export class DataNode<T> implements BaseNodeType {
   }
 
   merge(another: DataNode<T>): boolean {
-    if (another.zeroBasedLine !== this.zeroBasedLine) {
+    //can not merge if the location is unknown
+    if (
+      hasUnknownLocation(this) ||
+      hasUnknownLocation(another) ||
+      another.zeroBasedLine !== this.zeroBasedLine
+    ) {
       return false;
     }
     this.data.push(...another.data);
@@ -35,12 +59,6 @@ export class DataNode<T> implements BaseNodeType {
     }
     return this.data[0];
   }
-  /** return the first element, if no element, returns undefined */
-  first(): T | undefined {
-    if (this.data.length > 0) {
-      return this.data[0];
-    }
-  }
 }
 
 export type ContextType = 'container' | 'data';
@@ -50,6 +68,10 @@ export class ContainerNode<T> implements BaseNodeType {
   public zeroBasedLine: number;
   public name: string;
   public group?: ContainerNode<T>[];
+  // childContainers without location info
+  public invalidChildContainers?: ContainerNode<T>[] = [];
+  // childData without location info
+  public invalidChildData?: DataNode<T>[];
 
   constructor(name: string) {
     this.name = name;
@@ -61,11 +83,24 @@ export class ContainerNode<T> implements BaseNodeType {
   }
 
   public addDataNode(dataNode: DataNode<T>): void {
-    this.childData.push(dataNode);
+    if (hasUnknownLocation(dataNode)) {
+      if (this.invalidChildData) {
+        this.invalidChildData.push(dataNode);
+      } else {
+        this.invalidChildData = [dataNode];
+      }
+    } else {
+      this.childData.push(dataNode);
+    }
   }
 
   merge(another: ContainerNode<T>): boolean {
-    if (another.zeroBasedLine !== this.zeroBasedLine) {
+    // can not merge if location is unknown
+    if (
+      hasUnknownLocation(this) ||
+      hasUnknownLocation(another) ||
+      another.zeroBasedLine !== this.zeroBasedLine
+    ) {
       return false;
     }
     if (!this.group) {
@@ -95,49 +130,54 @@ export class ContainerNode<T> implements BaseNodeType {
    * @param grouping if true, will try to merge child-data with the same line
    */
   public sort(grouping = false): void {
-    const sortByLine = (n1: BaseNodeType, n2: BaseNodeType): number =>
-      n1.zeroBasedLine - n2.zeroBasedLine;
-    // group nodes after sort
-    const groupNodes = <N extends BaseNodeType>(list: N[], node: N): N[] => {
-      if (list.length <= 0) {
-        return [node];
-      }
-      // if not able to merge with previous node, i.e . can not group, add it to the list
-      if (!list[list.length - 1].merge(node)) {
-        list.push(node);
-      }
-      return list;
-    };
-
     this.childData.sort(sortByLine);
     if (grouping) {
-      this.childData = this.childData.reduce(groupNodes, []);
+      this.childData = this.childData.reduce<DataNode<T>[]>(groupNodes, []);
     }
 
-    // recursive to sort childContainers, which will update its lineNumber and then sort the list itself
-    this.childContainers.forEach((c) => c.sort(grouping));
+    // recursive to sort childContainers, which will update its lineNumber, remove the invalid container then then sort the list itself
+    const valid: ContainerNode<T>[] = [];
+    const invalid: ContainerNode<T>[] = [];
+    this.childContainers.forEach((c) => {
+      c.sort(grouping);
+      if (hasUnknownLocation(c)) {
+        invalid.push(c);
+      } else {
+        valid.push(c);
+      }
+    });
+    this.childContainers = valid;
+    this.invalidChildContainers = invalid.length > 0 ? invalid : undefined;
+
     this.childContainers.sort(sortByLine);
     if (grouping) {
-      this.childContainers = this.childContainers.reduce(groupNodes, []);
+      this.childContainers = this.childContainers.reduce<ContainerNode<T>[]>(groupNodes, []);
     }
 
-    // if container doesn't have valid line info, use the first child's
-    if (this.zeroBasedLine < 0) {
+    // if container doesn't have valid line info, use the first known-location child's
+    if (hasUnknownLocation(this)) {
       const topLines = [this.childData, this.childContainers]
         .filter((l) => l.length > 0)
         .map((l) => l[0].zeroBasedLine);
-      this.zeroBasedLine = Math.min(...topLines);
+      this.zeroBasedLine = topLines.length > 0 ? Math.min(...topLines) : -1;
     }
   }
   // use conditional type to narrow down exactly the type
-  public getChildren<C extends ContextType>(type: C): ChildNodeType<T, C>[] {
-    const children = type === 'container' ? this.childContainers : this.childData;
+
+  public getChildren<C extends ContextType>(type: C): ChildrenList<T, C> {
+    const valid = type === 'container' ? this.childContainers : this.childData;
+    const invalid = type === 'container' ? this.invalidChildContainers : this.invalidChildData;
     // has to cast explicitly due to the issue:
     // https://github.com/microsoft/TypeScript/issues/24929
-    return children as ChildNodeType<T, C>[];
+    return { valid, invalid } as ChildrenList<T, C>;
   }
 }
+
 export type NodeType<T> = ContainerNode<T> | DataNode<T>;
 export type ChildNodeType<T, C extends ContextType> = C extends 'container'
   ? ContainerNode<T>
   : DataNode<T>;
+export interface ChildrenList<T, C extends ContextType> {
+  valid: ChildNodeType<T, C>[];
+  invalid?: ChildNodeType<T, C>[];
+}

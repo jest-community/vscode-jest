@@ -52,7 +52,6 @@ import { DebugCodeLensProvider } from '../../src/DebugCodeLens/DebugCodeLensProv
 import { TestResultProvider, TestResult, TestReconciliationState } from '../../src/TestResults';
 import { DebugCodeLens } from '../../src/DebugCodeLens/DebugCodeLens';
 import { extensionName } from '../../src/appGlobals';
-import { basename } from 'path';
 import * as vscode from 'vscode';
 import { TestState } from '../../src/DebugCodeLens';
 import * as helper from '../test-helper';
@@ -217,15 +216,13 @@ describe('DebugCodeLensProvider', () => {
       });
     });
 
-    it('should create the CodeLens specifying the document filename', () => {
-      const expected = 'expected';
-      ((basename as unknown) as jest.Mock<{}>).mockReturnValueOnce(expected);
+    it('should create the CodeLens specifying the document', () => {
       const sut = new DebugCodeLensProvider(provideJestExt, allTestStates);
       getResults.mockReturnValueOnce(testResults);
       const actual = sut.provideCodeLenses(document, token);
 
       expect(actual).toHaveLength(1);
-      expect((actual[0] as DebugCodeLens).fileName).toBe(expected);
+      expect((actual[0] as DebugCodeLens).document).toBe(document);
     });
 
     it('should create the CodeLens specifying the test name', () => {
@@ -267,15 +264,14 @@ describe('DebugCodeLensProvider', () => {
       const sut = new DebugCodeLensProvider(provideJestExt, allTestStates);
       const document = {} as any;
       const range = {} as any;
-      const fileName = 'fileName';
       const testName = 'testName';
-      const codeLens = new DebugCodeLens(document, range, fileName, testName);
+      const codeLens = new DebugCodeLens(document, range, testName);
       const token = {} as any;
       sut.resolveCodeLens(codeLens, token);
 
       expect(codeLens.command).toEqual({
-        arguments: [document, fileName, testName],
-        command: `${extensionName}.run-test`,
+        arguments: [testName],
+        command: `${extensionName}.editor.debug-tests`,
         title: 'Debug',
       });
     });

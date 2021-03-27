@@ -3,7 +3,6 @@ import { TestIdentifier } from '../TestResults';
 
 export type DebugTestIdentifier = string | TestIdentifier;
 export class DebugCodeLens extends vscode.CodeLens {
-  readonly fileName: string;
   readonly testIds: DebugTestIdentifier[];
   readonly document: vscode.TextDocument;
 
@@ -19,12 +18,10 @@ export class DebugCodeLens extends vscode.CodeLens {
   constructor(
     document: vscode.TextDocument,
     range: vscode.Range,
-    fileName: string,
     ...testIds: DebugTestIdentifier[]
   ) {
     super(range);
     this.document = document;
-    this.fileName = fileName;
     this.testIds = testIds;
   }
 }

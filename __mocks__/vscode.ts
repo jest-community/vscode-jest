@@ -27,6 +27,9 @@ const workspace = {
   onDidChangeConfiguration: jest.fn(),
   onDidChangeTextDocument: jest.fn(),
   onDidChangeWorkspaceFolders: jest.fn(),
+  onDidCreateFiles: jest.fn(),
+  onDidDeleteFiles: jest.fn(),
+  onDidRenameFiles: jest.fn(),
 };
 
 const OverviewRulerLane = {
@@ -54,9 +57,10 @@ const debug = {
 const commands = {
   executeCommand: jest.fn(),
   registerCommand: jest.fn(),
+  registerTextEditorCommand: jest.fn(),
 };
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type,@typescript-eslint/no-empty-function
+// eslint-disable-next-line @typescript-eslint/no-empty-function
 const CodeLens = function CodeLens() {};
 
 const QuickInputButtons = {

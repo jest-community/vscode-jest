@@ -1,0 +1,8 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "strict": false,
+    "alwaysStrict": true,
+  },
+  "include": ["**/*.ts", "../custom.d.ts"]
+}

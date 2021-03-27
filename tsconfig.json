@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "alwaysStrict": true,
+    "strict": true,
     "module": "commonjs",
     "moduleResolution": "node",
     "noUnusedLocals": true,
@@ -20,5 +20,6 @@
       }
     ]
   },
-  "exclude": ["__mocks__", "node_modules"]
+  "include": ["**/*"],
+  "exclude": ["__mocks__", "node_modules", "tests"]
 }

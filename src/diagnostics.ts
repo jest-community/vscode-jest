@@ -51,11 +51,15 @@ export function updateCurrentDiagnostics(
         const line = r.lineNumberOfError || r.end.line;
         const textLine = editor.document.lineAt(line);
         const name = testIdString('display', r.identifier);
-        return createDiagnosticWithRange(r.shortMessage, textLine.range, name);
+        return createDiagnosticWithRange(
+          r.shortMessage || r.terseMessage || 'unknown errorr',
+          textLine.range,
+          name
+        );
       });
     list.push(...diagnostics);
     return list;
-  }, []);
+  }, [] as vscode.Diagnostic[]);
 
   collection.set(uri, allDiagnostics);
 }
@@ -76,12 +80,19 @@ export function updateDiagnostics(
   }
 
   function addTestsError(result: TestFileAssertionStatus, uri: vscode.Uri): void {
+    if (!result.assertions) {
+      return;
+    }
     const asserts = result.assertions.filter((a) => a.status === TestReconciliationState.KnownFail);
     collection.set(
       uri,
       asserts.map((assertion) => {
         const name = testIdString('display', assertion);
-        return createDiagnostic(assertion.shortMessage || assertion.message, assertion.line, name);
+        return createDiagnostic(
+          assertion.shortMessage || assertion.message,
+          assertion.line ?? -1,
+          name
+        );
       })
     );
   }
@@ -90,7 +101,7 @@ export function updateDiagnostics(
     const uri = vscode.Uri.file(result.file);
     switch (result.status) {
       case TestReconciliationState.KnownFail:
-        if (result.assertions.length <= 0) {
+        if (result.assertions && result.assertions.length <= 0) {
           addTestFileError(result, uri);
         } else {
           addTestsError(result, uri);
@@ -103,7 +114,7 @@ export function updateDiagnostics(
   });
 
   // Remove diagnostics for files no longer in existence
-  const toBeDeleted = [];
+  const toBeDeleted: vscode.Uri[] = [];
   collection.forEach((uri) => {
     if (!existsSync(uri.fsPath)) {
       toBeDeleted.push(uri);
