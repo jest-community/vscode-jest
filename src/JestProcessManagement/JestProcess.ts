@@ -1,110 +1,164 @@
 import * as vscode from 'vscode';
 import { join } from 'path';
-import { Runner, ProjectWorkspace } from 'jest-editor-support';
-import { WatchMode } from '../Jest';
-import { ExitCallback } from './JestProcessManager';
+import { Runner, RunnerEvent, Options } from 'jest-editor-support';
+import { JestExtContext, WatchMode } from '../JestExt/types';
 import { extensionId } from '../appGlobals';
+import { Logging } from '../logging';
+import { JestProcessRequest } from './types';
+import { requestString } from './helper';
+import { removeSurroundingQuote } from '../helpers';
+
+export const RunnerEvents: RunnerEvent[] = [
+  'processClose',
+  'processExit',
+  'executableJSON',
+  'executableStdErr',
+  'executableOutput',
+  'terminalError',
+];
+
+interface RunnerTask {
+  promise: Promise<void>;
+  resolve: () => unknown;
+  reject: (reason: unknown) => unknown;
+  runner: Runner;
+}
+export type StopReason = 'on-demand' | 'process-end';
+
+let SEQ = 0;
 
 export class JestProcess {
-  static readonly keepAliveLimit = 5;
   static readonly stopHangTimeout = 500;
-  public keepAlive: boolean;
-  public watchMode: WatchMode;
-  private runner!: Runner;
-  private projectWorkspace: ProjectWorkspace;
-  private onExitCallback?: ExitCallback;
-  private jestSupportEvents: Map<string, (...args: unknown[]) => void>;
-  private stopResolveCallback: (() => void) | null = null;
-  private keepAliveCounter: number;
 
-  constructor({
-    projectWorkspace,
-    watchMode = WatchMode.None,
-    keepAlive = false,
-  }: {
-    projectWorkspace: ProjectWorkspace;
-    watchMode?: WatchMode;
-    keepAlive?: boolean;
-  }) {
-    this.keepAlive = keepAlive;
-    this.watchMode = watchMode;
-    this.projectWorkspace = projectWorkspace;
-    this.keepAliveCounter = keepAlive ? JestProcess.keepAliveLimit : 1;
-    this.jestSupportEvents = new Map();
+  private task?: RunnerTask;
+  private extContext: JestExtContext;
+  private logging: Logging;
+  private _stopReason?: StopReason;
+  private _id: string;
+  public readonly request: JestProcessRequest;
 
-    this.startRunner();
+  constructor(extContext: JestExtContext, request: JestProcessRequest) {
+    this.extContext = extContext;
+    this.request = request;
+    this.logging = extContext.loggingFactory.create(`JestProcess ${request.type}`);
+    this._id = `id: ${SEQ++}, request: ${requestString(request)}`;
   }
 
-  public onExit(callback: ExitCallback): void {
-    this.onExitCallback = callback;
+  public get stopReason(): StopReason | undefined {
+    return this._stopReason;
   }
-
-  public onJestEditorSupportEvent(event: string, callback: (...args: any[]) => void): this {
-    this.jestSupportEvents.set(event, callback);
-    this.runner.on(event, callback);
-    return this;
+  public get id(): string {
+    return this._id;
   }
-
-  public stop(): Promise<void> {
-    return new Promise((resolve) => {
-      this.keepAliveCounter = 1;
-      this.stopResolveCallback = resolve;
-      this.jestSupportEvents.clear();
-      this.runner.closeProcess();
-
-      // As a safety fallback to prevent the stop from hanging, resolve after a timeout
-      // this is safe since subsequent resolve calls are no-op
-      // TODO: If `closeProcess` can be guarenteed to always resolve, remove this
-      setTimeout(resolve, JestProcess.stopHangTimeout);
-    });
-  }
-
-  public runJestWithUpdateForSnapshots(callback: () => void): void {
-    this.runner.runJestWithUpdateForSnapshots(callback);
-  }
-
-  public stopRequested(): boolean {
-    return this.stopResolveCallback !== null;
-  }
-  private startRunner() {
-    this.stopResolveCallback = null;
-    let exited = false;
-
-    const extensionPath = vscode.extensions.getExtension(extensionId)!.extensionPath;
-    const reporterPath = join(extensionPath, 'out', 'reporter.js');
-
-    const options = {
-      noColor: true,
-      reporters: ['default', `"${reporterPath}"`],
-    };
-    this.runner = new Runner(this.projectWorkspace, options);
-
-    this.restoreJestEvents();
-
-    this.runner.start(this.watchMode !== WatchMode.None, this.watchMode === WatchMode.WatchAll);
-
-    this.runner.on('debuggerProcessExit', () => {
-      if (!exited) {
-        exited = true;
-        if (--this.keepAliveCounter > 0) {
-          this.runner.removeAllListeners();
-          this.startRunner();
-        } else {
-          if (this.onExitCallback) {
-            this.onExitCallback(this);
-          }
-          if (this.stopResolveCallback) {
-            this.stopResolveCallback();
-            this.stopResolveCallback = null;
-          }
-        }
-      }
-    });
-  }
-
-  private restoreJestEvents() {
-    for (const [event, callback] of this.jestSupportEvents.entries()) {
-      this.runner.on(event, callback);
+  private get watchMode(): WatchMode {
+    if (this.request.type === 'watch-tests') {
+      return WatchMode.Watch;
     }
+    if (this.request.type === 'watch-all-tests') {
+      return WatchMode.WatchAll;
+    }
+    return WatchMode.None;
+  }
+
+  public toString(): string {
+    return `JestProcess: ${this.id}; stopReason: ${this.stopReason}`;
+  }
+  public start(): Promise<void> {
+    this._stopReason = undefined;
+    return this.startRunner();
+  }
+  public stop(): Promise<void> {
+    this._stopReason = 'on-demand';
+    if (!this.task) {
+      this.logging('debug', 'nothing to stop, no pending runner/promise');
+      this.taskDone();
+      return Promise.resolve();
+    }
+
+    this.task.runner.closeProcess();
+
+    return this.task.promise;
+  }
+
+  private taskDone() {
+    this.task = undefined;
+  }
+
+  private getReporterPath() {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const extensionPath = vscode.extensions.getExtension(extensionId)!.extensionPath;
+    return join(extensionPath, 'out', 'reporter.js');
+  }
+  private quoteFileName(fileName: string): string {
+    return `"${removeSurroundingQuote(fileName)}"`;
+  }
+  private startRunner(): Promise<void> {
+    if (this.task) {
+      this.logging('warn', `the runner task has already started!`);
+      return this.task.promise;
+    }
+
+    const options: Options = {
+      noColor: true,
+      reporters: ['default', `"${this.getReporterPath()}"`],
+    };
+
+    switch (this.request.type) {
+      case 'all-tests':
+        if (this.request.updateSnapshot) {
+          options.args = { args: ['--updateSnapshot'] };
+        }
+        break;
+      case 'by-file': {
+        options.testFileNamePattern = this.quoteFileName(this.request.testFileNamePattern);
+        const args: string[] = ['--findRelatedTests'];
+        if (this.request.updateSnapshot) {
+          args.push('--updateSnapshot');
+        }
+        options.args = { args };
+        break;
+      }
+
+      case 'by-file-test':
+        options.testFileNamePattern = this.quoteFileName(this.request.testFileNamePattern);
+        options.testNamePattern = this.request.testNamePattern;
+        if (this.request.updateSnapshot) {
+          options.args = { args: ['--updateSnapshot'] };
+        }
+        break;
+      case 'not-test':
+        delete options.reporters;
+        options.args = { args: this.request.args, replace: true };
+        break;
+    }
+
+    const runner = new Runner(this.extContext.runnerWorkspace, options);
+    this.registerListener(runner);
+
+    let taskInfo: Omit<RunnerTask, 'promise'>;
+    const promise = new Promise<void>((resolve, reject) => {
+      taskInfo = { runner, resolve, reject };
+    });
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    this.task = { ...taskInfo!, promise };
+
+    this.request.listener.onEvent(this, 'processStarting');
+    runner.start(this.watchMode !== WatchMode.None, this.watchMode === WatchMode.WatchAll);
+
+    return promise;
+  }
+
+  private eventHandler(event: RunnerEvent, ...args: unknown[]): void {
+    if (event === 'processClose' || event === 'processExit') {
+      this.task?.resolve();
+      this.task = undefined;
+      this._stopReason = this._stopReason ?? 'process-end';
+    }
+    this.request.listener.onEvent(this, event, ...args);
+  }
+  private registerListener(runner: Runner): void {
+    RunnerEvents.forEach((event) =>
+      runner.on(event, (...args: unknown[]) => this.eventHandler(event, ...args))
+    );
   }
 }

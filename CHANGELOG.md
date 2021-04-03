@@ -4,7 +4,13 @@ Please add your own contribution below inside the Master section
 Bug-fixes within the same version aren't needed
 
 ## Master
-
+* Introducing a new interactive mode, in addition to the current "watch" mode, to run jest tests. Use the new `jest.autoRun` settings to control when and what tests should be run automatically, or not. - @connectdotz (#674) 
+* refactor jest process management to adopt queue-based model with promise-based process execution.  - @connectdotz (#674) 
+* enhance statusBar to display autoRun and workspace stats  - @connectdotz (#674)
+* added new commands, context menu, keybinding to better support interactive mode.  - @connectdotz (#674)
+* added ability to update snapshot without restarting jest.  - @connectdotz (#674)
+* added ability to get jest metadata such as all test files.  - @connectdotz (#674)
+* change editor decorators to reflect when tests are changed but tests have not been run (which might be common in the new interactive mode)  - @connectdotz (#674)
 -->
 
 ### 4.0.0-alpha.4
