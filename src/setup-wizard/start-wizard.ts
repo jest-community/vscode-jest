@@ -81,7 +81,9 @@ export const startWizard = (
     ];
 
     let result: WizardStatus;
-    let selectItemIdx = menuItems.findIndex((item) => item.id === WizardTasks[taskId]?.actionId);
+    let selectItemIdx: number | undefined = menuItems.findIndex(
+      (item) => taskId && item.id === WizardTasks[taskId]?.actionId
+    );
     do {
       result = await showActionMenu(menuItems, {
         title: 'vscode-jest Setup Wizard',
@@ -97,8 +99,11 @@ export const startWizard = (
     return showMainMenu(context);
   };
 
-  const selectWorkspace = async (): Promise<vscode.WorkspaceFolder> => {
+  const selectWorkspace = async (): Promise<vscode.WorkspaceFolder | undefined> => {
     message('', 'Select a workspace folder to set up...');
+    if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length <= 0) {
+      return Promise.resolve(undefined);
+    }
     return vscode.workspace.workspaceFolders.length <= 1
       ? Promise.resolve(vscode.workspace.workspaceFolders[0])
       : await vscode.window.showWorkspaceFolderPick();

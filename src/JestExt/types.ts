@@ -1,6 +1,7 @@
 import { JestTotalResults, ProjectWorkspace } from 'jest-editor-support';
 
 import * as vscode from 'vscode';
+import * as messaging from '../messaging';
 import { LoggingFactory } from '../logging';
 import {
   JestExtAutoRunConfig,
@@ -8,6 +9,7 @@ import {
   OnStartupType,
   PluginResourceSettings,
 } from '../Settings';
+import { WizardTaskId } from '../setup-wizard';
 import { AutoRunMode, StatusBarUpdate } from '../StatusBar';
 
 export enum WatchMode {
@@ -41,5 +43,6 @@ export interface JestExtProcessContextRaw extends JestExtContext {
   output: vscode.OutputChannel;
   updateStatusBar: (status: StatusBarUpdate) => void;
   updateWithData: (data: JestTotalResults) => void;
+  setupWizardAction: (taskId: WizardTaskId) => messaging.MessageAction;
 }
 export type JestExtProcessContext = Readonly<JestExtProcessContextRaw>;

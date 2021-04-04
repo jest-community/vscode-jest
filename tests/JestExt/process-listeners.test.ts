@@ -25,6 +25,7 @@ describe('jest process listeners', () => {
         autoRun: {},
         updateStatusBar: jest.fn(),
         workspace: {},
+        setupWizardAction: jest.fn(),
         loggingFactory: {
           create: jest.fn(() => mockLogging),
         },

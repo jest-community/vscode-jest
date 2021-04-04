@@ -38,6 +38,21 @@ export const actionItem = <T = WizardStatus>(
 });
 
 /**
+ * methods to handle button click in vscode UI
+ * @param button  should be either ActionableButton or the system BackButton.
+ * @returns
+ */
+const handleButtonClick = <T>(button: vscode.QuickInputButton): ActionableButton<T> | undefined => {
+  if (button === vscode.QuickInputButtons.Back) {
+    return undefined;
+  }
+  if (isActionableButton(button)) {
+    return button as ActionableButton<T>;
+  }
+  throw new Error(`expect actionableButton but got ${JSON.stringify(button)}`);
+};
+
+/**
  *
  * @param items
  * @param options
@@ -50,7 +65,7 @@ export const showActionMenu = async <T = WizardStatus>(
   const quickPick = vscode.window.createQuickPick<ActionableMenuItem<T>>();
   quickPick.items = items;
   quickPick.title = options.title;
-  quickPick.value = options.value;
+  quickPick.value = options.value || '';
   quickPick.placeholder = options.placeholder;
   quickPick.canSelectMany = false;
   quickPick.ignoreFocusOut = true;
@@ -63,17 +78,21 @@ export const showActionMenu = async <T = WizardStatus>(
   }
 
   const logging = options?.verbose
-    ? (msg): void => console.log(`<showActionMenu> ${msg}`)
+    ? (msg: string): void => console.log(`<showActionMenu> ${msg}`)
     : undefined;
   try {
     const input = await new Promise<ActionMenuInput<T>>((resolve) => {
       quickPick.onDidChangeSelection((selectedItems) =>
         selectedItems.length === 1 ? resolve(selectedItems[0]) : resolve(undefined)
       );
-      quickPick.onDidTriggerButton((button: ActionableButton<T>) => resolve(button));
+      quickPick.onDidTriggerButton((button) => resolve(handleButtonClick(button)));
 
       quickPick.show();
-      if (options.selectItemIdx >= 0 && options.selectItemIdx < items.length) {
+      if (
+        options.selectItemIdx != null &&
+        options.selectItemIdx >= 0 &&
+        options.selectItemIdx < items.length
+      ) {
         quickPick.selectedItems = [items[options.selectItemIdx]];
       }
     });
@@ -105,23 +124,23 @@ export const showActionInputBox = async <T = WizardStatus>(
   options?: ActionInputBoxOptions<T>
 ): Promise<ActionInputResult<T>> => {
   const inputBox = vscode.window.createInputBox();
-  inputBox.title = options.title;
-  inputBox.value = options.value;
-  inputBox.prompt = options.prompt;
+  inputBox.title = options?.title;
+  inputBox.value = options?.value || '';
+  inputBox.prompt = options?.prompt;
   inputBox.ignoreFocusOut = true;
-  inputBox.buttons = options.rightButtons || [];
-  if (options.enableBackButton) {
+  inputBox.buttons = options?.rightButtons || [];
+  if (options?.enableBackButton) {
     inputBox.buttons = [vscode.QuickInputButtons.Back, ...inputBox.buttons];
   }
 
   const logging = options?.verbose
-    ? (msg): void => console.log(`<ShowActionInputBox> ${msg}`)
+    ? (msg: string): void => console.log(`<ShowActionInputBox> ${msg}`)
     : undefined;
   try {
     const input = await new Promise<ActionInput<T>>((resolve) => {
       inputBox.onDidAccept(() => resolve(inputBox.value));
       inputBox.onDidHide(() => resolve(undefined));
-      inputBox.onDidTriggerButton((button: ActionableButton<T>) => resolve(button));
+      inputBox.onDidTriggerButton((button) => resolve(handleButtonClick(button)));
       inputBox.show();
     });
     if (!input) {
@@ -171,8 +190,8 @@ export const getConfirmation = async (
   yesTitle = 'Yes',
   noTitle = 'No',
   onCancel: 'yes' | 'no' = 'no'
-): Promise<boolean> =>
-  await showActionMessage(
+): Promise<boolean> => {
+  const choice = await showActionMessage(
     type,
     msg,
     {
@@ -188,6 +207,9 @@ export const getConfirmation = async (
       action: () => Promise.resolve(false),
     }
   );
+
+  return choice ?? onCancel === 'yes' ? true : false;
+};
 
 export const DEBUG_CONFIG_PLATFORMS = ['windows', 'linux', 'osx'];
 
@@ -260,7 +282,7 @@ export const mergeDebugConfigWithCmdLine = (
     throw new Error(`invalid cmdLine: ${cmdLine}`);
   }
 
-  let finalConfig;
+  let finalConfig: vscode.DebugConfiguration;
 
   const { cwd, args: configArgs, ...restConfig } = config;
   const _cwd = absoluteRootPath ? absoluteRootPath : cwd;

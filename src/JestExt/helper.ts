@@ -120,3 +120,10 @@ export const getExtensionResourceSettings = (uri: vscode.Uri): PluginResourceSet
     autoRun: config.get<JestExtAutoRunConfig>('autoRun'),
   };
 };
+
+export const prefixWorkspace = (context: JestExtContext, message: string): string => {
+  if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 1) {
+    return `(${context.workspace.name}) ${message}`;
+  }
+  return message;
+};

@@ -239,7 +239,6 @@ describe('QuickInput Proxy', () => {
         await expect(p).resolves.toEqual(undefined);
 
         expect(mockDispose).toBeCalledTimes(1);
-        expect(console.log).toBeCalledWith(expect.stringMatching('back button'));
       });
     });
   });
@@ -404,7 +403,6 @@ describe('QuickInput Proxy', () => {
         await expect(p).resolves.toEqual(undefined);
 
         expect(mockShow).toBeCalledTimes(1);
-        expect(console.log).toBeCalledWith(expect.stringMatching('back button'));
       });
     });
   });

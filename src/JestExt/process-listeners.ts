@@ -4,7 +4,7 @@ import * as messaging from '../messaging';
 import { cleanAnsi } from '../helpers';
 import { JestProcess, JestProcessEvent, JestProcessListener } from '../JestProcessManagement';
 import { ListenerSession } from './process-session';
-import { isWatchRequest } from './helper';
+import { isWatchRequest, prefixWorkspace } from './helper';
 import { Logging } from '../logging';
 
 export class AbstractProcessListener implements JestProcessListener {
@@ -208,18 +208,21 @@ export class RunTestListener extends AbstractProcessListener {
       (process.request.type === 'watch-tests' || process.request.type === 'watch-all-tests') &&
       process.stopReason !== 'on-demand'
     ) {
-      let msg = `Jest process "${process.request.type}" failed unexpectedly`;
+      const msg = prefixWorkspace(
+        this.session.context,
+        `Jest process "${process.request.type}" failed unexpectedly`
+      );
       this.logging('warn', msg);
 
-      if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 1) {
-        const folder = this.session.context.workspace.name;
-        msg = `(${folder}) ${msg}\nIf this is expected, consider adding '${folder}' to disabledWorkspaceFolders`;
-      }
       this.session.context.output.appendLine(
         `${msg}\n see troubleshooting: ${messaging.TROUBLESHOOTING_URL}`
       );
       this.session.context.output.show(true);
-      messaging.systemErrorMessage(msg, messaging.showTroubleshootingAction);
+      messaging.systemErrorMessage(
+        msg,
+        messaging.showTroubleshootingAction,
+        this.session.context.setupWizardAction('cmdLine')
+      );
     }
   }
 

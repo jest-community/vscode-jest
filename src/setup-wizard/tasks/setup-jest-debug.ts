@@ -48,6 +48,7 @@ export const setupJestDebug: SetupTask = async (context: WizardContext): Promise
     }
     return 'abort';
   }
+  const jestCommandLine = settings.jestCommandLine;
   const launchConfigs = settings.configurations;
 
   // save config to workspaceFolder launch.json file
@@ -96,7 +97,7 @@ export const setupJestDebug: SetupTask = async (context: WizardContext): Promise
   ): Promise<WizardStatus> => {
     const finalConfig = mergeDebugConfigWithCmdLine(
       config,
-      settings.jestCommandLine,
+      jestCommandLine,
       settings.absoluteRootPath
     );
 
@@ -123,7 +124,7 @@ export const setupJestDebug: SetupTask = async (context: WizardContext): Promise
   };
 
   const generateConfig = (): Promise<WizardStatus> => {
-    const configs = debugConfigProvider.provideDebugConfigurations(workspace);
+    const configs = debugConfigProvider.provideDebugConfigurations?.(workspace);
     const config = Array.isArray(configs) && configs.find((c) => c.name === DEBUG_CONFIG_NAME);
     if (!config) {
       console.error(`no ${DEBUG_CONFIG_NAME} is generated: configs=`, configs);

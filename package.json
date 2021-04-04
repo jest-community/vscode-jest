@@ -243,7 +243,7 @@
       },
       {
         "command": "io.orta.jest.setup-extension",
-        "title": "Jest: Setup Extension"
+        "title": "Jest: Setup Extension (Beta)"
       }
     ],
     "menus": {

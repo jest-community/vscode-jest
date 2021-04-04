@@ -18,15 +18,15 @@ _(The setup wizard is released as a beta product in v4. Thank you for trying it 
 ---
 ## Overview
 
-It helps users to set up the essential configurations of the extension via a simple UI. While the extension provides default configurations that work for the common standard environments, such as CRA and plain jest, the more sophisticated projects are most likely needed to customize the extension for their environments. And this is where the setup wizard comes in.
+It helps users to set up the essential configurations of the extension via a simple UI. While the extension provides default configurations that work for the common standard environments, such as CRA and plain jest, the more sophisticated projects might need to customize the extension via a few simple settings that the wizard will help walking through this process. 
 
-The wizard asks questions and collects answers to update user's workspace `settings.json` and `launch.json` accordingly ( [How does it work ?](#how-does-it-work)). It works for single and multi-root workspaces. It creates an OUTPUT channel `"vscode-jest Setup"` showing progress, and tips to make wizard easier to use and diagnose should there be an issue. 
+The wizard asks questions and collects answers to update `settings.json` and `launch.json` in user's workspace ( [How does it work ?](#how-does-it-work)). It works for both single and multi-root workspaces. An OUTPUT channel `"vscode-jest Setup"` will be presented to show progress and tips through out the process. 
 
-Users can run the wizard any time they want ([How to run it ?](how-to-run-it)) and safely abort if desired. 
+Users can run the wizard any time ([How to run it ?](how-to-run-it)) and safely abort if desired. 
 
 The wizard tries its best to create accurate configurations but it will not be able to cover all the use cases out there. However, it always strikes for transparency, and shows where and what the configuration will be updated so users can easily modify it later manually if needed.
 
-_(Note: the wizard is not to set up [jest](https://jestjs.io) itself. Actually, a working jest environment (such as you can run jest tests in terminal) is a prerequisite of running `vscode-jest` extension.)_
+_(Note: the wizard is not to set up [jest](https://jestjs.io) itself. Actually, a working jest environment (such that you can run jest tests in terminal) is a prerequisite of running `vscode-jest` extension.)_
 ## How to run it
 in v4.0, there are multiple ways you can activate the setup wizard
 
@@ -47,7 +47,7 @@ Please be aware that all relative paths in the settings are resolved against the
 
 
 While users can pass any jest CLI options in the `"jest.jestCommandLine"`, it is recommended NOT to pass the following:
-- the watch options (--watch, --watchAll): the extension will append watch flag when needed. 
+- the watch options (--watch, --watchAll): the extension will append watch flag when appropriate. 
 - the coverage option (--coverage): user can easily toggle on/off coverage via command so no need to add it on the commandLine.
 
 Because the extension appends additional options to this commandLine at run time, please make sure these additional options can be passed through, for example, if your command-line is `"npm test"`, make sure you add `"--"` at the end to pass through the additional options: `"npm test --"`
