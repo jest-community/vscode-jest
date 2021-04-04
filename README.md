@@ -252,7 +252,7 @@ Possible status are: `[ "fail", "pass", "skip", "unknown"]`. Please note that th
 <summary><a id="coverageFormatter"></a>coverageFormatter</summary>
 
 There are 2 formatters to choose from: 
-  1. DefaultFormatter: high light uncovered and partially-covered code inline as well as on the right overview ruler. (this is the default)
+  1. DefaultFormatter: high light uncovered and partially-covered code inlilne as well as on the right overview ruler. (this is the default)
   ![coverage-DefaultFormatter.png](./images/coverage-DefaultFormatter.png)
 
   2. GutterFormatter: render coverage status in the gutter as well as the overview ruler. 

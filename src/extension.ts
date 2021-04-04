@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
 
-import { extensionName } from './appGlobals';
 import { statusBar } from './StatusBar';
 import { ExtensionManager, getExtensionWindowSettings } from './extensionManager';
 import { registerSnapshotCodeLens, registerSnapshotPreview } from './SnapshotCodeLens';
 import { startWizard, StartWizardOptions } from './setup-wizard';
 import { JestExt } from './JestExt';
+import { extensionName } from './appGlobals';
 
 let extensionManager: ExtensionManager;
 
