@@ -13,7 +13,7 @@ export class DebugCodeLens extends vscode.CodeLens {
    * @param fileName
    * @param testIds test name/pattern.
    *  Because a test block can have multiple test results, such as for paramertized tests (i.e. test.each/describe.each), there could be multiple debuggable candidates, thus it takes multiple test identifiers.
-   *  Noite: If a test id is a string array, it should represent the hierarchiical relationship of a test structure, such as [describe-id, test-id].
+   *  Note: If a test id is a string array, it should represent the hierarchical relationship of a test structure, such as [describe-id, test-id].
    */
   constructor(
     document: vscode.TextDocument,

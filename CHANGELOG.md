@@ -4,6 +4,8 @@ Please add your own contribution below inside the Master section
 Bug-fixes within the same version aren't needed
 
 ## Master
+* added setup extension wizard - @connectdotz (#655)
+* update doc to give warning on potential incorrect coverage in watch mode - @connectdotz(#655)
 * Introducing a new interactive mode, in addition to the current "watch" mode, to run jest tests. Use the new `jest.autoRun` settings to control when and what tests should be run automatically, or not. - @connectdotz (#674) 
 * refactor jest process management to adopt queue-based model with promise-based process execution.  - @connectdotz (#674) 
 * enhance statusBar to display autoRun and workspace stats  - @connectdotz (#674)

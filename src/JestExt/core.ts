@@ -28,8 +28,9 @@ import { createProcessSession, ProcessSession } from './process-session';
 import { JestExtContext, JestExtSessionAware } from './types';
 import * as messaging from '../messaging';
 import { SupportedLanguageIds } from '../appGlobals';
-import { createJestExtContext, getExtensionResourceSettings } from './helper';
+import { createJestExtContext, getExtensionResourceSettings, prefixWorkspace } from './helper';
 import { PluginResourceSettings } from '../Settings';
+import { startWizard, WizardTaskId } from '../setup-wizard';
 
 interface RunTestPickItem extends vscode.QuickPickItem {
   id: DebugTestIdentifier;
@@ -113,12 +114,25 @@ export class JestExt {
     this.setupStatusBar();
   }
 
+  private setupWizardAction(taskId: WizardTaskId): messaging.MessageAction {
+    return {
+      title: 'Run Setup Wizard',
+      action: (): unknown =>
+        startWizard(this.debugConfigurationProvider, {
+          workspace: this.extContext.workspace,
+          taskId,
+          verbose: this.extContext.settings.debugMode,
+        }),
+    };
+  }
+
   private createProcessSession(): ProcessSession {
     return createProcessSession({
       ...this.extContext,
       output: this.channel,
       updateStatusBar: this.updateStatusBar.bind(this),
       updateWithData: this.updateWithData.bind(this),
+      setupWizardAction: this.setupWizardAction.bind(this),
     });
   }
   private toSBStats(stats: TestStats): SBTestStats {
@@ -152,11 +166,13 @@ export class JestExt {
       this.updateTestFileList();
       this.channel.appendLine('Jest Session Started');
     } catch (e) {
-      this.logging('error', 'failed to start jest session:', e);
+      const msg = prefixWorkspace(this.extContext, 'Failed to start jest session');
+      this.logging('error', `${msg}:`, e);
       this.channel.appendLine('Failed to start jest session');
       messaging.systemErrorMessage(
-        'Failed to start jest session...',
-        messaging.showTroubleshootingAction
+        '${msg}...',
+        messaging.showTroubleshootingAction,
+        this.setupWizardAction('cmdLine')
       );
     }
   }
@@ -171,12 +187,10 @@ export class JestExt {
       this.channel.appendLine('Jest Session Stopped');
       this.updateStatusBar({ state: 'stopped' });
     } catch (e) {
-      this.logging('error', 'failed to stop jest session:', e);
+      const msg = prefixWorkspace(this.extContext, 'Failed to stop jest session');
+      this.logging('error', `${msg}:`, e);
       this.channel.appendLine('Failed to stop jest session');
-      messaging.systemErrorMessage(
-        'Failed to stop jest session...',
-        messaging.showTroubleshootingAction
-      );
+      messaging.systemErrorMessage('${msg}...', messaging.showTroubleshootingAction);
     }
   }
 
@@ -332,7 +346,7 @@ export class JestExt {
         id,
       }));
       const selected = await vscode.window.showQuickPick<RunTestPickItem>(items, {
-        placeHolder: 'select a test to debug',
+        placeHolder: 'Select a test to debug',
       });
 
       return selected?.id;
@@ -358,17 +372,23 @@ export class JestExt {
       escapeRegExp(idString('full-name', testId))
     );
 
-    try {
-      // try to run the debug configuration from launch.json
-      await vscode.debug.startDebugging(this.extContext.workspace, 'vscode-jest-tests');
-    } catch {
-      // if that fails, there (probably) isn't any debug configuration (at least no correctly named one)
-      // therefore debug the test using the default configuration
-      const debugConfiguration = this.debugConfigurationProvider.provideDebugConfigurations(
+    let debugConfig = vscode.workspace
+      .getConfiguration('launch', this.extContext.workspace.uri)
+      ?.get<vscode.DebugConfiguration[]>('configurations')
+      ?.filter((config) => config.name === 'vscode-jest-tests')[0];
+    if (!debugConfig) {
+      messaging.systemWarningMessage(
+        prefixWorkspace(
+          this.extContext,
+          'No debug config named "vscode-jest-tests" found in launch.json, will use a default config.\nIf you encountered debugging problems, feel free to try the setup wizard below'
+        ),
+        this.setupWizardAction('debugConfig')
+      );
+      debugConfig = this.debugConfigurationProvider.provideDebugConfigurations(
         this.extContext.workspace
       )[0];
-      await vscode.debug.startDebugging(this.extContext.workspace, debugConfiguration);
     }
+    vscode.debug.startDebugging(this.extContext.workspace, debugConfig);
   };
   public runAllTests(editor?: vscode.TextEditor): void {
     if (!editor) {
@@ -474,10 +494,15 @@ export class JestExt {
         this.setTestFiles(files);
         this.logging('debug', `found ${files?.length} testFiles`);
         if (error) {
-          this.logging('error', 'failed to update test file list:', error);
+          const msg = prefixWorkspace(
+            this.extContext,
+            'Failed to obtain test file list, something might not be setup right?'
+          );
+          this.logging('error', msg, error);
           messaging.systemWarningMessage(
-            'Failed to obtain test file list, something might not be setup right?',
-            messaging.showTroubleshootingAction
+            msg,
+            messaging.showTroubleshootingAction,
+            this.setupWizardAction('cmdLine')
           );
         }
       },

@@ -47,6 +47,7 @@ jest.mock('../src/extensionManager', () => ({
 
 import * as vscode from 'vscode';
 import { activate, deactivate } from '../src/extension';
+import { startWizard } from '../src/setup-wizard';
 
 (vscode.commands as any).registerCommand = jest.fn().mockImplementation((...args) => args);
 (vscode.window as any).onDidChangeActiveTextEditor = jest
@@ -164,6 +165,17 @@ describe('Extension', () => {
           });
         }
       );
+    });
+
+    it('to start setup-wizard', () => {
+      activate(context);
+      const callArg = context.subscriptions.push.mock.calls[0].find((args) => {
+        return args[0] === `${extensionName}.setup-extension`;
+      });
+
+      expect(callArg).toBeDefined();
+      callArg[1]();
+      expect(startWizard).toHaveBeenCalled();
     });
 
     it('should register a DebugConfigurationProvider', () => {

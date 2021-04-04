@@ -239,7 +239,7 @@ It is recommended not to add the following options as they are managed by the ex
 <details>
 <summary><a id="rootPath"></a>rootPath</summary>
 
-If your project doesn't live in the root of your repository, you may want to customise the `jest.rootPath` setting to enlighten the extension as to where to look. For instance: `"jest.rootPath": "src/client-app"` will direct the extension to use the `src/client-app` folder as the root for Jest.
+If your project doesn't live in the root of your repository, you may want to customize the `jest.rootPath` setting to enlighten the extension as to where to look. For instance: `"jest.rootPath": "src/client-app"` will direct the extension to use the `src/client-app` folder as the root for Jest.
 </details>
 
 <details>
@@ -369,7 +369,7 @@ Please see [vscode Key Bindings](https://code.visualstudio.com/docs/getstarted/k
 
 
 ## Troubleshooting
-Sorry you are having trouble with the extension. If your issue did not get resolved after checking out the [how-to](#how-to-) section and the tips below, feel free to [ask](https://github.com/jest-community/vscode-jest/issues) the community, chances are some one else had a similar experience and could help resolving it. 
+Sorry you are having trouble with the extension. If your issue did not get resolved after checking out the [how-to](#how-to-use-the-extension) section and the tips below, feel free to [ask](https://github.com/jest-community/vscode-jest/issues) the community, chances are some one else had a similar experience and could help resolving it. 
 
 <details>
 <summary>I don't see "Jest" in the bottom status bar</summary>
@@ -379,7 +379,7 @@ Sorry you are having trouble with the extension. If your issue did not get resol
 </details>
 
 <details>
-<summary>I got "Jest failed too many times..." error message</summary>
+<summary>I got "Jest Process xxx failed unexpectedly..." or "Jest failed too many times..." error message</summary>
 
   This usually mean the extension is not able to start jest process for you. First check the Jest OUTPUT channel or developer console to see what is the actual error (see [self-diagnosis](#self-diagnosis)). 
 
@@ -389,7 +389,7 @@ Sorry you are having trouble with the extension. If your issue did not get resol
   ```
   The issue is probably not related to this extension. If this only happened occasionally after launch or you saw vscode warning about shell start up slow, try to simplified the env files, restart vscode or reload windows. See [Resolving Shell Environment is Slow](https://code.visualstudio.com/docs/supporting/faq#_resolving-shell-environment-is-slow-error-warning).
 
-  If you see error about not able to find `jest` or some other jest related runtime error: if you can run jest from terminal then you can use the **"Run Setup Wizard"** button in the error panel to help resolving the configuration issue. There could be other causes, such as jest test root path is different from the project's, which can be fixed by setting `jest.rootPath`. Feel free to check out the [customization](#customization) section to manually adjust the extension if needed. 
+  If you see error about not able to find `jest` or some other jest related runtime error: if you can run jest from terminal then you can use the **"Run Setup Wizard"** button in the error panel to help resolving the configuration issue, see [Setup Wizard](setup-wizard.md) for more details. There could be other causes, such as jest test root path is different from the project's, which can be fixed by setting [jest.rootPath](#rootPath). Feel free to check out the [customization](#customization) section to manually adjust the extension if needed. 
 </details>
 
 <details>

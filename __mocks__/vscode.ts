@@ -39,10 +39,14 @@ const OverviewRulerLane = {
 const Uri = {
   file: (f) => f,
   parse: jest.fn(),
+  joinPath: jest.fn(),
 };
 const Range = jest.fn();
+const Position = jest.fn();
 const Diagnostic = jest.fn();
+const ThemeIcon = jest.fn();
 const DiagnosticSeverity = { Error: 0, Warning: 1, Information: 2, Hint: 3 };
+const ConfigurationTarget = { Global: 1, Workspace: 2, WorkspaceFolder: 3 };
 
 const debug = {
   onDidTerminateDebugSession: jest.fn(),
@@ -56,7 +60,12 @@ const commands = {
   registerTextEditorCommand: jest.fn(),
 };
 
+// eslint-disable-next-line @typescript-eslint/no-empty-function
 const CodeLens = function CodeLens() {};
+
+const QuickInputButtons = {
+  Back: {},
+};
 
 export {
   CodeLens,
@@ -67,8 +76,12 @@ export {
   OverviewRulerLane,
   Uri,
   Range,
+  Position,
   Diagnostic,
+  ThemeIcon,
   DiagnosticSeverity,
+  ConfigurationTarget,
   debug,
   commands,
+  QuickInputButtons,
 };

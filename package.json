@@ -5,7 +5,7 @@
   "version": "4.0.0-alpha.4",
   "publisher": "Orta",
   "engines": {
-    "vscode": "^1.23.0"
+    "vscode": "^1.45.0"
   },
   "author": {
     "name": "Orta Therox, ConnectDotz & Sean Poulter",
@@ -234,12 +234,16 @@
         "title": "Jest: Run All Tests in Current Workspace"
       },
       {
+        "command": "io.orta.jest.editor.workspace.toggle-coverage",
+        "title": "Jest: Toggle Coverage for Current Workspace"
+      },
+      {
         "command": "io.orta.jest.editor.run-all-tests",
         "title": "Jest: Run Related Tests"
       },
       {
-        "command": "io.orta.jest.editor.workspace.toggle-coverage",
-        "title": "Jest: Toggle Coverage for Current Workspace"
+        "command": "io.orta.jest.setup-extension",
+        "title": "Jest: Setup Extension (Beta)"
       }
     ],
     "menus": {
@@ -390,7 +394,7 @@
     "@types/istanbul-lib-source-maps": "^4.0.1",
     "@types/jest": "^26.0.15",
     "@types/node": "^8.0.31",
-    "@types/vscode": "^1.23.0",
+    "@types/vscode": "^1.45.0",
     "@typescript-eslint/eslint-plugin": "^4.14.2",
     "@typescript-eslint/parser": "^4.14.2",
     "copy-webpack-plugin": "^6.0.2",

@@ -40,6 +40,7 @@ import * as extHelper from '../..//src/JestExt/helper';
 import { workspaceLogging } from '../../src/logging';
 import { ProjectWorkspace } from 'jest-editor-support';
 import { mockProjectWorkspace, mockWworkspaceLogging } from '../test-helper';
+import { startWizard } from '../../src/setup-wizard';
 
 /* eslint jest/expect-expect: ["error", { "assertFunctionNames": ["expect", "expectItTakesNoAction"] }] */
 const mockHelpers = helper as jest.Mocked<any>;
@@ -201,6 +202,7 @@ describe('JestExt', () => {
     let sut: JestExt;
     let startDebugging, debugConfiguration;
     const mockShowQuickPick = jest.fn();
+    let mockConfigurations = [];
     beforeEach(() => {
       startDebugging = (debug.startDebugging as unknown) as jest.Mock<{}>;
       ((startDebugging as unknown) as jest.Mock<{}>).mockImplementation(
@@ -216,6 +218,12 @@ describe('JestExt', () => {
       vscode.window.showQuickPick = mockShowQuickPick;
       mockHelpers.escapeRegExp.mockImplementation((s) => s);
       mockHelpers.testIdString.mockImplementation((_, s) => s);
+
+      mockConfigurations = [];
+      vscode.workspace.getConfiguration = jest.fn().mockReturnValue({
+        get: jest.fn(() => mockConfigurations),
+      });
+
       sut = newJestExt();
     });
     it('should run the supplied test', async () => {
@@ -314,7 +322,7 @@ describe('JestExt', () => {
         });
         it('if user did not choose any test, no debug will be run', async () => {
           selectIdx = -1;
-          await sut.debugTests(workspaceFolder, fileName, tId1, tId2, tId3);
+          await sut.debugTests(document, tId1, tId2, tId3);
           expect(mockShowQuickPick).toHaveBeenCalledTimes(1);
           expect(debug.startDebugging).not.toHaveBeenCalled();
         });
@@ -326,6 +334,61 @@ describe('JestExt', () => {
         });
       });
     });
+    it.each`
+      configNames                        | shouldShowWarning | debugMode
+      ${undefined}                       | ${true}           | ${true}
+      ${[]}                              | ${true}           | ${true}
+      ${['a', 'b']}                      | ${true}           | ${false}
+      ${['a', 'vscode-jest-tests', 'b']} | ${false}          | ${false}
+    `(
+      'provides setup wizard in warning message if no "vscode-jest-tests" in launch.json: $configNames',
+      async ({ configNames, shouldShowWarning, debugMode }) => {
+        expect.hasAssertions();
+        const testNamePattern = 'testNamePattern';
+        mockConfigurations = configNames ? configNames.map((name) => ({ name })) : undefined;
+
+        // mockProjectWorkspace.debug = debugMode;
+        sut = newJestExt({ settings: { debugMode } });
+
+        await sut.debugTests(document, testNamePattern);
+
+        expect(startDebugging).toBeCalledTimes(1);
+        if (shouldShowWarning) {
+          // debug with generated config
+          expect(debug.startDebugging).toHaveBeenLastCalledWith(
+            workspaceFolder,
+            debugConfiguration
+          );
+        } else {
+          // debug with existing config
+          expect(debug.startDebugging).toHaveBeenLastCalledWith(workspaceFolder, {
+            name: 'vscode-jest-tests',
+          });
+        }
+
+        expect(sut.debugConfigurationProvider.prepareTestRun).toBeCalledWith(
+          fileName,
+          testNamePattern
+        );
+
+        if (shouldShowWarning) {
+          expect(messaging.systemWarningMessage).toHaveBeenCalled();
+
+          //verify the message button does invoke the setup wizard command
+          const button = (messaging.systemWarningMessage as jest.Mocked<any>).mock.calls[0][1];
+          expect(button.action).not.toBeUndefined();
+          vscode.commands.executeCommand = jest.fn();
+          button.action();
+          expect(startWizard).toBeCalledWith(sut.debugConfigurationProvider, {
+            workspace: workspaceFolder,
+            taskId: 'debugConfig',
+            verbose: debugMode,
+          });
+        } else {
+          expect(messaging.systemWarningMessage).not.toHaveBeenCalled();
+        }
+      }
+    );
   });
 
   describe('onDidCloseTextDocument()', () => {
