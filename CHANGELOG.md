@@ -4,6 +4,10 @@ Please add your own contribution below inside the Master section
 Bug-fixes within the same version aren't needed
 
 ## Master
+
+-->
+
+### 4.0.0-alpha.5
 * added setup extension wizard - @connectdotz (#655)
 * update doc to give warning on potential incorrect coverage in watch mode - @connectdotz(#655)
 * Introducing a new interactive mode, in addition to the current "watch" mode, to run jest tests. Use the new `jest.autoRun` settings to control when and what tests should be run automatically, or not. - @connectdotz (#674) 
@@ -13,8 +17,7 @@ Bug-fixes within the same version aren't needed
 * added ability to update snapshot without restarting jest.  - @connectdotz (#674)
 * added ability to get jest metadata such as all test files.  - @connectdotz (#674)
 * change editor decorators to reflect when tests are changed but tests have not been run (which might be common in the new interactive mode)  - @connectdotz (#674)
--->
-
+* addressed a few dependency security vulnerability.
 ### 4.0.0-alpha.4
 * update doc to give warning on potential incorrect coverage in watch mode - @connectdotz
 * fix unknown location bug such as for jest.todo tests (#657) - @connectdotz

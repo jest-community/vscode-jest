@@ -179,7 +179,6 @@ const ContextMatch = (messaging: Messaging): ContextMatchAlgorithm => {
       // if we can't find corresponding container to match, the whole container will be considered unmatched
       return toUnmatchedResults(t, `can not find matching assertion for block ${t.name}`, reason);
     }
-    // eslint-disable-next-line @typescript-eslint/no-use-before-define
     return matchContainers(t, matched[0]);
   };
 
