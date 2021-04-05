@@ -5,11 +5,11 @@
 ---
 ## v4 Pre-Release <!-- omit in toc -->
 
-We are actively working on our next major release [v4](#576) that fixes many of the nagging issues many of you have asked, such as inconsistent test status indicator, high CPU usage, more granular control of when to run which tests, missing coverage, not recognize parameterized tests, frustrating start up failure etc. 
+We are actively working on our next major release [v4](https://github.com/jest-community/vscode-jest/issues/576) that addresses many nagging issues you have been asking for, such as inconsistent test status indicator, high CPU usage, more granular control of the test runner, missing coverage, supporting parameterized tests, mysterious start up failure etc. 
 
-The latest release is [v4.0.0-alpha.4](https://github.com/jest-community/vscode-jest/releases/tag/v4.0.0-alpha.4). 
+We are now (finally) feature complete with the latest release [v4.0.0-alpha.5](https://github.com/jest-community/vscode-jest/releases/tag/v4.0.0-alpha.5), please feel free to check it out and let us know how it works for you. 
 
-We would love to have as many people try it as possible so we can shake out the bugs and get to the final release sooner. If you experience any issue with the production version, please try the alpha and let us know if it did not fix your issue so we can fast track your issue...
+The current production release (3.2.0) is in code freeze. Please try alpha release if you experienced any issue with the production version. We can most likely fast track your issue right now before the final release.
 
 ---
 
