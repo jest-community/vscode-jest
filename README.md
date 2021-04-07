@@ -331,9 +331,15 @@ Besides the formatter, user can also customize the color via `jest.coverageColor
       }
       ```
 </details>
+
 ### Debug Config
 
-This extension offers default debug config for common use cases, such as standard jest or projects bootstrapped by `create-react-app`. More sophisticated projects might need to customize the debug config. As mentioned earlier, you can use the [setup wizard](setup-wizard.md) to help create one, or edit it manually in the `launch.json` file, where a few jest specific debug config templates are offered, such as "Jest: Default jest configuration" or "Jest: create-react-app". To learn more about debug/launch configurations in general, visit [VS Code Docs: Debugging](https://code.visualstudio.com/docs/editor/debugging#_launch-configurations).
+This extension looks for `"vscode-jest-tests"` debug config in the workspace `.vscode/launch.json`. If not found, it will attempt to generate a default config that should work for most standard jest or projects bootstrapped by `create-react-app`. 
+
+If the default config is not working for your project, you can either use the [setup wizard](setup-wizard.md), probably the easier approach (available in v4), or edit the `launch.json` file manually.
+
+If you choose to edit the `launch.json` manually, you can use the jest templates, such as "Jest: Default jest configuration" or "Jest: create-react-app", as a starting point. See more detail on how to add debug config in vscode [Debugging](https://code.visualstudio.com/docs/editor/debugging#_launch-configurations). 
+
 
 There are many information online about how to setup vscode debug config for specific environments/frameworks, you might find the following helpful:
   - [vscode debug config properties](https://code.visualstudio.com/docs/nodejs/nodejs-debugging#_launch-configuration-properties) 
