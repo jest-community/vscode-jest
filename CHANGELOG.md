@@ -4,7 +4,8 @@ Please add your own contribution below inside the Master section
 Bug-fixes within the same version aren't needed
 
 ## Master
-
+* fix internal debug issue with webpack 5.x - @connectdotz
+* 
 -->
 
 ### 4.0.0-alpha.5

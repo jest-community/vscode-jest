@@ -376,7 +376,7 @@
     "clean-out": "rimraf ./out",
     "vscode:prepublish": "yarn clean-out && yarn compile",
     "compile": "webpack --mode production",
-    "watch": "webpack --mode development --watch --info-verbosity verbose",
+    "watch": "webpack --mode development --watch --progress",
     "lint": "eslint \"src/**/*.ts\" \"tests/**/*.ts\" \"*.json\"  \"*.js\" ",
     "test": "jest",
     "watch-test": "yarn test -- --watch",
