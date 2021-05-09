@@ -8,7 +8,11 @@ Bug-fixes within the same version aren't needed
 * 
 -->
 
-### 4.0.0-alpha.5
+### 4.0.0
+
+* fix internal debug issue with webpack 5.x - @connectdotz (#690)
+* roll up the previous alpha releases...
+#### 4.0.0-alpha.5
 * added setup extension wizard - @connectdotz (#655)
 * update doc to give warning on potential incorrect coverage in watch mode - @connectdotz(#655)
 * Introducing a new interactive mode, in addition to the current "watch" mode, to run jest tests. Use the new `jest.autoRun` settings to control when and what tests should be run automatically, or not. - @connectdotz (#674) 
@@ -19,24 +23,24 @@ Bug-fixes within the same version aren't needed
 * added ability to get jest metadata such as all test files.  - @connectdotz (#674)
 * change editor decorators to reflect when tests are changed but tests have not been run (which might be common in the new interactive mode)  - @connectdotz (#674)
 * addressed a few dependency security vulnerability.
-### 4.0.0-alpha.4
+#### 4.0.0-alpha.4
 * update doc to give warning on potential incorrect coverage in watch mode - @connectdotz
 * fix unknown location bug such as for jest.todo tests (#657) - @connectdotz
 * fix no debug codeLens if autoEnable is false (#658) - @connectdotz
 * turn typescript strict mode on, upgrade tooling and clean up the conflict - @connectdotz
-### 4.0.0-alpha.3
+#### 4.0.0-alpha.3
 * fully support parameterized tests in matching, diagnosis and debugging - @connectdotz
 * optimization: remove stop/start the internal jest tests process during debug - @connectdotz
 * add a new setting for "jest.jestCommandLine" that supersede "jest.pathToJest" and "jest.pathToConfig" - @connectdotz
-### 4.0.0-alpha.2
+#### 4.0.0-alpha.2
 * use assertion's fullName in TestResult instead of the source test name - @connectdotz
 * consolidated and simplified coverage formatter parsing logic; added overlay color customization; change coverage formatter/colors will take effect without restarting vscode; updated coverage help in README. - @connectdotz
-### 4.0.0-alpha.1
+#### 4.0.0-alpha.1
 * change path of jest executable in order to support running jest in yarn workspaces - @glentakahashi
 * refactor editor decorations and load icons from `vscode-codicons` [@Tymek](https://github.com/Tymek)
 * move test status indicator from editor text to gutter [@Tymek](https://github.com/Tymek)
 
-### 4.0.0-alpha.0
+#### 4.0.0-alpha.0
 * improve create-react-app detection logic - stephtr
 * improve the detection of cases in which Jest needs to be restarted with `--watchAll` - [@lordofthelake](https://github.com/lordofthelake)  
 * upgrade all dependencies to the latest, except istanbul-lib-xxx, which requires more code change and will be handled in a separate coverage PR. - @connectdotz

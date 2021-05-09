@@ -3,13 +3,17 @@
 [![Build Status](https://travis-ci.org/jest-community/vscode-jest.svg?branch=master)](https://travis-ci.org/jest-community/vscode-jest) [![Coverage Status](https://coveralls.io/repos/github/jest-community/vscode-jest/badge.svg?branch=master)](https://coveralls.io/github/jest-community/vscode-jest?branch=master) [![Visual Studio Marketplace](https://img.shields.io/visual-studio-marketplace/v/Orta.vscode-jest?color=success&label=Visual%20Studio%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=Orta.vscode-jest) 
 
 ---
-## v4 Pre-Release <!-- omit in toc -->
+## v4 Release <!-- omit in toc -->
 
-We are actively working on our next major release [v4](https://github.com/jest-community/vscode-jest/issues/576) that addresses many nagging issues you have been asking for, such as inconsistent test status indicator, high CPU usage, more granular control of the test runner, missing coverage, supporting parameterized tests, mysterious start up failure etc. 
+After longer than expected development, [v4](https://github.com/jest-community/vscode-jest/releases/tag/v4.0.0) is finally released! 😄
 
-We are now (finally) feature complete with the latest release [v4.0.0-alpha.5](https://github.com/jest-community/vscode-jest/releases/tag/v4.0.0-alpha.5), please feel free to check it out and let us know how it works for you. 
+This is a big release packed with changes to address many nagging issues you have been asking for, such as inconsistent test status indicators, high CPU usage, more granular control of the test runner, missing coverage, supporting parameterized tests, mysterious start up failure etc. 
 
-The current production release (3.2.0) is in code freeze. Please try alpha release if you experienced any issue with the production version. We can most likely fast track your issue right now before the final release.
+Knowing the scope of the changes is significant, while we tried to test it as much as we can, there are probably still some rough edges we have not discovered. If it interrupted your work, our apology! You can either look up on the document below to see if you can find a workaround; or [revert](https://code.visualstudio.com/updates/v1_30#_install-previous-versions) to the earlier version. Please do not hesitate to file [issues](https://github.com/jest-community/vscode-jest/issues) or ask questions in [discussions](https://github.com/jest-community/vscode-jest/discussions), we will be monitoring them closely and address issues as best we can. 
+
+Feel free to read more about the [features and migration](https://github.com/jest-community/vscode-jest/releases/tag/v4.0.0) or come chat with us in the [release discussion](https://github.com/jest-community/vscode-jest/discussions/categories/general) for general comments or questions about this release.
+
+P.S. We find the new version did made the development of this extension a bit easier (yes, we do eat our own dog food :dog:), hopefully, it will do the same for your project. Happy coding!
 
 ---
 
@@ -405,11 +409,21 @@ Sorry you are having trouble with the extension. If your issue did not get resol
 </details>
 
 <details>
-<summary><a id='self-diagnosis'></a>The extension is not behaving as expected, what is going on?</summary> 
+<summary>The tests and status do not match or some tests showing question marks unexpectedly</summary>
+
+If your test file happen to have parameterized tests, i.e. `test.each` variations, please make sure you have jest version >= 26.5. 
+
+If the above did not resolve your issue, please see the [self-diagnosis](#self-diagnosis) below that could show more insight of why the test and result could not be matched.
+
+</details>
+
+<details>
+<summary><a id='self-diagnosis'></a>The extension is not behaving as expected, what is going on? (try self diagnosis)</summary> 
 
 If your can execute jest tests on command line but vscode-jest was not running as expected, here is what you can do to find out more information:
   - See jest process output in the "OUTPUT" channel, which is usually named after the workspace folder, such as `Jest (your-workspace-name)`. Or you can click on `Jest` label on status bar to show Jest Output window. This will show you the jest run output and the errors.
    <img src="https://github.com/jest-community/vscode-jest/raw/master/images/output-channel.png" alt="Screenshot of the tool" width="100%">
+
   - Turn on the debug mode to see more internal debugging message: 
     - set `"jest.debugMode": true` in `.vscode/settings.json` 
     - restart vscode-jest or reload the window (via `Reload Window` command)
