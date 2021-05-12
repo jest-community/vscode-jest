@@ -65,8 +65,8 @@ describe('jest process listeners', () => {
       ${[]}                                                | ${[]}
       ${['whatever\n', '["file1", "file', '2", "file3"]']} | ${['file1', 'file2', 'file3']}
       ${['["/a/b", "a/c"]']}                               | ${['/a/b', 'a/c']}
-      ${['["/a/b", "a/c"]', '["a","b","c"]']}              | ${undefined}
-      ${['[a, b]']}                                        | ${'throw'}
+      ${['["/a/b", "a/c"]\n', '["a","b","c"]']}            | ${'unexpected result'}
+      ${['[a, b]']}                                        | ${'Unexpected token'}
     `('can extract and notify file list from valid $output', ({ output, expectedFiles }) => {
       expect.hasAssertions();
 
@@ -87,6 +87,7 @@ describe('jest process listeners', () => {
       } else {
         expect(fileNames).toBeUndefined();
         expect(error).not.toBeUndefined();
+        expect(error.toString()).toContain(expectedFiles);
       }
     });
   });

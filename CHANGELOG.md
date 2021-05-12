@@ -4,10 +4,11 @@ Please add your own contribution below inside the Master section
 Bug-fixes within the same version aren't needed
 
 ## Master
-* fix test files not found in testFile list on windows after v4 migration - @connectdotz
-* do not report error if no test file found - @connectdotz
 -->
 
+### 4.0.1
+* fix test files not found in testFile list on windows after v4 migration - @connectdotz (#696)
+* do not report error if no test file found - @connectdotz (#696)
 ### 4.0.0
 
 * fix internal debug issue with webpack 5.x - @connectdotz (#690)

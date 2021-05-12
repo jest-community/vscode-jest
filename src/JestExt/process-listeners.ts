@@ -118,7 +118,7 @@ export class ListTestFileListener extends AbstractProcessListener {
     super.onProcessClose(process);
     try {
       const json = this.buffer.match(JsonArrayRegexp);
-      if (!json) {
+      if (!json || json.length === 0) {
         // no test file is probably all right
         this.logging('debug', 'no test file is found');
         return this.onResult([]);
@@ -131,7 +131,7 @@ export class ListTestFileListener extends AbstractProcessListener {
 
         return this.onResult(uriFiles);
       }
-      throw new Error('invalid result format');
+      throw new Error('unexpected result');
     } catch (e) {
       this.logging('warn', 'failed to parse result:', this.buffer, 'error=', e);
       return this.onResult(undefined, e);
