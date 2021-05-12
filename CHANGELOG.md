@@ -4,8 +4,8 @@ Please add your own contribution below inside the Master section
 Bug-fixes within the same version aren't needed
 
 ## Master
-* fix internal debug issue with webpack 5.x - @connectdotz
-* 
+* fix test files not found in testFile list on windows after v4 migration - @connectdotz
+* do not report error if no test file found - @connectdotz
 -->
 
 ### 4.0.0

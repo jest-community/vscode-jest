@@ -3,7 +3,7 @@ import { JestTotalResults } from 'jest-editor-support';
 import * as messaging from '../messaging';
 import { cleanAnsi } from '../helpers';
 import { JestProcess, JestProcessEvent, JestProcessListener } from '../JestProcessManagement';
-import { ListenerSession } from './process-session';
+import { ListenerSession, OnListTestFilesResult } from './process-session';
 import { isWatchRequest, prefixWorkspace } from './helper';
 import { Logging } from '../logging';
 
@@ -104,12 +104,9 @@ export class ListTestFileListener extends AbstractProcessListener {
     return 'ListTestFileListener';
   }
   private buffer = '';
-  private onResult: (fileNames?: string[], error?: string | Error) => void;
+  private onResult: OnListTestFilesResult;
 
-  constructor(
-    session: ListenerSession,
-    onResult: (fileNames?: string[], error?: string | Error) => void
-  ) {
+  constructor(session: ListenerSession, onResult: OnListTestFilesResult) {
     super(session);
     this.onResult = onResult;
   }
@@ -121,17 +118,22 @@ export class ListTestFileListener extends AbstractProcessListener {
     super.onProcessClose(process);
     try {
       const json = this.buffer.match(JsonArrayRegexp);
-      if (json && json.length === 1) {
-        const files = JSON.parse(json[0]);
-        this.logging('debug', `got ${files.length} test files`);
-
-        return this.onResult(files);
-      } else {
-        this.logging('warn', 'failed to extract test files from output:', this.buffer);
-        return this.onResult(undefined, 'failed to extract test files');
+      if (!json) {
+        // no test file is probably all right
+        this.logging('debug', 'no test file is found');
+        return this.onResult([]);
       }
+      if (json.length === 1) {
+        const files: string[] = JSON.parse(json[0]);
+        // convert to uri style filePath to match vscode document names
+        const uriFiles = files.map((f) => vscode.Uri.file(f).fsPath);
+        this.logging('debug', `got ${uriFiles.length} test files`);
+
+        return this.onResult(uriFiles);
+      }
+      throw new Error('invalid result format');
     } catch (e) {
-      this.logging('warn', 'failed to extract test files from output:', this.buffer, 'error=', e);
+      this.logging('warn', 'failed to parse result:', this.buffer, 'error=', e);
       return this.onResult(undefined, e);
     }
   }

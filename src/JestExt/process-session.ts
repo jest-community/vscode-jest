@@ -11,10 +11,11 @@ import { RunTestListener, ListTestFileListener } from './process-listeners';
 import { JestExtProcessContext } from './types';
 
 type InternalProcessType = 'list-test-files' | 'update-snapshot';
+export type OnListTestFilesResult = (fileNames?: string[], error?: string | Error) => void;
 export type InternalRequestBase =
   | {
       type: Extract<InternalProcessType, 'list-test-files'>;
-      onResult: (fileNames?: string[], error?: string | Error) => void;
+      onResult: OnListTestFilesResult;
     }
   | {
       type: Extract<InternalProcessType, 'update-snapshot'>;

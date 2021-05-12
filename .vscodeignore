@@ -24,3 +24,4 @@ images/**
 node_modules
 webpack.config.js
 generated-icons/
+*.zip
