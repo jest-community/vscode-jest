@@ -3,7 +3,7 @@ import { JestTotalResults } from 'jest-editor-support';
 import * as messaging from '../messaging';
 import { cleanAnsi } from '../helpers';
 import { JestProcess, JestProcessEvent, JestProcessListener } from '../JestProcessManagement';
-import { ListenerSession, OnListTestFilesResult } from './process-session';
+import { ListenerSession, ListTestFilesCallback } from './process-session';
 import { isWatchRequest, prefixWorkspace } from './helper';
 import { Logging } from '../logging';
 
@@ -104,9 +104,9 @@ export class ListTestFileListener extends AbstractProcessListener {
     return 'ListTestFileListener';
   }
   private buffer = '';
-  private onResult: OnListTestFilesResult;
+  private onResult: ListTestFilesCallback;
 
-  constructor(session: ListenerSession, onResult: OnListTestFilesResult) {
+  constructor(session: ListenerSession, onResult: ListTestFilesCallback) {
     super(session);
     this.onResult = onResult;
   }
