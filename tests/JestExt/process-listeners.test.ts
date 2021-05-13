@@ -62,14 +62,15 @@ describe('jest process listeners', () => {
   describe('ListTestFileListener', () => {
     it.each`
       output                                               | expectedFiles
-      ${[]}                                                | ${undefined}
+      ${[]}                                                | ${[]}
       ${['whatever\n', '["file1", "file', '2", "file3"]']} | ${['file1', 'file2', 'file3']}
       ${['["/a/b", "a/c"]']}                               | ${['/a/b', 'a/c']}
-      ${['["/a/b", "a/c"]\n', '["a","b","c"]']}            | ${undefined}
-      ${['[a, b]']}                                        | ${'throw'}
+      ${['["/a/b", "a/c"]\n', '["a","b","c"]']}            | ${'unexpected result'}
+      ${['[a, b]']}                                        | ${'Unexpected token'}
     `('can extract and notify file list from valid $output', ({ output, expectedFiles }) => {
       expect.hasAssertions();
 
+      (vscode.Uri.file as jest.Mocked<any>) = jest.fn((f) => ({ fsPath: f }));
       const onResult = jest.fn();
       const listener = new ListTestFileListener(mockSession, onResult);
 
@@ -80,11 +81,13 @@ describe('jest process listeners', () => {
 
       const [fileNames, error] = onResult.mock.calls[0];
       if (Array.isArray(expectedFiles)) {
+        expect(vscode.Uri.file).toBeCalledTimes(expectedFiles.length);
         expect(fileNames).toEqual(expectedFiles);
         expect(error).toBeUndefined();
       } else {
         expect(fileNames).toBeUndefined();
         expect(error).not.toBeUndefined();
+        expect(error.toString()).toContain(expectedFiles);
       }
     });
   });
