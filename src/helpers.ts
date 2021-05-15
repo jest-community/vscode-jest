@@ -146,6 +146,14 @@ export function testIdString(type: IdStringType, identifier: TestIdentifier): st
 }
 
 /**
+ * escape windows file path '\' to '\\', see https://jestjs.io/docs/cli#jest-regexfortestfiles
+ * @param filePath
+ */
+export function escapeFilePath(filePath: string): string {
+  return filePath.replace(/\\/g, '\\\\');
+}
+
+/**
  * Generate path to icon used in decorations
  * NOTE: Should not be called repeatedly for the performance reasons. Cache your results.
  */

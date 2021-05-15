@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { getTestCommand, isCreateReactAppTestCommand } from './helpers';
+import { escapeFilePath, getTestCommand, isCreateReactAppTestCommand } from './helpers';
 
 export class DebugConfigurationProvider implements vscode.DebugConfigurationProvider {
   private fileNameToRun = '';
@@ -33,11 +33,17 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
       debugConfiguration.args = [];
     }
     if (this.fileNameToRun) {
-      debugConfiguration.args.push(this.fileNameToRun);
       if (this.testToRun) {
         debugConfiguration.args.push('--testNamePattern');
         debugConfiguration.args.push(this.testToRun);
       }
+      if (!debugConfiguration.args.includes('--runTestsByPath')) {
+        debugConfiguration.args.push('--runTestsByPath');
+      }
+      if (!debugConfiguration.args.includes('${file}')) {
+        debugConfiguration.args.push(escapeFilePath(this.fileNameToRun));
+      }
+
       this.fileNameToRun = '';
       this.testToRun = '';
     }
@@ -60,7 +66,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
       type: 'node',
       name: 'vscode-jest-tests',
       request: 'launch',
-      args: ['--runInBand'],
+      args: ['--runInBand', '--runTestsByPath', '${file}'],
       cwd: '${workspaceFolder}',
       console: 'integratedTerminal',
       internalConsoleOptions: 'neverOpen',

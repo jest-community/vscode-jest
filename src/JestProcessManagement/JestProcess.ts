@@ -6,7 +6,7 @@ import { extensionId } from '../appGlobals';
 import { Logging } from '../logging';
 import { JestProcessRequest } from './types';
 import { requestString } from './helper';
-import { removeSurroundingQuote } from '../helpers';
+import { escapeFilePath, removeSurroundingQuote } from '../helpers';
 
 export const RunnerEvents: RunnerEvent[] = [
   'processClose',
@@ -110,7 +110,9 @@ export class JestProcess {
         }
         break;
       case 'by-file': {
-        options.testFileNamePattern = this.quoteFileName(this.request.testFileNamePattern);
+        options.testFileNamePattern = this.quoteFileName(
+          escapeFilePath(this.request.testFileNamePattern)
+        );
         const args: string[] = ['--findRelatedTests'];
         if (this.request.updateSnapshot) {
           args.push('--updateSnapshot');
@@ -119,13 +121,18 @@ export class JestProcess {
         break;
       }
 
-      case 'by-file-test':
-        options.testFileNamePattern = this.quoteFileName(this.request.testFileNamePattern);
+      case 'by-file-test': {
+        options.testFileNamePattern = this.quoteFileName(
+          escapeFilePath(this.request.testFileNamePattern)
+        );
         options.testNamePattern = this.request.testNamePattern;
+        const args: string[] = ['--runTestsByPath'];
         if (this.request.updateSnapshot) {
-          options.args = { args: ['--updateSnapshot'] };
+          args.push('--updateSnapshot');
         }
+        options.args = { args };
         break;
+      }
       case 'not-test':
         delete options.reporters;
         options.args = { args: this.request.args, replace: true };

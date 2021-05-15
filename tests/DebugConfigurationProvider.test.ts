@@ -1,7 +1,7 @@
 jest.unmock('../src/DebugConfigurationProvider');
 
 import { DebugConfigurationProvider } from '../src/DebugConfigurationProvider';
-import { getTestCommand, isCreateReactAppTestCommand } from '../src/helpers';
+import { getTestCommand, isCreateReactAppTestCommand, escapeFilePath } from '../src/helpers';
 
 describe('DebugConfigurationProvider', () => {
   it('should by default return a DebugConfiguration for Jest', () => {
@@ -37,19 +37,36 @@ describe('DebugConfigurationProvider', () => {
     expect(config.args).toContain('--runInBand');
   });
 
-  it('should append the specified tests', () => {
-    const fileName = 'fileName';
-    const testNamePattern = 'testNamePattern';
-    const expected = [fileName, '--testNamePattern', testNamePattern];
-    let configuration: any = { name: 'vscode-jest-tests' };
+  it.each`
+    debugConfigArgs                    | expectByPathArg | expectFileNameArg
+    ${[]}                              | ${true}         | ${true}
+    ${['--runTestsByPath']}            | ${false}        | ${true}
+    ${['--runTestsByPath', '${file}']} | ${false}        | ${false}
+  `(
+    'should append the specified tests arguments',
+    ({ debugConfigArgs, expectByPathArg, expectFileNameArg }) => {
+      ((escapeFilePath as unknown) as jest.Mock<{}>).mockImplementation((s) => s);
+      const fileName = 'fileName';
+      const testNamePattern = 'testNamePattern';
+      const expected = [...debugConfigArgs, '--testNamePattern', testNamePattern];
 
-    const sut = new DebugConfigurationProvider();
-    sut.prepareTestRun(fileName, testNamePattern);
+      let configuration: any = { name: 'vscode-jest-tests', args: debugConfigArgs };
 
-    configuration = sut.resolveDebugConfiguration(undefined, configuration);
+      const sut = new DebugConfigurationProvider();
+      sut.prepareTestRun(fileName, testNamePattern);
 
-    expect(configuration).toBeDefined();
-    expect(configuration.env && configuration.env.CI).toBeTruthy();
-    expect(configuration.args).toEqual(expected);
-  });
+      configuration = sut.resolveDebugConfiguration(undefined, configuration);
+
+      expect(configuration).toBeDefined();
+      expect(configuration.env && configuration.env.CI).toBeTruthy();
+      if (expectByPathArg) {
+        expected.push('--runTestsByPath');
+      }
+      if (expectFileNameArg) {
+        expected.push(fileName);
+        expect(escapeFilePath).toBeCalled();
+      }
+      expect(configuration.args).toEqual(expected);
+    }
+  );
 });

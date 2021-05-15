@@ -32,6 +32,7 @@ import {
   testIdString,
   escapeRegExp,
   removeSurroundingQuote,
+  escapeFilePath,
 } from '../src/helpers';
 
 // Manually (forcefully) set the executable's file extension to test its addition independendly of the operating system.
@@ -249,5 +250,17 @@ describe('removeSurroundingQuote', () => {
     ${"''single single quote''"} | ${'single single quote'}
   `('can remove surrounding quotes from $str', ({ str, expected }) => {
     expect(removeSurroundingQuote(str)).toEqual(expected);
+  });
+});
+
+describe('escapeFilePath', () => {
+  it.each`
+    path                | expected
+    ${'/a/b/c'}         | ${'/a/b/c'}
+    ${'C:/a/b/c.js'}    | ${'C:/a/b/c.js'}
+    ${'c:\\a\\b\\c.ts'} | ${'c:\\\\a\\\\b\\\\c.ts'}
+    ${''}               | ${''}
+  `('escape $path => $expected', ({ path, expected }) => {
+    expect(escapeFilePath(path)).toEqual(expected);
   });
 });
