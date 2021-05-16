@@ -292,8 +292,8 @@
     "keybindings": [
       {
         "command": "io.orta.jest.editor.run-all-tests",
-        "key": "ctrl+t",
-        "mac": "cmd+t",
+        "key": "ctrl+alt+t",
+        "mac": "ctrl+alt+t",
         "when": "jest:run.interactive && editorLangId =~ /(javascript|javascriptreact|typescript|typescriptreact)/ "
       }
     ],
