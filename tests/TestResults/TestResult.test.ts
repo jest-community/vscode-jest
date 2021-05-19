@@ -10,7 +10,6 @@ const {
   coverageMapWithLowerCaseWindowsDriveLetters,
   testResultsWithLowerCaseWindowsDriveLetters,
   resultsWithoutAnsiEscapeSequence,
-  withLowerCaseWindowsDriveLetter,
 } = TestResult;
 
 describe('TestResult', () => {
@@ -135,18 +134,6 @@ describe('TestResult', () => {
           property: {},
         },
       });
-    });
-  });
-
-  describe('withLowerCaseDriveLetter', () => {
-    it('should return a new file path when provided a path with an upper case drive letter', () => {
-      const filePath = 'C:\\path\\file.ext';
-      expect(withLowerCaseWindowsDriveLetter(filePath)).toBe('c:\\path\\file.ext');
-    });
-
-    it('should indicate no change is required otherwise', () => {
-      const filePath = 'c:\\path\\file.ext';
-      expect(withLowerCaseWindowsDriveLetter(filePath)).toBeUndefined();
     });
   });
 });

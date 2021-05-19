@@ -32,7 +32,9 @@ import {
   testIdString,
   escapeRegExp,
   removeSurroundingQuote,
-  escapeFilePath,
+  toFilePath,
+  toLowerCaseDriveLetter,
+  toUpperCaseDriveLetter,
 } from '../src/helpers';
 
 // Manually (forcefully) set the executable's file extension to test its addition independendly of the operating system.
@@ -253,14 +255,40 @@ describe('removeSurroundingQuote', () => {
   });
 });
 
-describe('escapeFilePath', () => {
+describe('toFilePath', () => {
   it.each`
     path                | expected
     ${'/a/b/c'}         | ${'/a/b/c'}
     ${'C:/a/b/c.js'}    | ${'C:/a/b/c.js'}
-    ${'c:\\a\\b\\c.ts'} | ${'c:\\\\a\\\\b\\\\c.ts'}
+    ${'c:/a/b/c.js'}    | ${'c:/a/b/c.js'}
+    ${'z:\\a\\b\\c.js'} | ${'Z:\\a\\b\\c.js'}
+    ${'\\a\\b\\c.js'}   | ${'\\a\\b\\c.js'}
     ${''}               | ${''}
   `('escape $path => $expected', ({ path, expected }) => {
-    expect(escapeFilePath(path)).toEqual(expected);
+    expect(toFilePath(path)).toEqual(expected);
+  });
+});
+
+describe('toLowerCaseDriveLetter', () => {
+  it.each`
+    filePath                | expected
+    ${'C:\\path\\file.ext'} | ${'c:\\path\\file.ext'}
+    ${'c:\\path\\file.ext'} | ${undefined}
+    ${'c:/path/file.ext'}   | ${undefined}
+    ${'/path/file.ext'}     | ${undefined}
+  `('$filePath => $expected', ({ filePath, expected }) => {
+    expect(toLowerCaseDriveLetter(filePath)).toBe(expected);
+  });
+});
+
+describe('toUpperCaseDriveLetter', () => {
+  it.each`
+    filePath                | expected
+    ${'C:\\path\\file.ext'} | ${undefined}
+    ${'c:\\path\\file.ext'} | ${'C:\\path\\file.ext'}
+    ${'c:/path/file.ext'}   | ${undefined}
+    ${'/path/file.ext'}     | ${undefined}
+  `('$filePath => $expected', ({ filePath, expected }) => {
+    expect(toUpperCaseDriveLetter(filePath)).toBe(expected);
   });
 });

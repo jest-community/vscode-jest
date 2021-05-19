@@ -2,7 +2,7 @@ import { TestReconciliationStateType } from './TestReconciliationState';
 import { JestFileResults, JestTotalResults } from 'jest-editor-support';
 import { FileCoverage } from 'istanbul-lib-coverage';
 import * as path from 'path';
-import { cleanAnsi } from '../helpers';
+import { cleanAnsi, toLowerCaseDriveLetter } from '../helpers';
 
 export interface Location {
   /** Zero-based column number */
@@ -46,15 +46,8 @@ export interface TestResult extends LocationRange {
   reason?: MatchResultReason;
 }
 
-export const withLowerCaseWindowsDriveLetter = (filePath: string): string | undefined => {
-  const match = filePath.match(/^([A-Z]:\\)(.*)$/);
-  if (match) {
-    return `${match[1].toLowerCase()}${match[2]}`;
-  }
-};
-
 function testResultWithLowerCaseWindowsDriveLetter(testResult: JestFileResults): JestFileResults {
-  const newFilePath = withLowerCaseWindowsDriveLetter(testResult.name);
+  const newFilePath = toLowerCaseDriveLetter(testResult.name);
   if (newFilePath) {
     return {
       ...testResult,
@@ -76,7 +69,7 @@ export const testResultsWithLowerCaseWindowsDriveLetters = (
 };
 
 function fileCoverageWithLowerCaseWindowsDriveLetter(fileCoverage: FileCoverage) {
-  const newFilePath = withLowerCaseWindowsDriveLetter(fileCoverage.path);
+  const newFilePath = toLowerCaseDriveLetter(fileCoverage.path);
   if (newFilePath) {
     return {
       ...fileCoverage,

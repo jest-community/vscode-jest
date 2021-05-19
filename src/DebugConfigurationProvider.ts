@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { escapeFilePath, getTestCommand, isCreateReactAppTestCommand } from './helpers';
+import { toFilePath, getTestCommand, isCreateReactAppTestCommand } from './helpers';
 
 export class DebugConfigurationProvider implements vscode.DebugConfigurationProvider {
   private fileNameToRun = '';
@@ -29,25 +29,21 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     // necessary for running CRA test scripts in non-watch mode
     debugConfiguration.env.CI = 'vscode-jest-tests';
 
-    if (!debugConfiguration.args) {
-      debugConfiguration.args = [];
-    }
+    const args = debugConfiguration.args || [];
+
     if (this.fileNameToRun) {
       if (this.testToRun) {
-        debugConfiguration.args.push('--testNamePattern');
-        debugConfiguration.args.push(this.testToRun);
+        args.push('--testNamePattern');
+        args.push(this.testToRun);
       }
-      if (!debugConfiguration.args.includes('--runTestsByPath')) {
-        debugConfiguration.args.push('--runTestsByPath');
-      }
-      if (!debugConfiguration.args.includes('${file}')) {
-        debugConfiguration.args.push(escapeFilePath(this.fileNameToRun));
-      }
+      args.push('--runTestsByPath');
+      args.push(toFilePath(this.fileNameToRun));
 
       this.fileNameToRun = '';
       this.testToRun = '';
     }
 
+    debugConfiguration.args = args;
     return debugConfiguration;
   }
 
@@ -66,7 +62,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
       type: 'node',
       name: 'vscode-jest-tests',
       request: 'launch',
-      args: ['--runInBand', '--runTestsByPath', '${file}'],
+      args: ['--runInBand', '--watchAll=false'],
       cwd: '${workspaceFolder}',
       console: 'integratedTerminal',
       internalConsoleOptions: 'neverOpen',

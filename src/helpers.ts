@@ -145,12 +145,28 @@ export function testIdString(type: IdStringType, identifier: TestIdentifier): st
   }
 }
 
+/** convert the upper-case drive letter filePath to lower-case. If path does not contain upper-case drive letter, returns undefined. */
+// note: this should probably be replaced by vscode.URI.file(filePath).fsPath ...
+export function toLowerCaseDriveLetter(filePath: string): string | undefined {
+  const match = filePath.match(/^([A-Z]:\\)(.*)$/);
+  if (match) {
+    return `${match[1].toLowerCase()}${match[2]}`;
+  }
+}
+/** convert the lower-case drive letter filePath (like vscode.URI.fsPath) to lower-case. If path does not contain lower-case drive letter, returns undefined. */
+export function toUpperCaseDriveLetter(filePath: string): string | undefined {
+  const match = filePath.match(/^([a-z]:\\)(.*)$/);
+  if (match) {
+    return `${match[1].toUpperCase()}${match[2]}`;
+  }
+}
+
 /**
- * escape windows file path '\' to '\\', see https://jestjs.io/docs/cli#jest-regexfortestfiles
+ * convert vscode.URI.fsPath to the actual file system file-path, i.e. convert drive letter to upper-case for windows
  * @param filePath
  */
-export function escapeFilePath(filePath: string): string {
-  return filePath.replace(/\\/g, '\\\\');
+export function toFilePath(filePath: string): string {
+  return toUpperCaseDriveLetter(filePath) || filePath;
 }
 
 /**

@@ -1,9 +1,12 @@
 jest.unmock('../src/DebugConfigurationProvider');
 
 import { DebugConfigurationProvider } from '../src/DebugConfigurationProvider';
-import { getTestCommand, isCreateReactAppTestCommand, escapeFilePath } from '../src/helpers';
+import { getTestCommand, isCreateReactAppTestCommand, toFilePath } from '../src/helpers';
 
 describe('DebugConfigurationProvider', () => {
+  const fileName = '/a/file';
+  const testName = 'a test';
+
   it('should by default return a DebugConfiguration for Jest', () => {
     const folder: any = { uri: { fsPath: null } };
     const sut = new DebugConfigurationProvider();
@@ -35,38 +38,28 @@ describe('DebugConfigurationProvider', () => {
     expect(config.args[0]).toBe('test');
     expect(config.args).toContain('--env=jsdom');
     expect(config.args).toContain('--runInBand');
+    expect(config.args).toContain('--watchAll=false');
   });
 
   it.each`
-    debugConfigArgs                    | expectByPathArg | expectFileNameArg
-    ${[]}                              | ${true}         | ${true}
-    ${['--runTestsByPath']}            | ${false}        | ${true}
-    ${['--runTestsByPath', '${file}']} | ${false}        | ${false}
-  `(
-    'should append the specified tests arguments',
-    ({ debugConfigArgs, expectByPathArg, expectFileNameArg }) => {
-      ((escapeFilePath as unknown) as jest.Mock<{}>).mockImplementation((s) => s);
-      const fileName = 'fileName';
-      const testNamePattern = 'testNamePattern';
-      const expected = [...debugConfigArgs, '--testNamePattern', testNamePattern];
+    debugConfigArgs    | expectedArgs
+    ${[]}              | ${['--testNamePattern', testName, '--runTestsByPath', fileName]}
+    ${['--runInBand']} | ${['--runInBand', '--testNamePattern', testName, '--runTestsByPath', fileName]}
+  `('should append the specified tests arguments', ({ debugConfigArgs, expectedArgs }) => {
+    ((toFilePath as unknown) as jest.Mock<{}>).mockImplementation((s) => s);
 
-      let configuration: any = { name: 'vscode-jest-tests', args: debugConfigArgs };
+    let configuration: any = { name: 'vscode-jest-tests', args: debugConfigArgs };
 
-      const sut = new DebugConfigurationProvider();
-      sut.prepareTestRun(fileName, testNamePattern);
+    const sut = new DebugConfigurationProvider();
+    sut.prepareTestRun(fileName, testName);
 
-      configuration = sut.resolveDebugConfiguration(undefined, configuration);
+    configuration = sut.resolveDebugConfiguration(undefined, configuration);
 
-      expect(configuration).toBeDefined();
-      expect(configuration.env && configuration.env.CI).toBeTruthy();
-      if (expectByPathArg) {
-        expected.push('--runTestsByPath');
-      }
-      if (expectFileNameArg) {
-        expected.push(fileName);
-        expect(escapeFilePath).toBeCalled();
-      }
-      expect(configuration.args).toEqual(expected);
+    expect(configuration).toBeDefined();
+    expect(configuration.env && configuration.env.CI).toBeTruthy();
+    if (expectedArgs.includes('--runTestsByPath')) {
+      expect(toFilePath).toBeCalled();
     }
-  );
+    expect(configuration.args).toEqual(expectedArgs);
+  });
 });
