@@ -1,13 +1,16 @@
-import {
-  JestFileResults,
-  JestTotalResults,
-  CodeLocation as Location,
-  TestReconciliationState,
-} from 'jest-editor-support';
-import { CoverageMapData, FileCoverageData } from 'istanbul-lib-coverage';
+import { TestReconciliationStateType } from './TestReconciliationState';
+import { JestFileResults, JestTotalResults } from 'jest-editor-support';
+import { FileCoverage } from 'istanbul-lib-coverage';
 import * as path from 'path';
 import { cleanAnsi, toLowerCaseDriveLetter } from '../helpers';
-import { MatchEvent } from './match-node';
+
+export interface Location {
+  /** Zero-based column number */
+  column: number;
+
+  /** Zero-based line number */
+  line: number;
+}
 
 export interface LocationRange {
   start: Location;
@@ -19,12 +22,18 @@ export interface TestIdentifier {
   ancestorTitles: string[];
 }
 
+export type MatchResultReason =
+  | 'match-by-context'
+  | 'match-by-name'
+  | 'duplicate-names'
+  | 'no-matched-assertion';
+
 export interface TestResult extends LocationRange {
   name: string;
 
   identifier: TestIdentifier;
 
-  status: TestReconciliationState;
+  status: TestReconciliationStateType;
   shortMessage?: string;
   terseMessage?: string;
 
@@ -33,10 +42,8 @@ export interface TestResult extends LocationRange {
 
   // multiple results for the given range, common for parameterized (.each) tests
   multiResults?: TestResult[];
-
-  // matching process history
-  sourceHistory?: MatchEvent[];
-  assertionHistory?: MatchEvent[];
+  // record match or unmatch reason for this test result
+  reason?: MatchResultReason;
 }
 
 function testResultWithLowerCaseWindowsDriveLetter(testResult: JestFileResults): JestFileResults {
@@ -61,9 +68,7 @@ export const testResultsWithLowerCaseWindowsDriveLetters = (
   return testResults.map(testResultWithLowerCaseWindowsDriveLetter);
 };
 
-function fileCoverageWithLowerCaseWindowsDriveLetter(
-  fileCoverage: FileCoverageData
-): FileCoverageData {
+function fileCoverageWithLowerCaseWindowsDriveLetter(fileCoverage: FileCoverage) {
   const newFilePath = toLowerCaseDriveLetter(fileCoverage.path);
   if (newFilePath) {
     return {
@@ -75,16 +80,16 @@ function fileCoverageWithLowerCaseWindowsDriveLetter(
   return fileCoverage;
 }
 
-export const coverageMapWithLowerCaseWindowsDriveLetters = (
-  data: JestTotalResults
-): CoverageMapData | undefined => {
+// TODO should fix jest-editor-support type declaration, the coverageMap should not be "any"
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const coverageMapWithLowerCaseWindowsDriveLetters = (data: JestTotalResults): any => {
   if (!data.coverageMap) {
     return;
   }
 
-  const result: CoverageMapData = {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const result: any = {};
   const filePaths = Object.keys(data.coverageMap);
-
   for (const filePath of filePaths) {
     const newFileCoverage = fileCoverageWithLowerCaseWindowsDriveLetter(data.coverageMap[filePath]);
     result[newFileCoverage.path] = newFileCoverage;
@@ -129,21 +134,10 @@ export const resultsWithoutAnsiEscapeSequence = (data: JestTotalResults): JestTo
       message: cleanAnsi(result.message),
       assertionResults: result.assertionResults.map((assertion) => ({
         ...assertion,
-        failureMessages: (assertion.failureMessages ?? []).map((message) => cleanAnsi(message)),
+        failureMessages: assertion.failureMessages.map((message) => cleanAnsi(message)),
       })),
     })),
   };
-};
-
-// enum based on TestReconciliationState
-export const TestStatus: {
-  [key in TestReconciliationState]: TestReconciliationState;
-} = {
-  Unknown: 'Unknown',
-  KnownSuccess: 'KnownSuccess',
-  KnownFail: 'KnownFail',
-  KnownSkip: 'KnownSkip',
-  KnownTodo: 'KnownTodo',
 };
 
 // export type StatusInfo<T> = {[key in TestReconciliationState]: T};
@@ -152,7 +146,7 @@ export interface StatusInfo {
   desc: string;
 }
 
-export const TestResultStatusInfo: { [key in TestReconciliationState]: StatusInfo } = {
+export const TestResultStatusInfo: { [key in TestReconciliationStateType]: StatusInfo } = {
   KnownFail: { precedence: 1, desc: 'Failed' },
   Unknown: {
     precedence: 2,

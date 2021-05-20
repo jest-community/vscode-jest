@@ -4,10 +4,16 @@ Please add your own contribution below inside the Master section
 Bug-fixes within the same version aren't needed
 
 ## Master
-* fix internal debug issue with webpack 5.x - @connectdotz
-* 
+
 -->
 
+### 4.0.2
+* fix debug problem for windows users (#707) - @connectdotz
+* change *Run Related Tests* default keybinding to Ctrl-Alt/Option-T to avoid overriding default shortcuts. (#704) - @Agalin
+
+### 4.0.1
+* fix test files not found in testFile list on windows after v4 migration - @connectdotz (#696)
+* do not report error if no test file found - @connectdotz (#696)
 ### 4.0.0
 
 * fix internal debug issue with webpack 5.x - @connectdotz (#690)
