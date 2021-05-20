@@ -8,7 +8,7 @@ Bug-fixes within the same version aren't needed
 -->
 
 ### 4.0.2
-* fix debug problem for windows users (#694) - @connectdotz
+* fix debug problem for windows users (#707) - @connectdotz
 * change *Run Related Tests* default keybinding to Ctrl-Alt/Option-T to avoid overriding default shortcuts. (#704) - @Agalin
 
 ### 4.0.1
