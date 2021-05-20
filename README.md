@@ -373,7 +373,7 @@ One can assign keyboard shortcut to any of these commands, see [vscode Key Bindi
 In interactive mode, user can trigger the following action from the text editor context-menu
 |menu|description|keyboard shortcut
 |---|---|---|
-|Jest: Run Related Tests| if in test file, run all tests in the file; if in source file, run all tests with dependency to the file|Ctrl-Option-t or Ctrl-Alt-t|
+|Jest: Run Related Tests| if in test file, run all tests in the file; if in source file, run all tests with dependency to the file|Ctrl-Option-t (Mac) or Ctrl-Alt-t|
 
 Please see [vscode Key Bindings](https://code.visualstudio.com/docs/getstarted/keybindings) if you want to change the keyboard shortcut. 
 
