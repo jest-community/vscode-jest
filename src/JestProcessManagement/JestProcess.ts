@@ -106,12 +106,12 @@ export class JestProcess {
     switch (this.request.type) {
       case 'all-tests':
         if (this.request.updateSnapshot) {
-          options.args = { args: ['--updateSnapshot'] };
+          options.args = { args: ['--updateSnapshot', '--watchAll=false'] };
         }
         break;
       case 'by-file': {
         options.testFileNamePattern = this.quoteFileName(this.request.testFileNamePattern);
-        const args: string[] = ['--findRelatedTests'];
+        const args: string[] = ['--findRelatedTests', '--watchAll=false'];
         if (this.request.updateSnapshot) {
           args.push('--updateSnapshot');
         }
@@ -122,7 +122,7 @@ export class JestProcess {
       case 'by-file-test': {
         options.testFileNamePattern = this.quoteFileName(this.request.testFileNamePattern);
         options.testNamePattern = this.request.testNamePattern;
-        const args: string[] = ['--runTestsByPath'];
+        const args: string[] = ['--runTestsByPath', '--watchAll=false'];
         if (this.request.updateSnapshot) {
           args.push('--updateSnapshot');
         }
