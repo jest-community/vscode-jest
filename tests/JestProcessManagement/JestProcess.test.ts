@@ -137,8 +137,8 @@ describe('JestProcess', () => {
       ${'all-tests'}       | ${undefined}                                                     | ${[false, false]} | ${true}         | ${undefined}
       ${'watch-tests'}     | ${undefined}                                                     | ${[true, false]}  | ${true}         | ${undefined}
       ${'watch-all-tests'} | ${undefined}                                                     | ${[true, true]}   | ${true}         | ${undefined}
-      ${'by-file'}         | ${{ testFileNamePattern: '"abc def"' }}                          | ${[false, false]} | ${true}         | ${undefined}
-      ${'by-file-test'}    | ${{ testFileNamePattern: '"abc def"', testNamePattern: 'test' }} | ${[false, false]} | ${true}         | ${undefined}
+      ${'by-file'}         | ${{ testFileNamePattern: '"c:\\a\\b.ts"' }}                      | ${[false, false]} | ${true}         | ${{ args: { args: ['--findRelatedTests'] }, testFileNamePattern: '"C:\\a\\b.ts"' }}
+      ${'by-file-test'}    | ${{ testFileNamePattern: '"/a/b.js"', testNamePattern: 'test' }} | ${[false, false]} | ${true}         | ${{ args: { args: ['--runTestsByPath'] }, testFileNamePattern: '"/a/b.js"' }}
       ${'not-test'}        | ${{ args: ['--listTests'] }}                                     | ${[false, false]} | ${false}        | ${{ args: { args: ['--listTests'], replace: true } }}
     `(
       'supports jest process request: $type',
@@ -156,6 +156,7 @@ describe('JestProcess', () => {
         } else {
           expect(options.reporters).toBeUndefined();
         }
+
         expect(options).toEqual(expect.objectContaining(extraRunnerOptions ?? extraProperty ?? {}));
         expect(mockRunner.start).toBeCalledWith(...startArgs);
         closeRunner();

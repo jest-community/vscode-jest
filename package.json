@@ -2,7 +2,7 @@
   "name": "vscode-jest",
   "displayName": "Jest",
   "description": "Use Facebook's Jest With Pleasure.",
-  "version": "4.0.1",
+  "version": "4.0.2",
   "publisher": "Orta",
   "engines": {
     "vscode": "^1.45.0"
@@ -317,7 +317,8 @@
               "request": "launch",
               "program": "^\"\\${workspaceFolder}/node_modules/.bin/jest\"",
               "args": [
-                "--runInBand"
+                "--runInBand",
+                "--watchAll=false"
               ],
               "cwd": "^\"\\${workspaceFolder}\"",
               "console": "integratedTerminal",
@@ -339,7 +340,8 @@
               "args": [
                 "test",
                 "--env=jsdom",
-                "--runInBand"
+                "--runInBand",
+                "--watchAll=false"
               ],
               "cwd": "^\"\\${workspaceFolder}\"",
               "console": "integratedTerminal",
@@ -358,7 +360,8 @@
               "program": "^\"\\${workspaceFolder}/scripts/test\"",
               "args": [
                 "--env=jsdom",
-                "--runInBand"
+                "--runInBand",
+                "--watchAll=false"
               ],
               "cwd": "^\"\\${workspaceFolder}\"",
               "console": "integratedTerminal",
