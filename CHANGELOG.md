@@ -4,8 +4,12 @@ Please add your own contribution below inside the Master section
 Bug-fixes within the same version aren't needed
 
 ## Master
-* fix debug problem for windows users (#694) - @connectdotz
+
 -->
+
+### 4.0.2
+* fix debug problem for windows users (#694) - @connectdotz
+* change *Run Related Tests* default keybinding to Ctrl-Alt/Option-T to avoid overriding default shortcuts. (#704) - @Agalin
 
 ### 4.0.1
 * fix test files not found in testFile list on windows after v4 migration - @connectdotz (#696)
