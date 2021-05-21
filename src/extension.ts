@@ -134,7 +134,15 @@ const addSubscriptions = (context: vscode.ExtensionContext): void => {
     ),
     vscode.workspace.onDidCreateFiles(extensionManager.onDidCreateFiles, extensionManager),
     vscode.workspace.onDidRenameFiles(extensionManager.onDidRenameFiles, extensionManager),
-    vscode.workspace.onDidDeleteFiles(extensionManager.onDidDeleteFiles, extensionManager)
+    vscode.workspace.onDidDeleteFiles(extensionManager.onDidDeleteFiles, extensionManager),
+    vscode.workspace.onDidSaveTextDocument(
+      extensionManager.onDidSaveTextDocument,
+      extensionManager
+    ),
+    vscode.workspace.onWillSaveTextDocument(
+      extensionManager.onWillSaveTextDocument,
+      extensionManager
+    )
   );
 };
 
