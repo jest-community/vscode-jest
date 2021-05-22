@@ -212,7 +212,7 @@ export class RunTestListener extends AbstractProcessListener {
     ) {
       const msg = prefixWorkspace(
         this.session.context,
-        `Jest process "${process.request.type}" failed unexpectedly`
+        `Jest process "${process.request.type}" ended unexpectedly`
       );
       this.logging('warn', msg);
 

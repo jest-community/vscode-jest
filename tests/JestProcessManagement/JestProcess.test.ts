@@ -137,9 +137,9 @@ describe('JestProcess', () => {
       ${'all-tests'}       | ${undefined}                                                     | ${[false, false]} | ${true}         | ${undefined}
       ${'watch-tests'}     | ${undefined}                                                     | ${[true, false]}  | ${true}         | ${undefined}
       ${'watch-all-tests'} | ${undefined}                                                     | ${[true, true]}   | ${true}         | ${undefined}
-      ${'by-file'}         | ${{ testFileNamePattern: '"c:\\a\\b.ts"' }}                      | ${[false, false]} | ${true}         | ${{ args: { args: ['--findRelatedTests'] }, testFileNamePattern: '"C:\\a\\b.ts"' }}
-      ${'by-file-test'}    | ${{ testFileNamePattern: '"/a/b.js"', testNamePattern: 'test' }} | ${[false, false]} | ${true}         | ${{ args: { args: ['--runTestsByPath'] }, testFileNamePattern: '"/a/b.js"' }}
-      ${'not-test'}        | ${{ args: ['--listTests'] }}                                     | ${[false, false]} | ${false}        | ${{ args: { args: ['--listTests'], replace: true } }}
+      ${'by-file'}         | ${{ testFileNamePattern: '"c:\\a\\b.ts"' }}                      | ${[false, false]} | ${true}         | ${{ args: { args: ['--findRelatedTests', '--watchAll=false'] }, testFileNamePattern: '"C:\\a\\b.ts"' }}
+      ${'by-file-test'}    | ${{ testFileNamePattern: '"/a/b.js"', testNamePattern: 'test' }} | ${[false, false]} | ${true}         | ${{ args: { args: ['--runTestsByPath', '--watchAll=false'] }, testFileNamePattern: '"/a/b.js"' }}
+      ${'not-test'}        | ${{ args: ['--listTests', '--watchAll=false'] }}                 | ${[false, false]} | ${false}        | ${{ args: { args: ['--listTests', '--watchAll=false'], replace: true } }}
     `(
       'supports jest process request: $type',
       async ({ type, extraProperty, startArgs, includeReporter, extraRunnerOptions }) => {

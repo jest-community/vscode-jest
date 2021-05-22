@@ -61,12 +61,13 @@ describe('jest process listeners', () => {
 
   describe('ListTestFileListener', () => {
     it.each`
-      output                                               | expectedFiles
-      ${[]}                                                | ${[]}
-      ${['whatever\n', '["file1", "file', '2", "file3"]']} | ${['file1', 'file2', 'file3']}
-      ${['["/a/b", "a/c"]']}                               | ${['/a/b', 'a/c']}
-      ${['["/a/b", "a/c"]\n', '["a","b","c"]']}            | ${'unexpected result'}
-      ${['[a, b]']}                                        | ${'Unexpected token'}
+      output                                                          | expectedFiles
+      ${[]}                                                           | ${[]}
+      ${['whatever\n', '["file1", "file', '2", "file3"]']}            | ${['file1', 'file2', 'file3']}
+      ${['["/a/b", "a/c"]']}                                          | ${['/a/b', 'a/c']}
+      ${['["/a/b", "a/c"]\n', '["a","b","c"]']}                       | ${'unexpected result'}
+      ${['[a, b]']}                                                   | ${'Unexpected token'}
+      ${['on windows with some error\n', '["C:\\\\a\\\\b.test.js"]']} | ${['C:\\a\\b.test.js']}
     `('can extract and notify file list from valid $output', ({ output, expectedFiles }) => {
       expect.hasAssertions();
 

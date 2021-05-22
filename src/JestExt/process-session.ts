@@ -138,7 +138,7 @@ export const createProcessSession = (context: JestExtProcessContext): ProcessSes
         return {
           ...request,
           type: 'not-test',
-          args: ['--listTests', '--json'],
+          args: ['--listTests', '--json', '--watchAll=false'],
           listener: new ListTestFileListener(listenerSession, request.onResult),
           schedule,
         };
