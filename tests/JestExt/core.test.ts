@@ -588,68 +588,48 @@ describe('JestExt', () => {
   });
   describe('onDidSaveTextDocument', () => {
     describe('should handle onSave run', () => {
-      describe.each`
-        runConfig                                    | languageId      | fileName    | withTestFiles     | withoutTestFiles
-        ${'off'}                                     | ${'javascript'} | ${'t1'}     | ${[false, true]}  | ${[false, true]}
-        ${{ watch: true }}                           | ${'javascript'} | ${'t1'}     | ${[false, false]} | ${[false, false]}
-        ${{ watch: false }}                          | ${'javascript'} | ${'t1'}     | ${[false, true]}  | ${[false, true]}
-        ${{ watch: false, onSave: 'test-src-file' }} | ${'javascript'} | ${'t3'}     | ${[true, false]}  | ${[true, false]}
-        ${{ watch: false, onSave: 'test-src-file' }} | ${'javascript'} | ${'t1'}     | ${[true, false]}  | ${[true, false]}
-        ${{ watch: false, onSave: 'test-src-file' }} | ${'json'}       | ${'t.json'} | ${[false, false]} | ${[false, false]}
-        ${{ watch: false, onSave: 'test-file' }}     | ${'javascript'} | ${'t3'}     | ${[false, true]}  | ${[true, false]}
-        ${{ watch: false, onSave: 'test-file' }}     | ${'javascript'} | ${'t1'}     | ${[true, false]}  | ${[true, false]}
-        ${{ watch: false, onSave: 'test-file' }}     | ${'json'}       | ${'t1'}     | ${[false, false]} | ${[false, false]}
+      it.each`
+        runConfig                                    | languageId      | isTestFile   | shouldSchedule | isDirty
+        ${'off'}                                     | ${'javascript'} | ${'yes'}     | ${false}       | ${true}
+        ${{ watch: true }}                           | ${'javascript'} | ${'yes'}     | ${false}       | ${false}
+        ${{ watch: false }}                          | ${'javascript'} | ${'yes'}     | ${false}       | ${true}
+        ${{ watch: false, onSave: 'test-src-file' }} | ${'javascript'} | ${'no'}      | ${true}        | ${false}
+        ${{ watch: false, onSave: 'test-src-file' }} | ${'javascript'} | ${'yes'}     | ${true}        | ${false}
+        ${{ watch: false, onSave: 'test-src-file' }} | ${'json'}       | ${'no'}      | ${false}       | ${false}
+        ${{ watch: false, onSave: 'test-file' }}     | ${'javascript'} | ${'no'}      | ${false}       | ${true}
+        ${{ watch: false, onSave: 'test-file' }}     | ${'javascript'} | ${'unknown'} | ${true}        | ${false}
+        ${{ watch: false, onSave: 'test-file' }}     | ${'javascript'} | ${'yes'}     | ${true}        | ${false}
+        ${{ watch: false, onSave: 'test-file' }}     | ${'javascript'} | ${'unknown'} | ${true}        | ${false}
+        ${{ watch: false, onSave: 'test-file' }}     | ${'json'}       | ${'unknown'} | ${false}       | ${false}
       `(
-        'with autoRun: $runConfig $languageId $fileName',
-        ({ runConfig: autoRun, languageId, fileName, withTestFiles, withoutTestFiles }) => {
-          let updateStatusBarSpy;
-          let sut;
-          let document;
-          beforeEach(() => {
-            sut = newJestExt({ settings: { autoRun } });
-            document = {
-              uri: { scheme: 'file' },
-              languageId: languageId,
-              fileName: fileName,
-            };
+        'with autoRun: $runConfig $languageId $isTestFile => $shouldSchedule, $isDirty',
+        ({ runConfig: autoRun, languageId, isTestFile, shouldSchedule, isDirty }) => {
+          const sut: any = newJestExt({ settings: { autoRun } });
+          const fileName = '/a/file;';
+          const document: any = {
+            uri: { scheme: 'file' },
+            languageId: languageId,
+            fileName,
+          };
 
-            window.visibleTextEditors = [];
-            updateStatusBarSpy = jest.spyOn(sut as any, 'updateStatusBar');
-          });
-          it('with testFiles', () => {
-            sut.setTestFiles(['t1', 't2']);
-            mockProcessSession.scheduleProcess.mockClear();
+          window.visibleTextEditors = [];
+          const updateStatusBarSpy = jest.spyOn(sut as any, 'updateStatusBar');
 
-            sut.onDidSaveTextDocument(document);
-            const [willSchedule, isDirty] = withTestFiles;
+          (sut.testResultProvider.isTestFile as jest.Mocked<any>).mockReturnValueOnce(isTestFile);
+          mockProcessSession.scheduleProcess.mockClear();
 
-            if (willSchedule) {
-              expect(mockProcessSession.scheduleProcess).toBeCalledWith(
-                expect.objectContaining({ type: 'by-file', testFileNamePattern: fileName })
-              );
-            } else {
-              expect(mockProcessSession.scheduleProcess).not.toBeCalled();
-            }
-            expect(updateStatusBarSpy).toBeCalledWith(
-              expect.objectContaining({ stats: { isDirty } })
+          sut.onDidSaveTextDocument(document);
+
+          if (shouldSchedule) {
+            expect(mockProcessSession.scheduleProcess).toBeCalledWith(
+              expect.objectContaining({ type: 'by-file', testFileNamePattern: fileName })
             );
-          });
-          it('without testFiles', () => {
-            mockProcessSession.scheduleProcess.mockClear();
-            sut.onDidSaveTextDocument(document);
-            const [willSchedule, isDirty] = withoutTestFiles;
-
-            if (willSchedule) {
-              expect(mockProcessSession.scheduleProcess).toBeCalledWith(
-                expect.objectContaining({ type: 'by-file', testFileNamePattern: fileName })
-              );
-            } else {
-              expect(mockProcessSession.scheduleProcess).not.toBeCalled();
-            }
-            expect(updateStatusBarSpy).toBeCalledWith(
-              expect.objectContaining({ stats: { isDirty } })
-            );
-          });
+          } else {
+            expect(mockProcessSession.scheduleProcess).not.toBeCalled();
+          }
+          expect(updateStatusBarSpy).toBeCalledWith(
+            expect.objectContaining({ stats: { isDirty } })
+          );
         }
       );
     });
@@ -780,20 +760,34 @@ describe('JestExt', () => {
         expect(updateCurrentDiagnostics).not.toBeCalled();
         expect(updateDecoratorsSpy).not.toBeCalled();
       });
-      it('if file is not in testFile list', async () => {
-        // update testFiles
-        await sut.startSession();
+      it.each`
+        isTestFile   | shouldUpdate
+        ${'yes'}     | ${true}
+        ${'no'}      | ${false}
+        ${'unknown'} | ${true}
+      `(
+        'isTestFile: $isTestFile => shouldUpdate? $shouldUpdate',
+        async ({ isTestFile, shouldUpdate }) => {
+          // update testFiles
+          await sut.startSession();
 
-        const { type, onResult } = mockProcessSession.scheduleProcess.mock.calls[0][0];
-        expect(type).toEqual('list-test-files');
-        expect(onResult).not.toBeUndefined();
-        onResult(['a', 'b']);
+          const { type, onResult } = mockProcessSession.scheduleProcess.mock.calls[0][0];
+          expect(type).toEqual('list-test-files');
+          expect(onResult).not.toBeUndefined();
 
-        const editor = mockEditor('x');
-        sut.triggerUpdateActiveEditor(editor);
-        expect(updateCurrentDiagnostics).not.toBeCalled();
-        expect(updateDecoratorsSpy).not.toBeCalled();
-      });
+          (sut.testResultProvider.isTestFile as jest.Mocked<any>).mockReturnValueOnce(isTestFile);
+
+          const editor = mockEditor('x');
+          sut.triggerUpdateActiveEditor(editor);
+          if (shouldUpdate) {
+            expect(updateCurrentDiagnostics).toBeCalled();
+            expect(updateDecoratorsSpy).toBeCalled();
+          } else {
+            expect(updateCurrentDiagnostics).not.toBeCalled();
+            expect(updateDecoratorsSpy).not.toBeCalled();
+          }
+        }
+      );
     });
   });
 

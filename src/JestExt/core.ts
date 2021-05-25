@@ -64,7 +64,6 @@ export class JestExt {
   private status: ReturnType<StatusBar['bind']>;
   private logging: Logging;
   private sessionAwareComponents: JestExtSessionAware[];
-  private testFiles?: string[];
   private extContext: JestExtContext;
   private dirtyFiles: Set<string> = new Set();
 
@@ -139,7 +138,6 @@ export class JestExt {
     return { ...stats, isDirty: this.dirtyFiles.size > 0 };
   }
   private setTestFiles(list: string[] | undefined): void {
-    this.testFiles = list;
     this.testResultProvider.updateTestFileList(list);
     this.updateStatusBar({ stats: this.toSBStats(this.testResultProvider.getTestSuiteStats()) });
   }
@@ -318,11 +316,11 @@ export class JestExt {
       return false;
     }
 
-    if (this.testFiles) {
-      return this.testFiles.includes(editor.document.fileName);
+    if (this.testResultProvider.isTestFile(editor.document.fileName) === 'no') {
+      return false;
     }
 
-    // if no testFiles list, then error on including more possible files
+    // if isTestFile returns unknown or true, treated it like a test file to give it best chance to display any test result if ever available
     return true;
   }
 
@@ -443,8 +441,7 @@ export class JestExt {
     if (
       this.extContext.autoRun.onSave &&
       (this.extContext.autoRun.onSave === 'test-src-file' ||
-        !this.testFiles ||
-        this.testFiles.includes(document.fileName))
+        this.testResultProvider.isTestFile(document.fileName) !== 'no')
     ) {
       this.processSession.scheduleProcess({
         type: 'by-file',
