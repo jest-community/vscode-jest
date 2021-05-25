@@ -37,6 +37,8 @@ const makeJestExt = (workspace: vscode.WorkspaceFolder): any => {
     onDidCreateFiles: jest.fn(),
     onDidRenameFiles: jest.fn(),
     onDidDeleteFiles: jest.fn(),
+    onDidSaveTextDocument: jest.fn(),
+    onWillSaveTextDocument: jest.fn(),
     triggerUpdateSettings: jest.fn(),
     workspace,
   };
@@ -527,6 +529,37 @@ describe('ExtensionManager', () => {
       extensionManager.onDidRenameFiles(event);
       expect(ext1.onDidRenameFiles).toBeCalledTimes(1);
       expect(ext2.onDidRenameFiles).toBeCalledTimes(ext2Call);
+    });
+  });
+  describe('listen for save events', () => {
+    let ext1, ext2;
+    beforeEach(() => {
+      extensionManager = createExtensionManager(['ws-1', 'ws-2']);
+      jest.clearAllMocks();
+      ext1 = extensionManager.getByName('ws-1');
+      ext2 = extensionManager.getByName('ws-2');
+    });
+    it('onDidSaveTextDocument', () => {
+      const document: any = { uri: 'ws-1' };
+      extensionManager.onDidSaveTextDocument(document);
+      expect(ext1.onDidSaveTextDocument).toBeCalledTimes(1);
+      expect(ext2.onDidSaveTextDocument).toBeCalledTimes(0);
+
+      document.uri = 'ws-2';
+      extensionManager.onDidSaveTextDocument(document);
+      expect(ext1.onDidSaveTextDocument).toBeCalledTimes(1);
+      expect(ext2.onDidSaveTextDocument).toBeCalledTimes(1);
+    });
+    it('onWillSaveTextDocument', () => {
+      const event: any = { document: { uri: 'ws-1' } };
+      extensionManager.onWillSaveTextDocument(event);
+      expect(ext1.onWillSaveTextDocument).toBeCalledTimes(1);
+      expect(ext2.onWillSaveTextDocument).toBeCalledTimes(0);
+
+      event.document.uri = 'ws-2';
+      extensionManager.onWillSaveTextDocument(event);
+      expect(ext1.onWillSaveTextDocument).toBeCalledTimes(1);
+      expect(ext2.onWillSaveTextDocument).toBeCalledTimes(1);
     });
   });
   describe('activate', () => {

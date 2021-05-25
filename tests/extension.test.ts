@@ -106,6 +106,9 @@ describe('Extension', () => {
 
       expect(vscode.workspace.onDidChangeTextDocument).toBeCalled();
       expect(context.subscriptions.push.mock.calls[0]).toContain('onDidChangeTextDocument');
+
+      expect(vscode.workspace.onDidSaveTextDocument).toBeCalled();
+      expect(vscode.workspace.onWillSaveTextDocument).toBeCalled();
     });
 
     it('should register an event handler to handle when an extension configuration changed', () => {

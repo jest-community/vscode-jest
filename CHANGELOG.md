@@ -4,7 +4,7 @@ Please add your own contribution below inside the Master section
 Bug-fixes within the same version aren't needed
 
 ## Master
-
+* move save related operations to new SaveTextDocument event listeners to prevent duplicate firing and losing test state for watch-mode + clean-doc-save combination. - @connectdotz
 -->
 
 ### 4.0.2
