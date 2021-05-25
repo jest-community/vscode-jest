@@ -230,6 +230,19 @@ export class ExtensionManager {
       ext.onDidChangeTextDocument(event);
     }
   }
+
+  onWillSaveTextDocument(event: vscode.TextDocumentWillSaveEvent): void {
+    const ext = this.getByDocUri(event.document.uri);
+    if (ext) {
+      ext.onWillSaveTextDocument(event);
+    }
+  }
+  onDidSaveTextDocument(document: vscode.TextDocument): void {
+    const ext = this.getByDocUri(document.uri);
+    if (ext) {
+      ext.onDidSaveTextDocument(document);
+    }
+  }
   private onFilesChange(files: readonly vscode.Uri[], handler: (ext: JestExt) => void) {
     const exts = files.map((f) => this.getByDocUri(f)).filter((ext) => ext != null) as JestExt[];
     const set = new Set<JestExt>(exts);

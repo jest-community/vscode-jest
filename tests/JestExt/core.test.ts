@@ -546,14 +546,6 @@ describe('JestExt', () => {
       expectItTakesNoAction(event);
     });
 
-    it('should invalidate the test results', () => {
-      sut.removeCachedTestResults = jest.fn();
-      window.visibleTextEditors = [];
-      sut.onDidChangeTextDocument(event);
-
-      expect(sut.removeCachedTestResults).toBeCalledWith(event.document, true);
-    });
-
     it('should trigger updateActiveEditor', () => {
       const editor: any = { document: event.document };
       sut.triggerUpdateActiveEditor = jest.fn();
@@ -569,6 +561,32 @@ describe('JestExt', () => {
       expect(sut.testResultProvider.getTestSuiteStats).toBeCalled();
       expect(updateStatusBarSpy).toBeCalled();
     });
+  });
+
+  describe('onWillSaveTextDocument', () => {
+    it.each([[true], [false]])(
+      'ony invalidate test status if document is dirty: isDirty=%d',
+      (isDirty) => {
+        window.visibleTextEditors = [];
+        const sut: any = newJestExt();
+        sut.testResultProvider.invalidateTestResults = jest.fn();
+        const event = {
+          document: {
+            isDirty,
+            uri: { scheme: 'file' },
+          },
+        };
+        sut.onWillSaveTextDocument(event);
+
+        if (isDirty) {
+          expect(sut.testResultProvider.invalidateTestResults).toBeCalled();
+        } else {
+          expect(sut.testResultProvider.invalidateTestResults).not.toBeCalled();
+        }
+      }
+    );
+  });
+  describe('onDidSaveTextDocument', () => {
     describe('should handle onSave run', () => {
       describe.each`
         runConfig                                    | languageId      | fileName    | withTestFiles     | withoutTestFiles
@@ -585,10 +603,15 @@ describe('JestExt', () => {
         'with autoRun: $runConfig $languageId $fileName',
         ({ runConfig: autoRun, languageId, fileName, withTestFiles, withoutTestFiles }) => {
           let updateStatusBarSpy;
+          let sut;
+          let document;
           beforeEach(() => {
             sut = newJestExt({ settings: { autoRun } });
-            event.document.languageId = languageId;
-            event.document.fileName = fileName;
+            document = {
+              uri: { scheme: 'file' },
+              languageId: languageId,
+              fileName: fileName,
+            };
 
             window.visibleTextEditors = [];
             updateStatusBarSpy = jest.spyOn(sut as any, 'updateStatusBar');
@@ -597,7 +620,7 @@ describe('JestExt', () => {
             sut.setTestFiles(['t1', 't2']);
             mockProcessSession.scheduleProcess.mockClear();
 
-            sut.onDidChangeTextDocument(event);
+            sut.onDidSaveTextDocument(document);
             const [willSchedule, isDirty] = withTestFiles;
 
             if (willSchedule) {
@@ -613,7 +636,7 @@ describe('JestExt', () => {
           });
           it('without testFiles', () => {
             mockProcessSession.scheduleProcess.mockClear();
-            sut.onDidChangeTextDocument(event);
+            sut.onDidSaveTextDocument(document);
             const [willSchedule, isDirty] = withoutTestFiles;
 
             if (willSchedule) {
@@ -631,7 +654,6 @@ describe('JestExt', () => {
       );
     });
   });
-
   describe('toggleCoverageOverlay()', () => {
     it('should toggle the coverage overlay visibility', () => {
       const sut = newJestExt();

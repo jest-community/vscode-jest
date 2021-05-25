@@ -5,6 +5,7 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 * add `--watchAll=false` to non-watch tasks - @connectdotz
+* move save related operations to new SaveTextDocument event listeners to prevent duplicate firing and losing test state for watch-mode + clean-doc-save combination. - @connectdotz
 * in matching: improve match-by-name for incorrect grouping case - @connectdotz
 -->
 

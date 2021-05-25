@@ -196,8 +196,8 @@ export class JestExt {
 
   /** update custom editor context used by vscode when clause, such as `jest:run.interactive` in package.json */
   private updateEditorContext(): void {
-    const isInteactive = this.extContext.autoRun.isOff || !this.extContext.autoRun.isWatch;
-    vscode.commands.executeCommand('setContext', 'jest:run.interactive', isInteactive);
+    const isInteractive = this.extContext.autoRun.isOff || !this.extContext.autoRun.isWatch;
+    vscode.commands.executeCommand('setContext', 'jest:run.interactive', isInteractive);
   }
   private updateTestFileEditor(editor: vscode.TextEditor): void {
     if (!this.isTestFileEditor(editor)) {
@@ -456,6 +456,24 @@ export class JestExt {
   }
 
   /**
+   * refresh UI for the given document editor or all active editors in the workspace
+   * @param document refresh UI for the specific document. if undefined, refresh all active editors in the workspace.
+   */
+  private refreshDocumentChange(document?: vscode.TextDocument): void {
+    for (const editor of vscode.window.visibleTextEditors) {
+      if (
+        (document && editor.document === document) ||
+        vscode.workspace.getWorkspaceFolder(editor.document.uri) === this.extContext.workspace
+      ) {
+        this.triggerUpdateActiveEditor(editor);
+      }
+    }
+
+    this.updateStatusBar({
+      stats: this.toSBStats(this.testResultProvider.getTestSuiteStats()),
+    });
+  }
+  /**
    * This event is fired with the document not dirty when:
    * - before the onDidSaveTextDocument event
    * - the document was changed by an external editor
@@ -473,18 +491,21 @@ export class JestExt {
       return;
     }
 
-    this.removeCachedTestResults(event.document, true);
+    // there is a bit redudant since didSave already handle the save changes
+    // but not sure if there are other non-editor related change we are trying
+    // to capture, so leave it be for now...
+    this.refreshDocumentChange(event.document);
+  }
 
-    for (const editor of vscode.window.visibleTextEditors) {
-      if (editor.document === event.document) {
-        this.triggerUpdateActiveEditor(editor);
-      }
+  onWillSaveTextDocument(event: vscode.TextDocumentWillSaveEvent): void {
+    if (event.document.isDirty) {
+      this.removeCachedTestResults(event.document, true);
+      this.refreshDocumentChange(event.document);
     }
-
-    this.handleOnSaveRun(event.document);
-    this.updateStatusBar({
-      stats: this.toSBStats(this.testResultProvider.getTestSuiteStats()),
-    });
+  }
+  onDidSaveTextDocument(document: vscode.TextDocument): void {
+    this.handleOnSaveRun(document);
+    this.refreshDocumentChange(document);
   }
 
   private updateTestFileList(): void {
@@ -593,14 +614,7 @@ export class JestExt {
     const statusList = this.testResultProvider.updateTestResults(normalizedData);
     updateDiagnostics(statusList, this.failDiagnostics);
 
-    const stats = this.testResultProvider.getTestSuiteStats();
-    this.updateStatusBar({ stats: this.toSBStats(stats) });
-
-    for (const editor of vscode.window.visibleTextEditors) {
-      if (vscode.workspace.getWorkspaceFolder(editor.document.uri) === this.extContext.workspace) {
-        this.triggerUpdateActiveEditor(editor);
-      }
-    }
+    this.refreshDocumentChange();
   }
 
   private generateDotsForItBlocks(

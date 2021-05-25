@@ -30,6 +30,8 @@ const workspace = {
   onDidCreateFiles: jest.fn(),
   onDidDeleteFiles: jest.fn(),
   onDidRenameFiles: jest.fn(),
+  onDidSaveTextDocument: jest.fn(),
+  onWillSaveTextDocument: jest.fn(),
 };
 
 const OverviewRulerLane = {
