@@ -4,13 +4,14 @@ Please add your own contribution below inside the Master section
 Bug-fixes within the same version aren't needed
 
 ## Master
+* add `--watchAll=false` to non-watch tasks - @connectdotz
 * move save related operations to new SaveTextDocument event listeners to prevent duplicate firing and losing test state for watch-mode + clean-doc-save combination. - @connectdotz
+* move testFile state to ResultProvider that provides a union of test-files and actual results, to be more robust even when there is a race condition when fileList comes after test run. - @connectdotz 
 -->
 
 ### 4.0.2
 * fix debug problem for windows users (#707) - @connectdotz
 * change *Run Related Tests* default keybinding to Ctrl-Alt/Option-T to avoid overriding default shortcuts. (#704) - @Agalin
-* add `--watchAll=false` to non-watch tasks - @connectdotz
 
 ### 4.0.1
 * fix test files not found in testFile list on windows after v4 migration - @connectdotz (#696)
