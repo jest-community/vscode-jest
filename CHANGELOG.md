@@ -4,13 +4,13 @@ Please add your own contribution below inside the Master section
 Bug-fixes within the same version aren't needed
 
 ## Master
-
+* add `--watchAll=false` to non-watch tasks - @connectdotz
+* in matching: improve match-by-name for incorrect grouping case - @connectdotz
 -->
 
 ### 4.0.2
 * fix debug problem for windows users (#707) - @connectdotz
 * change *Run Related Tests* default keybinding to Ctrl-Alt/Option-T to avoid overriding default shortcuts. (#704) - @Agalin
-* add `--watchAll=false` to non-watch tasks - @connectdotz
 
 ### 4.0.1
 * fix test files not found in testFile list on windows after v4 migration - @connectdotz (#696)

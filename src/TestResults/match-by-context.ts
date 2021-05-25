@@ -18,7 +18,13 @@ import {
 } from 'jest-editor-support';
 import { TestReconciliationState } from './TestReconciliationState';
 import { MatchResultReason, TestResult } from './TestResult';
-import { DataNode, ContainerNode, ContextType, ChildNodeType } from './match-node';
+import {
+  DataNode,
+  ContainerNode,
+  ContextType,
+  ChildNodeType,
+  VirtualGroupableNode,
+} from './match-node';
 
 const ROOT_NODE_NAME = '__root__';
 export const buildAssertionContainer = (
@@ -101,7 +107,13 @@ const toUnmatchedResults = (
   return results;
 };
 
-type MessageType = 'context-mismatch' | 'match-failed' | 'unusual-match' | 'duplicate-name';
+type MessageType =
+  | 'context-mismatch'
+  | 'match-failed'
+  | 'unusual-match'
+  | 'duplicate-name'
+  | 'incorrect-grouping'
+  | 'no-matched-assertion';
 const createMessaging = (fileName: string, verbose: boolean) => (
   messageType: MessageType,
   contextType: ContextType,
@@ -114,7 +126,12 @@ const createMessaging = (fileName: string, verbose: boolean) => (
   }
 
   const output = (message: string): void =>
-    console.warn(`[${fileName}] ${message} \n source=`, source, `\n assertion=`, assertion);
+    console.warn(
+      `matching test result with source "${fileName}": ${message} \n source=`,
+      source,
+      `\n assertion=`,
+      assertion
+    );
 
   const blockType = contextType === 'container' ? 'describe' : 'test';
   switch (messageType) {
@@ -135,6 +152,16 @@ const createMessaging = (fileName: string, verbose: boolean) => (
     }
     case 'unusual-match': {
       output(`unusual match: ${extraReason} : ${blockType} ${source.name}: `);
+      break;
+    }
+    case 'incorrect-grouping': {
+      output(
+        `found incorrect grouping for "${source.name}", will ungroup and retry matching result... `
+      );
+      break;
+    }
+    case 'no-matched-assertion': {
+      output(`not able to match source block with test result!`);
       break;
     }
   }
@@ -158,7 +185,7 @@ const ContextMatch = (messaging: Messaging): ContextMatchAlgorithm => {
     }
     const a = matched[0];
     const itBlock = t.single();
-    if (a.data.length === 1) {
+    if (a.groupCount() <= 0) {
       const assertion = a.single();
       if (a.name !== t.name && !matchPos(itBlock, assertion)) {
         messaging('unusual-match', 'data', t, a, 'neither name nor line matched');
@@ -166,7 +193,7 @@ const ContextMatch = (messaging: Messaging): ContextMatchAlgorithm => {
       return [toMatchResult(itBlock, assertion, reason)];
     }
     // 1-to-many: parameterized tests
-    return a.data.map((a) => toMatchResult(itBlock, a, reason));
+    return a.getAll().map((aa) => toMatchResult(itBlock, aa.data, reason));
   };
 
   const handleDescribeBlockMatch = (
@@ -194,6 +221,11 @@ const ContextMatch = (messaging: Messaging): ContextMatchAlgorithm => {
   ): void => {
     const tList = tContainer.getChildren(contextType);
     const aList = aContainer.getChildren(contextType);
+    const results: [
+      ChildNodeType<ItBlock, C>,
+      ChildNodeType<TestAssertionStatus, C>[],
+      MatchResultReason
+    ][] = [];
 
     // handle invalid assertions here: since it has no location info, we can't use context to match them, will
     // match by name instead. Once the test block is matched, we should remove it from the remaining matching candidate
@@ -203,31 +235,54 @@ const ContextMatch = (messaging: Messaging): ContextMatchAlgorithm => {
     if (aList.invalid) {
       //match invalid assertions by name from the tList
       remainingTList = remainingTList.filter((t) => {
-        const found = aList.invalid?.filter((a) => a.name === t.name);
+        const found = aList.invalid?.filter((a) => a.isMatched(t as VirtualGroupableNode));
         if (found && found.length > 0) {
-          onResult(t, found, 'match-by-name');
+          results.push([t, found, 'match-by-name']);
           return false;
         }
         return true;
       });
     }
     if (remainingTList.length === aList.valid.length) {
-      remainingTList.forEach((t, idx) => onResult(t, [aList.valid[idx]], 'match-by-context'));
+      remainingTList.forEach((t, idx) => results.push([t, [aList.valid[idx]], 'match-by-context']));
     } else {
-      messaging('context-mismatch', contextType, tContainer, aContainer);
+      // messaging('context-mismatch', contextType, tContainer, aContainer);
 
-      remainingTList.forEach((t) => {
+      for (const t of remainingTList) {
         // duplicate names under the same layer is really illegal jest practice, they can not
         // be reliably resolved with name-based matching
         if (remainingTList.filter((t1) => t1.name === t.name).length > 1) {
-          messaging('duplicate-name', contextType, t);
-          onResult(t, [], 'duplicate-names');
+          results.push([t, [], 'duplicate-names']);
         } else {
-          const found = aList.valid.filter((a) => a.name === t.name);
-          onResult(t, found, found?.length > 0 ? 'match-by-name' : 'no-matched-assertion');
+          const found = aList.valid.filter((a) => a.isMatched(t as VirtualGroupableNode));
+          // if name matched failed, try to match in groups, as the grouping might be wrong when
+          // jest generate incorrect locations for tests, such as seen for parameterized tests on windows or for angular.
+          // if we found match in the group, flatten the group and try to rematch again.
+          if (found.length <= 0) {
+            const foundInGroups = aList.valid.filter((a) => a.isInGroup(t.name));
+            if (foundInGroups.length > 0) {
+              foundInGroups.forEach((a) => {
+                messaging('incorrect-grouping', 'container', t, a);
+                aContainer.invalidateGroupNode(contextType, a);
+              });
+
+              return matchChildren(contextType, tContainer, aContainer, onResult);
+            }
+          }
+          results.push([t, found, found?.length > 0 ? 'match-by-name' : 'no-matched-assertion']);
         }
-      });
+      }
     }
+    results.forEach((r) => {
+      const [t, , reason] = r;
+      if (reason === 'duplicate-names') {
+        messaging('duplicate-name', contextType, t);
+      }
+      if (reason === 'no-matched-assertion') {
+        messaging('no-matched-assertion', contextType, t);
+      }
+      onResult(...r);
+    });
   };
 
   /**

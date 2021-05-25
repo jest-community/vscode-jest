@@ -53,8 +53,8 @@ describe('buildAssertionContainer', () => {
     expect(root.childData).toHaveLength(2);
     expect(root.childData.map((n) => n.zeroBasedLine)).toEqual([2, 5]);
     const groupNode = root.childData[0];
-    expect(groupNode.data).toHaveLength(3);
-    expect(groupNode.data.map((n) => n.title)).toEqual(['test-1', 'test-3', 'test-2']);
+    expect(groupNode.groupCount()).toEqual(2);
+    expect(groupNode.getAll().map((n) => n.data.title)).toEqual(['test-1', 'test-3', 'test-2']);
   });
   it('can group describe blocks with the same line', () => {
     const a1 = helper.makeAssertion('test-1', 'KnownSuccess', ['d-1'], [2, 0]);
@@ -408,6 +408,124 @@ describe('matchTestAssertions', () => {
       expect(matched.map((m) => [m.name, m.status, m.reason])).toEqual([
         [t1.name, 'Unknown', 'no-matched-assertion'],
       ]);
+    });
+  });
+  describe('invalid grouping: do no worse than match-by-name', () => {
+    const t0 = helper.makeItBlock('first test', [1, 0, 6, 0]);
+    const d0 = helper.makeDescribeBlock('desc-1', [t0]);
+    const t1 = helper.makeItBlock('test.each $a', [7, 0, 5, 0]);
+    const d1 = helper.makeDescribeBlock('wrapper-1', [t1]);
+    const t2 = helper.makeItBlock('test.each again $a', [10, 0, 15, 0]);
+    // const d2 = helper.makeDescribeBlock('wrapper-2', [t2]);
+    const t3 = helper.makeItBlock('last test', [15, 0, 27, 0]);
+    const tTodo = helper.makeItBlock('a todo test', [30, 0, 30, 0]);
+    const d3 = helper.makeDescribeBlock('wrapper-3', [t3, tTodo]);
+
+    describe('when all tests have the same loation', () => {
+      const a0 = helper.makeAssertion('first test', 'KnownSuccess', undefined, [1, 0]);
+      const a1 = helper.makeAssertion('test.each 1', 'KnownSuccess', undefined, [1, 0]);
+      const a2 = helper.makeAssertion('test.each 2', 'KnownFail', undefined, [1, 0]);
+      // const a3 = helper.makeAssertion('test.each again 3', 'KnownSuccess', undefined, [1, 0]);
+      const a4 = helper.makeAssertion('last test', 'KnownSuccess', undefined, [1, 0]);
+      const a5 = helper.makeAssertion('a todo test', 'KnownTodo', undefined, undefined, {
+        location: null,
+      });
+
+      it('can match by name for static test names', () => {
+        const sourceRoot = helper.makeRoot([t0, t3, tTodo]);
+        const matched = match.matchTestAssertions('a file', sourceRoot, [a4, a0, a5]);
+        expect(matched).toHaveLength(3);
+        expect(
+          matched.map((m) => [m.name, m.start.line, m.status, m.reason, m.multiResults?.length])
+        ).toEqual(
+          expect.arrayContaining([
+            [a0.fullName, t0.start.line - 1, a0.status, 'match-by-name', undefined],
+            [a4.fullName, t3.start.line - 1, a4.status, 'match-by-name', undefined],
+            [a5.fullName, tTodo.start.line - 1, a5.status, 'match-by-name', undefined],
+          ])
+        );
+      });
+      describe('can skip dynamic named tests while still match the static named ones', () => {
+        it('simple case: no describe', () => {
+          const sourceRoot = helper.makeRoot([t0, t1, t3, tTodo]);
+          const matched = match.matchTestAssertions('a file', sourceRoot, [a1, a2, a4, a0, a5]);
+          expect(matched).toHaveLength(4);
+          expect(
+            matched.map((m) => [m.name, m.start.line, m.status, m.reason, m.multiResults?.length])
+          ).toEqual(
+            expect.arrayContaining([
+              [a0.fullName, t0.start.line - 1, a0.status, 'match-by-name', undefined],
+              [t1.name, t1.start.line - 1, 'Unknown', 'no-matched-assertion', undefined],
+              [a4.fullName, t3.start.line - 1, a4.status, 'match-by-name', undefined],
+              [a5.fullName, tTodo.start.line - 1, a5.status, 'match-by-name', undefined],
+            ])
+          );
+        });
+        it('a more complex case: with desc blocks', () => {
+          const sourceRoot = helper.makeRoot([d0, t1, t3, tTodo]);
+          const a0d = helper.makeAssertion('first test', 'KnownSuccess', ['desc-1'], [1, 0]);
+          const matched = match.matchTestAssertions('a file', sourceRoot, [a1, a2, a4, a0d, a5]);
+          expect(matched).toHaveLength(4);
+          expect(
+            matched.map((m) => [m.name, m.start.line, m.status, m.reason, m.multiResults?.length])
+          ).toEqual(
+            expect.arrayContaining([
+              [a0d.fullName, t0.start.line - 1, a0d.status, 'match-by-context', undefined],
+              [t1.name, t1.start.line - 1, 'Unknown', 'no-matched-assertion', undefined],
+              [a4.fullName, t3.start.line - 1, a4.status, 'match-by-name', undefined],
+              [a5.fullName, tTodo.start.line - 1, a5.status, 'match-by-name', undefined],
+            ])
+          );
+        });
+        it('a more complex case2: with deep desc blocks and multiple tests within', () => {
+          const dComplex = helper.makeDescribeBlock('desc-deep', [d1, t2]);
+          const a1d = helper.makeAssertion(
+            'test.each 1',
+            'KnownSuccess',
+            ['desc-deep', 'wrapper-1'],
+            [1, 0]
+          );
+          const a2d = helper.makeAssertion(
+            'test.each 2',
+            'KnownFail',
+            ['desc-deep', 'wrapper-1'],
+            [1, 0]
+          );
+          const a3d = helper.makeAssertion(
+            'test.each again 3',
+            'KnownSuccess',
+            ['desc-deep'],
+            [1, 0]
+          );
+          const a4d = helper.makeAssertion('last test', 'KnownSuccess', ['wrapper-3'], [1, 0]);
+          const a5d = helper.makeAssertion('a todo test', 'KnownTodo', ['wrapper-3'], undefined, {
+            location: null,
+          });
+
+          const sourceRoot = helper.makeRoot([t0, dComplex, d3]);
+          const matched = match.matchTestAssertions('a file', sourceRoot, [
+            a1d,
+            a2d,
+            a3d,
+            a4d,
+            a0,
+            a5d,
+          ]);
+          expect(matched).toHaveLength(6);
+          expect(
+            matched.map((m) => [m.name, m.start.line, m.status, m.reason, m.multiResults?.length])
+          ).toEqual(
+            expect.arrayContaining([
+              [a0.fullName, t0.start.line - 1, a0.status, 'match-by-context', undefined],
+              [a1d.fullName, t1.start.line - 1, a1d.status, 'match-by-context', undefined],
+              [a2d.fullName, t1.start.line - 1, a2d.status, 'match-by-context', undefined],
+              [a3d.fullName, t2.start.line - 1, a3d.status, 'match-by-context', undefined],
+              [a4d.fullName, t3.start.line - 1, a4d.status, 'match-by-context', undefined],
+              [a5d.fullName, tTodo.start.line - 1, a5d.status, 'match-by-name', undefined],
+            ])
+          );
+        });
+      });
     });
   });
 });

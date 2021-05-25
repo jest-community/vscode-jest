@@ -5,9 +5,29 @@
 export interface PositionNode {
   zeroBasedLine: number;
 }
+
 export interface BaseNodeType extends PositionNode {
   name: string;
+  lastProperty?: string;
+}
+
+export interface GroupableNodeType extends BaseNodeType {
   merge: (another: this) => boolean;
+
+  /**
+   * return all grouped nodes including self
+   * @param resetGroup if true, the group will be reset after flatten
+   **/
+  getAll: () => this[];
+
+  // if no grouping, returns 0 otherwie the number of group memebers without self
+  groupCount: () => number;
+
+  // is any element in the group (not including self) matches the give name
+  isInGroup: (name: string) => boolean;
+
+  // check if the node matches the other node, by name and other group property.
+  isMatched: <T extends GroupableNodeType>(other: T) => boolean;
 }
 
 export const hasUnknownLocation = (node: PositionNode): boolean => node.zeroBasedLine < 0;
@@ -16,7 +36,7 @@ const sortByLine = (n1: PositionNode, n2: PositionNode): number =>
   n1.zeroBasedLine - n2.zeroBasedLine;
 
 // group nodes after sort
-const groupNodes = <N extends BaseNodeType>(list: N[], node: N): N[] => {
+const groupNodes = <N extends GroupableNodeType>(list: N[], node: N): N[] => {
   if (list.length <= 0) {
     return [node];
   }
@@ -27,19 +47,70 @@ const groupNodes = <N extends BaseNodeType>(list: N[], node: N): N[] => {
   return list;
 };
 
-/* interface implementation */
-export class DataNode<T> implements BaseNodeType {
+export interface HasTitle {
+  title: string;
+}
+export class VirtualGroupableNode implements GroupableNodeType {
   name: string;
   zeroBasedLine: number;
-  data: T[];
+  lastProperty?: string;
+  group: this[];
 
-  constructor(name: string, zeroBasedLine: number, data: T) {
+  constructor(name: string, zeroBasedLine: number, lastProperty?: string) {
     this.name = name;
     this.zeroBasedLine = zeroBasedLine;
-    this.data = [data];
+    this.lastProperty = lastProperty;
+    this.group = [];
   }
 
-  merge(another: DataNode<T>): boolean {
+  merge(_another: this): boolean {
+    throw new Error(`derived class sould implement "merge"`);
+  }
+
+  // flatten node with grouping into an array including self
+  getAll(): this[] {
+    return [this, ...this.group];
+  }
+  // flatten node with grouping into an array including self
+  flatten(): this[] {
+    const members = this.getAll();
+    this.group = [];
+    return members;
+  }
+
+  // if no grouping, returns 0 otherwie the number of group memebers without self
+  groupCount(): number {
+    return this.group.length;
+  }
+
+  // is any element in the group (not including self) matches the give name
+  isInGroup(name: string): boolean {
+    return this.group.find((n) => n.name === name) != null;
+  }
+
+  // check if the node matches the other node, by name and other group property.
+  isMatched<T extends GroupableNodeType>(other: T): boolean {
+    return (
+      this.name === other.name &&
+      ((this.groupCount() > 0 && other.lastProperty === 'each') ||
+        (this.groupCount() <= 0 && other.lastProperty !== 'each'))
+    );
+  }
+
+  addGroupMember(member: this): void {
+    this.group.push(...member.flatten());
+  }
+}
+/* interface implementation */
+export class DataNode<T> extends VirtualGroupableNode implements GroupableNodeType {
+  data: T;
+
+  constructor(name: string, zeroBasedLine: number, data: T, lastProperty?: string) {
+    super(name, zeroBasedLine, lastProperty);
+    this.data = data;
+  }
+
+  merge(another: this): boolean {
     //can not merge if the location is unknown
     if (
       hasUnknownLocation(this) ||
@@ -48,34 +119,31 @@ export class DataNode<T> implements BaseNodeType {
     ) {
       return false;
     }
-    this.data.push(...another.data);
+    this.addGroupMember(another);
     return true;
   }
 
   /** return the single element in the list, exception otherwise */
   single(): T {
-    if (this.data.length !== 1) {
-      throw new TypeError(`expect 1 element but got ${this.data.length} elements`);
+    if (this.groupCount() > 0) {
+      throw new TypeError(`expect single element but got ${this.groupCount()} elements`);
     }
-    return this.data[0];
+    return this.data;
   }
 }
 
 export type ContextType = 'container' | 'data';
-export class ContainerNode<T> implements BaseNodeType {
+export class ContainerNode<T> extends VirtualGroupableNode implements GroupableNodeType {
   public childContainers: ContainerNode<T>[] = [];
   public childData: DataNode<T>[] = [];
-  public zeroBasedLine: number;
-  public name: string;
-  public group?: ContainerNode<T>[];
+
   // childContainers without location info
   public invalidChildContainers?: ContainerNode<T>[] = [];
   // childData without location info
   public invalidChildData?: DataNode<T>[];
 
-  constructor(name: string) {
-    this.name = name;
-    this.zeroBasedLine = -1;
+  constructor(name: string, lastProperty?: string) {
+    super(name, -1, lastProperty);
   }
 
   public addContainerNode(container: ContainerNode<T>): void {
@@ -94,7 +162,7 @@ export class ContainerNode<T> implements BaseNodeType {
     }
   }
 
-  merge(another: ContainerNode<T>): boolean {
+  merge(another: this): boolean {
     // can not merge if location is unknown
     if (
       hasUnknownLocation(this) ||
@@ -103,11 +171,7 @@ export class ContainerNode<T> implements BaseNodeType {
     ) {
       return false;
     }
-    if (!this.group) {
-      this.group = [another];
-    } else {
-      this.group.push(another);
-    }
+    this.addGroupMember(another);
     return true;
   }
 
@@ -170,6 +234,34 @@ export class ContainerNode<T> implements BaseNodeType {
     // has to cast explicitly due to the issue:
     // https://github.com/microsoft/TypeScript/issues/24929
     return { valid, invalid } as ChildrenList<T, C>;
+  }
+
+  public invalidateGroupNode<C extends ContextType>(
+    contextType: ContextType,
+    node: ChildNodeType<T, C>
+  ): boolean {
+    // move child container to invalid list
+    const { valid, invalid } = this.getChildren(contextType);
+    const idx = valid.indexOf(node);
+    // contextType === 'container' ? valid.indexOf(node) : valid.indexOf(node as DataNode<T>);
+
+    if (idx < 0) {
+      console.warn(
+        `no child found in parent container for ${contextType}. Not able to fix incorrect grouping`
+      );
+      return false;
+    }
+    valid.splice(idx, 1);
+
+    const newInvalid = invalid || [];
+    newInvalid.push(...node.flatten());
+    if (contextType === 'container') {
+      this.invalidChildContainers = newInvalid as ContainerNode<T>[];
+    } else {
+      this.invalidChildData = newInvalid as DataNode<T>[];
+    }
+
+    return true;
   }
 }
 
