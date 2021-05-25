@@ -92,6 +92,16 @@ export class TestResultProvider implements JestExtSessionAware {
     this.testSuites = {};
   }
 
+  isTestFile(fileName: string): 'yes' | 'no' | 'unknown' {
+    if (this.testFiles?.includes(fileName) || this.testSuites[fileName] != null) {
+      return 'yes';
+    }
+    if (!this.testFiles) {
+      return 'unknown';
+    }
+    return 'no';
+  }
+
   private matchResults(filePath: string, { root, itBlocks }: IParseResults): TestSuiteResult {
     try {
       const assertions = this.reconciler.assertionsForTestFile(filePath);
@@ -117,13 +127,6 @@ export class TestResultProvider implements JestExtSessionAware {
   }
 
   /**
-   * if we have test file list, returns true if the file is NOT in the list; otherwise always returns false since we can't be sure
-   * @param filePath
-   */
-  private notTestFile(filePath: string): boolean {
-    return (this.testFiles && !this.testFiles.includes(filePath)) ?? false;
-  }
-  /**
    * returns matched test results for the given file
    * @param filePath
    * @returns valid test result list or undefined if the file is not a test.
@@ -136,7 +139,7 @@ export class TestResultProvider implements JestExtSessionAware {
       return results;
     }
 
-    if (this.notTestFile(filePath)) {
+    if (this.isTestFile(filePath) === 'no') {
       return;
     }
 
@@ -168,7 +171,7 @@ export class TestResultProvider implements JestExtSessionAware {
       return cached;
     }
 
-    if (this.notTestFile(filePath)) {
+    if (this.isTestFile(filePath) === 'no') {
       return;
     }
 

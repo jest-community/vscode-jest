@@ -822,4 +822,36 @@ describe('TestResultProvider', () => {
       expect(mockReconciler.assertionsForTestFile).toHaveBeenCalledTimes(1);
     });
   });
+  describe('isTestFile', () => {
+    const target = 'file-1';
+    beforeEach(() => {
+      mockReconciler.updateFileWithJestStatus.mockClear();
+    });
+    it.each`
+      testFiles               | testResults   | expected
+      ${undefined}            | ${undefined}  | ${'unknown'}
+      ${undefined}            | ${['file-2']} | ${'unknown'}
+      ${[]}                   | ${[]}         | ${'no'}
+      ${[]}                   | ${['file-1']} | ${'yes'}
+      ${[]}                   | ${['file-2']} | ${'no'}
+      ${['file-1']}           | ${undefined}  | ${'yes'}
+      ${['file-2']}           | ${undefined}  | ${'no'}
+      ${['file-1', 'file-2']} | ${undefined}  | ${'yes'}
+      ${['file-1']}           | ${['file-1']} | ${'yes'}
+      ${['file-2']}           | ${['file-1']} | ${'yes'}
+      ${['file-2']}           | ${['file-2']} | ${'no'}
+    `('$testFiles, $testResults => $expected', ({ testFiles, testResults, expected }) => {
+      const sut = new TestResultProvider();
+      if (testFiles) {
+        sut.updateTestFileList(testFiles);
+      }
+      if (testResults) {
+        const mockResults = testResults.map((file) => ({ file, status: 'KnownSuceess' }));
+        mockReconciler.updateFileWithJestStatus.mockReturnValueOnce(mockResults);
+        sut.updateTestResults({} as any);
+      }
+
+      expect(sut.isTestFile(target)).toEqual(expected);
+    });
+  });
 });
