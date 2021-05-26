@@ -7,7 +7,7 @@ import { ProjectWorkspace } from 'jest-editor-support';
 import { JestProcessRequest } from '../JestProcessManagement';
 import { PluginResourceSettings, JestExtAutoRunConfig } from '../Settings';
 import { AutoRunMode } from '../StatusBar';
-import { pathToJest, pathToConfig } from '../helpers';
+import { pathToJest, pathToConfig, toFilePath } from '../helpers';
 import { workspaceLogging } from '../logging';
 import { AutoRunAccessor, JestExtContext } from './types';
 import { CoverageColors } from '../Coverage';
@@ -81,7 +81,7 @@ export const createJestExtContext = (
   const currentJestVersion = 20;
   const [jestCommandLine, pathToConfig] = getJestCommandSettings(settings);
   const runnerWorkspace = new ProjectWorkspace(
-    settings.rootPath,
+    toFilePath(settings.rootPath),
     jestCommandLine,
     pathToConfig,
     currentJestVersion,
