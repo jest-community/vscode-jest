@@ -11,6 +11,7 @@ import { ProjectWorkspace } from 'jest-editor-support';
 import { workspaceLogging } from '../../src/logging';
 import { pathToJest, pathToConfig } from '../../src/helpers';
 import { mockProjectWorkspace } from '../test-helper';
+import { toFilePath } from '../../src/helpers';
 
 describe('createJestExtContext', () => {
   const workspaceFolder: any = { name: 'workspace' };
@@ -84,11 +85,14 @@ describe('createJestExtContext', () => {
     });
   });
   it('will create runnerWorkspace', () => {
-    const settings: any = {};
-    (ProjectWorkspace as jest.Mocked<any>).mockReturnValue({});
+    const rootPath = 'abc';
+    const settings: any = { rootPath };
+    const mockRunnerWorkspace = { rootPath };
+    (ProjectWorkspace as jest.Mocked<any>).mockReturnValue(mockRunnerWorkspace);
     const context = createJestExtContext(workspaceFolder, settings);
     expect(ProjectWorkspace).toBeCalled();
-    expect(context.runnerWorkspace).toEqual({});
+    expect(toFilePath).toBeCalledWith(rootPath);
+    expect(context.runnerWorkspace).toEqual(mockRunnerWorkspace);
   });
   it('will create logging factory', () => {
     const settings: any = {};
