@@ -6,13 +6,27 @@ export interface PositionNode {
   zeroBasedLine: number;
 }
 
+type IsGroupType = 'yes' | 'no' | 'maybe';
 export interface BaseNodeType extends PositionNode {
-  name: string;
-  lastProperty?: string;
+  readonly name: string;
+  readonly isGroup?: IsGroupType;
+  readonly ancestorTitles: string[];
+  readonly fullName: string;
+  readonly hasDynamicName?: boolean;
 }
 
-export interface GroupableNodeType extends BaseNodeType {
-  merge: (another: this) => boolean;
+export interface MatchOptions {
+  /**If true, will match by fullName instead of name */
+  byFullName?: boolean;
+  /** if true, will ignore name/fullName difference */
+  ignoreDynamicNameDiff?: boolean;
+  /** if true, will ignore isGroupNode() difference */
+  ignoreGroupDiff?: boolean;
+  /** if true will immediately mark nodes' isMatched flag */
+  markImmediately?: boolean;
+}
+export interface GroupableNodeType<T> extends BaseNodeType {
+  merge: (another: this, forced?: boolean) => boolean;
 
   /**
    * return all grouped nodes including self
@@ -20,14 +34,25 @@ export interface GroupableNodeType extends BaseNodeType {
    **/
   getAll: () => this[];
 
-  // if no grouping, returns 0 otherwie the number of group memebers without self
-  groupCount: () => number;
+  /** returns true if the node is a group node, i.e. either has non-zero group member or lastProperty === 'each' */
+  isGroupNode: () => IsGroupType;
 
   // is any element in the group (not including self) matches the give name
   isInGroup: (name: string) => boolean;
 
-  // check if the node matches the other node, by name and other group property.
-  isMatched: <T extends GroupableNodeType>(other: T) => boolean;
+  /**
+   * try to match "other" based on the filter type:
+   * "by-name": match by name of the nodes
+   * "by-group": if the node has a group, then the "other" node should have 'each' lastProperty.
+   *
+   * the matched node will be linked and returns true; otherwise false
+   *
+   * If other already matched, returns true as well.
+   **/
+  match: (other: T, options?: MatchOptions) => boolean;
+
+  /** note: setting isMatch will set its group members, if any, match-state as well */
+  isMatched: boolean;
 }
 
 export const hasUnknownLocation = (node: PositionNode): boolean => node.zeroBasedLine < 0;
@@ -36,7 +61,7 @@ const sortByLine = (n1: PositionNode, n2: PositionNode): number =>
   n1.zeroBasedLine - n2.zeroBasedLine;
 
 // group nodes after sort
-const groupNodes = <N extends GroupableNodeType>(list: N[], node: N): N[] => {
+const groupNodes = <N extends GroupableNodeType<GroupableNode>>(list: N[], node: N): N[] => {
   if (list.length <= 0) {
     return [node];
   }
@@ -50,21 +75,75 @@ const groupNodes = <N extends GroupableNodeType>(list: N[], node: N): N[] => {
 export interface HasTitle {
   title: string;
 }
-export class VirtualGroupableNode implements GroupableNodeType {
+
+export const ROOT_NODE_NAME = '__root__';
+
+export interface OptionalAttributes {
+  fullName?: string;
+  isGroup?: IsGroupType;
+  hasDynamicName?: boolean;
+}
+export class GroupableNode implements GroupableNodeType<GroupableNode> {
   name: string;
   zeroBasedLine: number;
-  lastProperty?: string;
   group: this[];
+  attrs: OptionalAttributes;
 
-  constructor(name: string, zeroBasedLine: number, lastProperty?: string) {
+  private _matched: boolean;
+  private _ancestorTitles: string[];
+
+  constructor(name: string, zeroBasedLine: number, attrs?: OptionalAttributes) {
     this.name = name;
     this.zeroBasedLine = zeroBasedLine;
-    this.lastProperty = lastProperty;
+
+    this.attrs = attrs ?? {};
+
     this.group = [];
+    this._ancestorTitles = [];
+    this._matched = false;
   }
 
-  merge(_another: this): boolean {
-    throw new Error(`derived class sould implement "merge"`);
+  get ancestorTitles(): string[] {
+    return this._ancestorTitles;
+  }
+  get fullName(): string {
+    if (!this.attrs.fullName) {
+      this.attrs.fullName = [...this._ancestorTitles.filter((t) => t.length > 0), this.name].join(
+        ' '
+      );
+    }
+    return this.attrs.fullName;
+  }
+
+  set isMatched(value: boolean) {
+    this.getAll().forEach((n) => (n._matched = value));
+  }
+
+  /** check if the target node is in the matched nodes list; if no target, check if there is any matched node. */
+  get isMatched(): boolean {
+    return this._matched;
+  }
+
+  // only update fullName if it is undefined
+  setParentInfo(pInfo: { titles: string[]; isGroup?: IsGroupType }): void {
+    this._ancestorTitles = pInfo.titles.filter((t) => t !== ROOT_NODE_NAME);
+    if (pInfo.isGroup === 'yes') {
+      this.attrs.isGroup = 'yes';
+    }
+  }
+
+  merge(another: this, forced = false): boolean {
+    //can not merge if the location is unknown
+    if (
+      !forced &&
+      (hasUnknownLocation(this) ||
+        hasUnknownLocation(another) ||
+        another.zeroBasedLine !== this.zeroBasedLine)
+    ) {
+      return false;
+    }
+    this.addGroupMember(another);
+    return true;
   }
 
   // flatten node with grouping into an array including self
@@ -78,9 +157,12 @@ export class VirtualGroupableNode implements GroupableNodeType {
     return members;
   }
 
-  // if no grouping, returns 0 otherwie the number of group memebers without self
-  groupCount(): number {
-    return this.group.length;
+  /** returns true if the node is a group node, i.e. either has non-zero group member or lastProperty === 'each' */
+  isGroupNode(): 'yes' | 'no' | 'maybe' {
+    if (this.attrs.isGroup === 'yes' || this.group.length > 0) {
+      return 'yes';
+    }
+    return this.attrs.isGroup ?? 'no';
   }
 
   // is any element in the group (not including self) matches the give name
@@ -88,52 +170,71 @@ export class VirtualGroupableNode implements GroupableNodeType {
     return this.group.find((n) => n.name === name) != null;
   }
 
-  // check if the node matches the other node, by name and other group property.
-  isMatched<T extends GroupableNodeType>(other: T): boolean {
-    return (
-      this.name === other.name &&
-      ((this.groupCount() > 0 && other.lastProperty === 'each') ||
-        (this.groupCount() <= 0 && other.lastProperty !== 'each'))
-    );
-  }
-
   addGroupMember(member: this): void {
     this.group.push(...member.flatten());
   }
-}
-/* interface implementation */
-export class DataNode<T> extends VirtualGroupableNode implements GroupableNodeType {
-  data: T;
 
-  constructor(name: string, zeroBasedLine: number, data: T, lastProperty?: string) {
-    super(name, zeroBasedLine, lastProperty);
-    this.data = data;
+  private nameMaybeDynamic(): boolean {
+    return this.attrs.hasDynamicName || this.isGroupNode() !== 'no';
   }
 
-  merge(another: this): boolean {
-    //can not merge if the location is unknown
+  /**
+   * match the other node by name and other group property. if matched, the nodes will be "linked".
+   * If "onlyUnmatched" flag is true, will only match if "other" has not been matched.
+   * @returns true if matched, even if it is already matched; otherwise false.
+   **/
+
+  match(other: GroupableNode, options?: MatchOptions): boolean {
+    const nameMatched = options?.byFullName
+      ? this.fullName === other.fullName
+      : this.name === other.name;
+
     if (
-      hasUnknownLocation(this) ||
-      hasUnknownLocation(another) ||
-      another.zeroBasedLine !== this.zeroBasedLine
+      !nameMatched &&
+      !(options?.ignoreDynamicNameDiff && (this.nameMaybeDynamic() || other.nameMaybeDynamic()))
     ) {
       return false;
     }
-    this.addGroupMember(another);
+
+    if (
+      !options?.ignoreGroupDiff &&
+      !(
+        this.isGroupNode() === 'maybe' ||
+        other.isGroupNode() === 'maybe' ||
+        this.isGroupNode() === other.isGroupNode()
+      )
+    ) {
+      return false;
+    }
+
+    if (options?.markImmediately) {
+      this.isMatched = true;
+      other.isMatched = true;
+    }
+
     return true;
   }
+}
+/* interface implementation */
+export class DataNode<T> extends GroupableNode {
+  data: T;
 
-  /** return the single element in the list, exception otherwise */
-  single(): T {
-    if (this.groupCount() > 0) {
-      throw new TypeError(`expect single element but got ${this.groupCount()} elements`);
-    }
-    return this.data;
+  constructor(name: string, zeroBasedLine: number, data: T, attrs?: OptionalAttributes) {
+    super(name, zeroBasedLine, attrs);
+    this.data = data;
   }
 }
 
+export interface UnmatchedOptions {
+  flatten?: boolean;
+  skipInvalid?: boolean;
+}
 export type ContextType = 'container' | 'data';
-export class ContainerNode<T> extends VirtualGroupableNode implements GroupableNodeType {
+
+export const flatten = <T>(lists: T[][]): T[] =>
+  lists.reduce((finalList, list) => finalList.concat(list), [] as T[]);
+
+export class ContainerNode<T> extends GroupableNode {
   public childContainers: ContainerNode<T>[] = [];
   public childData: DataNode<T>[] = [];
 
@@ -142,15 +243,23 @@ export class ContainerNode<T> extends VirtualGroupableNode implements GroupableN
   // childData without location info
   public invalidChildData?: DataNode<T>[];
 
-  constructor(name: string, lastProperty?: string) {
-    super(name, -1, lastProperty);
+  constructor(name: string, attrs?: OptionalAttributes) {
+    super(name, -1, attrs);
   }
 
   public addContainerNode(container: ContainerNode<T>): void {
+    container.setParentInfo({
+      titles: [...this.ancestorTitles, this.name],
+      isGroup: this.attrs.isGroup,
+    });
     this.childContainers.push(container);
   }
 
   public addDataNode(dataNode: DataNode<T>): void {
+    dataNode.setParentInfo({
+      titles: [...this.ancestorTitles, this.name],
+      isGroup: this.attrs.isGroup,
+    });
     if (hasUnknownLocation(dataNode)) {
       if (this.invalidChildData) {
         this.invalidChildData.push(dataNode);
@@ -162,30 +271,20 @@ export class ContainerNode<T> extends VirtualGroupableNode implements GroupableN
     }
   }
 
-  merge(another: this): boolean {
-    // can not merge if location is unknown
-    if (
-      hasUnknownLocation(this) ||
-      hasUnknownLocation(another) ||
-      another.zeroBasedLine !== this.zeroBasedLine
-    ) {
-      return false;
-    }
-    this.addGroupMember(another);
-    return true;
-  }
-
-  public findContainer(path: string[], createIfMissing = true): ContainerNode<T> | undefined {
+  public findContainer(
+    path: string[],
+    createNewContainer?: (name: string) => ContainerNode<T>
+  ): ContainerNode<T> | undefined {
     if (path.length <= 0) {
       return this;
     }
     const [target, ...remaining] = path;
     let container = this.childContainers.find((c) => c.name === target);
-    if (!container && createIfMissing) {
-      container = new ContainerNode(target);
+    if (!container && createNewContainer) {
+      container = createNewContainer(target);
       this.addContainerNode(container);
     }
-    return container?.findContainer(remaining, createIfMissing);
+    return container?.findContainer(remaining, createNewContainer);
   }
 
   /**
@@ -235,15 +334,47 @@ export class ContainerNode<T> extends VirtualGroupableNode implements GroupableN
     // https://github.com/microsoft/TypeScript/issues/24929
     return { valid, invalid } as ChildrenList<T, C>;
   }
+  /**
+   * invalidate duplicate named nodes
+   *
+   * @returns true if container has been updated; otherwise false
+   */
+  public invalidateDuplicateNameNodes<C extends ContextType>(
+    contextType: ContextType,
+    onDups?: (dups: ChildNodeType<T, C>[]) => void
+  ): boolean {
+    const { valid, invalid } = this.getChildren(contextType);
 
+    const dups = valid.filter((n) => valid.find((nn) => nn !== n && nn.fullName === n.fullName));
+    if (dups.length <= 0) {
+      return false;
+    }
+    const newValid = valid.filter((n) => !dups.includes(n));
+    const newInvalid = invalid || [];
+    newInvalid.push(...dups);
+
+    if (contextType === 'container') {
+      this.childContainers = newValid as ContainerNode<T>[];
+      this.invalidChildContainers = newInvalid as ContainerNode<T>[];
+    } else {
+      this.childData = newValid as DataNode<T>[];
+      this.invalidChildData = newInvalid as DataNode<T>[];
+    }
+
+    onDups?.(dups as ChildNodeType<T, C>[]);
+
+    return true;
+  }
+
+  /** move child container to invalid list.
+   * @returns true if container has been updated; otherwise false
+   */
   public invalidateGroupNode<C extends ContextType>(
     contextType: ContextType,
     node: ChildNodeType<T, C>
   ): boolean {
-    // move child container to invalid list
     const { valid, invalid } = this.getChildren(contextType);
     const idx = valid.indexOf(node);
-    // contextType === 'container' ? valid.indexOf(node) : valid.indexOf(node as DataNode<T>);
 
     if (idx < 0) {
       console.warn(
@@ -263,6 +394,27 @@ export class ContainerNode<T> extends VirtualGroupableNode implements GroupableN
 
     return true;
   }
+
+  // extract all unmatched data node
+  public unmatchedNodes = (options?: UnmatchedOptions): DataNode<T>[] => {
+    const dataNodes =
+      (options?.skipInvalid !== true && this.invalidChildData?.concat(this.childData)) ||
+      this.childData;
+    let unmatched = dataNodes.filter((n) => !n.isMatched);
+
+    if (options?.flatten) {
+      unmatched = flatten(unmatched.map((u) => u.flatten()));
+    }
+
+    const containerNodes =
+      (options?.skipInvalid !== true &&
+        this.invalidChildContainers?.concat(this.childContainers)) ||
+      this.childContainers;
+    const deepUnmatched = flatten(containerNodes.map((n) => n.unmatchedNodes(options)));
+    unmatched.push(...deepUnmatched);
+
+    return unmatched;
+  };
 }
 
 export type NodeType<T> = ContainerNode<T> | DataNode<T>;

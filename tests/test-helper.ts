@@ -37,18 +37,28 @@ export const findResultForTest = (results: TestResult[], itBlock: ItBlock): Test
 };
 
 // factory method
-export const makeItBlock = (name?: string, pos?: [number, number, number, number]): any => {
+export const makeItBlock = (
+  name?: string,
+  pos?: [number, number, number, number],
+  override?: Partial<ItBlock>
+): any => {
   const loc = pos ? makePositionRange(pos) : EmptyLocationRange;
   return {
     type: 'it',
     name,
     ...loc,
+    ...(override ?? {}),
   };
 };
-export const makeDescribeBlock = (name: string, itBlocks: any[]): any => ({
+export const makeDescribeBlock = (
+  name: string,
+  itBlocks: any[],
+  override?: Partial<ItBlock>
+): any => ({
   type: 'describe',
   name,
   children: itBlocks,
+  ...(override ?? {}),
 });
 export const makeRoot = (children: any[]): any => ({
   type: 'root',

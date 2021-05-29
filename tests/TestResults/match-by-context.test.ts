@@ -53,7 +53,6 @@ describe('buildAssertionContainer', () => {
     expect(root.childData).toHaveLength(2);
     expect(root.childData.map((n) => n.zeroBasedLine)).toEqual([2, 5]);
     const groupNode = root.childData[0];
-    expect(groupNode.groupCount()).toEqual(2);
     expect(groupNode.getAll().map((n) => n.data.title)).toEqual(['test-1', 'test-3', 'test-2']);
   });
   it('can group describe blocks with the same line', () => {
@@ -148,14 +147,16 @@ describe('buildSourceContainer', () => {
   });
 });
 describe('matchTestAssertions', () => {
+  const mockError = jest.fn();
   const mockWarn = jest.fn();
   beforeEach(() => {
     jest.resetAllMocks();
+    console.error = mockError;
     console.warn = mockWarn;
   });
   it('tests are matched by context position regardless name and line', () => {
     const t1 = helper.makeItBlock('test-1', [1, 0, 5, 0]);
-    const t2 = helper.makeItBlock('test-2-${num}', [6, 0, 7, 0]);
+    const t2 = helper.makeItBlock('test-2-${num}', [6, 0, 7, 0], { hasDynamicName: true });
     const sourceRoot = helper.makeRoot([t2, t1]);
 
     const a1 = helper.makeAssertion('test-1', 'KnownFail', [], [0, 0]);
@@ -222,12 +223,17 @@ describe('matchTestAssertions', () => {
       const a4 = helper.makeAssertion('test-4', 'KnownSuccess', ['d-1', 'd-1-1'], [9, 0]);
 
       const matched = match.matchTestAssertions('a file', sourceRoot, [a1, a2, a4]);
-      expect(matched.map((m) => [m.name, m.status])).toEqual([
-        ['test-1', 'KnownSuccess'],
-        ['d-1 test-2', 'KnownFail'],
-        ['test-3', 'Unknown'],
-        ['d-1 d-1-1 test-4', 'KnownSuccess'],
-      ]);
+
+      const expected = [
+        ['test-1', 'KnownSuccess', 'match-by-context'],
+        ['d-1 test-2', 'KnownFail', 'match-by-name'],
+        ['test-3', 'Unknown', 'match-failed'],
+        ['d-1 d-1-1 test-4', 'KnownSuccess', 'match-by-context'],
+      ];
+      expect(matched).toHaveLength(expected.length);
+      expect(matched.map((m) => [m.name, m.status, m.reason])).toEqual(
+        expect.arrayContaining(expected)
+      );
     });
     it('describe block will fail if context mismatch and name lookup failed', () => {
       const t1 = helper.makeItBlock('test-1', [1, 0, 5, 0]); // under root
@@ -259,7 +265,10 @@ describe('matchTestAssertions', () => {
     const createTestData = (
       statusList: (TestReconciliationStateType | [TestReconciliationStateType, number])[]
     ): [ParsedNode, TestAssertionStatus[]] => {
-      const t1 = helper.makeItBlock('', [12, 1, 20, 1]);
+      const t1 = helper.makeItBlock('', [12, 1, 20, 1], {
+        hasDynamicName: true,
+        lastProperty: 'each',
+      });
       const sourceRoot = helper.makeRoot([t1]);
 
       // this match jest.each with 2 assertions
@@ -291,28 +300,157 @@ describe('matchTestAssertions', () => {
       expect(matched[1].end).toEqual({ line: 19, column: 0 });
       expect(matched[1].lineNumberOfError).toEqual(12);
     });
+    describe('describe.each use case', () => {
+      describe('1 test in describe.each', () => {
+        it.each`
+          t1Info                                     | d1Info               | a1Info                        | a2Info
+          ${['test-1']}                              | ${['d-1.each $var']} | ${['test-1', ['d-1.each 1']]} | ${['test-1', ['d-1.each 2']]}
+          ${['test-1']}                              | ${['d-1.each']}      | ${['test-1', ['d-1.each']]}   | ${['test-1', ['d-1.each']]}
+          ${['test-${k}', { hasDynamicName: true }]} | ${['d-1.each']}      | ${['test-1', ['d-1.each']]}   | ${['test-1', ['d-1.each']]}
+          ${['test-${k}', { hasDynamicName: true }]} | ${['d-1.each $var']} | ${['test-1', ['d-1.each 1']]} | ${['test-1', ['d-1.each 2']]}
+        `('$t1Info in $d1Info', ({ t1Info, d1Info, a1Info, a2Info }) => {
+          let [tName, override] = t1Info;
+          const t1 = helper.makeItBlock(tName, [1, 0, 5, 0], { ...(override ?? {}) });
+          [tName, override] = d1Info;
+          const d1 = helper.makeDescribeBlock(tName, [t1], {
+            lastProperty: 'each',
+            ...(override ?? {}),
+          });
+
+          let [aName, ancestor] = a1Info;
+          const a1 = helper.makeAssertion(aName, 'KnownSuccess', ancestor, [1, 0]);
+          [aName, ancestor] = a2Info;
+          const a2 = helper.makeAssertion(aName, 'KnownFail', ancestor, [1, 0]);
+
+          const sourceRoot = helper.makeRoot([d1]);
+          const matched = match.matchTestAssertions('a file', sourceRoot, [a1, a2]);
+
+          expect(matched).toHaveLength(2);
+          expect(matched.map((m) => [m.name, m.start.line, m.status, m.reason])).toEqual(
+            expect.arrayContaining([
+              [a1.fullName, t1.start.line - 1, a1.status, 'match-by-context'],
+              [a2.fullName, t1.start.line - 1, a2.status, 'match-by-context'],
+            ])
+          );
+        });
+      });
+      const t1 = helper.makeItBlock('test-1', [1, 0, 5, 0]);
+      // const t2 = helper.makeItBlock('test-2', [10, 0, 15, 0]);
+      // const t3 = helper.makeItBlock('test.each ${num}', [26, 0, 57, 0], { lastProperty: 'each' });
+      // const t4 = helper.makeItBlock('test-2', [100, 0, 105, 0]);
+      // const d1 = helper.makeDescribeBlock('d-1.each $var', [t1, t2, t3], { lastProperty: 'each' });
+      // const d2 = helper.makeDescribeBlock('d-2', [t4]);
+
+      describe('nested each tests in describe.each', () => {
+        const t1 = helper.makeItBlock('test-1.each $count', [1, 0, 5, 0], { lastProperty: 'each' });
+        const d1 = helper.makeDescribeBlock('d-1.each $var', [t1], { lastProperty: 'each' });
+        const a1 = helper.makeAssertion('test-1.each 1', 'KnownSuccess', ['d-1.each 1'], [1, 0]);
+        const a2 = helper.makeAssertion('test-1.each 2', 'KnownFail', ['d-1.each 1'], [1, 0]);
+        const a3 = helper.makeAssertion('test-1.each 2', 'KnownSuccess', ['d-1.each 2'], [1, 0]);
+
+        it('single nested each tests in describe.each', () => {
+          const sourceRoot = helper.makeRoot([d1]);
+          const matched = match.matchTestAssertions('a file', sourceRoot, [a1, a2, a3]);
+          expect(matched).toHaveLength(3);
+          expect(matched.map((m) => [m.name, m.start.line, m.status, m.reason])).toEqual(
+            expect.arrayContaining([
+              [a1.fullName, t1.start.line - 1, a1.status, 'match-by-context'],
+              [a2.fullName, t1.start.line - 1, a2.status, 'match-by-context'],
+              [a3.fullName, t1.start.line - 1, a3.status, 'match-by-context'],
+            ])
+          );
+        });
+        it('multiple tests in the describe.each block', () => {
+          const t2 = helper.makeItBlock('test-2', [10, 0, 5, 0]);
+          const t3 = helper.makeItBlock('test-3-${k}', [20, 0, 5, 0], { hasDynamicName: true });
+          const dd1 = helper.makeDescribeBlock('d-1.each $var', [t1, t2, t3], {
+            lastProperty: 'each',
+          });
+
+          const a4 = helper.makeAssertion('test-2', 'KnownSuccess', ['d-1.each 1'], [11, 0]);
+          const a5 = helper.makeAssertion('test-2', 'KnownSuccess', ['d-1.each 2'], [11, 0]);
+          const a6 = helper.makeAssertion('test-3-a', 'KnownSuccess', ['d-1.each 1'], [33, 0]);
+          const a7 = helper.makeAssertion('test-3-b', 'KnownFail', ['d-1.each 2'], [33, 0]);
+
+          const sourceRoot = helper.makeRoot([dd1]);
+          const matched = match.matchTestAssertions('a file', sourceRoot, [
+            a1,
+            a2,
+            a3,
+            a4,
+            a5,
+            a6,
+            a7,
+          ]);
+          expect(matched).toHaveLength(7);
+          expect(matched.map((m) => [m.name, m.start.line, m.status, m.reason])).toEqual(
+            expect.arrayContaining([
+              [a1.fullName, t1.start.line - 1, a1.status, 'match-by-context'],
+              [a2.fullName, t1.start.line - 1, a2.status, 'match-by-context'],
+              [a3.fullName, t1.start.line - 1, a3.status, 'match-by-context'],
+              [a4.fullName, t2.start.line - 1, a4.status, 'match-by-context'],
+              [a5.fullName, t2.start.line - 1, a5.status, 'match-by-context'],
+              [a6.fullName, t3.start.line - 1, a6.status, 'match-by-context'],
+              [a7.fullName, t3.start.line - 1, a7.status, 'match-by-context'],
+            ])
+          );
+        });
+      });
+      it('1 simple test in describe.each with the same name', () => {
+        const d1 = helper.makeDescribeBlock('d-1.each', [t1], { lastProperty: 'each' });
+        const a1 = helper.makeAssertion('test-1', 'KnownSuccess', ['d-1.each'], [1, 0]);
+        const a2 = helper.makeAssertion('test-1', 'KnownFail', ['d-1.each'], [1, 0]);
+
+        const sourceRoot = helper.makeRoot([d1]);
+        const matched = match.matchTestAssertions('a file', sourceRoot, [a1, a2]);
+        expect(matched).toHaveLength(2);
+        expect(matched.map((m) => [m.name, m.start.line, m.status, m.reason])).toEqual(
+          expect.arrayContaining([
+            [a1.fullName, t1.start.line - 1, a1.status, 'match-by-context'],
+            [a2.fullName, t1.start.line - 1, a2.status, 'match-by-context'],
+          ])
+        );
+      });
+      it('1 dynamically named test.each in describe.each', () => {
+        const t1 = helper.makeItBlock('test-1-$x', [1, 0, 5, 0], { hasDynamicName: true });
+        const d1 = helper.makeDescribeBlock('d-1.each $var', [t1], { lastProperty: 'each' });
+        const a1 = helper.makeAssertion('`test-1-x`', 'KnownSuccess', ['d-1.each'], [1, 0]);
+        const a2 = helper.makeAssertion('test-1-y', 'KnownFail', ['d-1.each'], [1, 0]);
+
+        const sourceRoot = helper.makeRoot([d1]);
+        const matched = match.matchTestAssertions('a file', sourceRoot, [a1, a2]);
+        expect(matched).toHaveLength(2);
+        expect(matched.map((m) => [m.name, m.start.line, m.status, m.reason])).toEqual(
+          expect.arrayContaining([
+            [a1.fullName, t1.start.line - 1, a1.status, 'match-by-context'],
+            [a2.fullName, t1.start.line - 1, a2.status, 'match-by-context'],
+          ])
+        );
+      });
+      it('it.each within describe.each', () => {});
+    });
   });
   it('test name precedence: assertion.fullName > assertion.title > testSource.name', () => {
     const t1 = helper.makeItBlock('test-1', [1, 0, 5, 0]);
-    const t2 = helper.makeItBlock('test-2-${num}', [6, 0, 7, 0]);
+    const t2 = helper.makeItBlock('test-2-${num}', [6, 0, 7, 0], { hasDynamicName: true });
     const t3 = helper.makeItBlock('test-3-no-assertion', [8, 0, 10, 0]);
     const d1 = helper.makeDescribeBlock('d-1', [t1, t2]);
     const sourceRoot = helper.makeRoot([d1, t3]);
 
-    const a1 = helper.makeAssertion('test-1-a', 'KnownFail', ['d-1'], [0, 0]);
+    const a1 = helper.makeAssertion('test-1', 'KnownFail', ['d-1'], [0, 0]);
     a1.fullName = undefined;
     const a2 = helper.makeAssertion('test-2-100', 'KnownSuccess', ['d-1'], [7, 0]);
     const matched = match.matchTestAssertions('a file', sourceRoot, [a1, a2]);
 
-    expect(matched).toHaveLength(3);
-    expect(matched.map((m) => m.name)).toEqual([
-      'test-3-no-assertion',
-      'test-1-a',
-      'd-1 test-2-100',
-    ]);
-    expect(matched.map((m) => m.status)).toEqual(['Unknown', 'KnownFail', 'KnownSuccess']);
+    const expected = ['test-3-no-assertion', 'test-1', 'd-1 test-2-100'];
+    expect(matched).toHaveLength(expected.length);
+    expect(matched.map((m) => m.name)).toEqual(expect.arrayContaining(expected));
+
+    expect(matched.map((m) => m.status)).toEqual(
+      expect.arrayContaining(['Unknown', 'KnownFail', 'KnownSuccess'])
+    );
   });
-  it('duplicate name in the same block should generate warning', () => {
+  it('duplicate name in the same block should generate error', () => {
     const t1 = helper.makeItBlock('test-1', [1, 0, 5, 0]);
     const t2 = helper.makeItBlock('test-1', [6, 0, 7, 0]);
     const sourceRoot = helper.makeRoot([t1, t2]);
@@ -322,14 +460,14 @@ describe('matchTestAssertions', () => {
     expect(matched).toHaveLength(2);
     expect(matched.map((m) => m.name)).toEqual(['test-1', 'test-1']);
     expect(matched.map((m) => m.status)).toEqual(['Unknown', 'Unknown']);
-    expect(
-      mockWarn.mock.calls.find((call) => call[0].includes('duplicate names'))
-    ).not.toBeUndefined();
+    expect(mockError).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.stringMatching('duplicate-name')])
+    );
   });
 
   // test.todo will generate null for location that could confuses the context matching
   describe('unknown location and test result reason', () => {
-    const t1 = helper.makeItBlock('test-${i}', [1, 0, 5, 0]); // under d-1
+    const t1 = helper.makeItBlock('test-${i}', [1, 0, 5, 0], { hasDynamicName: true }); // under d-1
     const t2 = helper.makeItBlock('test.todo 1', [6, 0, 7, 0]); // under d-1
     const t3 = helper.makeItBlock('test.todo 2', [9, 0, 10, 0]); // under d-1
     const t4 = helper.makeItBlock('test-2', [12, 0, 20, 0]); // under d-1
@@ -395,8 +533,8 @@ describe('matchTestAssertions', () => {
         expect.arrayContaining([
           [a2.fullName, a2.status, 'match-by-name'],
           [a4.fullName, a4.status, 'match-by-name'],
-          [t1.name, 'Unknown', 'no-matched-assertion'],
-          [t3.name, 'Unknown', 'no-matched-assertion'],
+          [t1.name, 'Unknown', 'match-failed'],
+          [t3.name, 'Unknown', 'match-failed'],
         ])
       );
     });
@@ -406,22 +544,22 @@ describe('matchTestAssertions', () => {
       const matched = match.matchTestAssertions('a file', helper.makeRoot([deep1]), []);
       expect(matched).toHaveLength(1);
       expect(matched.map((m) => [m.name, m.status, m.reason])).toEqual([
-        [t1.name, 'Unknown', 'no-matched-assertion'],
+        [t1.name, 'Unknown', 'match-failed'],
       ]);
     });
   });
   describe('invalid grouping: do no worse than match-by-name', () => {
     const t0 = helper.makeItBlock('first test', [1, 0, 6, 0]);
     const d0 = helper.makeDescribeBlock('desc-1', [t0]);
-    const t1 = helper.makeItBlock('test.each $a', [7, 0, 5, 0]);
+    const t1 = helper.makeItBlock('test.each $a', [7, 0, 5, 0], { lastProperty: 'each' });
     const d1 = helper.makeDescribeBlock('wrapper-1', [t1]);
-    const t2 = helper.makeItBlock('test.each again $a', [10, 0, 15, 0]);
+    const t2 = helper.makeItBlock('test.each again $a', [10, 0, 15, 0], { lastProperty: 'each' });
     // const d2 = helper.makeDescribeBlock('wrapper-2', [t2]);
     const t3 = helper.makeItBlock('last test', [15, 0, 27, 0]);
     const tTodo = helper.makeItBlock('a todo test', [30, 0, 30, 0]);
     const d3 = helper.makeDescribeBlock('wrapper-3', [t3, tTodo]);
 
-    describe('when all tests have the same loation', () => {
+    describe('when all tests have the same loation: i.e. they will be grouped incorrectly', () => {
       const a0 = helper.makeAssertion('first test', 'KnownSuccess', undefined, [1, 0]);
       const a1 = helper.makeAssertion('test.each 1', 'KnownSuccess', undefined, [1, 0]);
       const a2 = helper.makeAssertion('test.each 2', 'KnownFail', undefined, [1, 0]);
@@ -445,7 +583,24 @@ describe('matchTestAssertions', () => {
           ])
         );
       });
-      describe('can skip dynamic named tests while still match the static named ones', () => {
+      it('will report invalid group warning in verbose mode', () => {
+        const sourceRoot = helper.makeRoot([t0, t3, tTodo]);
+        const matched = match.matchTestAssertions('a file', sourceRoot, [a4, a0, a5], true);
+        expect(matched).toHaveLength(3);
+        expect(
+          matched.map((m) => [m.name, m.start.line, m.status, m.reason, m.multiResults?.length])
+        ).toEqual(
+          expect.arrayContaining([
+            [a0.fullName, t0.start.line - 1, a0.status, 'match-by-name', undefined],
+            [a4.fullName, t3.start.line - 1, a4.status, 'match-by-name', undefined],
+            [a5.fullName, tTodo.start.line - 1, a5.status, 'match-by-name', undefined],
+          ])
+        );
+        expect(mockWarn).toHaveBeenCalledWith(
+          expect.arrayContaining([expect.stringMatching('incorrect-grouping')])
+        );
+      });
+      describe('can skip dynamic named tests while still matching the static named ones', () => {
         it('simple case: no describe', () => {
           const sourceRoot = helper.makeRoot([t0, t1, t3, tTodo]);
           const matched = match.matchTestAssertions('a file', sourceRoot, [a1, a2, a4, a0, a5]);
@@ -455,7 +610,7 @@ describe('matchTestAssertions', () => {
           ).toEqual(
             expect.arrayContaining([
               [a0.fullName, t0.start.line - 1, a0.status, 'match-by-name', undefined],
-              [t1.name, t1.start.line - 1, 'Unknown', 'no-matched-assertion', undefined],
+              [t1.name, t1.start.line - 1, 'Unknown', 'match-failed', undefined],
               [a4.fullName, t3.start.line - 1, a4.status, 'match-by-name', undefined],
               [a5.fullName, tTodo.start.line - 1, a5.status, 'match-by-name', undefined],
             ])
@@ -471,7 +626,7 @@ describe('matchTestAssertions', () => {
           ).toEqual(
             expect.arrayContaining([
               [a0d.fullName, t0.start.line - 1, a0d.status, 'match-by-context', undefined],
-              [t1.name, t1.start.line - 1, 'Unknown', 'no-matched-assertion', undefined],
+              [t1.name, t1.start.line - 1, 'Unknown', 'match-failed', undefined],
               [a4.fullName, t3.start.line - 1, a4.status, 'match-by-name', undefined],
               [a5.fullName, tTodo.start.line - 1, a5.status, 'match-by-name', undefined],
             ])
@@ -526,6 +681,117 @@ describe('matchTestAssertions', () => {
           );
         });
       });
+    });
+  });
+  describe('can handle missing ancestorTitles (#715)', () => {
+    const t1 = helper.makeItBlock('test me', [1, 0, 6, 0]);
+    const d1 = helper.makeDescribeBlock('desc-1', [t1]);
+
+    const t2 = helper.makeItBlock('test me', [10, 0, 15, 0]);
+    const d2 = helper.makeDescribeBlock('desc-2', [t2]);
+
+    it('simple 1 test in describe block', () => {
+      const a1 = helper.makeAssertion('test me', 'KnownSuccess', undefined, [1, 0], {
+        fullName: 'desc-1 test me',
+      });
+      const sourceRoot = helper.makeRoot([d1]);
+      const matched = match.matchTestAssertions('a file', sourceRoot, [a1]);
+      expect(matched).toHaveLength(1);
+      expect(matched.map((m) => [m.name, m.start.line, m.status, m.reason])).toEqual(
+        expect.arrayContaining([[a1.fullName, t1.start.line - 1, a1.status, 'match-by-fullName']])
+      );
+    });
+    it('2 test block with the same name but different describe blocks', () => {
+      const a1 = helper.makeAssertion('test me', 'KnownSuccess', undefined, [1, 0], {
+        fullName: 'desc-1 test me',
+      });
+      const a2 = helper.makeAssertion('test me', 'KnownFail', undefined, [10, 0], {
+        fullName: 'desc-2 test me',
+      });
+      const sourceRoot = helper.makeRoot([d1, d2]);
+      const matched = match.matchTestAssertions('a file', sourceRoot, [a1, a2]);
+      expect(matched).toHaveLength(2);
+      expect(matched.map((m) => [m.name, m.start.line, m.status, m.reason])).toEqual(
+        expect.arrayContaining([
+          [a1.fullName, t1.start.line - 1, a1.status, 'match-by-fullName'],
+          [a2.fullName, t2.start.line - 1, a2.status, 'match-by-fullName'],
+        ])
+      );
+    });
+    it('when test.each matched multiple assertions by full-name', () => {
+      const t1 = helper.makeItBlock('a each test', [1, 0, 6, 0], { lastProperty: 'each' });
+      const d1 = helper.makeDescribeBlock('desc-1', [t1]);
+
+      const a1 = helper.makeAssertion('a each test', 'KnownSuccess', undefined, [1, 0], {
+        fullName: 'desc-1 a each test',
+      });
+      const a2 = helper.makeAssertion('a each test', 'KnownFail', undefined, [1, 0], {
+        fullName: 'desc-1 a each test',
+      });
+      const sourceRoot = helper.makeRoot([d1]);
+      const matched = match.matchTestAssertions('a file', sourceRoot, [a1, a2]);
+
+      expect(matched).toHaveLength(2);
+      expect(matched.map((m) => [m.name, m.start.line, m.status, m.reason])).toEqual(
+        expect.arrayContaining([
+          [a1.fullName, t1.start.line - 1, a1.status, 'match-by-fullName'],
+          [a2.fullName, t1.start.line - 1, a2.status, 'match-by-fullName'],
+        ])
+      );
+    });
+    it('can still detect duplicate test names during fullName match', () => {
+      const t1 = helper.makeItBlock('a test', [1, 0, 6, 0]);
+      const t2 = helper.makeItBlock('a test', [10, 0, 6, 0]);
+      const d1 = helper.makeDescribeBlock('desc-1', [t1, t2]);
+
+      const a1 = helper.makeAssertion('a test', 'KnownSuccess', undefined, [1, 0], {
+        fullName: 'desc-1 a test',
+      });
+      const a2 = helper.makeAssertion('a test', 'KnownFail', undefined, [10, 0], {
+        fullName: 'desc-1 a test',
+      });
+      mockError.mockClear();
+
+      const sourceRoot = helper.makeRoot([d1]);
+      const matched = match.matchTestAssertions('a file', sourceRoot, [a1, a2]);
+
+      expect(matched).toHaveLength(2);
+      expect(matched.map((m) => [m.name, m.start.line, m.status, m.reason])).toEqual(
+        expect.arrayContaining([
+          [t1.name, t1.start.line - 1, 'Unknown', 'match-failed'],
+          [t2.name, t2.start.line - 1, 'Unknown', 'match-failed'],
+        ])
+      );
+      expect(mockError).toBeCalledTimes(4);
+      expect(mockError).toHaveBeenCalledWith(
+        expect.arrayContaining([expect.stringMatching('match-failed')])
+      );
+      expect(mockError).toHaveBeenCalledWith(
+        expect.arrayContaining([expect.stringMatching('duplicate-name')])
+      );
+    });
+  });
+  describe('edge cases', () => {
+    it('when location order is wrong but context matched', () => {
+      // angular produces fixed wrong location that caused the order of the tests are also wrong
+      // even though the context matched!
+      const t1 = helper.makeItBlock('a test', [1, 0, 6, 0]);
+      const t2 = helper.makeItBlock('a test.each %i', [10, 0, 16, 0], { lastProperty: 'each' });
+
+      const a1 = helper.makeAssertion('a test', 'KnownSuccess', undefined, [100, 0]);
+      const a2 = helper.makeAssertion('a test.each 1 ', 'KnownFail', undefined, [10, 0]);
+      const a3 = helper.makeAssertion('a test.each 2', 'KnownSuccess', undefined, [10, 0]);
+
+      const sourceRoot = helper.makeRoot([t1, t2]);
+      const matched = match.matchTestAssertions('a file', sourceRoot, [a1, a2, a3]);
+
+      expect(matched).toHaveLength(2);
+      expect(matched.map((m) => [m.name, m.start.line, m.status, m.reason])).toEqual(
+        expect.arrayContaining([
+          [a1.fullName, t1.start.line - 1, a1.status, 'match-by-name'],
+          [t2.name, t2.start.line - 1, 'Unknown', 'match-failed'],
+        ])
+      );
     });
   });
 });

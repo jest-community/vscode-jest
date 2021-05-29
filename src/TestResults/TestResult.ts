@@ -25,8 +25,9 @@ export interface TestIdentifier {
 export type MatchResultReason =
   | 'match-by-context'
   | 'match-by-name'
-  | 'duplicate-names'
-  | 'no-matched-assertion';
+  | 'match-by-fullName'
+  | 'duplicate-name'
+  | 'match-failed';
 
 export interface TestResult extends LocationRange {
   name: string;
