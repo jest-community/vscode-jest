@@ -14,11 +14,5 @@
   "eslint.enable": true,
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": true
-  },
-  "jest.debugMode": true,
-  "jest.debugCodeLens.showWhenTestStateIn": [
-    "fail",
-    "pass",
-    "unknown"
-  ]
+  }
 }

@@ -3,6 +3,7 @@ import { JestFileResults, JestTotalResults } from 'jest-editor-support';
 import { FileCoverage } from 'istanbul-lib-coverage';
 import * as path from 'path';
 import { cleanAnsi, toLowerCaseDriveLetter } from '../helpers';
+import { MatchEvent } from './match-node';
 
 export interface Location {
   /** Zero-based column number */
@@ -22,13 +23,6 @@ export interface TestIdentifier {
   ancestorTitles: string[];
 }
 
-export type MatchResultReason =
-  | 'match-by-context'
-  | 'match-by-name'
-  | 'match-by-fullName'
-  | 'duplicate-name'
-  | 'match-failed';
-
 export interface TestResult extends LocationRange {
   name: string;
 
@@ -43,8 +37,10 @@ export interface TestResult extends LocationRange {
 
   // multiple results for the given range, common for parameterized (.each) tests
   multiResults?: TestResult[];
-  // record match or unmatch reason for this test result
-  reason?: MatchResultReason;
+
+  // matching process history
+  sourceHistory?: MatchEvent[];
+  assertionHistory?: MatchEvent[];
 }
 
 function testResultWithLowerCaseWindowsDriveLetter(testResult: JestFileResults): JestFileResults {

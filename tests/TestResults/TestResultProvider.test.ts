@@ -229,12 +229,12 @@ describe('TestResultProvider', () => {
     it('can handle template literal in the context', () => {
       const sut = new TestResultProvider();
       const testBlock2 = helper.makeItBlock('template literal I got ${str}', [6, 0, 7, 20], {
-        hasDynamicName: true,
+        nameType: 'TemplateLiteral',
       });
       const testBlock3 = helper.makeItBlock(
         'template literal ${i}, ${k}: {something}',
         [10, 5, 20, 5],
-        { hasDynamicName: true }
+        { nameType: 'TemplateLiteral' }
       );
 
       mockmockParse([testBlock, testBlock3, testBlock2]);
@@ -280,10 +280,9 @@ describe('TestResultProvider', () => {
 
     describe('safe-guard warnings', () => {
       const consoleWarning = jest.spyOn(console, 'warn').mockImplementation(() => {});
-      const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
-      it('report error if match failed', () => {
+
+      it('report warning if match failed', () => {
         const sut = new TestResultProvider();
-        sut.verbose = true;
         mockmockParse([testBlock]);
         mockReconciler.assertionsForTestFile.mockReturnValueOnce([
           helper.makeAssertion(
@@ -297,12 +296,11 @@ describe('TestResultProvider', () => {
         expect(actual).toHaveLength(1);
         expect(actual[0].status).toBe(TestReconciliationState.Unknown);
         expect(actual[0].shortMessage).not.toBeUndefined();
-        expect(consoleError).toHaveBeenCalled();
+        expect(consoleWarning).toHaveBeenCalled();
       });
       it('1-many match (jest.each) detected', () => {
         const sut = new TestResultProvider();
-        sut.verbose = true;
-        mockmockParse([testBlock]);
+        mockmockParse([{ ...testBlock, lastProperty: 'each' }]);
         mockReconciler.assertionsForTestFile.mockReturnValueOnce([
           helper.makeAssertion(testBlock.name, TestReconciliationState.KnownSuccess, [], [1, 12]),
           helper.makeAssertion(testBlock.name, TestReconciliationState.KnownSuccess, [], [1, 12]),
@@ -312,8 +310,9 @@ describe('TestResultProvider', () => {
         expect(actual).toHaveLength(1);
         expect(actual[0].status).toBe(TestReconciliationState.KnownSuccess);
         expect(actual[0].shortMessage).toBeUndefined();
+        expect(consoleWarning).not.toHaveBeenCalled();
       });
-      it('when all goes according to plan, no warning', () => {
+      it('when all goes according to plan, no warning but can still log debug message', () => {
         const sut = new TestResultProvider();
         sut.verbose = true;
         mockmockParse([testBlock]);
@@ -498,10 +497,10 @@ describe('TestResultProvider', () => {
         mockReconciler.assertionsForTestFile.mockReturnValueOnce(assertions);
         const actual = sut.getResults(filePath);
         expect(actual).toHaveLength(1);
-        const { name, status, reason } = actual[0];
+        const { name, status, sourceHistory } = actual[0];
         expect(name).toEqual(tBlock.name);
         expect(status).toEqual('Unknown');
-        expect(reason).toEqual('match-failed');
+        expect(sourceHistory).toEqual(['match-failed']);
       });
     });
     describe('error handling', () => {
