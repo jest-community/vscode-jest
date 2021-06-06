@@ -40,7 +40,9 @@ export const buildAssertionContainer = (
         a.ancestorTitles,
         (name: string) => new ContainerNode(name, { isGroup: 'maybe' })
       );
-      const zeroBasedLine = a.location?.line ? a.location.line - 1 : -1;
+      // regardless the document: https://jestjs.io/docs/26.x/cli#--testlocationinresults
+      // the location are actually zero-based, but the "line" attribute is 1-based.
+      const zeroBasedLine = a.location ? a.location.line : a.line ? a.line - 1 : -1;
       container?.addDataNode(
         new DataNode(a.title, zeroBasedLine, a, {
           fullName: a.fullName,

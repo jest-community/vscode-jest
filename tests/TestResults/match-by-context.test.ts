@@ -18,7 +18,7 @@ describe('buildAssertionContainer', () => {
     const root = match.buildAssertionContainer([a1, a3, a2]);
     expect(root.childContainers).toHaveLength(0);
     expect(root.childData).toHaveLength(3);
-    expect(root.childData.map((n) => n.zeroBasedLine)).toEqual([0, 1, 2]);
+    expect(root.childData.map((n) => n.zeroBasedLine)).toEqual([1, 2, 3]);
   });
   it('can build and sort assertions with ancestors', () => {
     const a1 = helper.makeAssertion('test-1', 'KnownSuccess', [], [1, 0]);
@@ -37,10 +37,10 @@ describe('buildAssertionContainer', () => {
     expect(root.childContainers).toHaveLength(2);
     expect(root.childData).toHaveLength(1);
     expect(root.childContainers.map((n) => [n.name, n.zeroBasedLine])).toEqual([
-      ['d-1', 1],
-      ['d-2', 4],
+      ['d-1', 2],
+      ['d-2', 5],
     ]);
-    expect(root.childData.map((n) => [n.name, n.zeroBasedLine])).toEqual([['test-1', 0]]);
+    expect(root.childData.map((n) => [n.name, n.zeroBasedLine])).toEqual([['test-1', 1]]);
     // the original assertion integrity should not be changed
     expect(
       [a1, a5, a3, a2, a4, a6].every((a) => a.fullName === a.title || a.ancestorTitles.length > 0)
@@ -54,7 +54,7 @@ describe('buildAssertionContainer', () => {
     const root = match.buildAssertionContainer([a1, a3, a4, a2]);
     expect(root.childContainers).toHaveLength(0);
     expect(root.childData).toHaveLength(2);
-    expect(root.childData.map((n) => n.zeroBasedLine)).toEqual([1, 4]);
+    expect(root.childData.map((n) => n.zeroBasedLine)).toEqual([2, 5]);
     const groupNode = root.childData[0];
     expect(groupNode.getAll().map((n) => n.data.title)).toEqual(['test-1', 'test-3', 'test-2']);
   });
@@ -66,10 +66,10 @@ describe('buildAssertionContainer', () => {
     const root = match.buildAssertionContainer([a1, a2, a3, a4]);
     expect(root.childContainers).toHaveLength(1);
     expect(root.childData).toHaveLength(1);
-    expect(root.childData[0]).toMatchObject({ zeroBasedLine: 4, name: 'test-2' });
+    expect(root.childData[0]).toMatchObject({ zeroBasedLine: 5, name: 'test-2' });
 
     const describeNode = root.childContainers[0];
-    expect(describeNode).toMatchObject({ zeroBasedLine: 1, name: 'd-1' });
+    expect(describeNode).toMatchObject({ zeroBasedLine: 2, name: 'd-1' });
     expect(describeNode.group?.map((n) => n.name)).toEqual(['d-2', 'd-3']);
   });
 
