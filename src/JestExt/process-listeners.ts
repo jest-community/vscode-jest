@@ -123,15 +123,14 @@ export class ListTestFileListener extends AbstractProcessListener {
         this.logging('debug', 'no test file is found');
         return this.onResult([]);
       }
-      if (json.length === 1) {
-        const files: string[] = JSON.parse(json[0]);
+      const uriFiles = json.reduce((totalFiles, list) => {
+        const files: string[] = JSON.parse(list);
         // convert to uri style filePath to match vscode document names
-        const uriFiles = files.map((f) => vscode.Uri.file(f).fsPath);
-        this.logging('debug', `got ${uriFiles.length} test files`);
+        return totalFiles.concat(files.filter((f) => f).map((f) => vscode.Uri.file(f).fsPath));
+      }, [] as string[]);
 
-        return this.onResult(uriFiles);
-      }
-      throw new Error('unexpected result');
+      this.logging('debug', `got ${uriFiles.length} test files`);
+      return this.onResult(uriFiles);
     } catch (e) {
       this.logging('warn', 'failed to parse result:', this.buffer, 'error=', e);
       return this.onResult(undefined, e);
