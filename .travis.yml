@@ -15,12 +15,12 @@ git:
 jobs:
   - stage: "verify"
     name: "verify"
-    node_js: "10"
+    node_js: "12"
     os: osx
     script: yarn danger ci
 
 node_js:
-  - "10"
+  - "12"
   - "lts/*"
 
 os:
