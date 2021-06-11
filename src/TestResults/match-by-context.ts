@@ -25,7 +25,6 @@ import {
   ContextType,
   ChildNodeType,
   ROOT_NODE_NAME,
-  flatten,
   OptionalAttributes,
   MatchEvent,
 } from './match-node';
@@ -191,11 +190,7 @@ const ContextMatch = (): ContextMatchAlgorithm => {
       return [];
     }
 
-    return flatten(
-      matched.map((a) => {
-        return a.getAll().map((aa) => toMatchResult(t, aa, reason));
-      })
-    );
+    return matched.flatMap((a) => a.getAll().map((aa) => toMatchResult(t, aa, reason)));
   };
 
   const handleDescribeBlockMatch = (result: MatchResultType<'container'>): TestResult[] => {
@@ -205,12 +200,10 @@ const ContextMatch = (): ContextMatchAlgorithm => {
     }
 
     t.addEvent(reason);
-    return flatten(
-      matched.map((a) => {
-        a.addEvent(reason);
-        return matchContainers(t, a);
-      })
-    );
+    return matched.flatMap((a) => {
+      a.addEvent(reason);
+      return matchContainers(t, a);
+    });
   };
 
   // match methods
@@ -346,13 +339,11 @@ const ContextMatch = (): ContextMatchAlgorithm => {
       }
 
       let aList = aContainer.unmatchedNodes(type, { ungroup: true });
-      const matched = flatten(
-        (['by-name', 'by-location'] as ClassicMatchType[]).map((matchType) => {
-          const matchResult = classicMatch(matchType, tList, aList);
-          tList = matchResult.unmatchedT;
-          return flatten(matchResult.results.map(onResult));
-        })
-      );
+      const matched = (['by-name', 'by-location'] as ClassicMatchType[]).flatMap((matchType) => {
+        const matchResult = classicMatch(matchType, tList, aList);
+        tList = matchResult.unmatchedT;
+        return matchResult.results.flatMap(onResult);
+      });
 
       // const matched = flatten(results.map(onResult));
       aList = aList.filter((a) => !a.isMatched);
@@ -378,7 +369,7 @@ const ContextMatch = (): ContextMatchAlgorithm => {
   };
 
   const toUnmatchedResults = (nodes: DataNode<ItBlock>[]): TestResult[] =>
-    flatten(nodes.map((t) => handleTestBlockMatch([t, [], 'match-failed'], true)));
+    nodes.flatMap((t) => handleTestBlockMatch([t, [], 'match-failed'], true));
 
   const match = (
     tContainer: ContainerNode<ItBlock>,

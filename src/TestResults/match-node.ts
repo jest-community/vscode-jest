@@ -235,9 +235,6 @@ export interface UnmatchedOptions {
 }
 export type ContextType = 'container' | 'data';
 
-export const flatten = <T>(lists: T[][]): T[] =>
-  lists.reduce((finalList, list) => finalList.concat(list), [] as T[]);
-
 export class ContainerNode<T> extends BaseNode {
   public childContainers: ContainerNode<T>[] = [];
   public childData: DataNode<T>[] = [];
@@ -321,15 +318,15 @@ export class ContainerNode<T> extends BaseNode {
   private allChildNodes<C extends ContextType>(type: C): ChildNodeType<T, C>[] {
     const allNodes: ChildNodeType<T, C>[] = [];
 
-    const allContainerNodes = flatten(this.childContainers.map((c) => c.getAll()));
+    const allContainerNodes = this.childContainers.flatMap((c) => c.getAll());
     if (type === 'container') {
       allNodes.push(...(allContainerNodes as ChildNodeType<T, C>[]));
     } else {
-      const allDataNodes = flatten(this.childData.map((c) => c.getAll()));
+      const allDataNodes = this.childData.flatMap((c) => c.getAll());
       allNodes.push(...(allDataNodes as ChildNodeType<T, C>[]));
     }
 
-    const childrenNodes = flatten(allContainerNodes.map((c) => c.allChildNodes(type)));
+    const childrenNodes = allContainerNodes.flatMap((c) => c.allChildNodes(type));
     return allNodes.concat(childrenNodes);
   }
   public checkDuplicateName(): void {

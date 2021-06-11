@@ -126,6 +126,11 @@
   dependencies:
     "@babel/types" "^7.8.3"
 
+"@babel/helper-validator-identifier@^7.14.5":
+  version "7.14.5"
+  resolved "https://registry.yarnpkg.com/@babel/helper-validator-identifier/-/helper-validator-identifier-7.14.5.tgz#d0f0e277c512e0c938277faa85a3968c9a44c0e8"
+  integrity sha512-5lsetuxCLilmVGyiLEfoHBRX8UCFD+1m2x3Rj97WrW3V7H3u4RWRXA4evMjImCsin2J2YT0QaVDGf+z8ondbAg==
+
 "@babel/helper-validator-identifier@^7.9.0", "@babel/helper-validator-identifier@^7.9.5":
   version "7.9.5"
   resolved "https://registry.yarnpkg.com/@babel/helper-validator-identifier/-/helper-validator-identifier-7.9.5.tgz#90977a8e6fbf6b431a7dc31752eee233bf052d80"
@@ -154,10 +159,10 @@
   resolved "https://registry.yarnpkg.com/@babel/parser/-/parser-7.9.6.tgz#3b1bbb30dabe600cd72db58720998376ff653bc7"
   integrity sha512-AoeIEJn8vt+d/6+PXDRPaksYhnlbMIiejioBZvvMQsOjW/JYK6k/0dKnvvP3EhK5GfMBWDPtrxRtegWdAcdq9Q==
 
-"@babel/parser@^7.8.3":
-  version "7.10.2"
-  resolved "https://registry.yarnpkg.com/@babel/parser/-/parser-7.10.2.tgz#871807f10442b92ff97e4783b9b54f6a0ca812d0"
-  integrity sha512-PApSXlNMJyB4JiGVhCOlzKIif+TKFTvu0aQAhnTvfP/z3vVSN6ZypH5bfUNwFXXjRQtUEBNFd2PtmCmG2Py3qQ==
+"@babel/parser@^7.14.4":
+  version "7.14.5"
+  resolved "https://registry.yarnpkg.com/@babel/parser/-/parser-7.14.5.tgz#4cd2f346261061b2518873ffecdf1612cb032829"
+  integrity sha512-TM8C+xtH/9n1qzX+JNHi7AN2zHMTiPUtspO0ZdHflW8KaskkALhMmuMHb4bCmNdv9VAPzJX3/bXqkVLnAvsPfg==
 
 "@babel/plugin-syntax-async-generators@^7.8.4":
   version "7.8.4"
@@ -282,6 +287,14 @@
   dependencies:
     "@babel/helper-validator-identifier" "^7.9.5"
     lodash "^4.17.13"
+    to-fast-properties "^2.0.0"
+
+"@babel/types@^7.14.4":
+  version "7.14.5"
+  resolved "https://registry.yarnpkg.com/@babel/types/-/types-7.14.5.tgz#3bb997ba829a2104cedb20689c4a5b8121d383ff"
+  integrity sha512-M/NzBpEL95I5Hh4dwhin5JlE7EzO5PHMAuzjxss3tiOBD46KfQvVedN/3jEPZvdRvtsK2222XfdHogNIttFgcg==
+  dependencies:
+    "@babel/helper-validator-identifier" "^7.14.5"
     to-fast-properties "^2.0.0"
 
 "@bcoe/v8-coverage@^0.2.3":
@@ -3518,14 +3531,14 @@ jest-each@^26.6.2:
     jest-util "^26.6.2"
     pretty-format "^26.6.2"
 
-jest-editor-support@^28.2.0:
-  version "28.2.0"
-  resolved "https://registry.yarnpkg.com/jest-editor-support/-/jest-editor-support-28.2.0.tgz#20e1aa1cfa4f83566d2da7fce5cb17c2ca3a4ba2"
-  integrity sha512-lvhYKh6F4h+XRVLvBPpkN3Dz6Qeh5tlvrc9UZWCI6zoAY6s/UIe/rbKYORKer0uEjbFmLrjHKDNUhclzNTNjkA==
+jest-editor-support@^29.0.0:
+  version "29.0.0"
+  resolved "https://registry.yarnpkg.com/jest-editor-support/-/jest-editor-support-29.0.0.tgz#7cf6ed9dd5d508699d1ead2f463a578992807a94"
+  integrity sha512-0+QMBwFs9U2u4TkQTIHkR+ulXr9A2E4D/GQZBacx0p54TSk6KbuijoFbxbZWzGrcRP7EwbxdVnFmzk8L1zN0Ug==
   dependencies:
-    "@babel/parser" "^7.8.3"
+    "@babel/parser" "^7.14.4"
     "@babel/traverse" "^7.6.2"
-    "@babel/types" "^7.8.3"
+    "@babel/types" "^7.14.4"
     "@jest/types" "^26.6.2"
     core-js "^3.2.1"
     jest-snapshot "^26.6.2"
