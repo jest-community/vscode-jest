@@ -65,7 +65,9 @@ describe('jest process listeners', () => {
       ${[]}                                                           | ${[]}
       ${['whatever\n', '["file1", "file', '2", "file3"]']}            | ${['file1', 'file2', 'file3']}
       ${['["/a/b", "a/c"]']}                                          | ${['/a/b', 'a/c']}
-      ${['["/a/b", "a/c"]\n', '["a","b","c"]']}                       | ${'unexpected result'}
+      ${['["/a/b", "", "a/c"]']}                                      | ${['/a/b', 'a/c']}
+      ${['["/a/b"]\n[""]\n["a/c"]\n']}                                | ${['/a/b', 'a/c']}
+      ${['["/a/b", "a/c"]\n', '["a","b"]']}                           | ${['/a/b', 'a/c', 'a', 'b']}
       ${['[a, b]']}                                                   | ${'Unexpected token'}
       ${['on windows with some error\n', '["C:\\\\a\\\\b.test.js"]']} | ${['C:\\a\\b.test.js']}
     `('can extract and notify file list from valid $output', ({ output, expectedFiles }) => {

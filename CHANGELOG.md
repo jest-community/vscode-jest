@@ -8,6 +8,7 @@ Bug-fixes within the same version aren't needed
 * move save related operations to new SaveTextDocument event listeners to prevent duplicate firing and losing test state for watch-mode + clean-doc-save combination. - @connectdotz
 * move testFile state to ResultProvider that provides a union of test-files and actual results, to be more robust even when there is a race condition when fileList comes after test run. - @connectdotz 
 * convert to upper-case drive letter for ProjectWorkspace rootPath - @connectdotz
+* fix test file parsing for multiple array situation (#699) - @connectdotz
 -->
 
 ### 4.0.2
