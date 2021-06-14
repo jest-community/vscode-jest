@@ -15,20 +15,40 @@ import {
   ParsedNode,
   DescribeBlock,
   Location,
+  NamedBlock,
 } from 'jest-editor-support';
 import { TestReconciliationState } from './TestReconciliationState';
-import { MatchResultReason, TestResult } from './TestResult';
-import { DataNode, ContainerNode, ContextType, ChildNodeType } from './match-node';
+import { TestResult } from './TestResult';
+import {
+  DataNode,
+  ContainerNode,
+  ContextType,
+  ChildNodeType,
+  ROOT_NODE_NAME,
+  OptionalAttributes,
+  MatchEvent,
+} from './match-node';
 
-const ROOT_NODE_NAME = '__root__';
 export const buildAssertionContainer = (
   assertions: TestAssertionStatus[]
 ): ContainerNode<TestAssertionStatus> => {
   const root = new ContainerNode<TestAssertionStatus>(ROOT_NODE_NAME);
   if (assertions.length > 0) {
     assertions.forEach((a) => {
-      const container = root.findContainer(a.ancestorTitles, true);
-      container?.addDataNode(new DataNode(a.title, a.location?.line ?? -1, a));
+      const container = root.findContainer(
+        a.ancestorTitles,
+        (name: string) => new ContainerNode(name, { isGroup: 'maybe' })
+      );
+      // regardless the document: https://jestjs.io/docs/26.x/cli#--testlocationinresults
+      // the location are actually zero-based, but the "line" attribute is 1-based.
+      const zeroBasedLine = a.location ? a.location.line : a.line ? a.line - 1 : -1;
+      container?.addDataNode(
+        new DataNode(a.title, zeroBasedLine, a, {
+          fullName: a.fullName,
+          isGroup: 'maybe',
+          range: { start: zeroBasedLine, end: zeroBasedLine },
+        })
+      );
     });
     // group by line since there could be multiple assertions for the same test block, such
     // as in the jest.each use case
@@ -42,11 +62,16 @@ export const buildSourceContainer = (sourceRoot: ParsedNode): ContainerNode<ItBl
   const isItBlock = (node: ParsedNode): node is ItBlock => node.type === 'it';
   const buildNode = (node: ParsedNode, parent: ContainerNode<ItBlock>): void => {
     let container = parent;
+    const attrs = (namedNode: NamedBlock): OptionalAttributes => ({
+      isGroup: namedNode.lastProperty === 'each' ? 'yes' : 'no',
+      nonLiteralName: namedNode.nameType !== 'Literal',
+      range: { start: namedNode.start?.line - 1 ?? -1, end: namedNode.end?.line - 1 ?? -1 },
+    });
     if (isDescribeBlock(node)) {
-      container = new ContainerNode(node.name);
+      container = new ContainerNode(node.name, attrs(node));
       parent.addContainerNode(container);
     } else if (isItBlock(node)) {
-      parent.addDataNode(new DataNode(node.name, node.start.line - 1, node));
+      parent.addDataNode(new DataNode(node.name, node.start.line - 1, node, attrs(node)));
     }
 
     node.children?.forEach((n) => buildNode(n, container));
@@ -54,8 +79,12 @@ export const buildSourceContainer = (sourceRoot: ParsedNode): ContainerNode<ItBl
 
   const root = new ContainerNode<ItBlock>(ROOT_NODE_NAME);
   buildNode(sourceRoot, root);
+
   // do not need to do grouping since there can't be test blocks that share lines
   root.sort(false);
+
+  root.checkDuplicateName();
+
   return root;
 };
 
@@ -64,17 +93,28 @@ const matchPos = (t: ItBlock, a: TestAssertionStatus, forError = false): boolean
   const line = forError ? a.line : a.line ?? a.location?.line;
   return (line != null && line >= t.start.line && line <= t.end.line) || false;
 };
+
+// could not use "instanceof" check as it could fail tests that mocked jest-editor-support like in TestResultProvider.test.ts
+const isDataNode = (arg: DataNode<ItBlock> | ItBlock): arg is DataNode<ItBlock> =>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (arg as any).data;
+
 export const toMatchResult = (
-  test: ItBlock,
-  assertionOrErr: TestAssertionStatus | string,
-  reason: MatchResultReason
+  source: DataNode<ItBlock> | ItBlock,
+  assertionOrErr: DataNode<TestAssertionStatus> | string,
+  reason: MatchEvent
 ): TestResult => {
-  const assertion = typeof assertionOrErr === 'string' ? undefined : assertionOrErr;
-  const err = typeof assertionOrErr === 'string' ? assertionOrErr : undefined;
+  const [test, sourceHistory, sourceName] = isDataNode(source)
+    ? [source.data, source.history(reason), source.fullName]
+    : [source, [reason], source.name];
+  const [assertion, assertionHistory, err] =
+    typeof assertionOrErr === 'string'
+      ? [undefined, undefined, assertionOrErr]
+      : [assertionOrErr.data, assertionOrErr.history(reason), undefined];
 
   // Note the shift from one-based to zero-based line number and columns
   return {
-    name: assertion?.fullName ?? assertion?.title ?? test.name,
+    name: assertion?.fullName ?? assertion?.title ?? sourceName,
     identifier: {
       title: assertion?.title || test.name,
       ancestorTitles: assertion?.ancestorTitles || [],
@@ -86,148 +126,165 @@ export const toMatchResult = (
     terseMessage: assertion?.terseMessage,
     lineNumberOfError:
       assertion?.line && matchPos(test, assertion, true) ? assertion.line - 1 : test.end.line - 1,
-    reason,
+    sourceHistory,
+    assertionHistory,
   };
 };
 
-/** mark all data and child containers unmatched */
-const toUnmatchedResults = (
-  tContainer: ContainerNode<ItBlock>,
-  err: string,
-  reason: MatchResultReason
-): TestResult[] => {
-  const results = tContainer.childData.map((n) => toMatchResult(n.single(), err, reason));
-  tContainer.childContainers.forEach((c) => results.push(...toUnmatchedResults(c, err, reason)));
-  return results;
+type MessagingInfo = {
+  type: 'report-unmatched';
+  unmatchedItBlocks: DataNode<ItBlock>[];
+  unmatchedAssertions: DataNode<TestAssertionStatus>[];
+  tContainer: ContainerNode<ItBlock>;
+  aContainer: ContainerNode<TestAssertionStatus>;
 };
 
-type MessageType = 'context-mismatch' | 'match-failed' | 'unusual-match' | 'duplicate-name';
-const createMessaging = (fileName: string, verbose: boolean) => (
-  messageType: MessageType,
-  contextType: ContextType,
-  source: ContainerNode<ItBlock> | DataNode<ItBlock>,
-  assertion?: ContainerNode<TestAssertionStatus> | DataNode<TestAssertionStatus>,
-  extraReason?: string
-): void => {
-  if (!verbose) {
-    return;
-  }
-
-  const output = (message: string): void =>
-    console.warn(`[${fileName}] ${message} \n source=`, source, `\n assertion=`, assertion);
-
-  const blockType = contextType === 'container' ? 'describe' : 'test';
-  switch (messageType) {
-    case 'context-mismatch':
-      output(
-        `!! context mismatched !! ${contextType} nodes are different under "${source.name}: either different test count or with unknown locations within the block": `
-      );
+const createMessaging = (fileName: string, _verbose: boolean) => (info: MessagingInfo): void => {
+  const build = (msg: string): Parameters<typeof console.log> => [
+    `[test resut matching] ${info.type} : ${msg} : "${fileName}"\n`,
+    info,
+  ];
+  switch (info.type) {
+    case 'report-unmatched':
+      console.warn(...build(`${info.unmatchedItBlocks.length} unmatched test blocks`));
       break;
-    case 'match-failed': {
-      output(`!! match failed !! ${blockType}: "${source.name}": ${extraReason} `);
-      break;
-    }
-    case 'duplicate-name': {
-      output(
-        `duplicate names in the same (describe) block is not recommanded and might not be matched reliably: ${source.name}`
-      );
-      break;
-    }
-    case 'unusual-match': {
-      output(`unusual match: ${extraReason} : ${blockType} ${source.name}: `);
-      break;
-    }
   }
 };
-type Messaging = ReturnType<typeof createMessaging>;
+
+type MatchResultType<C extends ContextType> = [
+  ChildNodeType<ItBlock, C>,
+  ChildNodeType<TestAssertionStatus, C>[],
+  MatchEvent
+];
 interface ContextMatchAlgorithm {
   match: (
     tContainer: ContainerNode<ItBlock>,
-    aContainer: ContainerNode<TestAssertionStatus>
+    aContainer: ContainerNode<TestAssertionStatus>,
+    messaging: ReturnType<typeof createMessaging>
   ) => TestResult[];
 }
 
-const ContextMatch = (messaging: Messaging): ContextMatchAlgorithm => {
+interface MatchMethodResult<C extends ContextType> {
+  unmatchedT: ChildNodeType<ItBlock, C>[];
+  results: MatchResultType<C>[];
+}
+
+interface FallbackMatchResult<C extends ContextType> {
+  matched?: TestResult[];
+  unmatchedT?: ChildNodeType<ItBlock, C>[];
+  unmatchedA?: ChildNodeType<TestAssertionStatus, C>[];
+}
+
+type ClassicMatchType = 'by-name' | 'by-location';
+
+const ContextMatch = (): ContextMatchAlgorithm => {
   const handleTestBlockMatch = (
-    t: DataNode<ItBlock>,
-    matched: DataNode<TestAssertionStatus>[],
-    reason: MatchResultReason
+    result: MatchResultType<'data'>,
+    reportUnmatch: boolean
   ): TestResult[] => {
-    if (matched.length !== 1) {
-      return [toMatchResult(t.single(), `found ${matched.length} matched assertion(s)`, reason)];
-    }
-    const a = matched[0];
-    const itBlock = t.single();
-    if (a.data.length === 1) {
-      const assertion = a.single();
-      if (a.name !== t.name && !matchPos(itBlock, assertion)) {
-        messaging('unusual-match', 'data', t, a, 'neither name nor line matched');
+    const [t, matched, reason] = result;
+    if (matched.length === 0) {
+      if (reportUnmatch) {
+        return [toMatchResult(t, `found ${matched.length} matched assertion(s)`, reason)];
       }
-      return [toMatchResult(itBlock, assertion, reason)];
+      return [];
     }
-    // 1-to-many: parameterized tests
-    return a.data.map((a) => toMatchResult(itBlock, a, reason));
+
+    return matched.flatMap((a) => a.getAll().map((aa) => toMatchResult(t, aa, reason)));
   };
 
-  const handleDescribeBlockMatch = (
-    t: ContainerNode<ItBlock>,
-    matched: ContainerNode<TestAssertionStatus>[],
-    reason: MatchResultReason
-  ): TestResult[] => {
-    if (matched.length !== 1) {
-      messaging('match-failed', 'container', t);
-      // if we can't find corresponding container to match, the whole container will be considered unmatched
-      return toUnmatchedResults(t, `can not find matching assertion for block ${t.name}`, reason);
+  const handleDescribeBlockMatch = (result: MatchResultType<'container'>): TestResult[] => {
+    const [t, matched, reason] = result;
+    if (matched.length === 0) {
+      return [];
     }
-    return matchContainers(t, matched[0]);
+
+    t.addEvent(reason);
+    return matched.flatMap((a) => {
+      a.addEvent(reason);
+      return matchContainers(t, a);
+    });
+  };
+
+  // match methods
+  const classicMatch = <C extends ContextType>(
+    type: ClassicMatchType,
+    tList: ChildNodeType<ItBlock, C>[],
+    aList: ChildNodeType<TestAssertionStatus, C>[]
+  ): MatchMethodResult<C> => {
+    const reason = type === 'by-name' ? 'match-by-name' : 'match-by-location';
+    const options =
+      type === 'by-name' ? undefined : { checkIsWithin: true, ignoreNonLiteralNameDiff: true };
+    const results: MatchResultType<C>[] = [];
+
+    const unmatchedT: ChildNodeType<ItBlock, C>[] = tList.filter((t) => {
+      if (type === 'by-name' && t.hasEvent('duplicate-name')) {
+        return true;
+      }
+      const matched = aList.filter((a) => a.match(t, options));
+      if (matched.length <= 0) {
+        return true;
+      }
+
+      if (matched.length === 1 || t.isGroupNode() === 'yes') {
+        results.push([t, matched, reason]);
+        return false;
+      }
+      return true;
+    });
+
+    return { unmatchedT, results };
+  };
+
+  const matchByContext = <C extends ContextType>(
+    tList: ChildNodeType<ItBlock, C>[],
+    aList: ChildNodeType<TestAssertionStatus, C>[]
+  ): MatchMethodResult<C> => {
+    const results: MatchResultType<C>[] = [];
+    if (tList.length === aList.length) {
+      const hasMismatch = tList.find(
+        (t, idx) => !aList[idx].match(t, { ignoreNonLiteralNameDiff: true })
+      );
+      if (!hasMismatch) {
+        tList.forEach((t, idx) => results.push([t, [aList[idx]], 'match-by-context']));
+        return { unmatchedT: [], results };
+      }
+    }
+    return { unmatchedT: tList, results: [] };
   };
 
   const matchChildren = <C extends ContextType>(
     contextType: C,
     tContainer: ContainerNode<ItBlock>,
     aContainer: ContainerNode<TestAssertionStatus>,
-    onResult: (
-      t: ChildNodeType<ItBlock, C>,
-      a: ChildNodeType<TestAssertionStatus, C>[],
-      reason: MatchResultReason
-    ) => void
+    onResult: (result: MatchResultType<C>) => void
   ): void => {
-    const tList = tContainer.getChildren(contextType);
-    const aList = aContainer.getChildren(contextType);
+    const results: MatchResultType<C>[] = [];
 
-    // handle invalid assertions here: since it has no location info, we can't use context to match them, will
-    // match by name instead. Once the test block is matched, we should remove it from the remaining matching candidate
-    // so we might be able to match the rest valid tests/assertions by context again.
-    // note: tList should not have any invalid child, only aList could...
-    let remainingTList = tList.valid;
-    if (aList.invalid) {
-      //match invalid assertions by name from the tList
-      remainingTList = remainingTList.filter((t) => {
-        const found = aList.invalid?.filter((a) => a.name === t.name);
-        if (found && found.length > 0) {
-          onResult(t, found, 'match-by-name');
-          return false;
-        }
-        return true;
-      });
+    let tList = tContainer.getChildren(contextType);
+    if (tList.length <= 0) {
+      return;
     }
-    if (remainingTList.length === aList.valid.length) {
-      remainingTList.forEach((t, idx) => onResult(t, [aList.valid[idx]], 'match-by-context'));
-    } else {
-      messaging('context-mismatch', contextType, tContainer, aContainer);
 
-      remainingTList.forEach((t) => {
-        // duplicate names under the same layer is really illegal jest practice, they can not
-        // be reliably resolved with name-based matching
-        if (remainingTList.filter((t1) => t1.name === t.name).length > 1) {
-          messaging('duplicate-name', contextType, t);
-          onResult(t, [], 'duplicate-names');
-        } else {
-          const found = aList.valid.filter((a) => a.name === t.name);
-          onResult(t, found, found?.length > 0 ? 'match-by-name' : 'no-matched-assertion');
-        }
-      });
+    const handleMatchReturn = (aReturn: MatchMethodResult<C>): void => {
+      results.push(...aReturn.results);
+      tList = aReturn.unmatchedT;
+    };
+
+    // if there is invalid location nodes, let's try to remove it from the container so we might be
+    // able to match by context below
+    let aList = aContainer.getChildren(contextType);
+    const invalidLocations = aList.filter((n) => n.hasEvent('invalid-location'));
+
+    if (invalidLocations.length > 0) {
+      aList = aList.filter((n) => !n.hasEvent('invalid-location'));
+      handleMatchReturn(classicMatch('by-name', tList, invalidLocations));
     }
+
+    handleMatchReturn(matchByContext(tList, aList));
+
+    tList.forEach((t) => results.push([t, [], 'match-failed']));
+    results.forEach((r) => onResult(r));
   };
 
   /**
@@ -245,20 +302,102 @@ const ContextMatch = (messaging: Messaging): ContextMatchAlgorithm => {
     aContainer: ContainerNode<TestAssertionStatus>
   ): TestResult[] => {
     const matchResults: TestResult[] = [];
-    matchChildren('data', tContainer, aContainer, (t, a, r) =>
-      matchResults.push(...handleTestBlockMatch(t, a, r))
+
+    matchChildren('data', tContainer, aContainer, (result) =>
+      matchResults.push(...handleTestBlockMatch(result, false))
     );
-    matchChildren('container', tContainer, aContainer, (t, a, r) =>
-      matchResults.push(...handleDescribeBlockMatch(t, a, r))
+    matchChildren('container', tContainer, aContainer, (result) =>
+      matchResults.push(...handleDescribeBlockMatch(result))
     );
 
-    if (aContainer.group) {
-      aContainer.group.forEach((c) => matchResults.push(...matchContainers(tContainer, c)));
-    }
+    aContainer.group.forEach((c) => matchResults.push(...matchContainers(tContainer, c)));
 
     return matchResults;
   };
-  return { match: matchContainers };
+
+  /**
+   * After context matching, perform the following matches to the unmatched describe and test blocks
+   * 1. perform fullName lookup first,
+   * 2. followed by location lookup.
+   *
+   * @param tContainer
+   * @param aContainer
+   * @returns
+   */
+
+  const matchFallback = (
+    tContainer: ContainerNode<ItBlock>,
+    aContainer: ContainerNode<TestAssertionStatus>
+  ): FallbackMatchResult<'data'> => {
+    const doMatch = <C extends ContextType>(
+      type: C,
+      onResult: (result: MatchResultType<C>) => TestResult[]
+    ) => {
+      let tList = tContainer.unmatchedNodes(type);
+      if (tList.length <= 0) {
+        return {};
+      }
+
+      let aList = aContainer.unmatchedNodes(type, { ungroup: true });
+      const matched = (['by-name', 'by-location'] as ClassicMatchType[]).flatMap((matchType) => {
+        const matchResult = classicMatch(matchType, tList, aList);
+        tList = matchResult.unmatchedT;
+        return matchResult.results.flatMap(onResult);
+      });
+
+      // const matched = flatten(results.map(onResult));
+      aList = aList.filter((a) => !a.isMatched);
+
+      return {
+        matched,
+        unmatchedT: tList,
+        unmatchedA: aList,
+      };
+    };
+    // handle unmatched container nodes
+    const cFallback = doMatch('container', (r) => {
+      const [t] = r;
+      return t.isMatched ? [] : handleDescribeBlockMatch(r);
+    });
+    // handle unmatched data nodes
+    const dFallback = doMatch('data', (r) => handleTestBlockMatch(r, false));
+
+    return {
+      ...dFallback,
+      matched: (cFallback.matched ?? []).concat(dFallback.matched ?? []),
+    };
+  };
+
+  const toUnmatchedResults = (nodes: DataNode<ItBlock>[]): TestResult[] =>
+    nodes.flatMap((t) => handleTestBlockMatch([t, [], 'match-failed'], true));
+
+  const match = (
+    tContainer: ContainerNode<ItBlock>,
+    aContainer: ContainerNode<TestAssertionStatus>,
+    messaging: ReturnType<typeof createMessaging>
+  ): TestResult[] => {
+    let matched = matchContainers(tContainer, aContainer);
+    const fallback = matchFallback(tContainer, aContainer);
+
+    matched = fallback.matched ? matched.concat(fallback.matched) : matched;
+    const unmatchedResults = fallback.unmatchedT && toUnmatchedResults(fallback.unmatchedT);
+
+    // reporting
+    if (unmatchedResults && unmatchedResults.length > 0) {
+      matched = unmatchedResults ? matched.concat(unmatchedResults) : matched;
+      messaging({
+        type: 'report-unmatched',
+        unmatchedItBlocks: fallback.unmatchedT ?? [],
+        unmatchedAssertions: fallback.unmatchedA ?? [],
+        tContainer,
+        aContainer,
+      });
+    }
+
+    return matched;
+  };
+
+  return { match };
 };
 
 /**
@@ -269,14 +408,17 @@ const ContextMatch = (messaging: Messaging): ContextMatchAlgorithm => {
  * @param verbose turns on/off the debugging warning messages.
  */
 
+const { match } = ContextMatch();
+
 export const matchTestAssertions = (
   fileName: string,
   sourceRoot: ParsedNode,
   assertions: TestAssertionStatus[],
-  verbose = true
+  verbose = false
 ): TestResult[] => {
   const tContainer = buildSourceContainer(sourceRoot);
   const aContainer = buildAssertionContainer(assertions);
-  const { match } = ContextMatch(createMessaging(fileName, verbose));
-  return match(tContainer, aContainer);
+
+  const messaging = createMessaging(fileName, verbose);
+  return match(tContainer, aContainer, messaging);
 };

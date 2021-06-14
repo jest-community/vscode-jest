@@ -120,9 +120,7 @@ export class TestResultProvider implements JestExtSessionAware {
     // no need to do groupByRange as the source block will not have blocks under the same location
     return {
       status: 'Unknown',
-      results: itBlocks.map((t) =>
-        match.toMatchResult(t, 'no assertion found', 'no-matched-assertion')
-      ),
+      results: itBlocks.map((t) => match.toMatchResult(t, 'no assertion found', 'match-failed')),
     };
   }
 

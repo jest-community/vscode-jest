@@ -47,7 +47,7 @@ const mockmockParse = (itBlocks: ItBlock[]) => {
 
 const setupJestEditorSupport = () => {
   const testBlocks = [
-    helper.makeItBlock('test 1 ', [2, 3, 4, 5]),
+    helper.makeItBlock('test 1', [2, 3, 4, 5]),
     helper.makeItBlock('test 2', [12, 13, 14, 15]),
     helper.makeItBlock('test 3', [22, 23, 24, 25]),
     helper.makeItBlock('test 4', [32, 33, 34, 35]),
@@ -228,13 +228,14 @@ describe('TestResultProvider', () => {
 
     it('can handle template literal in the context', () => {
       const sut = new TestResultProvider();
-      const testBlock2 = helper.makeItBlock('template literal I got ${str}', [6, 0, 7, 20]);
-      const testBlock3 = helper.makeItBlock('template literal ${i}, ${k}: {something}', [
-        10,
-        5,
-        20,
-        5,
-      ]);
+      const testBlock2 = helper.makeItBlock('template literal I got ${str}', [6, 0, 7, 20], {
+        nameType: 'TemplateLiteral',
+      });
+      const testBlock3 = helper.makeItBlock(
+        'template literal ${i}, ${k}: {something}',
+        [10, 5, 20, 5],
+        { nameType: 'TemplateLiteral' }
+      );
 
       mockmockParse([testBlock, testBlock3, testBlock2]);
       const assertions = [
@@ -279,51 +280,9 @@ describe('TestResultProvider', () => {
 
     describe('safe-guard warnings', () => {
       const consoleWarning = jest.spyOn(console, 'warn').mockImplementation(() => {});
-      describe('when contexts does not align', () => {
-        beforeEach(() => {
-          mockmockParse([testBlock]);
-          mockReconciler.assertionsForTestFile.mockReturnValueOnce([
-            helper.makeAssertion('whatever', TestReconciliationState.KnownSuccess, [], [12, 19]),
-            helper.makeAssertion('whatever', TestReconciliationState.KnownSuccess, [], [20, 25]),
-          ]);
-        });
-        it('reprots warning when verbose is true', () => {
-          const sut = new TestResultProvider();
-          sut.verbose = true;
 
-          const actual = sut.getResults(filePath);
-          expect(actual).toHaveLength(1);
-          expect(actual[0].status).toBe(TestReconciliationState.Unknown);
-          expect(actual[0].shortMessage).not.toBeUndefined();
-          expect(consoleWarning).toHaveBeenCalled();
-        });
-        it('not warning if verbose is off', () => {
-          const sut = new TestResultProvider();
-          sut.verbose = false;
-
-          const actual = sut.getResults(filePath);
-          expect(actual).toHaveLength(1);
-          expect(actual[0].status).toBe(TestReconciliationState.Unknown);
-          expect(actual[0].shortMessage).not.toBeUndefined();
-          expect(consoleWarning).not.toHaveBeenCalled();
-        });
-      });
-      it('report warning if context match but neither name nor location matched', () => {
-        const sut = new TestResultProvider();
-        sut.verbose = true;
-        mockmockParse([testBlock]);
-        mockReconciler.assertionsForTestFile.mockReturnValueOnce([
-          helper.makeAssertion('another name', TestReconciliationState.KnownSuccess, [], [20, 25]),
-        ]);
-        const actual = sut.getResults(filePath);
-        expect(actual).toHaveLength(1);
-        expect(actual[0].status).toBe(TestReconciliationState.KnownSuccess);
-        expect(actual[0].shortMessage).toBeUndefined();
-        expect(consoleWarning).toHaveBeenCalled();
-      });
       it('report warning if match failed', () => {
         const sut = new TestResultProvider();
-        sut.verbose = true;
         mockmockParse([testBlock]);
         mockReconciler.assertionsForTestFile.mockReturnValueOnce([
           helper.makeAssertion(
@@ -341,8 +300,7 @@ describe('TestResultProvider', () => {
       });
       it('1-many match (jest.each) detected', () => {
         const sut = new TestResultProvider();
-        sut.verbose = true;
-        mockmockParse([testBlock]);
+        mockmockParse([{ ...testBlock, lastProperty: 'each' }]);
         mockReconciler.assertionsForTestFile.mockReturnValueOnce([
           helper.makeAssertion(testBlock.name, TestReconciliationState.KnownSuccess, [], [1, 12]),
           helper.makeAssertion(testBlock.name, TestReconciliationState.KnownSuccess, [], [1, 12]),
@@ -352,8 +310,9 @@ describe('TestResultProvider', () => {
         expect(actual).toHaveLength(1);
         expect(actual[0].status).toBe(TestReconciliationState.KnownSuccess);
         expect(actual[0].shortMessage).toBeUndefined();
+        expect(consoleWarning).not.toHaveBeenCalled();
       });
-      it('when all goes according to plan, no warning', () => {
+      it('when all goes according to plan, no warning but can still log debug message', () => {
         const sut = new TestResultProvider();
         sut.verbose = true;
         mockmockParse([testBlock]);
@@ -369,7 +328,9 @@ describe('TestResultProvider', () => {
     });
     describe('parameterized tests', () => {
       let sut: TestResultProvider;
-      const testBlock2 = helper.makeItBlock('p-test-$status', [8, 0, 20, 20]);
+      const testBlock2 = helper.makeItBlock('p-test-$status', [8, 0, 20, 20], {
+        lastProperty: 'each',
+      });
       beforeEach(() => {
         sut = new TestResultProvider();
         mockmockParse([testBlock, testBlock2]);
@@ -472,8 +433,10 @@ describe('TestResultProvider', () => {
     });
     describe('paramertized describes', () => {
       let sut: TestResultProvider;
-      const tBlock = helper.makeItBlock('p-test-$count', [8, 0, 20, 20]);
-      const dBlock = helper.makeDescribeBlock('p-describe-scount', [tBlock]);
+      const tBlock = helper.makeItBlock('p-test-$count', [8, 0, 20, 20], { lastProperty: 'each' });
+      const dBlock = helper.makeDescribeBlock('p-describe-scount', [tBlock], {
+        lastProperty: 'each',
+      });
       beforeEach(() => {
         sut = new TestResultProvider();
         mockmockParse([dBlock]);
@@ -534,10 +497,10 @@ describe('TestResultProvider', () => {
         mockReconciler.assertionsForTestFile.mockReturnValueOnce(assertions);
         const actual = sut.getResults(filePath);
         expect(actual).toHaveLength(1);
-        const { name, status, reason } = actual[0];
+        const { name, status, sourceHistory } = actual[0];
         expect(name).toEqual(tBlock.name);
         expect(status).toEqual('Unknown');
-        expect(reason).toEqual('no-matched-assertion');
+        expect(sourceHistory).toEqual(['match-failed']);
       });
     });
     describe('error handling', () => {
