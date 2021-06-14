@@ -4,13 +4,16 @@ Please add your own contribution below inside the Master section
 Bug-fixes within the same version aren't needed
 
 ## Master
+
+-->
+
+### 4.0.3
 * add `--watchAll=false` to non-watch tasks - @connectdotz
 * move save related operations to new SaveTextDocument event listeners to prevent duplicate firing and losing test state for watch-mode + clean-doc-save combination. - @connectdotz
 * move testFile state to ResultProvider that provides a union of test-files and actual results, to be more robust even when there is a race condition when fileList comes after test run. - @connectdotz 
 * convert to upper-case drive letter for ProjectWorkspace rootPath - @connectdotz
 * improve context match fallback: add name and location lookup as fallback for context matching. - @connectdotz
--->
-
+* fix test file parsing for multiple array situation (#699) - @connectdot
 ### 4.0.2
 * fix debug problem for windows users (#707) - @connectdotz
 * change *Run Related Tests* default keybinding to Ctrl-Alt/Option-T to avoid overriding default shortcuts. (#704) - @Agalin
