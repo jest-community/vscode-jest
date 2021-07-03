@@ -4,7 +4,7 @@ Please add your own contribution below inside the Master section
 Bug-fixes within the same version aren't needed
 
 ## Master
-* fix type warning in settings.json when using the `{"autoRun": "off"}` option
+* fix type warning in settings.json when using the `{"autoRun": "off"}` option - @tommy
 
 -->
 
