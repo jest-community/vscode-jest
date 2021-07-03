@@ -190,7 +190,11 @@
         },
         "jest.autoRun": {
           "markdownDescription": "Control when jest should run (changed) tests. It supports multiple models, such as fully automated, fully manual and onSave... See [AutoRun](https://github.com/jest-community/vscode-jest/blob/master/README.md#how-to-trigger-the-test-run) for details and examples",
-          "type": "object",
+          "type": [
+            "object",
+            "string",
+            "null"
+          ],
           "default": null,
           "scope": "resource"
         }
