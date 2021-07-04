@@ -901,7 +901,7 @@ describe('matchTestAssertions', () => {
   });
 
   // see https://github.com/jest-community/vscode-jest/issues/608#issuecomment-849770258
-  it('dynamic named describe block should work for match-by-context (#608)', () => {
+  it('dynamic named describe block should work for match-by-context', () => {
     const t1 = helper.makeItBlock('simple test', [1, 0, 6, 0]);
     const d1 = helper.makeDescribeBlock('`with ${TemplateLiteral}`', [t1]);
 
