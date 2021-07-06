@@ -2,6 +2,8 @@
  * internal classes used by `match-by-context`
  */
 
+import { ParsedRange } from 'jest-editor-support';
+
 type IsGroupType = 'yes' | 'no' | 'maybe';
 
 const IsMatchedEvents = ['match-by-context', 'match-by-name', 'match-by-location'] as const;
@@ -19,6 +21,10 @@ export type MatchEvent =
 export interface MatchOptions {
   /** if true, will ignore name difference if both nodes have NonLiteral names */
   ignoreNonLiteralNameDiff?: boolean;
+
+  // accept regular name, i.e. the name of the node, not the fullName, match.
+  acceptLocalNameMatch?: boolean;
+
   /** if true, will ignore isGroupNode() difference */
   ignoreGroupDiff?: boolean;
   /** if true, will perform position check to see if "this" is enclosed within "other" node */
@@ -49,8 +55,8 @@ export interface OptionalAttributes {
   fullName?: string;
   isGroup?: IsGroupType;
   nonLiteralName?: boolean;
-  // zero-based line range
-  range?: { start: number; end: number };
+  // zero-based location range
+  range?: ParsedRange;
 }
 export class BaseNode {
   name: string;
@@ -123,8 +129,8 @@ export class BaseNode {
       return false;
     }
     return (
-      this.attrs.range.start <= another.attrs.range.start &&
-      this.attrs.range.end >= another.attrs.range.end
+      this.attrs.range.start.line <= another.attrs.range.start.line &&
+      this.attrs.range.end.line >= another.attrs.range.end.line
     );
   }
 
@@ -181,21 +187,31 @@ export class BaseNode {
    **/
 
   match(other: BaseNode, options?: MatchOptions): boolean {
-    const posNotMatch = options?.checkIsWithin && !other.contains(this);
-    const matchedAsNonLiteralName =
+    // check position
+    if (options?.checkIsWithin && !other.contains(this)) {
+      return false;
+    }
+    // check name
+    const ignoreNameDiff =
       options?.ignoreNonLiteralNameDiff &&
       this.maybeNonLiteralName() &&
       other.maybeNonLiteralName();
-    const nameNotMatch = this.fullName !== other.fullName && !matchedAsNonLiteralName;
-    const groupNotMatch =
-      !options?.ignoreGroupDiff &&
-      !(
-        this.isGroupNode() === 'maybe' ||
-        other.isGroupNode() === 'maybe' ||
-        this.isGroupNode() === other.isGroupNode()
-      );
+    if (
+      this.fullName !== other.fullName &&
+      !ignoreNameDiff &&
+      !(options?.acceptLocalNameMatch && this.name === other.name)
+    ) {
+      return false;
+    }
 
-    return !(posNotMatch || nameNotMatch || groupNotMatch);
+    // check group
+    const ignoreGroupDiff =
+      options?.ignoreGroupDiff || this.isGroupNode() === 'maybe' || other.isGroupNode() === 'maybe';
+    if (this.isGroupNode() !== other.isGroupNode() && !ignoreGroupDiff) {
+      return false;
+    }
+
+    return true;
   }
 
   /**
@@ -230,9 +246,6 @@ export class DataNode<T> extends BaseNode {
   }
 }
 
-export interface UnmatchedOptions {
-  ungroup?: boolean;
-}
 export type ContextType = 'container' | 'data';
 
 export class ContainerNode<T> extends BaseNode {
@@ -307,6 +320,12 @@ export class ContainerNode<T> extends BaseNode {
         .map((nodes) => nodes.find((n) => !n.hasEvent('invalid-location'))?.zeroBasedLine)
         .filter((n) => n != null) as number[];
       this.zeroBasedLine = topLines.length > 0 ? Math.min(...topLines) : -1;
+      if (!this.attrs.range) {
+        this.attrs.range = {
+          start: { line: this.zeroBasedLine, column: 0 },
+          end: { line: this.zeroBasedLine, column: 0 },
+        };
+      }
     }
   }
 
@@ -338,18 +357,10 @@ export class ContainerNode<T> extends BaseNode {
       }
     });
   }
-  // extract all unmatched data node
-  public unmatchedNodes = <C extends ContextType>(
-    type: C,
-    options?: UnmatchedOptions
-  ): ChildNodeType<T, C>[] => {
-    const unmatched = this.allChildNodes(type).filter((n) => !n.isMatched);
 
-    if (options?.ungroup) {
-      unmatched.forEach((u) => u.ungroup());
-    }
-    return unmatched;
-  };
+  // extract all unmatched data node
+  public unmatchedNodes = <C extends ContextType>(type: C): ChildNodeType<T, C>[] =>
+    this.allChildNodes(type).filter((n) => !n.isMatched);
 }
 
 export type NodeType<T> = ContainerNode<T> | DataNode<T>;

@@ -453,6 +453,30 @@ describe('matchTestAssertions', () => {
           ])
         );
       });
+      it('deeper it.each within describe.each', () => {
+        const t1 = helper.makeItBlock('test.each $x', [1, 0, 5, 0], { lastProperty: 'each' });
+        const d1 = helper.makeDescribeBlock('d-1.each $var', [t1], { lastProperty: 'each' });
+        const d2 = helper.makeDescribeBlock('d-2', [d1]);
+        const t2 = helper.makeItBlock('empty test', [6, 0, 7, 0]);
+
+        const a1 = helper.makeAssertion('`test.each a`', 'KnownSuccess', ['d-1.each 1'], [1, 0]);
+        const a2 = helper.makeAssertion('test.each b', 'KnownFail', ['d-1.each 1'], [1, 0]);
+        const a3 = helper.makeAssertion('test.each a', 'KnownSuccess', ['d-1.each 2'], [1, 0]);
+        const a4 = helper.makeAssertion('test.each b', 'KnownSuccess', ['d-1.each 2'], [1, 0]);
+
+        const sourceRoot = helper.makeRoot([d2, t2]);
+        const matched = match.matchTestAssertions('a file', sourceRoot, [a1, a2, a3, a4]);
+        // expect(matched).toHaveLength(5);
+        expect(matched.map((m) => [m.name, m.start.line, m.status, reason(m)])).toEqual(
+          expect.arrayContaining([
+            [a1.fullName, t1.start.line - 1, a1.status, 'match-by-location'],
+            [a2.fullName, t1.start.line - 1, a2.status, 'match-by-location'],
+            [a3.fullName, t1.start.line - 1, a3.status, 'match-by-location'],
+            [a4.fullName, t1.start.line - 1, a4.status, 'match-by-location'],
+            [t2.name, t2.start.line - 1, 'Unknown', 'match-failed'],
+          ])
+        );
+      });
     });
   });
   it('test name precedence: assertion.fullName > assertion.title > testSource.name', () => {
@@ -847,5 +871,46 @@ describe('matchTestAssertions', () => {
         [a3.fullName, t2.start.line - 1, a3.status, ['match-by-location']],
       ]);
     });
+  });
+  it('matched assertions would be updated with source range', () => {
+    const getRange = (t) => ({
+      start: { line: t.start.line - 1, column: t.start.column - 1 },
+      end: { line: t.end.line - 1, column: t.end.column - 1 },
+    });
+    const t1 = helper.makeItBlock('a test $seq', [2, 5, 6, 51], { lastProperty: 'each' });
+    const d1 = helper.makeDescribeBlock('desc-1', [t1], {
+      start: { line: 1, column: 3 },
+      end: { line: 7, column: 3 },
+    });
+
+    const a1 = helper.makeAssertion('a test 1', 'KnownSuccess', ['desc-1'], [3, 0]);
+    const a2 = helper.makeAssertion('a test 2 ', 'KnownFail', ['desc-1'], [3, 0]);
+
+    const sourceRoot = helper.makeRoot([d1]);
+    const assertionRoot = match.buildAssertionContainer([a1, a2]);
+    const matched = match.matchTestAssertions('a file', sourceRoot, assertionRoot);
+
+    expect(matched.map((m) => toTestResultRecord(m))).toMatchTestResults([
+      [a1.fullName, t1.start.line - 1, a1.status, ['match-by-context']],
+      [a2.fullName, t1.start.line - 1, a2.status, ['match-by-context']],
+    ]);
+    const assertionDescribe = assertionRoot.childContainers[0];
+    expect(assertionDescribe.attrs.range).toEqual(getRange(d1));
+    expect(assertionDescribe.attrs.range).toEqual(getRange(d1));
+    assertionDescribe.childData.forEach((c) => expect(c.attrs.range).toEqual(getRange(t1)));
+  });
+
+  // see https://github.com/jest-community/vscode-jest/issues/608#issuecomment-849770258
+  it('dynamic named describe block should work for match-by-context', () => {
+    const t1 = helper.makeItBlock('simple test', [1, 0, 6, 0]);
+    const d1 = helper.makeDescribeBlock('`with ${TemplateLiteral}`', [t1]);
+
+    const a1 = helper.makeAssertion('simple test', 'KnownSuccess', ['with whatever'], [1, 0]);
+    const sourceRoot = helper.makeRoot([d1]);
+    const matched = match.matchTestAssertions('a file', sourceRoot, [a1]);
+
+    expect(matched.map((m) => toTestResultRecord(m))).toMatchTestResults([
+      [a1.fullName, t1.start.line - 1, a1.status, ['match-by-context']],
+    ]);
   });
 });
