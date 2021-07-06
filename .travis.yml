@@ -30,7 +30,7 @@ os:
 
 script:
   - yarn ci
-  - cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js -v
+  - cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js
   - yarn vscode:prepublish
   
 
