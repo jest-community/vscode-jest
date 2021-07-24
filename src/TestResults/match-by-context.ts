@@ -107,9 +107,6 @@ const matchPos = (t: ItBlock, a: TestAssertionStatus, forError = false): boolean
 const isSourceDataNode = (arg: DataNode<ItBlock> | ItBlock): arg is DataNode<ItBlock> =>
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (arg as any).data;
-const isDataNode = (arg: NodeType<unknown>): arg is DataNode<unknown> =>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (arg as any).data;
 
 export const toMatchResult = (
   source: DataNode<ItBlock> | ItBlock,
@@ -188,23 +185,24 @@ interface FallbackMatchResult<C extends ContextType> {
 }
 
 type ClassicMatchType = 'by-name' | 'by-location';
-type MaybeTestResult<C extends boolean> = C extends true ? TestResult : undefined;
 
 const ContextMatch = (): ContextMatchAlgorithm => {
-  const onMatch = <C extends boolean>(
+  const onMatch = (
     tNode: NodeType<ItBlock>,
     aNode: NodeType<TestAssertionStatus>,
-    event: MatchEvent,
-    generateResult: C
-  ): MaybeTestResult<C> => {
+    event: MatchEvent
+  ): void => {
     tNode.addEvent(event);
     aNode.addEvent(event);
     aNode.attrs.range = tNode.attrs.range;
-
-    if (generateResult && isDataNode(tNode) && isDataNode(aNode)) {
-      return toMatchResult(tNode, aNode, event) as MaybeTestResult<C>;
-    }
-    return undefined as MaybeTestResult<C>;
+  };
+  const onMatchResult = (
+    tNode: DataNode<ItBlock>,
+    aNode: DataNode<TestAssertionStatus>,
+    event: MatchEvent
+  ): TestResult => {
+    onMatch(tNode, aNode, event);
+    return toMatchResult(tNode, aNode, event);
   };
   const handleTestBlockMatch = (
     result: MatchResultType<'data'>,
@@ -221,8 +219,8 @@ const ContextMatch = (): ContextMatchAlgorithm => {
 
     return matched.flatMap((a) =>
       matchGroup
-        ? a.getAll().map((aa) => onMatch(t, aa, reason, true))
-        : onMatch(t, a, reason, true)
+        ? a.getAll().map((aa) => onMatchResult(t, aa, reason))
+        : onMatchResult(t, a, reason)
     );
   };
 
@@ -236,7 +234,7 @@ const ContextMatch = (): ContextMatchAlgorithm => {
     }
     t.addEvent(reason);
     const _matchContainers = (a: ContainerNode<TestAssertionStatus>) => {
-      onMatch(t, a, reason, false);
+      onMatch(t, a, reason);
       return matchContainers(t, a);
     };
     return matched.flatMap((a) =>
