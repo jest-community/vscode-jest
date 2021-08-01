@@ -43,8 +43,14 @@ describe('BaseNode', () => {
     `(
       'check location: $loc1 isWithin $loc2? $shouldMatch',
       ({ loc1, loc2, options, shouldMatch }) => {
-        const range1 = loc1 && { start: loc1[0], end: loc1[1] };
-        const range2 = loc2 && { start: loc2[0], end: loc2[1] };
+        const range1 = loc1 && {
+          start: { line: loc1[0], column: 0 },
+          end: { line: loc1[1], column: 0 },
+        };
+        const range2 = loc2 && {
+          start: { line: loc2[0], column: 0 },
+          end: { line: loc2[1], column: 0 },
+        };
         const n1 = new BaseNode('n1', 10, {
           fullName: 'n1',
           range: range1,

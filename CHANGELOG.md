@@ -5,6 +5,8 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 * fix type warning in settings.json when using the `{"autoRun": "off"}` option - @tommy
+* fix couple of test result matching issues - @connectdotz (#737)
+* update match API/attributes to support up-coming vscode test provider API. - @connectdotz (#737)
 
 -->
 
