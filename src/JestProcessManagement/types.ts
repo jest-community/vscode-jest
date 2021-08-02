@@ -49,11 +49,22 @@ export type JestProcessRequestBase =
     }
   | {
       type: Extract<JestTestProcessType, 'by-file'>;
-      testFileNamePattern: string;
+      testFileName: string;
       updateSnapshot?: boolean;
     }
   | {
       type: Extract<JestTestProcessType, 'by-file-test'>;
+      testFileName: string;
+      testNamePattern: string;
+      updateSnapshot?: boolean;
+    }
+  | {
+      type: Extract<JestTestProcessType, 'by-file-pattern'>;
+      testFileNamePattern: string;
+      updateSnapshot?: boolean;
+    }
+  | {
+      type: Extract<JestTestProcessType, 'by-file-test-pattern'>;
       testFileNamePattern: string;
       testNamePattern: string;
       updateSnapshot?: boolean;

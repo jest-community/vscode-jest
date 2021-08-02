@@ -54,7 +54,7 @@ describe('JestProcess', () => {
     jestProcess = new JestProcess(extContext, request);
     expect(`${jestProcess}`).toEqual(jestProcess.toString());
     expect(jestProcess.toString()).toMatchInlineSnapshot(
-      `"JestProcess: id: 0, request: {\\"type\\":\\"all-tests\\",\\"schedule\\":{\\"queue\\":\\"blocking\\"},\\"listener\\":\\"function\\"}; stopReason: undefined"`
+      `"JestProcess: id: all-tests-0, request: {\\"type\\":\\"all-tests\\",\\"schedule\\":{\\"queue\\":\\"blocking\\"},\\"listener\\":\\"function\\"}; stopReason: undefined"`
     );
   });
   describe('when creating', () => {
@@ -133,13 +133,15 @@ describe('JestProcess', () => {
     );
 
     it.each`
-      type                 | extraProperty                                                    | startArgs         | includeReporter | extraRunnerOptions
-      ${'all-tests'}       | ${undefined}                                                     | ${[false, false]} | ${true}         | ${undefined}
-      ${'watch-tests'}     | ${undefined}                                                     | ${[true, false]}  | ${true}         | ${undefined}
-      ${'watch-all-tests'} | ${undefined}                                                     | ${[true, true]}   | ${true}         | ${undefined}
-      ${'by-file'}         | ${{ testFileNamePattern: '"c:\\a\\b.ts"' }}                      | ${[false, false]} | ${true}         | ${{ args: { args: ['--findRelatedTests', '--watchAll=false'] }, testFileNamePattern: '"C:\\a\\b.ts"' }}
-      ${'by-file-test'}    | ${{ testFileNamePattern: '"/a/b.js"', testNamePattern: 'test' }} | ${[false, false]} | ${true}         | ${{ args: { args: ['--runTestsByPath', '--watchAll=false'] }, testFileNamePattern: '"/a/b.js"' }}
-      ${'not-test'}        | ${{ args: ['--listTests', '--watchAll=false'] }}                 | ${[false, false]} | ${false}        | ${{ args: { args: ['--listTests', '--watchAll=false'], replace: true } }}
+      type                      | extraProperty                                                    | startArgs         | includeReporter | extraRunnerOptions
+      ${'all-tests'}            | ${undefined}                                                     | ${[false, false]} | ${true}         | ${undefined}
+      ${'watch-tests'}          | ${undefined}                                                     | ${[true, false]}  | ${true}         | ${undefined}
+      ${'watch-all-tests'}      | ${undefined}                                                     | ${[true, true]}   | ${true}         | ${undefined}
+      ${'by-file'}              | ${{ testFileName: '"c:\\a\\b.ts"' }}                             | ${[false, false]} | ${true}         | ${{ args: { args: ['--findRelatedTests', '--watchAll=false'] }, testFileNamePattern: '"C:\\a\\b.ts"' }}
+      ${'by-file-test'}         | ${{ testFileName: '"/a/b.js"', testNamePattern: 'a test' }}      | ${[false, false]} | ${true}         | ${{ args: { args: ['--runTestsByPath', '--watchAll=false'] }, testFileNamePattern: '"/a/b.js"', testNamePattern: '"a test"' }}
+      ${'by-file-pattern'}      | ${{ testFileNamePattern: '"c:\\a\\b.ts"' }}                      | ${[false, false]} | ${true}         | ${{ args: { args: ['--watchAll=false', '--testPathPattern', '"c:\\\\a\\\\b\\.ts"'] } }}
+      ${'by-file-test-pattern'} | ${{ testFileNamePattern: '/a/b.js', testNamePattern: 'a test' }} | ${[false, false]} | ${true}         | ${{ args: { args: ['--watchAll=false', '--testPathPattern', '"/a/b\\.js"'] }, testNamePattern: '"a test"' }}
+      ${'not-test'}             | ${{ args: ['--listTests', '--watchAll=false'] }}                 | ${[false, false]} | ${false}        | ${{ args: { args: ['--listTests', '--watchAll=false'], replace: true } }}
     `(
       'supports jest process request: $type',
       async ({ type, extraProperty, startArgs, includeReporter, extraRunnerOptions }) => {
@@ -164,13 +166,13 @@ describe('JestProcess', () => {
       }
     );
     it.each`
-      request                                                                                               | expectUpdate
-      ${{ type: 'all-tests', updateSnapshot: true }}                                                        | ${true}
-      ${{ type: 'all-tests', updateSnapshot: false }}                                                       | ${false}
-      ${{ type: 'by-file', updateSnapshot: true, testFileNamePattern: 'abc' }}                              | ${true}
-      ${{ type: 'by-file-test', updateSnapshot: true, testFileNamePattern: 'abc', testNamePattern: 'xyz' }} | ${true}
-      ${{ type: 'watch-tests', updateSnapshot: true }}                                                      | ${false}
-      ${{ type: 'watch-all-tests', updateSnapshot: true }}                                                  | ${false}
+      request                                                                                        | expectUpdate
+      ${{ type: 'all-tests', updateSnapshot: true }}                                                 | ${true}
+      ${{ type: 'all-tests', updateSnapshot: false }}                                                | ${false}
+      ${{ type: 'by-file', updateSnapshot: true, testFileName: 'abc' }}                              | ${true}
+      ${{ type: 'by-file-test', updateSnapshot: true, testFileName: 'abc', testNamePattern: 'xyz' }} | ${true}
+      ${{ type: 'watch-tests', updateSnapshot: true }}                                               | ${false}
+      ${{ type: 'watch-all-tests', updateSnapshot: true }}                                           | ${false}
     `('can update snapshot with request $request', ({ request, expectUpdate }) => {
       expect.hasAssertions();
       const _request = mockRequest(request.type, request);

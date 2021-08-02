@@ -1,4 +1,3 @@
-/* eslint-disable jest/no-conditional-expect */
 jest.unmock('events');
 jest.unmock('../../src/JestExt/core');
 jest.unmock('../../src/JestExt/helper');
@@ -26,7 +25,6 @@ jest.mock('jest-editor-support');
 import * as vscode from 'vscode';
 import { JestExt } from '../../src/JestExt/core';
 import { createProcessSession } from '../../src/JestExt/process-session';
-import { window, workspace, debug, ExtensionContext, TextEditorDecorationType } from 'vscode';
 import { hasDocument, isOpenInMultipleEditors } from '../../src/editor';
 import { TestStatus } from '../../src/decorations/test-status';
 import { updateCurrentDiagnostics, updateDiagnostics } from '../../src/diagnostics';
@@ -41,6 +39,7 @@ import { workspaceLogging } from '../../src/logging';
 import { ProjectWorkspace } from 'jest-editor-support';
 import { mockProjectWorkspace, mockWworkspaceLogging } from '../test-helper';
 import { startWizard } from '../../src/setup-wizard';
+import { JestTestProvider } from '../../src/test-provider';
 
 /* eslint jest/expect-expect: ["error", { "assertFunctionNames": ["expect", "expectItTakesNoAction"] }] */
 const mockHelpers = helper as jest.Mocked<any>;
@@ -54,9 +53,9 @@ const EmptySortedResult = {
 const mockGetExtensionResourceSettings = jest.spyOn(extHelper, 'getExtensionResourceSettings');
 
 describe('JestExt', () => {
-  const getConfiguration = workspace.getConfiguration as jest.Mock<any>;
+  const getConfiguration = vscode.workspace.getConfiguration as jest.Mock<any>;
   const StateDecorationsMock = TestStatus as jest.Mock;
-  const context: any = { asAbsolutePath: (text) => text } as ExtensionContext;
+  const context: any = { asAbsolutePath: (text) => text } as vscode.ExtensionContext;
   const workspaceFolder = { name: 'test-folder' } as any;
   const channelStub = {
     appendLine: jest.fn(),
@@ -105,6 +104,11 @@ describe('JestExt', () => {
     };
   };
 
+  const mockTestProvider: any = {
+    activate: jest.fn(),
+    dispose: jest.fn(),
+  };
+
   beforeEach(() => {
     jest.resetAllMocks();
 
@@ -115,6 +119,7 @@ describe('JestExt', () => {
     (createProcessSession as jest.Mocked<any>).mockReturnValue(mockProcessSession);
     (ProjectWorkspace as jest.Mocked<any>).mockImplementation(mockProjectWorkspace);
     (workspaceLogging as jest.Mocked<any>).mockImplementation(mockWworkspaceLogging);
+    (JestTestProvider as jest.Mocked<any>).mockImplementation(() => mockTestProvider);
   });
 
   describe('resetInlineErrorDecorators()', () => {
@@ -204,7 +209,7 @@ describe('JestExt', () => {
     const mockShowQuickPick = jest.fn();
     let mockConfigurations = [];
     beforeEach(() => {
-      startDebugging = (debug.startDebugging as unknown) as jest.Mock<{}>;
+      startDebugging = (vscode.debug.startDebugging as unknown) as jest.Mock<{}>;
       ((startDebugging as unknown) as jest.Mock<{}>).mockImplementation(
         async (_folder: any, nameOrConfig: any) => {
           // trigger fallback to default configuration
@@ -226,24 +231,29 @@ describe('JestExt', () => {
 
       sut = newJestExt();
     });
-    it('should run the supplied test', async () => {
-      const testNamePattern = 'testNamePattern';
-      await sut.debugTests(document, testNamePattern);
-      expect(debug.startDebugging).toHaveBeenCalledWith(workspaceFolder, debugConfiguration);
-      const configuration = startDebugging.mock.calls[startDebugging.mock.calls.length - 1][1];
-      expect(configuration).toBeDefined();
-      expect(configuration.type).toBe('dummyconfig');
-      expect(sut.debugConfigurationProvider.prepareTestRun).toBeCalledWith(
-        fileName,
-        testNamePattern
-      );
+    describe('should run the supplied test', () => {
+      it.each([[document], ['fileName']])('support document paramter: %s', async (doc) => {
+        const testNamePattern = 'testNamePattern';
+        await sut.debugTests(doc, testNamePattern);
+        expect(vscode.debug.startDebugging).toHaveBeenCalledWith(
+          workspaceFolder,
+          debugConfiguration
+        );
+        const configuration = startDebugging.mock.calls[startDebugging.mock.calls.length - 1][1];
+        expect(configuration).toBeDefined();
+        expect(configuration.type).toBe('dummyconfig');
+        expect(sut.debugConfigurationProvider.prepareTestRun).toBeCalledWith(
+          fileName,
+          testNamePattern
+        );
+      });
     });
     it('can handle testIdentifier argument', async () => {
       const tId = makeIdentifier('test-1', ['d-1', 'd-1-1']);
       const fullName = 'd-1 d-1-1 test-1';
       mockHelpers.testIdString.mockReturnValue(fullName);
       await sut.debugTests(document, tId);
-      expect(debug.startDebugging).toHaveBeenCalledWith(workspaceFolder, debugConfiguration);
+      expect(vscode.debug.startDebugging).toHaveBeenCalledWith(workspaceFolder, debugConfiguration);
       const configuration = startDebugging.mock.calls[startDebugging.mock.calls.length - 1][1];
       expect(configuration).toBeDefined();
       expect(configuration.type).toBe('dummyconfig');
@@ -265,14 +275,17 @@ describe('JestExt', () => {
         expect(mockHelpers.escapeRegExp).toHaveBeenCalled();
       }
       if (startDebug) {
-        expect(debug.startDebugging).toHaveBeenCalledWith(workspaceFolder, debugConfiguration);
+        expect(vscode.debug.startDebugging).toHaveBeenCalledWith(
+          workspaceFolder,
+          debugConfiguration
+        );
         const configuration = startDebugging.mock.calls[startDebugging.mock.calls.length - 1][1];
         expect(configuration).toBeDefined();
         expect(configuration.type).toBe('dummyconfig');
         expect(sut.debugConfigurationProvider.prepareTestRun).toHaveBeenCalled();
       } else {
         expect(sut.debugConfigurationProvider.prepareTestRun).not.toHaveBeenCalled();
-        expect(debug.startDebugging).not.toHaveBeenCalled();
+        expect(vscode.debug.startDebugging).not.toHaveBeenCalled();
       }
     });
     describe('paramerterized test', () => {
@@ -314,7 +327,10 @@ describe('JestExt', () => {
           const selected = [tId1, tId2, tId3][selectIdx];
           expect(mockHelpers.escapeRegExp).toBeCalledWith(selected);
           // verify the actual test to be run is the one we selected: tId2
-          expect(debug.startDebugging).toHaveBeenCalledWith(workspaceFolder, debugConfiguration);
+          expect(vscode.debug.startDebugging).toHaveBeenCalledWith(
+            workspaceFolder,
+            debugConfiguration
+          );
           const configuration = startDebugging.mock.calls[startDebugging.mock.calls.length - 1][1];
           expect(configuration).toBeDefined();
           expect(configuration.type).toBe('dummyconfig');
@@ -324,13 +340,13 @@ describe('JestExt', () => {
           selectIdx = -1;
           await sut.debugTests(document, tId1, tId2, tId3);
           expect(mockShowQuickPick).toHaveBeenCalledTimes(1);
-          expect(debug.startDebugging).not.toHaveBeenCalled();
+          expect(vscode.debug.startDebugging).not.toHaveBeenCalled();
         });
         it('if pass zero testId, nothing will be run', async () => {
           await sut.debugTests(document);
           expect(mockShowQuickPick).not.toHaveBeenCalled();
           expect(mockHelpers.testIdString).not.toBeCalled();
-          expect(debug.startDebugging).not.toHaveBeenCalled();
+          expect(vscode.debug.startDebugging).not.toHaveBeenCalled();
         });
       });
     });
@@ -355,13 +371,13 @@ describe('JestExt', () => {
         expect(startDebugging).toBeCalledTimes(1);
         if (shouldShowWarning) {
           // debug with generated config
-          expect(debug.startDebugging).toHaveBeenLastCalledWith(
+          expect(vscode.debug.startDebugging).toHaveBeenLastCalledWith(
             workspaceFolder,
             debugConfiguration
           );
         } else {
           // debug with existing config
-          expect(debug.startDebugging).toHaveBeenLastCalledWith(workspaceFolder, {
+          expect(vscode.debug.startDebugging).toHaveBeenLastCalledWith(workspaceFolder, {
             name: 'vscode-jest-tests',
           });
         }
@@ -549,7 +565,7 @@ describe('JestExt', () => {
     it('should trigger updateActiveEditor', () => {
       const editor: any = { document: event.document };
       sut.triggerUpdateActiveEditor = jest.fn();
-      window.visibleTextEditors = [editor];
+      vscode.window.visibleTextEditors = [editor];
       sut.onDidChangeTextDocument(event);
 
       expect(sut.triggerUpdateActiveEditor).toBeCalledWith(editor);
@@ -567,7 +583,7 @@ describe('JestExt', () => {
     it.each([[true], [false]])(
       'ony invalidate test status if document is dirty: isDirty=%d',
       (isDirty) => {
-        window.visibleTextEditors = [];
+        vscode.window.visibleTextEditors = [];
         const sut: any = newJestExt();
         sut.testResultProvider.invalidateTestResults = jest.fn();
         const event = {
@@ -612,7 +628,7 @@ describe('JestExt', () => {
             fileName,
           };
 
-          window.visibleTextEditors = [];
+          vscode.window.visibleTextEditors = [];
           const updateStatusBarSpy = jest.spyOn(sut as any, 'updateStatusBar');
 
           (sut.testResultProvider.isTestFile as jest.Mocked<any>).mockReturnValueOnce(isTestFile);
@@ -622,7 +638,7 @@ describe('JestExt', () => {
 
           if (shouldSchedule) {
             expect(mockProcessSession.scheduleProcess).toBeCalledWith(
-              expect.objectContaining({ type: 'by-file', testFileNamePattern: fileName })
+              expect.objectContaining({ type: 'by-file', testFileName: fileName })
             );
           } else {
             expect(mockProcessSession.scheduleProcess).not.toBeCalled();
@@ -811,10 +827,10 @@ describe('JestExt', () => {
 
     beforeEach(() => {
       StateDecorationsMock.mockImplementation(() => ({
-        passing: { key: 'pass' } as TextEditorDecorationType,
-        failing: { key: 'fail' } as TextEditorDecorationType,
-        skip: { key: 'skip' } as TextEditorDecorationType,
-        unknown: { key: 'unknown' } as TextEditorDecorationType,
+        passing: { key: 'pass' } as vscode.TextEditorDecorationType,
+        failing: { key: 'fail' } as vscode.TextEditorDecorationType,
+        skip: { key: 'skip' } as vscode.TextEditorDecorationType,
+        unknown: { key: 'unknown' } as vscode.TextEditorDecorationType,
       }));
       sut = newJestExt(settings);
 
@@ -878,13 +894,28 @@ describe('JestExt', () => {
         const sut = createJestExt();
         await sut.startSession();
         expect(mockProcessSession.start).toHaveBeenCalled();
+        expect(JestTestProvider).toHaveBeenCalled();
+
         expect(sut.testResultProvider.onSessionStart).toHaveBeenCalled();
+        expect(sut.testResultProvider.onSessionStart).toHaveBeenCalledWith(
+          expect.objectContaining({ session: mockProcessSession })
+        );
       });
       it('if failed to start session, show error', async () => {
         mockProcessSession.start.mockReturnValueOnce(Promise.reject('forced error'));
         const sut = createJestExt();
         await sut.startSession();
         expect(messaging.systemErrorMessage).toBeCalled();
+      });
+      it('dispose existing jestProvider before creating new one', async () => {
+        expect.hasAssertions();
+        const sut = createJestExt();
+        await sut.startSession();
+        expect(JestTestProvider).toHaveBeenCalledTimes(1);
+
+        await sut.startSession();
+        expect(mockTestProvider.dispose).toBeCalledTimes(1);
+        expect(JestTestProvider).toHaveBeenCalledTimes(2);
       });
       describe('will update test file list', () => {
         it.each`
@@ -924,6 +955,15 @@ describe('JestExt', () => {
         const sut = createJestExt();
         await sut.stopSession();
         expect(mockProcessSession.stop).toHaveBeenCalled();
+      });
+      it('dispose existing testProvider', async () => {
+        const sut = createJestExt();
+        await sut.startSession();
+        expect(JestTestProvider).toHaveBeenCalledTimes(1);
+
+        await sut.stopSession();
+        expect(mockTestProvider.dispose).toBeCalledTimes(1);
+        expect(JestTestProvider).toHaveBeenCalledTimes(1);
       });
       it('updatae statusBar status', async () => {
         const sut = createJestExt();
@@ -965,7 +1005,7 @@ describe('JestExt', () => {
       sut.runAllTests(editor);
       expect(mockProcessSession.scheduleProcess).toBeCalledWith({
         type: 'by-file',
-        testFileNamePattern: 'whatever',
+        testFileName: 'whatever',
       });
     });
   });
@@ -1025,9 +1065,12 @@ describe('JestExt', () => {
       });
     });
     it('will invoke internal components to process test results', () => {
-      updateWithData({});
+      updateWithData({}, 'test-all-12');
       expect(mockCoverageMapProvider.update).toBeCalled();
-      expect(sut.testResultProvider.updateTestResults).toBeCalled();
+      expect(sut.testResultProvider.updateTestResults).toBeCalledWith(
+        expect.anything(),
+        'test-all-12'
+      );
       expect(updateDiagnostics).toBeCalled();
     });
 
@@ -1055,9 +1098,42 @@ describe('JestExt', () => {
   describe('deactivate', () => {
     it('will stop session and output channel', () => {
       const sut = newJestExt();
+      sut.activate();
       sut.deactivate();
       expect(mockProcessSession.stop).toBeCalledTimes(1);
       expect(channelStub.dispose).toBeCalledTimes(1);
+      expect(mockTestProvider.dispose).toBeCalledTimes(1);
+    });
+  });
+  describe('activate', () => {
+    it('will invoke onDidChangeActiveTextEditor for activeTextEditor', () => {
+      const sut = newJestExt();
+      const spy = jest.spyOn(sut, 'onDidChangeActiveTextEditor').mockImplementation(() => {});
+      vscode.window.activeTextEditor = undefined;
+
+      sut.activate();
+      expect(spy).not.toHaveBeenCalled();
+
+      (vscode.window.activeTextEditor as any) = {
+        document: { uri: 'whatever' },
+      };
+      (vscode.workspace.getWorkspaceFolder as jest.Mocked<any>).mockReturnValue(workspaceFolder);
+
+      sut.activate();
+      expect(spy).toHaveBeenCalled();
+    });
+    it('will create testProvider', () => {
+      const sut = newJestExt();
+      vscode.window.activeTextEditor = undefined;
+
+      sut.activate();
+      expect(JestTestProvider).toHaveBeenCalledTimes(1);
+
+      const rContext = (JestTestProvider as jest.Mocked<any>).mock.calls[0][0];
+      expect(rContext.settings).not.toBeUndefined();
+      expect(rContext.workspace).not.toBeUndefined();
+      expect(rContext.session).not.toBeUndefined();
+      expect(rContext.testResolveProvider).not.toBeUndefined();
     });
   });
 });

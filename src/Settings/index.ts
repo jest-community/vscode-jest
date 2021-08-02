@@ -7,7 +7,9 @@ export type JestTestProcessType =
   | 'watch-all-tests'
   | 'by-file'
   | 'by-file-test'
-  | 'not-test';
+  | 'not-test'
+  | 'by-file-test-pattern'
+  | 'by-file-pattern';
 
 export type OnStartupType = Extract<JestTestProcessType, 'all-tests'>[];
 export type OnSaveFileType = 'test-file' | 'test-src-file';

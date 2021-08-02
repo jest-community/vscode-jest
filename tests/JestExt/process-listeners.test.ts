@@ -108,12 +108,19 @@ describe('jest process listeners', () => {
       mockProcess = { request: { type: 'watch-tests' } };
     });
 
-    it('can handle test result', () => {
-      expect.hasAssertions();
-      const listener = new RunTestListener(mockSession);
-      const mockData = {};
-      listener.onEvent(mockProcess, 'executableJSON', mockData);
-      expect(mockSession.context.updateWithData).toBeCalledWith(mockData);
+    describe('can handle test result', () => {
+      it.each([[true], [false]])('with full output implementation: %s', (fullOutput) => {
+        if (!fullOutput) {
+          delete mockSession.context.output.clear;
+          delete mockSession.context.output.show;
+        }
+        expect.hasAssertions();
+        const listener = new RunTestListener(mockSession);
+        const mockData = {};
+        mockProcess = { id: 'mock-id' };
+        listener.onEvent(mockProcess, 'executableJSON', mockData);
+        expect(mockSession.context.updateWithData).toBeCalledWith(mockData, 'mock-id');
+      });
     });
     describe.each`
       output             | stdout   | stderr   | error

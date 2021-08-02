@@ -69,7 +69,27 @@ const QuickInputButtons = {
   Back: {},
 };
 
-export {
+const tests = {
+  createTestController: jest.fn(),
+};
+
+const TestRunProfileKind = {
+  Run: 1,
+  Debug: 2,
+  Coverage: 3,
+};
+
+const TestMessage = jest.fn();
+const TestRunRequest = jest.fn();
+
+const EventEmitter = jest.fn().mockImplementation(() => {
+  console.log('in mock vscode.EventEmitter');
+  return {
+    fire: jest.fn(),
+  };
+});
+
+export = {
   CodeLens,
   languages,
   StatusBarAlignment,
@@ -86,4 +106,9 @@ export {
   debug,
   commands,
   QuickInputButtons,
+  tests,
+  TestRunProfileKind,
+  EventEmitter,
+  TestMessage,
+  TestRunRequest,
 };

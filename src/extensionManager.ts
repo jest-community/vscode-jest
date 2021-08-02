@@ -66,10 +66,9 @@ export class ExtensionManager {
     this.commonPluginSettings = getExtensionWindowSettings();
 
     this.debugConfigurationProvider = new DebugConfigurationProvider();
-    this.debugCodeLensProvider = new DebugCodeLensProvider((uri) => this.getByDocUri(uri));
-    this.coverageCodeLensProvider = new CoverageCodeLensProvider((uri) => this.getByDocUri(uri));
+    this.debugCodeLensProvider = new DebugCodeLensProvider(this.getByDocUri);
+    this.coverageCodeLensProvider = new CoverageCodeLensProvider(this.getByDocUri);
     this.applySettings(getExtensionWindowSettings());
-    this.registerAll();
   }
   applySettings(settings: PluginWindowSettings): void {
     this.commonPluginSettings = settings;
@@ -78,6 +77,13 @@ export class ExtensionManager {
       ? debugCodeLens.showWhenTestStateIn
       : [];
     settings.disabledWorkspaceFolders.forEach(this.unregisterByName, this);
+
+    //register workspace folder not in the disable list
+    vscode.workspace.workspaceFolders?.forEach((ws) => {
+      if (!this.extByWorkspace.get(ws.name)) {
+        this.register(ws);
+      }
+    });
   }
   register(workspaceFolder: vscode.WorkspaceFolder): void {
     if (!this.shouldStart(workspaceFolder.name)) {
@@ -94,9 +100,7 @@ export class ExtensionManager {
     this.extByWorkspace.set(workspaceFolder.name, jestExt);
     jestExt.startSession();
   }
-  registerAll(): void {
-    vscode.workspace.workspaceFolders?.forEach(this.register, this);
-  }
+
   unregister(workspaceFolder: vscode.WorkspaceFolder): void {
     this.unregisterByName(workspaceFolder.name);
   }
@@ -125,9 +129,9 @@ export class ExtensionManager {
     }
     return true;
   }
-  getByName(workspaceFolderName: string): JestExt | undefined {
+  public getByName = (workspaceFolderName: string): JestExt | undefined => {
     return this.extByWorkspace.get(workspaceFolderName);
-  }
+  };
   public getByDocUri: GetJestExtByURI = (uri: vscode.Uri) => {
     const workspace = vscode.workspace.getWorkspaceFolder(uri);
     if (workspace) {
@@ -262,11 +266,12 @@ export class ExtensionManager {
     }, [] as vscode.Uri[]);
     this.onFilesChange(files, (ext) => ext.onDidRenameFiles(event));
   }
+
   activate(): void {
     if (vscode.window.activeTextEditor?.document.uri) {
       const ext = this.getByDocUri(vscode.window.activeTextEditor.document.uri);
       if (ext) {
-        ext.onDidChangeActiveTextEditor(vscode.window.activeTextEditor);
+        ext.activate();
       }
     }
   }

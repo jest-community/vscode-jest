@@ -31,6 +31,8 @@ import { SupportedLanguageIds } from '../appGlobals';
 import { createJestExtContext, getExtensionResourceSettings, prefixWorkspace } from './helper';
 import { PluginResourceSettings } from '../Settings';
 import { startWizard, WizardTaskId } from '../setup-wizard';
+import { JestExtResultContext } from '../test-provider/types';
+import { JestTestProvider } from '../test-provider';
 
 interface RunTestPickItem extends vscode.QuickPickItem {
   id: DebugTestIdentifier;
@@ -66,6 +68,8 @@ export class JestExt {
   private sessionAwareComponents: JestExtSessionAware[];
   private extContext: JestExtContext;
   private dirtyFiles: Set<string> = new Set();
+
+  private testProvider?: JestTestProvider;
 
   constructor(
     vscodeContext: vscode.ExtensionContext,
@@ -108,11 +112,18 @@ export class JestExt {
     resetDiagnostics(this.failDiagnostics);
 
     this.processSession = this.createProcessSession();
-    this.sessionAwareComponents = [this.testResultProvider];
 
     this.setupStatusBar();
-  }
 
+    this.sessionAwareComponents = [this.testResultProvider];
+  }
+  private getExtResultContext(): JestExtResultContext {
+    return {
+      ...this.extContext,
+      session: this.processSession,
+      testResolveProvider: this.testResultProvider,
+    };
+  }
   private setupWizardAction(taskId: WizardTaskId): messaging.MessageAction {
     return {
       title: 'Run Setup Wizard',
@@ -159,7 +170,12 @@ export class JestExt {
       }
       await this.processSession.start();
 
-      this.sessionAwareComponents.forEach((c) => c.onSessionStart?.());
+      this.testProvider?.dispose();
+      this.testProvider = new JestTestProvider(this.getExtResultContext(), this.debugTests);
+
+      this.sessionAwareComponents.forEach((c) =>
+        c.onSessionStart?.({ ...this.extContext, session: this.processSession })
+      );
 
       this.updateTestFileList();
       this.channel.appendLine('Jest Session Started');
@@ -179,6 +195,9 @@ export class JestExt {
     try {
       this.channel.appendLine('Stopping Jest Session');
       await this.processSession.stop();
+
+      this.testProvider?.dispose();
+      this.testProvider = undefined;
 
       this.sessionAwareComponents.forEach((c) => c.onSessionStop?.());
 
@@ -203,13 +222,13 @@ export class JestExt {
     }
 
     const filePath = editor.document.fileName;
-    let testResults: SortedTestResults | undefined;
+    let sortedResults: SortedTestResults | undefined;
     try {
-      testResults = this.testResultProvider.getSortedResults(filePath);
+      sortedResults = this.testResultProvider.getSortedResults(filePath);
     } catch (e) {
       this.channel.appendLine(`${filePath}: failed to parse test results: ${e.toString()}`);
       // assign an empty result so we can clear the outdated decorators/diagnostics etc
-      testResults = {
+      sortedResults = {
         fail: [],
         skip: [],
         success: [],
@@ -217,12 +236,12 @@ export class JestExt {
       };
     }
 
-    if (!testResults) {
+    if (!sortedResults) {
       return;
     }
 
-    this.updateDecorators(testResults, editor);
-    updateCurrentDiagnostics(testResults.fail, this.failDiagnostics, editor);
+    this.updateDecorators(sortedResults, editor);
+    updateCurrentDiagnostics(sortedResults.fail, this.failDiagnostics, editor);
   }
 
   public triggerUpdateActiveEditor(editor: vscode.TextEditor): void {
@@ -324,14 +343,26 @@ export class JestExt {
     return true;
   }
 
+  public activate(): void {
+    if (
+      vscode.window.activeTextEditor?.document.uri &&
+      vscode.workspace.getWorkspaceFolder(vscode.window.activeTextEditor.document.uri) ===
+        this.extContext.workspace
+    ) {
+      this.onDidChangeActiveTextEditor(vscode.window.activeTextEditor);
+    }
+    this.testProvider?.dispose();
+    this.testProvider = new JestTestProvider(this.getExtResultContext(), this.debugTests);
+  }
   public deactivate(): void {
     this.stopSession();
     this.channel.dispose();
+    this.testProvider?.dispose();
   }
 
   //**  commands */
   public debugTests = async (
-    document: vscode.TextDocument,
+    document: vscode.TextDocument | string,
     ...ids: DebugTestIdentifier[]
   ): Promise<void> => {
     const idString = (type: IdStringType, id: DebugTestIdentifier): string =>
@@ -366,7 +397,7 @@ export class JestExt {
     }
 
     this.debugConfigurationProvider.prepareTestRun(
-      document.fileName,
+      typeof document === 'string' ? document : document.fileName,
       escapeRegExp(idString('full-name', testId))
     );
 
@@ -397,7 +428,7 @@ export class JestExt {
       this.dirtyFiles.delete(name);
       this.processSession.scheduleProcess({
         type: 'by-file',
-        testFileNamePattern: name,
+        testFileName: name,
       });
     }
   }
@@ -445,7 +476,7 @@ export class JestExt {
     ) {
       this.processSession.scheduleProcess({
         type: 'by-file',
-        testFileNamePattern: document.fileName,
+        testFileName: document.fileName,
       });
     } else {
       this.dirtyFiles.add(document.fileName);
@@ -603,12 +634,13 @@ export class JestExt {
       this.coverageOverlay.updateVisibleEditors();
     });
   }
-  private updateWithData(data: JestTotalResults): void {
+  private updateWithData(data: JestTotalResults, pid = 'unknown'): void {
     const noAnsiData = resultsWithoutAnsiEscapeSequence(data);
     const normalizedData = resultsWithLowerCaseWindowsDriveLetters(noAnsiData);
     this._updateCoverageMap(normalizedData.coverageMap);
 
-    const statusList = this.testResultProvider.updateTestResults(normalizedData);
+    const statusList = this.testResultProvider.updateTestResults(normalizedData, pid);
+
     updateDiagnostics(statusList, this.failDiagnostics);
 
     this.refreshDocumentChange();

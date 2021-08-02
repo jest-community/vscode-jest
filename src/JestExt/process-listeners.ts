@@ -168,7 +168,7 @@ export class RunTestListener extends AbstractProcessListener {
     ) {
       const scope =
         process.request.type === 'by-file'
-          ? `for file "${process.request.testFileNamePattern}"`
+          ? `for file "${process.request.testFileName}"`
           : `for all files in "${this.session.context.workspace.name}"`;
       vscode.window
         .showInformationMessage(`Would you like to update snapshots ${scope}?`, {
@@ -218,7 +218,7 @@ export class RunTestListener extends AbstractProcessListener {
       this.session.context.output.appendLine(
         `${msg}\n see troubleshooting: ${messaging.TROUBLESHOOTING_URL}`
       );
-      this.session.context.output.show(true);
+      this.session.context.output.show?.(true);
       messaging.systemErrorMessage(
         msg,
         messaging.showTroubleshootingAction,
@@ -230,11 +230,11 @@ export class RunTestListener extends AbstractProcessListener {
   //=== event handlers ===
   protected onProcessStarting(process: JestProcess): void {
     super.onProcessStarting(process);
-    this.session.context.output.clear();
+    this.session.context.output.clear?.();
   }
 
-  protected onExecutableJSON(_process: JestProcess, data: JestTotalResults): void {
-    this.session.context.updateWithData(data);
+  protected onExecutableJSON(process: JestProcess, data: JestTotalResults): void {
+    this.session.context.updateWithData(data, process.id);
   }
 
   protected onExecutableStdErr(process: JestProcess, message: string): void {
@@ -253,7 +253,7 @@ export class RunTestListener extends AbstractProcessListener {
     if (output.includes('onRunStart')) {
       this.session.context.updateStatusBar({ state: 'running' });
       if (isWatchRequest(process.request)) {
-        this.session.context.output.clear();
+        this.session.context.output.clear?.();
       }
     }
     if (output.includes('onRunComplete')) {
@@ -267,7 +267,7 @@ export class RunTestListener extends AbstractProcessListener {
 
   protected onTerminalError(_process: JestProcess, data: string): void {
     this.session.context.output.appendLine(`\nException raised: ${data}`);
-    this.session.context.output.show(true);
+    this.session.context.output.show?.(true);
   }
   protected onProcessClose(process: JestProcess): void {
     super.onProcessClose(process);
