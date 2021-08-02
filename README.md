@@ -3,7 +3,16 @@
 [![Build Status](https://travis-ci.org/jest-community/vscode-jest.svg?branch=master)](https://travis-ci.org/jest-community/vscode-jest) [![Coverage Status](https://coveralls.io/repos/github/jest-community/vscode-jest/badge.svg?branch=master)](https://coveralls.io/github/jest-community/vscode-jest?branch=master) [![Visual Studio Marketplace](https://img.shields.io/visual-studio-marketplace/v/Orta.vscode-jest?color=success&label=Visual%20Studio%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=Orta.vscode-jest) 
 
 ---
-## v4 Release <!-- omit in toc -->
+## v4.1 with Test Explorer <!-- omit in toc -->
+
+Test explorer is one of the highly requested feature for this extension. We are excited that vscode released a new set of testing API and a brand new test explorer in v1.59 (2021 July release), and with `vscode-jest` v4.1 we can finally offer this feature via the official vscode test explorer 🎉
+
+![test-explore.png](images/test-explorer.png)
+
+Note the test explorer is new and some of the features are still missing (see [How to use test explore](#how-to-use-the-test-explorer) for more details), we will continue to improve it as vscode test api/explorer evolves. As usual, please do not hesitate to ask questions or file issues, have fun!
+
+<details>
+<summary>v4 Release</summary>
 
 After longer than expected development, [v4](https://github.com/jest-community/vscode-jest/releases/tag/v4.0.0) is finally released! 😄
 
@@ -14,6 +23,7 @@ Knowing the scope of the changes is significant, while we tried to test it as mu
 Feel free to read more about the [features and migration](https://github.com/jest-community/vscode-jest/releases/tag/v4.0.0) or come chat with us in the [release discussion](https://github.com/jest-community/vscode-jest/discussions/693) for general comments or questions about this release.
 
 P.S. We find the new version did made the development of this extension a bit easier (yes, we do eat our own dog food :dog:), hopefully, it will do the same for your project. Happy coding!
+</details>
 
 ---
 
@@ -29,6 +39,7 @@ Content
     - [How to use code coverage?](#how-to-use-code-coverage)
     - [How to use the extension with monorepo projects?](#how-to-use-the-extension-with-monorepo-projects)
     - [How to read the StatusBar?](#how-to-read-the-statusbar)
+    - [How to use the Test Explorer?](#how-to-use-the-test-explorer)
   - [Customization](#customization)
     - [Settings](#settings)
       - [Details](#details)
@@ -196,6 +207,18 @@ shows the active workspace has onSave for test file only, and that the workspace
 
 shows the autoRun will be triggered by either test or source file changes.
 </details>
+
+### How to use the Test Explorer?
+Users with `vscode` v1.59 and `vscode-jest` v4.1 and up will start to see tests appearing in the test explorer automatically, in addition to editor decoractors. Test explorer provides a "test-centric" view (vs. "source-centric" view in the editors) and allow users to run/debug tests directly from the explorer (in addition to the inline debug codeLens):
+
+![test-explore.png](images/test-explorer.png)
+
+However, test explorer is new and some features are still work-in-progress or not available yet:
+- can't turn on/off coverage yet
+- not able to accurately indicate run/debug eligibility on the item level, this means you might not be able to run/debug some items through run/debug buttons.
+- for watch-mode workspaces, the run button is turned off since tests will be automatically executed.
+- debug can only be exeuted for the test blocks, not on the file or folder level. 
+- the tests stats on the top of the explorer might not be accurate, especially for multiroot workspaces.
 
 ## Customization
 ### Settings
