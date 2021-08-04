@@ -8,26 +8,11 @@ import { TestAssertionStatus } from 'jest-editor-support';
 import { DataNode, NodeType, ROOT_NODE_NAME } from '../TestResults/match-node';
 import { Logging } from '../logging';
 import { TestSuitChangeEvent } from '../TestResults/test-result-events';
-import { Debuggable, TestItemData, JestTestProviderContext, WithUri, ScheduledTest } from './types';
+import { Debuggable, TestItemData, WithUri, ScheduledTest } from './types';
+import { JestTestProviderContext } from './test-provider-context';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const isScheduledTest = (arg: any): arg is ScheduledTest => arg && arg.run && arg.onDone;
-/**
- * remove the item from parent. If parent became empty, i.e. no children, recursive up the item tree unless the parent === stopAt
- * @param stopAt: if
- */
-const removeItemUp = (item: vscode.TestItem, stopAt?: vscode.TestItem): void => {
-  const parent = item.parent;
-  parent?.children.delete(item.id);
-
-  if (!parent || parent === stopAt) {
-    return;
-  }
-
-  if (parent.children.size <= 0) {
-    removeItemUp(parent, stopAt);
-  }
-};
 interface JestRunable {
   getJestRunRequest: (profile: vscode.TestRunProfile) => JestExtRequestType;
 }
@@ -36,7 +21,7 @@ abstract class TestItemDataBase implements TestItemData, JestRunable, WithUri {
   log: Logging;
 
   constructor(public context: JestTestProviderContext, name: string) {
-    this.log = context.loggingFactory.create(name);
+    this.log = context.ext.loggingFactory.create(name);
   }
   get uri(): vscode.Uri {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -45,7 +30,7 @@ abstract class TestItemDataBase implements TestItemData, JestRunable, WithUri {
 
   scheduleTest(run: vscode.TestRun, profile: vscode.TestRunProfile): string | undefined {
     const jestRequest = this.getJestRunRequest(profile);
-    const pid = this.context.session.scheduleProcess({
+    const pid = this.context.ext.session.scheduleProcess({
       ...jestRequest,
       context: { output: this.runAsOutput(run) },
     });
@@ -57,14 +42,8 @@ abstract class TestItemDataBase implements TestItemData, JestRunable, WithUri {
   }
 
   abstract getJestRunRequest(profile: vscode.TestRunProfile): JestExtRequestType;
-  discoverTest(_run: vscode.TestRun): void {
-    //default is do nothing, but that means the item should already be resolved
-    if (this.item.canResolveChildren !== false) {
-      this.log('warn', `no discoverTest to resolve the TestItem?: ${this.item.id}`);
-    }
-  }
 
-  runAsOutput(run: vscode.TestRun): ProcessOutput {
+  private runAsOutput(run: vscode.TestRun): ProcessOutput {
     return {
       append: (value: string) => {
         const s = value.replace(/\n/g, '\r\n');
@@ -75,7 +54,7 @@ abstract class TestItemDataBase implements TestItemData, JestRunable, WithUri {
   }
 
   isRunnable(): boolean {
-    return !this.context.autoRun.isWatch;
+    return !this.context.ext.autoRun.isWatch;
   }
   isDebuggable(): boolean {
     return false;
@@ -94,8 +73,8 @@ abstract class TestItemDataBase implements TestItemData, JestRunable, WithUri {
     return this.context.getScheduledTest(pid);
   };
 
-  createRun = (pid?: string) => {
-    return this.context.createTestRun(new vscode.TestRunRequest([this.item]), pid ?? this.item.id);
+  createRun = () => {
+    return this.context.createTestRun(new vscode.TestRunRequest([this.item]), this.item.id);
   };
   /** end run if name matches the data item.id or pid */
   endRun = (runOrSchedule: vscode.TestRun | ScheduledTest, pid?: string): void => {
@@ -107,11 +86,6 @@ abstract class TestItemDataBase implements TestItemData, JestRunable, WithUri {
       run.end();
     }
   };
-
-  // remove TestItem from parent
-  dispose() {
-    this.item.parent?.children.delete(this.item.id);
-  }
 }
 
 /**
@@ -127,15 +101,17 @@ export class WorkspaceRoot extends TestItemDataBase {
     this.item = this.createTestItem();
     this.testDocuments = new Map();
     this.listeners = [];
+
+    this.registerEvents();
   }
   createTestItem(): vscode.TestItem {
     const item = this.context.createTestItem(
-      `${extensionId}:${this.context.workspace.name}`,
-      this.context.workspace.name,
-      this.context.workspace.uri,
+      `${extensionId}:${this.context.ext.workspace.name}`,
+      this.context.ext.workspace.name,
+      this.context.ext.workspace.uri,
       this
     );
-    item.description = `(${this.context.autoRun.mode})`;
+    item.description = `(${this.context.ext.autoRun.mode})`;
 
     item.canResolveChildren = true;
     return item;
@@ -145,15 +121,13 @@ export class WorkspaceRoot extends TestItemDataBase {
     return { type: 'all-tests' };
   }
   discoverTest(run: vscode.TestRun): void {
-    this.registerEvents();
-    const testList = this.context.testResolveProvider.getTestList();
+    const testList = this.context.ext.testResolveProvider.getTestList();
     this.onTestListUpdated(testList, run);
   }
 
   // test result event handling
   private registerEvents = (): void => {
-    this.unregisterEvents();
-    const events = this.context.testResolveProvider.events;
+    const events = this.context.ext.testResolveProvider.events;
     this.listeners = [
       events.testListUpdated.event(this.onTestListUpdated),
       events.testSuiteChanged.event(this.onTestSuiteChanged),
@@ -173,7 +147,7 @@ export class WorkspaceRoot extends TestItemDataBase {
     );
   };
   private addPath = (absoluteFileName: string): FolderData | undefined => {
-    const relativePath = path.relative(this.context.workspace.uri.fsPath, absoluteFileName);
+    const relativePath = path.relative(this.context.ext.workspace.uri.fsPath, absoluteFileName);
     const folders = relativePath.split(path.sep).slice(0, -1);
 
     return folders.reduce(this.addFolder, undefined);
@@ -189,7 +163,7 @@ export class WorkspaceRoot extends TestItemDataBase {
     absoluteFileName: string,
     onTestRoot?: (doc: TestDocumentRoot) => void
   ): TestDocumentRoot => {
-    if (this.context.testResolveProvider.isTestFile(absoluteFileName) !== 'yes') {
+    if (this.context.ext.testResolveProvider.isTestFile(absoluteFileName) !== 'yes') {
       throw new Error(`not-test-file: ${absoluteFileName}`);
     }
     let docRoot = this.testDocuments.get(absoluteFileName);
@@ -206,14 +180,6 @@ export class WorkspaceRoot extends TestItemDataBase {
     return docRoot;
   };
 
-  private removeFile = (absoluteFileName: string): void => {
-    const documentRoot = this.testDocuments.get(absoluteFileName);
-    if (!documentRoot) {
-      return;
-    }
-    this.testDocuments.delete(absoluteFileName);
-    removeItemUp(documentRoot.item, this.item);
-  };
   /**
    * Wwhen test list updated, rebuild the whole testItem tree for all the test files (DocumentRoot)
    * Note: this could be optimized to only updat the differences if needed.
@@ -222,27 +188,18 @@ export class WorkspaceRoot extends TestItemDataBase {
     absoluteFileNames: string[] | undefined,
     run?: vscode.TestRun
   ): void => {
-    if (!absoluteFileNames || absoluteFileNames.length <= 0) {
-      this.item.children.replace([]);
-      this.testDocuments.clear();
-    } else {
-      // remove cached doc not in the list
-      Array.from(this.testDocuments.keys()).forEach((key) => {
-        if (!absoluteFileNames.includes(key)) {
-          this.removeFile(key);
-        }
-      });
+    this.item.children.replace([]);
+    this.testDocuments.clear();
 
-      const aRun = run ?? this.createRun();
-      try {
-        absoluteFileNames.forEach((f) =>
-          this.addTestFile(f, (testRoot) => testRoot.updateResultState(aRun))
-        );
-      } catch (e) {
-        console.error(`[WorkspaceRoot] "${this.item.id}" onTestListUpdated failed:`, e);
-      } finally {
-        this.endRun(aRun);
-      }
+    const aRun = run ?? this.createRun();
+    try {
+      absoluteFileNames?.forEach((f) =>
+        this.addTestFile(f, (testRoot) => testRoot.updateResultState(aRun))
+      );
+    } catch (e) {
+      this.log('error', `[WorkspaceRoot] "${this.item.id}" onTestListUpdated failed:`, e);
+    } finally {
+      this.endRun(aRun);
     }
     this.item.canResolveChildren = false;
   };
@@ -262,7 +219,8 @@ export class WorkspaceRoot extends TestItemDataBase {
         try {
           event.files.forEach((f) => this.addTestFile(f, (testRoot) => testRoot.discoverTest(run)));
         } catch (e) {
-          console.error(
+          this.log(
+            'error',
             `[WorkspaceRoot] "${this.item.id}" onTestSuiteChanged: assertions-updated failed:`,
             e
           );
@@ -280,7 +238,6 @@ export class WorkspaceRoot extends TestItemDataBase {
 
   dispose(): void {
     this.unregisterEvents();
-    super.dispose();
   }
 }
 
@@ -433,21 +390,21 @@ export class TestDocumentRoot extends TestItemDataBase {
 
   private createChildItems = (): void => {
     try {
-      const suiteResult = this.context.testResolveProvider.getTestSuiteResult(this.item.id);
+      const suiteResult = this.context.ext.testResolveProvider.getTestSuiteResult(this.item.id);
       if (!suiteResult || !suiteResult.assertionContainer) {
         this.item.children.replace([]);
       } else {
         syncChildNodes(this, suiteResult.assertionContainer);
       }
     } catch (e) {
-      console.error(`[TestDocumentRoot] "${this.item.id}" createChildItems failed:`, e);
+      this.log('error', `[TestDocumentRoot] "${this.item.id}" createChildItems failed:`, e);
     } finally {
       this.item.canResolveChildren = false;
     }
   };
 
   public updateResultState(run: vscode.TestRun): void {
-    const suiteResult = this.context.testResolveProvider.getTestSuiteResult(this.item.id);
+    const suiteResult = this.context.ext.testResolveProvider.getTestSuiteResult(this.item.id);
     updateItemState(run, this.item, suiteResult);
 
     this.item.children.forEach((childItem) =>
@@ -504,9 +461,9 @@ export class TestData extends TestItemDataBase implements Debuggable {
   isDebuggable(): boolean {
     return true;
   }
-  getDebugInfo = (): { fileName: string; testNamePattern: string } => {
+  getDebugInfo(): { fileName: string; testNamePattern: string } {
     return { fileName: this.uri.fsPath, testNamePattern: this.node.fullName };
-  };
+  }
   private updateItemRange(): void {
     if (this.node.attrs.range) {
       const pos = [

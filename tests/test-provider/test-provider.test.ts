@@ -1,14 +1,14 @@
 jest.unmock('../../src/test-provider/test-provider');
+jest.unmock('../../src/test-provider/test-provider-context');
+jest.unmock('./test-helper');
 jest.unmock('../../src/appGlobals');
 
 import * as vscode from 'vscode';
 import { debugTest, JestTestProvider, runTest } from '../../src/test-provider/test-provider';
 import { WorkspaceRoot } from '../../src/test-provider/test-item-data';
-import { TestItemStore } from '../../src/test-provider/utils';
-import { ScheduledTest } from '../../src/test-provider/types';
+import { JestTestProviderContext } from '../../src/test-provider/test-provider-context';
 import { extensionId } from '../../src/appGlobals';
-
-// const WorkspaceRootMock = WorkspaceRoot as jest.Mocked<any>;
+import { mockController, mockResultContext, mockRun } from './test-helper';
 
 const throwError = () => {
   throw new Error('debug error');
@@ -76,28 +76,26 @@ describe('runTest', () => {
             ? jest.fn().mockReturnValueOnce(pid)
             : jest.fn().mockImplementation(pid),
       };
-      const runMock: any = {
-        appendOutput: jest.fn(),
-        errored: jest.fn(),
-        skipped: jest.fn(),
-      };
+      const runMock: any = mockRun();
       const profile: any = { kind: vscode.TestRunProfileKind.Run };
 
-      const scheduledTests: Map<string, ScheduledTest> = new Map();
+      // const scheduledTests: Map<string, ScheduledTest> = new Map();
       const cancelToken: any = { isCancellationRequested: isCancelled };
+      const context = new JestTestProviderContext({} as any, {} as any);
+      const spy = jest.spyOn(context, 'setScheduledTest');
 
-      const p = runTest(tData, runMock, cancelToken, scheduledTests, profile);
+      const p = runTest(tData, runMock, cancelToken, context, profile);
       if (isCancelled) {
         expect(tData.scheduleTest).not.toBeCalled();
       } else {
         expect(tData.scheduleTest).toBeCalled();
         if (typeof pid === 'string') {
-          expect(scheduledTests.size).toBe(1);
-          const { onDone } = scheduledTests.get(pid);
+          expect(spy).toBeCalledTimes(1);
+          const { onDone } = context.getScheduledTest(pid);
           expect(onDone).not.toBeUndefined();
           onDone();
         } else {
-          expect(scheduledTests.size).toBe(0);
+          expect(spy).toBeCalledTimes(0);
         }
       }
 
@@ -122,21 +120,10 @@ describe('runTest', () => {
 });
 
 describe('JestTestProvider', () => {
-  const createResultContext = (wsName = 'ws-1', override: any = {}): any => {
-    return {
-      autoRun: {},
-      session: {},
-      workspace: { name: wsName },
-      testResolveProvider: jest.fn(),
-      ...override,
-    };
-  };
-
-  const makeItemData = (item: any, debuggable = true) => {
+  const makeItemData = (debuggable = true) => {
     const data: any = {
       discoverTest: jest.fn(),
       scheduleTest: jest.fn(),
-      item,
       dispose: jest.fn(),
       canRun: jest.fn().mockReturnValue(true),
     };
@@ -146,18 +133,17 @@ describe('JestTestProvider', () => {
     return data;
   };
 
-  const setupTestItemData = (id: string, debuggable = true, updateMap = true): any => {
-    const item = { id };
-    const data = makeItemData(item, debuggable);
-    if (updateMap) {
-      itemStoreMock.map.set(item, data);
-    }
+  const setupTestItemData = (
+    id: string,
+    debuggable = true,
+    context?: JestTestProviderContext
+  ): any => {
+    const data = makeItemData(debuggable);
+    data.item = context?.createTestItem(id, id, {} as any, data) ?? { id };
     return data;
   };
 
   let controllerMock;
-  let runMock;
-  let itemStoreMock;
   let resultContextMock;
   let debugTestsMock;
   let workspaceRootMock;
@@ -165,44 +151,26 @@ describe('JestTestProvider', () => {
   beforeEach(() => {
     jest.resetAllMocks();
 
-    resultContextMock = createResultContext();
+    resultContextMock = mockResultContext();
     debugTestsMock = jest.fn();
 
-    runMock = {
-      errored: jest.fn(),
-      skipped: jest.fn(),
-      appendOutput: jest.fn(),
-      end: jest.fn(),
-    };
-    controllerMock = {
-      createTestRun: jest.fn().mockImplementation((request, name) => {
-        runMock.name = name;
-        runMock.request = request;
-        return runMock;
-      }),
-      dispose: jest.fn(),
-      createRunProfile: jest.fn(),
-      items: jest.fn(),
-    };
+    controllerMock = mockController();
     (vscode.tests.createTestController as jest.Mocked<any>).mockImplementation((id, label) => {
       controllerMock.id = id;
       controllerMock.label = label;
       return controllerMock;
     });
 
-    const map = new Map<object, object>();
-    itemStoreMock = {
-      map,
-      getData: jest.fn().mockImplementation((item) => map.get(item)),
-    };
-    (TestItemStore as jest.Mocked<any>).mockImplementation(() => itemStoreMock);
     (vscode.workspace.getWorkspaceFolder as jest.Mocked<any>).mockImplementation((uri) => ({
       name: uri,
     }));
 
-    workspaceRootMock = setupTestItemData('workspace-root', false, true);
-    workspaceRootMock.activate = jest.fn();
-    (WorkspaceRoot as jest.Mocked<any>).mockReturnValue(workspaceRootMock);
+    (WorkspaceRoot as jest.Mocked<any>).mockImplementation((context) => {
+      workspaceRootMock = setupTestItemData('workspace-root', false, context);
+      workspaceRootMock.activate = jest.fn();
+      workspaceRootMock.context = context;
+      return workspaceRootMock;
+    });
   });
 
   describe('upon creation', () => {
@@ -230,19 +198,33 @@ describe('JestTestProvider', () => {
 
       expect(WorkspaceRoot).toBeCalled();
     });
+    it.each`
+      isWatchMode | createRunProfile
+      ${true}     | ${false}
+      ${false}    | ${true}
+    `(
+      'will createRunProfile($createRunProfile) if isWatchMode=$isWatchMode',
+      ({ isWatchMode, createRunProfile }) => {
+        resultContextMock.autoRun.isWatch = isWatchMode;
+        new JestTestProvider(resultContextMock, debugTestsMock);
+        const kinds = [vscode.TestRunProfileKind.Debug, vscode.TestRunProfileKind.Coverage];
+        if (createRunProfile) {
+          kinds.push(vscode.TestRunProfileKind.Run);
+        }
+
+        expect(controllerMock.createRunProfile).toHaveBeenCalledTimes(kinds.length);
+        kinds.forEach((kind) => {
+          expect(controllerMock.createRunProfile).toHaveBeenCalledWith(
+            expect.anything(),
+            kind,
+            expect.anything(),
+            true
+          );
+        });
+      }
+    );
   });
-  // describe('upon ativation', () => {
-  //   it('will activate workspaceRoot', () => {
-  //     const mockActivate = jest.fn();
-  //     (WorkspaceRoot as jest.Mocked<any>).mockImplementation(() => {
-  //       return { activate: mockActivate };
-  //     });
-  //     const testProvider = new JestTestProvider(resultContextMock, debugTestsMock);
-  //     expect(mockActivate).not.toBeCalled();
-  //     testProvider.activate();
-  //     expect(mockActivate).toBeCalled();
-  //   });
-  // });
+
   describe('can  discover tests', () => {
     describe('when no test item is requested', () => {
       it('will resolve the whole workspace via workspaceRoot', () => {
@@ -250,26 +232,36 @@ describe('JestTestProvider', () => {
         controllerMock.resolveHandler();
         expect(controllerMock.createTestRun).toBeCalled();
         expect(workspaceRootMock.discoverTest).toBeCalledTimes(1);
-        expect(workspaceRootMock.discoverTest).toBeCalledWith(runMock);
+        expect(workspaceRootMock.discoverTest).toBeCalledWith(controllerMock.lastRunMock());
       });
     });
     describe('when some item is requested', () => {
       it('will forward the request to the item', () => {
-        const data = setupTestItemData('whatever', true, true);
         new JestTestProvider(resultContextMock, debugTestsMock);
+        const data = setupTestItemData('whatever', true, workspaceRootMock.context);
         controllerMock.resolveHandler(data.item);
         expect(controllerMock.createTestRun).toBeCalled();
-        expect(data.discoverTest).toBeCalledWith(runMock);
-        expect(runMock.name).toEqual(controllerMock.id);
+        expect(data.discoverTest).toBeCalledWith(controllerMock.lastRunMock());
+        expect(controllerMock.lastRunMock().name).toEqual(controllerMock.id);
       });
       it('if item not found in the item-data map should not crash', () => {
-        const data = setupTestItemData('whatever', true, false);
         new JestTestProvider(resultContextMock, debugTestsMock);
+        const data = makeItemData(true);
         controllerMock.resolveHandler({});
         expect(controllerMock.createTestRun).toBeCalled();
         expect(data.discoverTest).not.toBeCalled();
         expect(workspaceRootMock.discoverTest).not.toBeCalled();
-        expect(runMock.name).toEqual(controllerMock.id);
+        expect(controllerMock.lastRunMock().name).toEqual(controllerMock.id);
+      });
+    });
+    describe('if discover failed', () => {
+      it('error will be reported', () => {
+        new JestTestProvider(resultContextMock, debugTestsMock);
+        workspaceRootMock.discoverTest.mockImplementation(() => {
+          throw new Error('forced crash');
+        });
+        controllerMock.resolveHandler();
+        expect(workspaceRootMock.item.error).toEqual(expect.stringContaining('discoverTest error'));
       });
     });
   });
@@ -282,7 +274,16 @@ describe('JestTestProvider', () => {
     });
   });
   describe('can handle run and debug request', () => {
-    let itemDataList, cancelToken;
+    let cancelToken;
+    const setupItemData = (context) => {
+      const itemDataList = [1, 2, 3].map((n) => setupTestItemData(`item-${n}`, true, context));
+      itemDataList.forEach((d) => {
+        d.context = { workspace: { name: 'whatever' } };
+        d.getDebugInfo = jest.fn().mockReturnValueOnce({});
+        d.canRun = jest.fn().mockReturnValue(true);
+      });
+      return itemDataList;
+    };
     beforeEach(() => {
       cancelToken = { onCancellationRequested: jest.fn() };
     });
@@ -297,20 +298,14 @@ describe('JestTestProvider', () => {
         new Promise<void>((resolve) => {
           debugDone = () => resolve();
         });
-      beforeEach(() => {
-        itemDataList = [1, 2, 3].map((n) => setupTestItemData(`item-${n}`, true, true));
-        itemDataList.forEach((d) => {
-          d.context = { workspace: { name: 'whatever' } };
-          d.getDebugInfo = jest.fn().mockReturnValueOnce({});
-          d.canRun = jest.fn().mockReturnValue(true);
-        });
-      });
+
       it('debug tests are done in serial', async () => {
         expect.hasAssertions();
 
         debugTestsMock.mockImplementation(controlled);
 
         const testProvider = new JestTestProvider(resultContextMock, debugTestsMock);
+        const itemDataList = setupItemData(workspaceRootMock.context);
         const request: any = {
           include: itemDataList.map((d) => d.item),
           profile: { kind: vscode.TestRunProfileKind.Debug },
@@ -335,7 +330,7 @@ describe('JestTestProvider', () => {
         expect(debugTestsMock).toBeCalledTimes(3);
 
         // the run will be closed
-        expect(runMock.end).toBeCalled();
+        expect(controllerMock.lastRunMock().end).toBeCalled();
       });
       it('cancellation means skip the rest of tests', async () => {
         expect.hasAssertions();
@@ -343,21 +338,28 @@ describe('JestTestProvider', () => {
         debugTestsMock.mockImplementation(controlled);
 
         const testProvider = new JestTestProvider(resultContextMock, debugTestsMock);
+        const itemDataList = setupItemData(workspaceRootMock.context);
         const request: any = {
           include: itemDataList.map((d) => d.item),
           profile: { kind: vscode.TestRunProfileKind.Debug },
         };
 
         const p = testProvider.runTests(request, cancelToken);
+        const cancelCallback = cancelToken.onCancellationRequested.mock.calls[0][0];
+        expect(cancelCallback).not.toBeUndefined();
+
         // a run is created
         expect(controllerMock.createTestRun).toBeCalled();
         expect(debugTestsMock).toBeCalledTimes(1);
 
+        const runMock = controllerMock.lastRunMock();
         await finishDebug();
         expect(debugTestsMock).toBeCalledTimes(2);
 
         // cancel the run during 2nd debug, the 3rd one should be skipped
         cancelToken.isCancellationRequested = true;
+        cancelCallback();
+        expect(runMock.end).toBeCalledTimes(1);
 
         await finishDebug();
         expect(debugTestsMock).toBeCalledTimes(2);
@@ -378,12 +380,14 @@ describe('JestTestProvider', () => {
           .mockImplementationOnce(throwError);
 
         const testProvider = new JestTestProvider(resultContextMock, debugTestsMock);
+        const itemDataList = setupItemData(workspaceRootMock.context);
         const request: any = {
           include: itemDataList.map((d) => d.item),
           profile: { kind: vscode.TestRunProfileKind.Debug },
         };
 
         await testProvider.runTests(request, cancelToken);
+        const runMock = controllerMock.lastRunMock();
 
         expect(debugTestsMock).toBeCalledTimes(3);
         expect(runMock.errored).toBeCalledTimes(2);
@@ -393,14 +397,13 @@ describe('JestTestProvider', () => {
       });
     });
     describe('when run tests , invoke itemData scheduleTests function', () => {
-      beforeEach(() => {
-        itemDataList = [1, 2, 3].map((n) => setupTestItemData(`item-${n}`, true, true));
-      });
       it('running tests in parallel', async () => {
         expect.hasAssertions();
-        itemDataList.forEach((d, idx) => d.scheduleTest.mockReturnValueOnce(`pid-${idx}`));
 
         const testProvider = new JestTestProvider(resultContextMock, debugTestsMock);
+        const itemDataList = setupItemData(workspaceRootMock.context);
+        itemDataList.forEach((d, idx) => d.scheduleTest.mockReturnValueOnce(`pid-${idx}`));
+
         const request: any = {
           include: itemDataList.map((d) => d.item),
           profile: { kind: vscode.TestRunProfileKind.Run },
@@ -411,6 +414,7 @@ describe('JestTestProvider', () => {
 
         // a run is created
         expect(controllerMock.createTestRun).toBeCalled();
+        const runMock = controllerMock.lastRunMock();
 
         itemDataList.forEach((d, idx) => {
           expect(d.scheduleTest).toBeCalled();
@@ -425,9 +429,11 @@ describe('JestTestProvider', () => {
       });
       it('cancellation is passed to the itemData to handle', async () => {
         expect.hasAssertions();
-        itemDataList.forEach((d, idx) => d.scheduleTest.mockReturnValueOnce(`pid-${idx}`));
 
         const testProvider = new JestTestProvider(resultContextMock, debugTestsMock);
+        const itemDataList = setupItemData(workspaceRootMock.context);
+        itemDataList.forEach((d, idx) => d.scheduleTest.mockReturnValueOnce(`pid-${idx}`));
+
         const request: any = {
           include: itemDataList.map((d) => d.item),
           profile: { kind: vscode.TestRunProfileKind.Run },
@@ -435,9 +441,14 @@ describe('JestTestProvider', () => {
         const context = (WorkspaceRoot as jest.Mocked<any>).mock.calls[0][0];
 
         const p = testProvider.runTests(request, cancelToken);
+        const cancelCallback = cancelToken.onCancellationRequested.mock.calls[0][0];
+        expect(cancelCallback).not.toBeUndefined();
 
+        const runMock = controllerMock.lastRunMock();
         // cacnel after run
         cancelToken.isCancellationRequested = true;
+        cancelCallback();
+        expect(runMock.end).toBeCalledTimes(1);
 
         // a run is already created
         expect(controllerMock.createTestRun).toBeCalled();
@@ -452,10 +463,13 @@ describe('JestTestProvider', () => {
         });
 
         await p;
-        expect(runMock.end).toBeCalled();
+        expect(runMock.end).toBeCalledTimes(2);
       });
       it('can handle exception', async () => {
         expect.hasAssertions();
+
+        const testProvider = new JestTestProvider(resultContextMock, debugTestsMock);
+        const itemDataList = setupItemData(workspaceRootMock.context);
         itemDataList.forEach((d, idx) => {
           if (idx === 1) {
             d.scheduleTest.mockImplementation(() => {
@@ -465,8 +479,6 @@ describe('JestTestProvider', () => {
             d.scheduleTest.mockReturnValueOnce(`pid-${idx}`);
           }
         });
-
-        const testProvider = new JestTestProvider(resultContextMock, debugTestsMock);
         const request: any = {
           include: itemDataList.map((d) => d.item),
           profile: { kind: vscode.TestRunProfileKind.Run },
@@ -480,6 +492,7 @@ describe('JestTestProvider', () => {
 
         // a run is already created
         expect(controllerMock.createTestRun).toBeCalled();
+        const runMock = controllerMock.lastRunMock();
 
         itemDataList.forEach((d, idx) => {
           expect(d.scheduleTest).toBeCalled();
@@ -498,19 +511,48 @@ describe('JestTestProvider', () => {
         await p;
         expect(runMock.end).toBeCalled();
       });
+      it('if no item in request, will run test for the whole workplace', async () => {
+        expect.hasAssertions();
+
+        const testProvider = new JestTestProvider(resultContextMock, debugTestsMock);
+        workspaceRootMock.scheduleTest = jest.fn().mockReturnValue('pid');
+
+        const request: any = {
+          profile: { kind: vscode.TestRunProfileKind.Run },
+        };
+
+        const p = testProvider.runTests(request, cancelToken);
+        const runMock = controllerMock.lastRunMock();
+        expect(workspaceRootMock.scheduleTest).toBeCalledTimes(1);
+        const scheduled = workspaceRootMock.context.getScheduledTest('pid');
+        expect(scheduled.run).not.toBeUndefined();
+        scheduled.onDone();
+
+        await p;
+        expect(runMock.end).toBeCalled();
+      });
+      it('will reject run request without profile', async () => {
+        expect.hasAssertions();
+
+        const testProvider = new JestTestProvider(resultContextMock, debugTestsMock);
+        const request: any = {};
+
+        await expect(testProvider.runTests(request, cancelToken)).rejects.not.toThrow();
+        expect(workspaceRootMock.scheduleTest).toBeCalledTimes(0);
+        expect(controllerMock.createTestRun).not.toBeCalled();
+      });
     });
     it('will report error for testItems not supporting the given runProfile', async () => {
       expect.hasAssertions();
-      itemDataList = [0, 1, 2].map((n) => {
-        const data = setupTestItemData(`item-${n}`, false, true);
-        data.scheduleTest.mockReturnValueOnce(`pid-${n}`);
-        if (n === 1) {
-          data.canRun.mockReturnValue(false);
-        }
-        return data;
-      });
 
       const testProvider = new JestTestProvider(resultContextMock, debugTestsMock);
+      const itemDataList = setupItemData(workspaceRootMock.context);
+      itemDataList.forEach((d, idx) => {
+        d.scheduleTest.mockReturnValueOnce(`pid-${idx}`);
+        if (idx === 1) {
+          d.canRun.mockReturnValue(false);
+        }
+      });
       const request: any = {
         include: itemDataList.map((d) => d.item),
         profile: { kind: vscode.TestRunProfileKind.Run },
@@ -520,6 +562,7 @@ describe('JestTestProvider', () => {
       const p = testProvider.runTests(request, cancelToken);
 
       expect(controllerMock.createTestRun).toBeCalled();
+      const runMock = controllerMock.lastRunMock();
 
       itemDataList.forEach((d, idx) => {
         if (idx !== 1) {

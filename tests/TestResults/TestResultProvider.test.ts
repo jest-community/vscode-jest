@@ -39,6 +39,7 @@ import { TestResultProvider } from '../../src/TestResults/TestResultProvider';
 import { TestReconciliationState } from '../../src/TestResults';
 import * as helper from '../test-helper';
 import { ItBlock, TestAssertionStatus, TestReconcilationState } from 'jest-editor-support';
+import * as match from '../../src/TestResults/match-by-context';
 
 const setupMockParse = (itBlocks: ItBlock[]) => {
   mockParse.mockReturnValue({
@@ -133,13 +134,19 @@ describe('TestResultProvider', () => {
       throw new Error('forced error');
     });
   };
-  const forceMatchError = (sut: any) => {
+  const forceMatchError = () => {
+    jest.spyOn(match, 'matchTestAssertions').mockImplementation(() => {
+      throw new Error('forced error');
+    });
+  };
+  const forceMatchResultError = (sut: any) => {
     sut.matchResults = jest.fn(() => {
       throw new Error('forced error');
     });
   };
   beforeEach(() => {
     jest.resetAllMocks();
+    jest.restoreAllMocks();
     mockTestReconciler.mockReturnValue(mockReconciler);
     (vscode.EventEmitter as jest.Mocked<any>) = jest.fn().mockImplementation(() => {
       return { fire: jest.fn() };
@@ -319,7 +326,10 @@ describe('TestResultProvider', () => {
     });
 
     describe('safe-guard warnings', () => {
-      const consoleWarning = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      let consoleWarning;
+      beforeEach(() => {
+        consoleWarning = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      });
 
       it('report warning if match failed', () => {
         const assertions = [
@@ -544,24 +554,31 @@ describe('TestResultProvider', () => {
         sut.updateTestFileList(['test-file']);
       };
       it.each`
-        desc                         | setup              | expectedResults  | isFail
-        ${'parse failed'}            | ${forceParseError} | ${'throw error'} | ${true}
-        ${'match failed'}            | ${forceMatchError} | ${'throw error'} | ${true}
-        ${'file is not a test file'} | ${setupForNonTest} | ${undefined}     | ${false}
+        desc                         | setup                    | expectedResults  | statsChange
+        ${'parse failed'}            | ${forceParseError}       | ${'throw error'} | ${'fail'}
+        ${'matchResult failed'}      | ${forceMatchResultError} | ${'throw error'} | ${'fail'}
+        ${'match failed'}            | ${forceMatchError}       | ${'Unknown'}     | ${'unknown'}
+        ${'file is not a test file'} | ${setupForNonTest}       | ${undefined}     | ${undefined}
       `(
-        'when $desc => returns $expectedResults, stats.fail = $isFail',
-        ({ setup, expectedResults, isFail }) => {
+        'when $desc => returns $expectedResults, stats changed: $statsChange',
+        ({ setup, expectedResults, statsChange }) => {
           const sut = newProviderWithData([makeData(itBlocks, assertions, 'whatever')]);
           setup(sut);
 
           const stats = sut.getTestSuiteStats();
           if (expectedResults === 'throw error') {
             expect(() => sut.getResults('whatever')).toThrow();
+          } else if (expectedResults === 'Unknown') {
+            expect(
+              sut.getResults('whatever').every((r) => r.status === expectedResults)
+            ).toBeTruthy();
           } else {
             expect(sut.getResults('whatever')).toEqual(expectedResults);
           }
-          if (isFail) {
+          if (statsChange === 'fail') {
             expect(sut.getTestSuiteStats()).toEqual({ ...stats, fail: stats.fail + 1, unknown: 0 });
+          } else if (statsChange === 'unknown') {
+            expect(sut.getTestSuiteStats()).toEqual({ ...stats, unknown: 1 });
           } else {
             expect(sut.getTestSuiteStats()).toEqual(stats);
           }
@@ -597,6 +614,14 @@ describe('TestResultProvider', () => {
     it('returns undefined for non-test file', () => {
       sut.updateTestFileList(['test-file']);
       expect(sut.getSortedResults('source file')).toBeUndefined();
+    });
+    it('returns undefined if no result for the file yet', () => {
+      const getResultSpy = jest.spyOn(sut, 'getResults');
+      getResultSpy.mockImplementation(() => {
+        return undefined;
+      });
+      sut.updateTestFileList(['test-file']);
+      expect(sut.getSortedResults('test-file')).toBeUndefined();
     });
     it('can throw for internal error for once', () => {
       forceParseError();
@@ -707,6 +732,30 @@ describe('TestResultProvider', () => {
       sut.updateTestFileList(undefined);
       sut.getResults('whatever');
       expect(mockParse).toHaveBeenCalled();
+    });
+    describe('getTestList', () => {
+      it('returns testFiles if available', () => {
+        const sut = new TestResultProvider();
+        expect(sut.getTestList()).toEqual([]);
+
+        sut.updateTestFileList(['file1']);
+        expect(sut.getTestList()).toEqual(['file1']);
+
+        mockReconciler.updateFileWithJestStatus.mockReturnValueOnce([{ file: 'file2' }]);
+        sut.updateTestResults({} as any);
+        expect(sut.getTestList()).toEqual(['file1']);
+
+        sut.updateTestFileList([]);
+        expect(sut.getTestList()).toEqual([]);
+      });
+      it('otherwise returns cached result file list', () => {
+        const sut = new TestResultProvider();
+        expect(sut.getTestList()).toEqual([]);
+
+        mockReconciler.updateFileWithJestStatus.mockReturnValueOnce([{ file: 'file2' }]);
+        sut.updateTestResults({} as any);
+        expect(sut.getTestList()).toEqual(['file2']);
+      });
     });
   });
   describe('JestExtSessionAware', () => {

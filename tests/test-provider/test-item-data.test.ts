@@ -1,8 +1,10 @@
 jest.unmock('../../src/test-provider/test-item-data');
+jest.unmock('../../src/test-provider/test-provider-context');
 jest.unmock('../../src/appGlobals');
 jest.unmock('../../src/TestResults/match-node');
 jest.unmock('../../src/TestResults/match-by-context');
 jest.unmock('../test-helper');
+jest.unmock('./test-helper');
 
 jest.mock('path', () => {
   let sep = '/';
@@ -30,76 +32,15 @@ import {
   WorkspaceRoot,
 } from '../../src/test-provider/test-item-data';
 import * as helper from '../test-helper';
+import { JestTestProviderContext } from '../../src/test-provider/test-provider-context';
 import { buildAssertionContainer } from '../../src/TestResults/match-by-context';
 import * as path from 'path';
+import { mockController, mockResultContext, mockRun } from './test-helper';
 
 const mockPathSep = (newSep: string) => {
   (path as jest.Mocked<any>).setSep(newSep);
   (path as jest.Mocked<any>).sep = newSep;
 };
-class TestItemCollectionMock {
-  private items: vscode.TestItem[] = [];
-  get size(): number {
-    return this.items.length;
-  }
-  replace = (list: vscode.TestItem[]) => {
-    this.items = list;
-  };
-  get = (id: string) => this.items.find((i) => i.id === id);
-  add = (item: vscode.TestItem) => {
-    this.items.push(item);
-  };
-  delete = (id: string) => {
-    this.items = this.items.filter((i) => i.id !== id);
-  };
-  forEach = (f: (item: vscode.TestItem) => void) => {
-    this.items.forEach(f);
-  };
-}
-const makeTestItem = (id, label, uri, parent?: any) => {
-  const item = {
-    id,
-    label,
-    parent,
-    uri,
-    children: new TestItemCollectionMock(),
-    dispose: jest.fn(),
-  };
-  item.dispose.mockImplementation(() => parent?.children.delete(id));
-  parent?.children.add(item);
-  return item;
-};
-let itemMap: Map<object, object>;
-
-const mockContext = () => ({
-  loggingFactory: { create: jest.fn().mockReturnValue(jest.fn()) },
-  autoRun: { isWatch: true },
-  workspace: { name: 'ws-1', uri: { fsPath: '/ws-1' } },
-  testResolveProvider: {
-    events: {
-      testListUpdated: { event: jest.fn().mockReturnValue({ dispose: jest.fn() }) },
-      testSuiteChanged: { event: jest.fn().mockReturnValue({ dispose: jest.fn() }) },
-    },
-    getTestList: jest.fn().mockReturnValue([]),
-    isTestFile: jest.fn().mockReturnValue('yes'),
-    getTestSuiteResult: jest.fn().mockReturnValue({}),
-  },
-  session: {
-    scheduleProcess: jest.fn(),
-  },
-  getData: jest.fn().mockImplementation((item) => itemMap.get(item)),
-  getChildData: jest.fn().mockImplementation((item, cId) => {
-    const cItem = item.children.get(cId);
-    return itemMap.get(cItem);
-  }),
-  createTestItem: jest.fn().mockImplementation((id, label, uri, data, parent) => {
-    const item = makeTestItem(id, label, uri, parent);
-    itemMap.set(item, data);
-    return item;
-  }),
-  createTestRun: jest.fn(),
-  getScheduledTest: jest.fn(),
-});
 
 const getChildItem = (item: vscode.TestItem, partialId: string): vscode.TestItem | undefined => {
   let found;
@@ -110,29 +51,17 @@ const getChildItem = (item: vscode.TestItem, partialId: string): vscode.TestItem
   });
   return found;
 };
-const createRun = (request, name) => {
-  return {
-    request,
-    name,
-    started: jest.fn(),
-    passed: jest.fn(),
-    skipped: jest.fn(),
-    errored: jest.fn(),
-    failed: jest.fn(),
-    appendOutput: jest.fn(),
-    end: jest.fn(),
-  };
-};
 
 describe('test-item-data', () => {
-  let runMock;
   let context;
   let profile;
+  let runMock;
+  let controllerMock;
 
   beforeEach(() => {
-    runMock = createRun({}, 'runMock');
-    itemMap = new Map();
-    context = mockContext();
+    controllerMock = mockController();
+    context = new JestTestProviderContext(mockResultContext('ws-1'), controllerMock);
+    runMock = context.createTestRun();
     profile = { kind: vscode.TestRunProfileKind.Run };
 
     vscode.Uri.joinPath = jest
@@ -149,7 +78,7 @@ describe('test-item-data', () => {
           '/ws-1/src/b.test.ts',
           '/ws-1/src/app/app.test.ts',
         ];
-        context.testResolveProvider.getTestList.mockReturnValue(testFiles);
+        context.ext.testResolveProvider.getTestList.mockReturnValue(testFiles);
         const wsRoot = new WorkspaceRoot(context);
         wsRoot.discoverTest(runMock);
 
@@ -177,15 +106,11 @@ describe('test-item-data', () => {
           });
         });
 
-        // will listen to external events
-        expect(context.testResolveProvider.events.testListUpdated.event).toBeCalledTimes(1);
-        expect(context.testResolveProvider.events.testSuiteChanged.event).toBeCalledTimes(1);
-
         //verify state after the discovery
         expect(wsRoot.item.canResolveChildren).toBe(false);
       });
       it('if no testFiles yet, should still turn off canResolveChildren', () => {
-        context.testResolveProvider.getTestList.mockReturnValue([]);
+        context.ext.testResolveProvider.getTestList.mockReturnValue([]);
         const wsRoot = new WorkspaceRoot(context);
         wsRoot.discoverTest(runMock);
         expect(wsRoot.item.children.size).toEqual(0);
@@ -195,8 +120,8 @@ describe('test-item-data', () => {
         const a1 = helper.makeAssertion('test-1', 'KnownSuccess', [], [1, 0]);
         const assertionContainer = buildAssertionContainer([a1]);
         const testFiles = ['/ws-1/a.test.ts'];
-        context.testResolveProvider.getTestList.mockReturnValue(testFiles);
-        context.testResolveProvider.getTestSuiteResult.mockReturnValue({
+        context.ext.testResolveProvider.getTestList.mockReturnValue(testFiles);
+        context.ext.testResolveProvider.getTestSuiteResult.mockReturnValue({
           status: 'KnownSuccess',
           assertionContainer,
         });
@@ -204,6 +129,37 @@ describe('test-item-data', () => {
         wsRoot.discoverTest(runMock);
         const docItem = wsRoot.item.children.get(testFiles[0]);
         expect(docItem.children.size).toEqual(0);
+      });
+      it('will remove folder item if no test file exist any more', () => {
+        const a1 = helper.makeAssertion('test-1', 'KnownSuccess', [], [1, 0]);
+        const assertionContainer = buildAssertionContainer([a1]);
+        const testFiles = ['/ws-1/tests1/a.test.ts', '/ws-1/tests2/b.test.ts'];
+        context.ext.testResolveProvider.getTestList.mockReturnValue(testFiles);
+        context.ext.testResolveProvider.getTestSuiteResult.mockReturnValue({
+          status: 'KnownSuccess',
+          assertionContainer,
+        });
+        const wsRoot = new WorkspaceRoot(context);
+
+        // first discover all test files and build the tree
+        wsRoot.discoverTest(runMock);
+        expect(wsRoot.item.children.size).toEqual(2);
+        let folderItem = wsRoot.item.children.get('/ws-1/tests1');
+        let docItem = folderItem.children.get(testFiles[0]);
+        expect(docItem).not.toBeUndefined();
+        folderItem = wsRoot.item.children.get('/ws-1/tests2');
+        docItem = folderItem.children.get(testFiles[1]);
+        expect(docItem).not.toBeUndefined();
+
+        // now remove '/ws-1/tests2/b.test.ts' and rediscover
+        testFiles.length = 1;
+        wsRoot.discoverTest(runMock);
+        expect(wsRoot.item.children.size).toEqual(1);
+        folderItem = wsRoot.item.children.get('/ws-1/tests2');
+        expect(folderItem).toBeUndefined();
+        folderItem = wsRoot.item.children.get('/ws-1/tests1');
+        docItem = folderItem.children.get(testFiles[0]);
+        expect(docItem).not.toBeUndefined();
       });
 
       describe('external events can trigger test tree changes', () => {
@@ -215,22 +171,37 @@ describe('test-item-data', () => {
             message,
           }));
         });
+        it('register for test result events', () => {
+          new WorkspaceRoot(context);
+          expect(context.ext.testResolveProvider.events.testListUpdated.event).toHaveBeenCalled();
+          expect(context.ext.testResolveProvider.events.testSuiteChanged.event).toHaveBeenCalled();
+        });
+        it('unregister test result events upon dispose', () => {
+          const wsRoot = new WorkspaceRoot(context);
+
+          const l1 =
+            context.ext.testResolveProvider.events.testListUpdated.event.mock.results[0].value;
+          const l2 =
+            context.ext.testResolveProvider.events.testSuiteChanged.event.mock.results[0].value;
+          wsRoot.dispose();
+          expect(l1.dispose).toBeCalled();
+          expect(l2.dispose).toBeCalled();
+        });
         describe('when testFile list is changed', () => {
           it('testListUpdated event will be fired', () => {
             const wsRoot = new WorkspaceRoot(context);
-            context.testResolveProvider.getTestList.mockReturnValueOnce([]);
+            context.ext.testResolveProvider.getTestList.mockReturnValueOnce([]);
             wsRoot.discoverTest(runMock);
             expect(wsRoot.item.children.size).toBe(0);
 
             // invoke testListUpdated event listener
-            let runMock2;
-            context.createTestRun.mockImplementation((request, name) => {
-              runMock2 = createRun(request, name);
-              return runMock2;
-            });
-            context.testResolveProvider.events.testListUpdated.event.mock.calls[0][0]([
+            context.ext.testResolveProvider.events.testListUpdated.event.mock.calls[0][0]([
               '/ws-1/a.test.ts',
             ]);
+            // should have created a new run
+            const runMock2 = controllerMock.lastRunMock();
+            expect(runMock2).not.toBe(runMock);
+
             expect(wsRoot.item.children.size).toBe(1);
             const docItem = getChildItem(wsRoot.item, 'a.test.ts');
             expect(docItem).not.toBeUndefined();
@@ -239,7 +210,7 @@ describe('test-item-data', () => {
         });
         describe('when testSuiteChanged.assertions-updated event filed', () => {
           it('all item data will be updated accordingly', () => {
-            context.testResolveProvider.getTestList.mockReturnValueOnce([]);
+            context.ext.testResolveProvider.getTestList.mockReturnValueOnce([]);
 
             const wsRoot = new WorkspaceRoot(context);
             wsRoot.discoverTest(runMock);
@@ -256,20 +227,15 @@ describe('test-item-data', () => {
               message: 'test file failed',
               assertionContainer,
             };
-            context.testResolveProvider.getTestSuiteResult.mockReturnValue(testSuiteResult);
-
-            let runMock2;
-            context.createTestRun.mockImplementationOnce((request, name) => {
-              runMock2 = createRun(request, name);
-              return runMock2;
-            });
+            context.ext.testResolveProvider.getTestSuiteResult.mockReturnValue(testSuiteResult);
 
             // triggers testSuiteChanged event listener
-            context.testResolveProvider.events.testSuiteChanged.event.mock.calls[0][0]({
+            context.ext.testResolveProvider.events.testSuiteChanged.event.mock.calls[0][0]({
               type: 'assertions-updated',
               pid: 'whatever',
               files: ['/ws-1/a.test.ts'],
             });
+            const runMock2 = controllerMock.lastRunMock();
             expect(wsRoot.item.children.size).toBe(1);
             const docItem = getChildItem(wsRoot.item, 'a.test.ts');
             expect(docItem).not.toBeUndefined();
@@ -289,28 +255,25 @@ describe('test-item-data', () => {
         describe('when testSuiteChanged.result-matched event fired', () => {
           it('test data range will be updated accordingly', () => {
             // assertion should be discovered prior
-            context.testResolveProvider.getTestList.mockReturnValueOnce(['/ws-1/a.test.ts']);
+            context.ext.testResolveProvider.getTestList.mockReturnValueOnce(['/ws-1/a.test.ts']);
 
             const a1 = helper.makeAssertion('test-a', 'KnownFail', ['desc-1'], [1, 0]);
             const assertionContainer = buildAssertionContainer([a1]);
-            context.testResolveProvider.getTestSuiteResult.mockReturnValue({
+            context.ext.testResolveProvider.getTestSuiteResult.mockReturnValue({
               status: 'KnownFail',
               assertionContainer,
-            });
-            context.createTestRun.mockImplementationOnce((request, name) => {
-              return createRun(request, name);
             });
 
             const wsRoot = new WorkspaceRoot(context);
             wsRoot.discoverTest(runMock);
-            expect(context.testResolveProvider.getTestSuiteResult).toHaveBeenCalledTimes(1);
+            expect(context.ext.testResolveProvider.getTestSuiteResult).toHaveBeenCalledTimes(1);
 
             expect(wsRoot.item.children.size).toBe(1);
             const docItem = getChildItem(wsRoot.item, 'a.test.ts');
             expect(docItem.children.size).toEqual(0);
 
             // after jest test run, result suite should be updated and test block should be populated
-            context.testResolveProvider.events.testSuiteChanged.event.mock.calls[0][0]({
+            context.ext.testResolveProvider.events.testSuiteChanged.event.mock.calls[0][0]({
               type: 'assertions-updated',
               pid: 'whatever',
               files: ['/ws-1/a.test.ts'],
@@ -321,9 +284,9 @@ describe('test-item-data', () => {
             const tItem = getChildItem(dItem, 'test-a');
             expect(tItem.range).toEqual({ args: [1, 0, 1, 0] });
 
-            expect(context.testResolveProvider.getTestSuiteResult).toHaveBeenCalled();
-            context.createTestRun.mockClear();
-            context.testResolveProvider.getTestSuiteResult.mockClear();
+            expect(context.ext.testResolveProvider.getTestSuiteResult).toHaveBeenCalled();
+            controllerMock.createTestRun.mockClear();
+            context.ext.testResolveProvider.getTestSuiteResult.mockClear();
 
             // after match, the assertion nodes would have updated range
             const descNode = assertionContainer.childContainers[0];
@@ -338,14 +301,14 @@ describe('test-item-data', () => {
             };
 
             // triggers testSuiteChanged event listener
-            context.testResolveProvider.events.testSuiteChanged.event.mock.calls[0][0]({
+            context.ext.testResolveProvider.events.testSuiteChanged.event.mock.calls[0][0]({
               type: 'result-matched',
               file: '/ws-1/a.test.ts',
             });
 
             // no run should be created as we are not changing any test item tree
-            expect(context.createTestRun).not.toBeCalled();
-            expect(context.testResolveProvider.getTestSuiteResult).not.toHaveBeenCalled();
+            expect(controllerMock.createTestRun).not.toBeCalled();
+            expect(context.ext.testResolveProvider.getTestSuiteResult).not.toHaveBeenCalled();
 
             // expect the item's range has picked up the updated nodes
             expect(dItem.range).toEqual({
@@ -373,11 +336,11 @@ describe('test-item-data', () => {
         const a1 = helper.makeAssertion('test-1', 'KnownSuccess', [], [1, 0]);
         const assertionContainer = buildAssertionContainer([a1]);
         const uri: any = { fsPath: '/ws-1/a.test.ts' };
-        context.testResolveProvider.getTestSuiteResult.mockReturnValue({
+        context.ext.testResolveProvider.getTestSuiteResult.mockReturnValue({
           status: 'KnownSuccess',
           assertionContainer,
         });
-        const parentItem: any = makeTestItem('ws-1', 'ws-1', uri);
+        const parentItem: any = controllerMock.createTestItem('ws-1', 'ws-1', uri);
         const docRoot = new TestDocumentRoot(context, uri, parentItem);
         docRoot.discoverTest(runMock);
         expect(docRoot.item.children.size).toEqual(1);
@@ -385,25 +348,48 @@ describe('test-item-data', () => {
         expect(tData instanceof TestData).toBeTruthy();
         expect(runMock.passed).toBeCalledWith(tData.item);
       });
+      it('if no test suite result yet, children list is empty', () => {
+        context.ext.testResolveProvider.getTestSuiteResult.mockReturnValue(undefined);
+        const uri: any = { fsPath: '/ws-1/a.test.ts' };
+        const parentItem: any = controllerMock.createTestItem('ws-1', 'ws-1', uri);
+        const docRoot = new TestDocumentRoot(context, uri, parentItem);
+        docRoot.discoverTest(runMock);
+        expect(docRoot.item.children.size).toEqual(0);
+      });
+    });
+    it('FolderData do not support discoverTest', () => {
+      controllerMock.createTestRun.mockClear();
+      const parentItem: any = controllerMock.createTestItem('parent', 'parent', {});
+      const folder = new FolderData(context, 'whatever', parentItem);
+      expect(folder.item.canResolveChildren).toBe(false);
+      expect((folder as any).discoverTest).toBeUndefined();
+    });
+    it('TestData do not support discoverTest', () => {
+      const parentItem: any = controllerMock.createTestItem('parent', 'parent', {});
+      const node: any = { fullName: 'a test', attrs: {}, data: {} };
+
+      const test = new TestData(context, { fsPath: 'whatever' } as any, node, parentItem);
+      expect(test.item.canResolveChildren).toBe(false);
+      expect((test as any).discoverTest).toBeUndefined();
     });
   });
   describe('when TestExplorer triggered runTest', () => {
     describe('Each item data can schedule a test run within the session', () => {
       beforeEach(() => {
-        context.session.scheduleProcess.mockReturnValue('pid');
+        context.ext.session.scheduleProcess.mockReturnValue('pid');
       });
       it('WorkspaceRoot runs all tests in the workspace', () => {
         const wsRoot = new WorkspaceRoot(context);
         expect(wsRoot.scheduleTest(runMock, profile)).toEqual('pid');
-        expect(context.session.scheduleProcess).toBeCalledWith(
+        expect(context.ext.session.scheduleProcess).toBeCalledWith(
           expect.objectContaining({ type: 'all-tests' })
         );
       });
       it('FolderData runs all tests inside the folder', () => {
-        const parent: any = makeTestItem('ws-1', 'ws-1', { fsPath: '/ws-1' }, undefined);
+        const parent: any = controllerMock.createTestItem('ws-1', 'ws-1', { fsPath: '/ws-1' });
         const folderData = new FolderData(context, 'folder', parent);
         expect(folderData.scheduleTest(runMock, profile)).toEqual('pid');
-        expect(context.session.scheduleProcess).toBeCalledWith(
+        expect(context.ext.session.scheduleProcess).toBeCalledWith(
           expect.objectContaining({
             type: 'by-file-pattern',
             testFileNamePattern: '/ws-1/folder',
@@ -411,10 +397,10 @@ describe('test-item-data', () => {
         );
       });
       it('DocumentRoot runs all tests in the test file', () => {
-        const parent: any = makeTestItem('ws-1', 'ws-1', { fsPath: '/ws-1' }, undefined);
+        const parent: any = controllerMock.createTestItem('ws-1', 'ws-1', { fsPath: '/ws-1' });
         const docRoot = new TestDocumentRoot(context, { fsPath: '/ws-1/a.test.ts' } as any, parent);
         expect(docRoot.scheduleTest(runMock, profile)).toEqual('pid');
-        expect(context.session.scheduleProcess).toBeCalledWith(
+        expect(context.ext.session.scheduleProcess).toBeCalledWith(
           expect.objectContaining({
             type: 'by-file',
             testFileName: '/ws-1/a.test.ts',
@@ -424,10 +410,10 @@ describe('test-item-data', () => {
       it('TestData runs the specific test pattern', () => {
         const uri: any = { fsPath: '/ws-1/a.test.ts' };
         const node: any = { fullName: 'a test', attrs: {}, data: {} };
-        const parent: any = makeTestItem('ws-1', 'ws-1', uri, undefined);
+        const parent: any = controllerMock.createTestItem('ws-1', 'ws-1', uri);
         const tData = new TestData(context, uri, node, parent);
         expect(tData.scheduleTest(runMock, profile)).toEqual('pid');
-        expect(context.session.scheduleProcess).toBeCalledWith(
+        expect(context.ext.session.scheduleProcess).toBeCalledWith(
           expect.objectContaining({
             type: 'by-file-test-pattern',
             testFileNamePattern: uri.fsPath,
@@ -435,38 +421,54 @@ describe('test-item-data', () => {
           })
         );
       });
+      it('reports error if failed to schedule test', () => {
+        context.ext.session.scheduleProcess.mockReturnValue(undefined);
+        const parent: any = controllerMock.createTestItem('ws-1', 'ws-1', { fsPath: '/ws-1' });
+        const docRoot = new TestDocumentRoot(context, { fsPath: '/ws-1/a.test.ts' } as any, parent);
+        expect(docRoot.scheduleTest(runMock, profile)).toBeUndefined();
+        expect(runMock.errored).toBeCalledWith(docRoot.item, expect.anything());
+      });
+      it('can tunnel and convert session output to run output', () => {
+        const parent: any = controllerMock.createTestItem('ws-1', 'ws-1', { fsPath: '/ws-1' });
+        const folderData = new FolderData(context, 'folder', parent);
+        expect(folderData.scheduleTest(runMock, profile)).toEqual('pid');
+        const request = context.ext.session.scheduleProcess.mock.calls[0][0];
+
+        request.context.output.append('first line\n');
+        expect(runMock.appendOutput).toBeCalledWith('first line\r\n');
+
+        request.context.output.appendLine('second line');
+        expect(runMock.appendOutput).toBeCalledWith('second line\r\n');
+      });
     });
     describe('when test is completed', () => {
       beforeEach(() => {});
       it('WorkspaceRoot will receive testSuiteChanged event', () => {
         const file = '/ws-1/a.test.ts';
-        context.testResolveProvider.getTestList.mockReturnValueOnce([file]);
+        context.ext.testResolveProvider.getTestList.mockReturnValueOnce([file]);
         const wsRoot = new WorkspaceRoot(context);
-        wsRoot.discoverTest(runMock);
-        const dItem = getChildItem(wsRoot.item, 'a.test.ts');
-        expect(dItem.children.size).toBe(0);
-        expect(dItem.canResolveChildren).toBe(true);
 
-        //previous scheduled test can be retrieved via context, mocking the data
-        const scheduledTest = { run: createRun({}, 'pid'), onDone: jest.fn(), cancelToken: {} };
-        context.getScheduledTest.mockReturnValue(scheduledTest);
+        // simulate a runTest schedule triggered the suite changes
+        const scheduledTest = { run: mockRun({}, 'pid'), onDone: jest.fn(), cancelToken: {} };
+        context.setScheduledTest('pid', scheduledTest);
 
         // mocking test results
         const a1 = helper.makeAssertion('test-a', 'KnownSuccess', [], [1, 0]);
         const assertionContainer = buildAssertionContainer([a1]);
-        context.testResolveProvider.getTestSuiteResult.mockReturnValue({
+        context.ext.testResolveProvider.getTestSuiteResult.mockReturnValue({
           status: 'KnownSuccess',
           assertionContainer,
         });
 
         // triggers testSuiteChanged event listener
-        context.testResolveProvider.events.testSuiteChanged.event.mock.calls[0][0]({
+        context.ext.testResolveProvider.events.testSuiteChanged.event.mock.calls[0][0]({
           type: 'assertions-updated',
           pid: 'pid',
           files: [file],
         });
 
         // the previous scheduled run should be used to update state
+        const dItem = getChildItem(wsRoot.item, 'a.test.ts');
         expect(dItem.children.size).toBe(1);
         const tItem = getChildItem(dItem, 'test-a');
         expect(scheduledTest.run.passed).toBeCalledWith(tItem);
@@ -480,7 +482,7 @@ describe('test-item-data', () => {
     describe('works in windows', () => {
       beforeEach(() => {
         mockPathSep('\\');
-        context.workspace = { name: 'ws-1', uri: { fsPath: 'c:\\ws-1' } };
+        context.ext.workspace = { name: 'ws-1', uri: { fsPath: 'c:\\ws-1' } };
         vscode.Uri.joinPath = jest
           .fn()
           .mockImplementation((uri, p) => ({ fsPath: `${uri.fsPath}\\${p}` }));
@@ -495,7 +497,7 @@ describe('test-item-data', () => {
           'c:\\ws-1\\src\\b.test.ts',
           'c:\\ws-1\\src\\app\\app.test.ts',
         ];
-        context.testResolveProvider.getTestList.mockReturnValue(testFiles);
+        context.ext.testResolveProvider.getTestList.mockReturnValue(testFiles);
         const wsRoot = new WorkspaceRoot(context);
         wsRoot.discoverTest(runMock);
 
@@ -529,9 +531,8 @@ describe('test-item-data', () => {
       let testFiles;
       beforeEach(() => {
         // establish baseline with 3 test files
-        context.createTestRun.mockImplementation(createRun);
         testFiles = ['/ws-1/src/a.test.ts', '/ws-1/src/b.test.ts', '/ws-1/src/app/app.test.ts'];
-        context.testResolveProvider.getTestList.mockReturnValue(testFiles);
+        context.ext.testResolveProvider.getTestList.mockReturnValue(testFiles);
         wsRoot = new WorkspaceRoot(context);
         wsRoot.discoverTest(runMock);
       });
@@ -540,7 +541,9 @@ describe('test-item-data', () => {
         const withNewTestFiles = [...testFiles, '/ws-1/tests/d.test.ts', '/ws-1/src/c.test.ts'];
 
         // trigger event
-        context.testResolveProvider.events.testListUpdated.event.mock.calls[0][0](withNewTestFiles);
+        context.ext.testResolveProvider.events.testListUpdated.event.mock.calls[0][0](
+          withNewTestFiles
+        );
 
         //should see the new files in the tree
         expect(wsRoot.item.children.size).toEqual(2);
@@ -557,7 +560,9 @@ describe('test-item-data', () => {
         const withoutAppFiles = [testFiles[0], testFiles[1]];
 
         // trigger event
-        context.testResolveProvider.events.testListUpdated.event.mock.calls[0][0](withoutAppFiles);
+        context.ext.testResolveProvider.events.testListUpdated.event.mock.calls[0][0](
+          withoutAppFiles
+        );
 
         //should see the new files in the tree
         expect(wsRoot.item.children.size).toEqual(1);
@@ -575,7 +580,7 @@ describe('test-item-data', () => {
         const withRenamed = ['/ws-1/c.test.ts', testFiles[1], testFiles[2]];
 
         // trigger event
-        context.testResolveProvider.events.testListUpdated.event.mock.calls[0][0](withRenamed);
+        context.ext.testResolveProvider.events.testListUpdated.event.mock.calls[0][0](withRenamed);
 
         //should see the new files in the tree
         expect(wsRoot.item.children.size).toEqual(2);
@@ -595,10 +600,10 @@ describe('test-item-data', () => {
     let docRoot, a1;
     beforeEach(() => {
       // setup baseline with 1 describe block and 1 test
-      const parent: any = makeTestItem('ws-1', 'ws-1', { fsPath: '/ws-1' }, undefined);
+      const parent: any = controllerMock.createTestItem('ws-1', 'ws-1', { fsPath: '/ws-1' });
       a1 = helper.makeAssertion('test-1', 'KnownSuccess', ['desc-1'], [1, 0]);
       const assertionContainer = buildAssertionContainer([a1]);
-      context.testResolveProvider.getTestSuiteResult.mockReturnValueOnce({
+      context.ext.testResolveProvider.getTestSuiteResult.mockReturnValueOnce({
         status: 'KnownSuccess',
         assertionContainer,
       });
@@ -609,12 +614,12 @@ describe('test-item-data', () => {
       // add test-2 under existing desc-1 and a new desc-2/test-3
       const a2 = helper.makeAssertion('test-2', 'KnownFail', ['desc-1'], [5, 0]);
       const a3 = helper.makeAssertion('test-3', 'KnownSuccess', ['desc-2'], [10, 0]);
-      const assertionContainer = buildAssertionContainer([a1, a2, a3]);
-      context.testResolveProvider.getTestSuiteResult.mockReturnValue({
+      const a4 = helper.makeAssertion('test-4', 'KnownTodo', ['desc-2'], [15, 0]);
+      const assertionContainer = buildAssertionContainer([a1, a2, a3, a4]);
+      context.ext.testResolveProvider.getTestSuiteResult.mockReturnValue({
         status: 'KnownFail',
         assertionContainer,
       });
-      runMock = createRun({}, 'runMock');
       docRoot.discoverTest(runMock);
       expect(docRoot.item.children.size).toEqual(2);
       expect(runMock.failed).toBeCalledWith(docRoot.item, expect.anything());
@@ -634,33 +639,107 @@ describe('test-item-data', () => {
       const t3 = getChildItem(desc2, 'desc-2 test-3');
       expect(t3).not.toBeUndefined();
       expect(runMock.passed).toBeCalledWith(t3);
+
+      const t4 = getChildItem(desc2, 'desc-2 test-4');
+      expect(t4).not.toBeUndefined();
+      expect(runMock.skipped).toBeCalledWith(t4);
     });
     it('delete', () => {
       // delete the only test -1
       const assertionContainer = buildAssertionContainer([]);
-      context.testResolveProvider.getTestSuiteResult.mockReturnValueOnce({
+      context.ext.testResolveProvider.getTestSuiteResult.mockReturnValueOnce({
         status: 'Unknown',
         assertionContainer,
       });
-      runMock = createRun({}, 'runMock');
       docRoot.discoverTest(runMock);
       expect(docRoot.item.children.size).toEqual(0);
     });
     it('rename', () => {
       const a2 = helper.makeAssertion('test-2', 'KnownFail', [], [1, 0]);
       const assertionContainer = buildAssertionContainer([a2]);
-      context.testResolveProvider.getTestSuiteResult.mockReturnValue({
+      context.ext.testResolveProvider.getTestSuiteResult.mockReturnValue({
         status: 'KnownFail',
         assertionContainer,
       });
 
-      runMock = createRun({}, 'runMock');
       docRoot.discoverTest(runMock);
       expect(docRoot.item.children.size).toEqual(1);
       expect(runMock.failed).toBeCalledWith(docRoot.item, expect.anything());
       const t2 = getChildItem(docRoot.item, 'test-2');
       expect(t2).not.toBeUndefined();
       expect(runMock.failed).toBeCalledWith(t2, expect.anything());
+    });
+    describe('duplicate test names', () => {
+      const setup = (assertions) => {
+        runMock.passed.mockClear();
+        runMock.failed.mockClear();
+
+        const assertionContainer = buildAssertionContainer(assertions);
+        context.ext.testResolveProvider.getTestSuiteResult.mockReturnValue({
+          status: 'KnownFail',
+          assertionContainer,
+        });
+      };
+      it('can still be inserted to test tree with unique ids', () => {
+        const a2 = helper.makeAssertion('test-1', 'KnownFail', [], [1, 0]);
+        const a3 = helper.makeAssertion('test-1', 'KnownSuccess', [], [1, 0]);
+        setup([a2, a3]);
+        docRoot.discoverTest(runMock);
+        expect(docRoot.item.children.size).toEqual(2);
+        expect(runMock.failed).toBeCalledWith(docRoot.item, expect.anything());
+        const items = [];
+        docRoot.item.children.forEach((item) => items.push(item));
+        expect(items[0].id).not.toEqual(items[1].id);
+        items.forEach((item) => expect(item.id).toEqual(expect.stringContaining('test-1')));
+
+        expect(runMock.failed).toBeCalledTimes(2);
+        expect(runMock.passed).toBeCalledTimes(1);
+      });
+      it('can still sync with test results', () => {
+        const a2 = helper.makeAssertion('test-1', 'KnownFail', [], [1, 0]);
+        const a3 = helper.makeAssertion('test-1', 'KnownSuccess', [], [1, 0]);
+        setup([a2, a3]);
+        docRoot.discoverTest(runMock);
+        expect(runMock.failed).toBeCalledTimes(2);
+        expect(runMock.passed).toBeCalledTimes(1);
+
+        //update a2 status
+        a2.status = 'KnownSuccess';
+        setup([a2, a3]);
+        docRoot.discoverTest(runMock);
+        expect(runMock.failed).toBeCalledTimes(1);
+        expect(runMock.passed).toBeCalledTimes(2);
+      });
+    });
+  });
+  describe('canRun', () => {
+    it('watch-mode workspace does not support Run profile', () => {
+      const wsRoot = new WorkspaceRoot(context);
+      const profile: any = { kind: vscode.TestRunProfileKind.Run };
+
+      context.ext.autoRun.isWatch = true;
+      expect(wsRoot.canRun(profile)).toBeFalsy();
+
+      context.ext.autoRun.isWatch = false;
+      expect(wsRoot.canRun(profile)).toBeTruthy();
+    });
+    it('only TestData support Debug profile', () => {
+      const wsRoot = new WorkspaceRoot(context);
+      const profile: any = { kind: vscode.TestRunProfileKind.Debug };
+      expect(wsRoot.canRun(profile)).toBeFalsy();
+
+      const parentItem: any = controllerMock.createTestItem('parent', 'parent', {});
+      const node: any = { fullName: 'a test', attrs: {}, data: {} };
+
+      const test = new TestData(context, { fsPath: 'whatever' } as any, node, parentItem);
+      expect(test.canRun(profile)).toBeTruthy();
+
+      expect(test.getDebugInfo()).toEqual({ fileName: 'whatever', testNamePattern: node.fullName });
+    });
+    it('any other profile kind is not supported at this point', () => {
+      const wsRoot = new WorkspaceRoot(context);
+      const profile: any = { kind: vscode.TestRunProfileKind.Coverage };
+      expect(wsRoot.canRun(profile)).toBeFalsy();
     });
   });
 });

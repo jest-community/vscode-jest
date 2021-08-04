@@ -1,16 +1,29 @@
 import * as vscode from 'vscode';
-import { TestItemDataType } from './types';
+import { JestExtResultContext, ScheduledTest, TestItemData } from './types';
 
-export class TestItemStore {
-  private testItemData: WeakMap<vscode.TestItem, TestItemDataType>;
-  constructor(private readonly controller: vscode.TestController) {
+/**
+ * provide context information from JestExt and test provider state:
+ * 1. TestData <-> TestItem
+ * 2. ScheduledTest: pid <-> ScheduledTest
+ *
+ * as well as factory functions to create TestItem and TestRun that could impact the state
+ */
+export class JestTestProviderContext {
+  private testItemData: WeakMap<vscode.TestItem, TestItemData>;
+  private scheduledTests: Map<string, ScheduledTest>;
+
+  constructor(
+    public readonly ext: JestExtResultContext,
+    private readonly controller: vscode.TestController
+  ) {
     this.testItemData = new WeakMap();
+    this.scheduledTests = new Map();
   }
   createTestItem = (
     id: string,
     label: string,
     uri: vscode.Uri,
-    data: TestItemDataType,
+    data: TestItemData,
     parent?: vscode.TestItem
   ): vscode.TestItem => {
     const testItem = this.controller.createTestItem(id, label, uri);
@@ -28,7 +41,7 @@ export class TestItemStore {
    * @param childId id of the child item
    * @returns data of the child item, casting for easy usage but does not guarentee type safety.
    */
-  getChildData = <T extends TestItemDataType = TestItemDataType>(
+  getChildData = <T extends TestItemData = TestItemData>(
     item: vscode.TestItem,
     childId: string
   ): T | undefined => {
@@ -44,10 +57,16 @@ export class TestItemStore {
    *
    * @returns casting for easy usage but does not guarentee type safety
    */
-  getData = <T extends TestItemDataType = TestItemDataType>(
-    item: vscode.TestItem
-  ): T | undefined => {
+  getData = <T extends TestItemData>(item: vscode.TestItem): T | undefined => {
     // Note: casting for easy usage but does not guarentee type safety.
     return this.testItemData.get(item) as T | undefined;
+  };
+
+  createTestRun = (request: vscode.TestRunRequest, name: string): vscode.TestRun => {
+    return this.controller.createTestRun(request, name);
+  };
+  getScheduledTest = (pid: string): ScheduledTest | undefined => this.scheduledTests.get(pid);
+  setScheduledTest = (pid: string, test: ScheduledTest): void => {
+    this.scheduledTests.set(pid, test);
   };
 }

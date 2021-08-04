@@ -97,7 +97,7 @@ export class TestResultProvider implements JestExtSessionAware {
     if (this.testFiles && this.testFiles.length > 0) {
       return this.testFiles;
     }
-    return Object.keys(this.testSuites);
+    return Array.from(this.testSuites.keys());
   }
 
   isTestFile(fileName: string): 'yes' | 'no' | 'unknown' {

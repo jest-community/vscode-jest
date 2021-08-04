@@ -1098,10 +1098,17 @@ describe('JestExt', () => {
   describe('deactivate', () => {
     it('will stop session and output channel', () => {
       const sut = newJestExt();
-      sut.activate();
       sut.deactivate();
       expect(mockProcessSession.stop).toBeCalledTimes(1);
       expect(channelStub.dispose).toBeCalledTimes(1);
+    });
+    it('will dispose test provider is initialized', () => {
+      const sut = newJestExt();
+      sut.deactivate();
+      expect(mockTestProvider.dispose).not.toBeCalledTimes(1);
+
+      sut.activate();
+      sut.deactivate();
       expect(mockTestProvider.dispose).toBeCalledTimes(1);
     });
   });
