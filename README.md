@@ -5,11 +5,12 @@
 ---
 ## v4.1 with Test Explorer <!-- omit in toc -->
 
-Test explorer is one of the highly requested feature for this extension. We are excited that vscode released a new set of testing API and a brand new test explorer in v1.59 (2021 July release), and with `vscode-jest` v4.1 we can finally offer this feature via the official vscode test explorer 🎉
+Test explorer is one of the highly requested feature for this extension. Last year vscode announced the plan for the official test explorer and we have been trying out the new proposed API since. Now the vscode test explore is live (2021 July release - v1.59), we are excited to release `v4.1` and our users can finally tap into this great new UI experience 🎉
+
 
 ![test-explore.png](images/test-explorer.png)
 
-Note the test explorer is new and some of the features are still missing (see [How to use test explore](#how-to-use-the-test-explorer) for more details), we will continue to improve it as vscode test api/explorer evolves. As usual, please do not hesitate to ask questions or file issues, have fun!
+Please note, the test explorer is new and some of the features might be missing or imperfect (see [How to use test explore](#how-to-use-the-test-explorer) for more details), nevertheless, we will continue to improve it. Please do not hesitate to ask questions or file issues, thanks and have fun!
 
 <details>
 <summary>v4 Release</summary>
@@ -214,11 +215,12 @@ Users with `vscode` v1.59 and `vscode-jest` v4.1 and up will start to see tests 
 ![test-explore.png](images/test-explorer.png)
 
 However, test explorer is new and some features are still work-in-progress or not available yet:
-- can't turn on/off coverage yet
-- not able to accurately indicate run/debug eligibility on the item level, this means you might not be able to run/debug some items through run/debug buttons.
+- can't turn on/off coverage yet (pending on vscode API change)
+- not able to accurately indicate run/debug eligibility on the item level, this means you might not be able to run/debug some items through run/debug buttons. (pending on vscode API change)
+- the tests stats on the top of the explorer might not be accurate, especially for multiroot workspaces. (pending on vscode fix))
 - for watch-mode workspaces, the run button is turned off since tests will be automatically executed.
 - debug can only be exeuted for the test blocks, not on the file or folder level. 
-- the tests stats on the top of the explorer might not be accurate, especially for multiroot workspaces.
+- currently not displaying test error in the new test-message-view, as it doesn't seem to add much to the existing hovering-based message view.
 
 ## Customization
 ### Settings
