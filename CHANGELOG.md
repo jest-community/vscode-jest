@@ -7,7 +7,8 @@ Bug-fixes within the same version aren't needed
 * fix type warning in settings.json when using the `{"autoRun": "off"}` option - @tommy
 * fix couple of test result matching issues - @connectdotz (#737)
 * update match API/attributes to support up-coming vscode test provider API. - @connectdotz (#737)
-
+* support official vscode Test Explorer and API in v1.59 - @connectdotz (#742)
+* 
 -->
 
 ### 4.0.3
