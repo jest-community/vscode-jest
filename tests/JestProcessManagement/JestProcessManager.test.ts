@@ -92,8 +92,8 @@ describe('JestProcessManager', () => {
       it('can run process after scheduling', () => {
         expect.hasAssertions();
 
-        const pid = pm.scheduleJestProcess(request);
-        expect(pid).toEqual(expect.stringContaining(request.type));
+        const process = pm.scheduleJestProcess(request);
+        expect(process.id).toEqual(expect.stringContaining(request.type));
         expect(jestProcessMock).toBeCalledTimes(1);
         expect(mockProcess.start).toBeCalledTimes(1);
 
@@ -164,12 +164,12 @@ describe('JestProcessManager', () => {
 
         // submit first request
         let scheduled = pm.scheduleJestProcess(requests[0]);
-        expect(scheduled).toContain(requests[0].type);
+        expect(scheduled.id).toContain(requests[0].type);
         expect(getState(pm, processes[0])).toEqual({ inQ: true, started: true, qSize: 1 });
 
         // schedule 2nd request while first one is still running
         scheduled = pm.scheduleJestProcess(requests[1]);
-        expect(scheduled).toContain(requests[1].type);
+        expect(scheduled.id).toContain(requests[1].type);
         expect(getState(pm, processes[0])).toEqual({ inQ: true, started: true, qSize: 2 });
         expect(getState(pm, processes[1])).toEqual({ inQ: true, started: false, qSize: 2 });
 
@@ -180,7 +180,7 @@ describe('JestProcessManager', () => {
 
         // schedule the 3rd request
         scheduled = pm.scheduleJestProcess(requests[2]);
-        expect(scheduled).toContain(requests[2].type);
+        expect(scheduled.id).toContain(requests[2].type);
         expect(getState(pm, processes[1])).toEqual({ inQ: true, started: true, qSize: 2 });
 
         //   getState(pm, processes[1], { 'in-queue': true, started: true, 'queue-length': 1 })
@@ -235,20 +235,20 @@ describe('JestProcessManager', () => {
 
         // submit first request
         let scheduled = pm.scheduleJestProcess(requests[0]);
-        expect(scheduled).toContain(requests[0].type);
+        expect(scheduled.id).toContain(requests[0].type);
         expect(getState(pm, processes[0])).toEqual({ inQ: true, started: true, qSize: 1 });
 
         // schedule 2nd request while first one is still running
         scheduled = pm.scheduleJestProcess(requests[1]);
-        expect(scheduled).toContain(requests[1].type);
+        expect(scheduled.id).toContain(requests[1].type);
         expect(getState(pm, processes[0])).toEqual({ inQ: true, started: true, qSize: 2 });
         expect(getState(pm, processes[1])).toEqual({ inQ: true, started: true, qSize: 2 });
 
         // schedule 3rd and 4th requests
         scheduled = pm.scheduleJestProcess(requests[2]);
-        expect(scheduled).toContain(requests[2].type);
+        expect(scheduled.id).toContain(requests[2].type);
         scheduled = pm.scheduleJestProcess(requests[3]);
-        expect(scheduled).toContain(requests[3].type);
+        expect(scheduled.id).toContain(requests[3].type);
         expect(getState(pm, processes[0])).toEqual({ inQ: true, started: true, qSize: 4 });
         expect(getState(pm, processes[1])).toEqual({ inQ: true, started: true, qSize: 4 });
         expect(getState(pm, processes[2])).toEqual({ inQ: true, started: true, qSize: 4 });
@@ -277,7 +277,7 @@ describe('JestProcessManager', () => {
         // schedule the first process
         let scheduled = pm.scheduleJestProcess(request);
         // the process is running
-        expect(scheduled).toContain(request.type);
+        expect(scheduled).toEqual(process);
         expect(getState(pm, process)).toEqual({ inQ: true, started: true, qSize: 1 });
 
         // schedule the 2nd process which should failed because the process is already running
@@ -305,7 +305,7 @@ describe('JestProcessManager', () => {
         // schedule the 2nd process which should succeed because there is no pending process
         const process2 = mockJestProcess(request);
         scheduled = pm.scheduleJestProcess(request);
-        expect(scheduled).toContain(request.type);
+        expect(scheduled.id).toContain(request.type);
         expect(getState(pm, process2)).toEqual({ inQ: true, started: false, qSize: 2 });
 
         // but the 3rd one would fail because the 2nd process is pending and thus can not add any more
@@ -336,19 +336,19 @@ describe('JestProcessManager', () => {
         // schedule the first process: no problem
         const process1 = mockJestProcess(request1);
         let scheduled = await pm.scheduleJestProcess(request1);
-        expect(scheduled).toContain(request1.type);
+        expect(scheduled.id).toContain(request1.type);
         expect(getState(pm, process1)).toEqual({ inQ: true, started: true, qSize: 1 });
 
         // schedule the 2nd process with request1, fine because process1 is running, not pending
         const process2 = mockJestProcess(request1);
         scheduled = await pm.scheduleJestProcess(request1);
-        expect(scheduled).toContain(request1.type);
+        expect(scheduled.id).toContain(request1.type);
         expect(getState(pm, process2)).toEqual({ inQ: true, started: false, qSize: 2 });
 
         // schedule the 3rd one with different request2, should be fine, no dup
         const process3 = mockJestProcess(request2);
         scheduled = await pm.scheduleJestProcess(request2);
-        expect(scheduled).toContain(request2.type);
+        expect(scheduled.id).toContain(request2.type);
         expect(getState(pm, process3)).toEqual({ inQ: true, started: false, qSize: 3 });
 
         // schedule the 4th one with request1, should be rejected as there is already one request pending

@@ -5,6 +5,7 @@ import {
   ScheduleStrategy,
   requestString,
   QueueType,
+  JestProcessInfo,
 } from '../JestProcessManagement';
 import { JestTestProcessType } from '../Settings';
 import { RunTestListener, ListTestFileListener } from './process-listeners';
@@ -22,11 +23,7 @@ export type InternalRequestBase =
       baseRequest: JestProcessRequest;
     };
 
-export interface JestExtProcessContextOverride {
-  context?: Partial<JestExtProcessContext>;
-}
-export type JestExtRequestType = (JestProcessRequestBase | InternalRequestBase) &
-  JestExtProcessContextOverride;
+export type JestExtRequestType = JestProcessRequestBase | InternalRequestBase;
 
 const ProcessScheduleStrategy: Record<JestTestProcessType, ScheduleStrategy> = {
   // abort if there is already an pending request
@@ -63,11 +60,15 @@ const ProcessScheduleStrategy: Record<JestTestProcessType, ScheduleStrategy> = {
 export interface ProcessSession {
   start: () => Promise<void>;
   stop: () => Promise<void>;
-  scheduleProcess: (request: JestExtRequestType) => string | undefined;
+  scheduleProcess: <T extends JestExtRequestType = JestExtRequestType>(
+    request: T
+  ) => JestProcessInfo | undefined;
 }
 export interface ListenerSession {
   context: JestExtProcessContext;
-  scheduleProcess: (request: JestExtRequestType) => string | undefined;
+  scheduleProcess: <T extends JestExtRequestType = JestExtRequestType>(
+    request: T
+  ) => JestProcessInfo | undefined;
 }
 
 export const createProcessSession = (context: JestExtProcessContext): ProcessSession => {
@@ -79,16 +80,22 @@ export const createProcessSession = (context: JestExtProcessContext): ProcessSes
    * @param type
    * @param stoppRunning if true, will stop and remove processes with the same type, default is false
    */
-  const scheduleProcess = (request: JestExtRequestType): string | undefined => {
-    context.output.appendLine(`scheduling jest process: ${request.type}`);
+  const scheduleProcess = <T extends JestExtRequestType = JestExtRequestType>(
+    request: T
+  ): JestProcessInfo | undefined => {
+    logging('debug', `scheduling jest process: ${request.type}`);
     try {
       const pRequest = createProcessRequest(request);
 
-      const pid = jestProcessManager.scheduleJestProcess(pRequest);
-      if (!pid) {
+      const process = jestProcessManager.scheduleJestProcess(pRequest);
+      if (!process) {
         logging('warn', `request schedule failed: ${requestString(pRequest)}`);
+        return;
       }
-      return pid;
+
+      context.onRunEvent.fire({ type: 'scheduled', process });
+
+      return process;
     } catch (e) {
       logging('warn', '[scheduleProcess] failed to create/schedule process for ', request);
       return;
@@ -123,9 +130,7 @@ export const createProcessSession = (context: JestExtProcessContext): ProcessSes
   };
 
   const createProcessRequest = (request: JestExtRequestType): JestProcessRequest => {
-    const lSession = request.context
-      ? { ...listenerSession, context: { ...listenerSession.context, ...request.context } }
-      : listenerSession;
+    const lSession = listenerSession;
     switch (request.type) {
       case 'all-tests':
       case 'watch-all-tests':
@@ -173,7 +178,7 @@ export const createProcessSession = (context: JestExtProcessContext): ProcessSes
    */
   const start = async (): Promise<void> => {
     if (jestProcessManager.numberOfProcesses() > 0) {
-      context.output.appendLine(`${jestProcessManager.numberOfProcesses} queued, stoping all...`);
+      logging('debug', `${jestProcessManager.numberOfProcesses} queued, stoping all...`);
       await stop();
     }
 

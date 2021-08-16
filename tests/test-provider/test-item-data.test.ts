@@ -35,7 +35,7 @@ import * as helper from '../test-helper';
 import { JestTestProviderContext } from '../../src/test-provider/test-provider-context';
 import { buildAssertionContainer } from '../../src/TestResults/match-by-context';
 import * as path from 'path';
-import { mockController, mockResultContext, mockRun } from './test-helper';
+import { mockController, mockExtExplorerContext } from './test-helper';
 
 const mockPathSep = (newSep: string) => {
   (path as jest.Mocked<any>).setSep(newSep);
@@ -52,17 +52,27 @@ const getChildItem = (item: vscode.TestItem, partialId: string): vscode.TestItem
   return found;
 };
 
+const mockScheduleProcess = (context) => {
+  const process = { id: 'whatever', request: { type: 'all-tests' } };
+  context.ext.session.scheduleProcess.mockImplementation((request) => {
+    process.request = request;
+    return process;
+  });
+  return process;
+};
 describe('test-item-data', () => {
   let context;
   let profile;
   let runMock;
   let controllerMock;
+  let resolveMock;
 
   beforeEach(() => {
     controllerMock = mockController();
-    context = new JestTestProviderContext(mockResultContext('ws-1'), controllerMock);
+    context = new JestTestProviderContext(mockExtExplorerContext('ws-1'), controllerMock);
     runMock = context.createTestRun();
     profile = { kind: vscode.TestRunProfileKind.Run };
+    resolveMock = jest.fn();
 
     vscode.Uri.joinPath = jest
       .fn()
@@ -171,21 +181,25 @@ describe('test-item-data', () => {
             message,
           }));
         });
+        it('register for jest session run events', () => {
+          new WorkspaceRoot(context);
+          expect(context.ext.sessionEvents.onRunEvent.event).toHaveBeenCalled();
+        });
         it('register for test result events', () => {
           new WorkspaceRoot(context);
           expect(context.ext.testResolveProvider.events.testListUpdated.event).toHaveBeenCalled();
           expect(context.ext.testResolveProvider.events.testSuiteChanged.event).toHaveBeenCalled();
         });
-        it('unregister test result events upon dispose', () => {
+        it('unregister events upon dispose', () => {
           const wsRoot = new WorkspaceRoot(context);
 
-          const l1 =
-            context.ext.testResolveProvider.events.testListUpdated.event.mock.results[0].value;
-          const l2 =
-            context.ext.testResolveProvider.events.testSuiteChanged.event.mock.results[0].value;
+          const listeners = [
+            context.ext.testResolveProvider.events.testListUpdated.event.mock.results[0].value,
+            context.ext.testResolveProvider.events.testSuiteChanged.event.mock.results[0].value,
+            context.ext.sessionEvents.onRunEvent.event.mock.results[0].value,
+          ];
           wsRoot.dispose();
-          expect(l1.dispose).toBeCalled();
-          expect(l2.dispose).toBeCalled();
+          listeners.forEach((l) => expect(l.dispose).toBeCalled());
         });
         describe('when testFile list is changed', () => {
           it('testListUpdated event will be fired', () => {
@@ -232,7 +246,7 @@ describe('test-item-data', () => {
             // triggers testSuiteChanged event listener
             context.ext.testResolveProvider.events.testSuiteChanged.event.mock.calls[0][0]({
               type: 'assertions-updated',
-              pid: 'whatever',
+              process: { id: 'whatever', request: {} },
               files: ['/ws-1/a.test.ts'],
             });
             const runMock2 = controllerMock.lastRunMock();
@@ -275,7 +289,7 @@ describe('test-item-data', () => {
             // after jest test run, result suite should be updated and test block should be populated
             context.ext.testResolveProvider.events.testSuiteChanged.event.mock.calls[0][0]({
               type: 'assertions-updated',
-              pid: 'whatever',
+              process: { id: 'whatever', request: {} },
               files: ['/ws-1/a.test.ts'],
             });
             expect(docItem.children.size).toEqual(1);
@@ -376,104 +390,189 @@ describe('test-item-data', () => {
   describe('when TestExplorer triggered runTest', () => {
     describe('Each item data can schedule a test run within the session', () => {
       beforeEach(() => {
-        context.ext.session.scheduleProcess.mockReturnValue('pid');
+        context.ext.session.scheduleProcess.mockReturnValue({ id: 'pid' });
       });
-      it('WorkspaceRoot runs all tests in the workspace', () => {
-        const wsRoot = new WorkspaceRoot(context);
-        expect(wsRoot.scheduleTest(runMock, profile)).toEqual('pid');
-        expect(context.ext.session.scheduleProcess).toBeCalledWith(
-          expect.objectContaining({ type: 'all-tests' })
-        );
-      });
-      it('FolderData runs all tests inside the folder', () => {
-        const parent: any = controllerMock.createTestItem('ws-1', 'ws-1', { fsPath: '/ws-1' });
-        const folderData = new FolderData(context, 'folder', parent);
-        expect(folderData.scheduleTest(runMock, profile)).toEqual('pid');
-        expect(context.ext.session.scheduleProcess).toBeCalledWith(
-          expect.objectContaining({
-            type: 'by-file-pattern',
-            testFileNamePattern: '/ws-1/folder',
-          })
-        );
-      });
-      it('DocumentRoot runs all tests in the test file', () => {
-        const parent: any = controllerMock.createTestItem('ws-1', 'ws-1', { fsPath: '/ws-1' });
-        const docRoot = new TestDocumentRoot(context, { fsPath: '/ws-1/a.test.ts' } as any, parent);
-        expect(docRoot.scheduleTest(runMock, profile)).toEqual('pid');
-        expect(context.ext.session.scheduleProcess).toBeCalledWith(
-          expect.objectContaining({
-            type: 'by-file',
-            testFileName: '/ws-1/a.test.ts',
-          })
-        );
-      });
-      it('TestData runs the specific test pattern', () => {
-        const uri: any = { fsPath: '/ws-1/a.test.ts' };
-        const node: any = { fullName: 'a test', attrs: {}, data: {} };
-        const parent: any = controllerMock.createTestItem('ws-1', 'ws-1', uri);
-        const tData = new TestData(context, uri, node, parent);
-        expect(tData.scheduleTest(runMock, profile)).toEqual('pid');
-        expect(context.ext.session.scheduleProcess).toBeCalledWith(
-          expect.objectContaining({
-            type: 'by-file-test-pattern',
-            testFileNamePattern: uri.fsPath,
-            testNamePattern: 'a test',
-          })
-        );
+      describe('run request', () => {
+        it('WorkspaceRoot runs all tests in the workspace', () => {
+          const wsRoot = new WorkspaceRoot(context);
+          wsRoot.scheduleTest(runMock, resolveMock, profile);
+          expect(context.ext.session.scheduleProcess).toBeCalledWith(
+            expect.objectContaining({ type: 'all-tests' })
+          );
+        });
+        it('FolderData runs all tests inside the folder', () => {
+          const parent: any = controllerMock.createTestItem('ws-1', 'ws-1', { fsPath: '/ws-1' });
+          const folderData = new FolderData(context, 'folder', parent);
+          folderData.scheduleTest(runMock, resolveMock, profile);
+          expect(context.ext.session.scheduleProcess).toBeCalledWith(
+            expect.objectContaining({
+              type: 'by-file-pattern',
+              testFileNamePattern: '/ws-1/folder',
+            })
+          );
+        });
+        it('DocumentRoot runs all tests in the test file', () => {
+          const parent: any = controllerMock.createTestItem('ws-1', 'ws-1', { fsPath: '/ws-1' });
+          const docRoot = new TestDocumentRoot(
+            context,
+            { fsPath: '/ws-1/a.test.ts' } as any,
+            parent
+          );
+          docRoot.scheduleTest(runMock, resolveMock, profile);
+          expect(context.ext.session.scheduleProcess).toBeCalledWith(
+            expect.objectContaining({
+              type: 'by-file',
+              testFileName: '/ws-1/a.test.ts',
+            })
+          );
+        });
+        it('TestData runs the specific test pattern', () => {
+          const uri: any = { fsPath: '/ws-1/a.test.ts' };
+          const node: any = { fullName: 'a test', attrs: {}, data: {} };
+          const parent: any = controllerMock.createTestItem('ws-1', 'ws-1', uri);
+          const tData = new TestData(context, uri, node, parent);
+          tData.scheduleTest(runMock, resolveMock, profile);
+          expect(context.ext.session.scheduleProcess).toBeCalledWith(
+            expect.objectContaining({
+              type: 'by-file-test-pattern',
+              testFileNamePattern: uri.fsPath,
+              testNamePattern: 'a test',
+            })
+          );
+        });
       });
       it('reports error if failed to schedule test', () => {
         context.ext.session.scheduleProcess.mockReturnValue(undefined);
         const parent: any = controllerMock.createTestItem('ws-1', 'ws-1', { fsPath: '/ws-1' });
         const docRoot = new TestDocumentRoot(context, { fsPath: '/ws-1/a.test.ts' } as any, parent);
-        expect(docRoot.scheduleTest(runMock, profile)).toBeUndefined();
+        expect(docRoot.scheduleTest(runMock, resolveMock, profile)).toBeUndefined();
         expect(runMock.errored).toBeCalledWith(docRoot.item, expect.anything());
+        expect(resolveMock).toBeCalled();
       });
-      it('can tunnel and convert session output to run output', () => {
+      it('schedule request will contain itemRun info', () => {
         const parent: any = controllerMock.createTestItem('ws-1', 'ws-1', { fsPath: '/ws-1' });
         const folderData = new FolderData(context, 'folder', parent);
-        expect(folderData.scheduleTest(runMock, profile)).toEqual('pid');
+        folderData.scheduleTest(runMock, resolveMock, profile);
         const request = context.ext.session.scheduleProcess.mock.calls[0][0];
 
-        request.context.output.append('first line\n');
-        expect(runMock.appendOutput).toBeCalledWith('first line\r\n');
-
-        request.context.output.appendLine('second line');
-        expect(runMock.appendOutput).toBeCalledWith('second line\r\n');
+        expect(request.itemRun.run).toEqual(runMock);
+        expect(request.itemRun.item).toEqual(folderData.item);
       });
     });
-    describe('when test is completed', () => {
-      beforeEach(() => {});
-      it('WorkspaceRoot will receive testSuiteChanged event', () => {
+
+    describe('when test result is ready', () => {
+      describe('WorkspaceRoot will receive testSuiteChanged event to update item status', () => {
         const file = '/ws-1/a.test.ts';
-        context.ext.testResolveProvider.getTestList.mockReturnValueOnce([file]);
-        const wsRoot = new WorkspaceRoot(context);
+        let wsRoot;
+        beforeEach(() => {
+          context.ext.testResolveProvider.getTestList.mockReturnValueOnce([file]);
+          wsRoot = new WorkspaceRoot(context);
 
-        // simulate a runTest schedule triggered the suite changes
-        const scheduledTest = { run: mockRun({}, 'pid'), onDone: jest.fn(), cancelToken: {} };
-        context.setScheduledTest('pid', scheduledTest);
-
-        // mocking test results
-        const a1 = helper.makeAssertion('test-a', 'KnownSuccess', [], [1, 0]);
-        const assertionContainer = buildAssertionContainer([a1]);
-        context.ext.testResolveProvider.getTestSuiteResult.mockReturnValue({
-          status: 'KnownSuccess',
-          assertionContainer,
+          // mocking test results
+          const a1 = helper.makeAssertion('test-a', 'KnownSuccess', [], [1, 0]);
+          const a2 = helper.makeAssertion('test-b', 'KnownFail', [], [10, 0], { line: 13 });
+          const assertionContainer = buildAssertionContainer([a1, a2]);
+          context.ext.testResolveProvider.getTestSuiteResult.mockReturnValue({
+            status: 'KnownFail',
+            assertionContainer,
+          });
+          controllerMock.createTestRun.mockClear();
         });
+        it('for extension-managed runs, the run will be closed after processing the result', () => {
+          // simulate an external run has been scheduled
+          const process = { id: 'whatever', request: { type: 'all-tests' } };
+          const onRunEvent = context.ext.sessionEvents.onRunEvent.event.mock.calls[0][0];
+          onRunEvent({ type: 'scheduled', process });
+          expect(controllerMock.createTestRun).toHaveBeenCalledTimes(1);
 
-        // triggers testSuiteChanged event listener
-        context.ext.testResolveProvider.events.testSuiteChanged.event.mock.calls[0][0]({
-          type: 'assertions-updated',
-          pid: 'pid',
-          files: [file],
+          // triggers testSuiteChanged event listener
+          context.ext.testResolveProvider.events.testSuiteChanged.event.mock.calls[0][0]({
+            type: 'assertions-updated',
+            process,
+            files: [file],
+          });
+
+          // no new run should be created the previous scheduled run should be used to update state
+          expect(controllerMock.createTestRun).toHaveBeenCalledTimes(1);
+          const runMock = controllerMock.lastRunMock();
+
+          const dItem = getChildItem(wsRoot.item, 'a.test.ts');
+          expect(dItem.children.size).toBe(2);
+          const tItem = getChildItem(dItem, 'test-a');
+          expect(runMock.passed).toBeCalledWith(tItem);
+          expect(runMock.end).toBeCalledTimes(1);
         });
+        it('for exporer-triggered runs, only the resolve function will be invoked', () => {
+          // simulate an internal run has been scheduled
+          const process = mockScheduleProcess(context);
 
-        // the previous scheduled run should be used to update state
-        const dItem = getChildItem(wsRoot.item, 'a.test.ts');
-        expect(dItem.children.size).toBe(1);
-        const tItem = getChildItem(dItem, 'test-a');
-        expect(scheduledTest.run.passed).toBeCalledWith(tItem);
-        // the complete handler should be invoked
-        expect(scheduledTest.onDone).toBeCalled();
+          const runMock = context.createTestRun();
+          const resolve = jest.fn();
+          controllerMock.createTestRun.mockClear();
+
+          wsRoot.scheduleTest(runMock, resolve, {});
+
+          expect(controllerMock.createTestRun).not.toHaveBeenCalled();
+
+          const onRunEvent = context.ext.sessionEvents.onRunEvent.event.mock.calls[0][0];
+          onRunEvent({ type: 'scheduled', process });
+          expect(controllerMock.createTestRun).toHaveBeenCalledTimes(0);
+
+          // triggers testSuiteChanged event listener
+          context.ext.testResolveProvider.events.testSuiteChanged.event.mock.calls[0][0]({
+            type: 'assertions-updated',
+            process,
+            files: [file],
+          });
+
+          // no new run should be created the previous scheduled run should be used to update state
+          expect(controllerMock.createTestRun).toHaveBeenCalledTimes(0);
+
+          const dItem = getChildItem(wsRoot.item, 'a.test.ts');
+          expect(dItem.children.size).toBe(2);
+          const tItem = getChildItem(dItem, 'test-a');
+          expect(runMock.passed).toBeCalledWith(tItem);
+          expect(runMock.end).not.toBeCalled();
+          expect(resolve).toBeCalled();
+        });
+        it.each`
+          config                                       | hasLocation
+          ${{ enabled: false }}                        | ${false}
+          ${{ enabled: true }}                         | ${false}
+          ${{ enabled: true, showInlineError: false }} | ${false}
+          ${{ enabled: true, showInlineError: true }}  | ${true}
+        `(
+          'testExplore config $config, will show inline error? $hasLocation',
+          ({ config, hasLocation }) => {
+            context.ext.settings = { testExplorer: config };
+            const process = mockScheduleProcess(context);
+
+            controllerMock.createTestRun.mockClear();
+
+            wsRoot.scheduleTest(runMock, resolveMock, {});
+
+            // triggers testSuiteChanged event listener
+            context.ext.testResolveProvider.events.testSuiteChanged.event.mock.calls[0][0]({
+              type: 'assertions-updated',
+              process,
+              files: [file],
+            });
+
+            // no new run should be created the previous scheduled run should be used to update state
+            expect(controllerMock.createTestRun).toHaveBeenCalledTimes(0);
+
+            const dItem = getChildItem(wsRoot.item, 'a.test.ts');
+            const tItem = getChildItem(dItem, 'test-b');
+            expect(runMock.failed).toBeCalledWith(tItem, expect.anything());
+            if (hasLocation) {
+              expect(vscode.Location).toHaveBeenCalledWith(tItem.uri, expect.anything());
+              expect(vscode.Position).toBeCalledTimes(2);
+              expect(vscode.Position).toBeCalledWith(12, 0);
+            } else {
+              expect(vscode.Location).not.toBeCalled();
+            }
+          }
+        );
       });
     });
   });
@@ -740,6 +839,299 @@ describe('test-item-data', () => {
       const wsRoot = new WorkspaceRoot(context);
       const profile: any = { kind: vscode.TestRunProfileKind.Coverage };
       expect(wsRoot.canRun(profile)).toBeFalsy();
+    });
+  });
+  describe('WorkspaceRoot listens to jest run events', () => {
+    it('register and dispose event listeners', () => {
+      const wsRoot = new WorkspaceRoot(context);
+      expect(context.ext.sessionEvents.onRunEvent.event).toBeCalled();
+      wsRoot.dispose();
+      const listener = context.ext.sessionEvents.onRunEvent.event.mock.results[0].value;
+      expect(listener.dispose).toBeCalled();
+    });
+    it('can adapt raw output to terminal output', () => {
+      const coloredText = '[2K[1G[1myarn run v1.22.5[22m\n';
+      const converted = '[2K[1G[1myarn run v1.22.5[22m\r\n';
+      context.appendOutput(coloredText, runMock);
+      expect(runMock.appendOutput).toBeCalledWith(expect.stringContaining(converted));
+    });
+    describe('handle run event to set item status and show output', () => {
+      const file = '/ws-1/tests/a.test.ts';
+      let wsRoot, folder, testFile, testBlock, onRunEvent;
+      beforeEach(() => {
+        context.ext.testResolveProvider.getTestList.mockReturnValueOnce([file]);
+        wsRoot = new WorkspaceRoot(context);
+        onRunEvent = context.ext.sessionEvents.onRunEvent.event.mock.calls[0][0];
+
+        // build out the test item tree
+        const a1 = helper.makeAssertion('test-a', 'KnownFail', [], [1, 0], {
+          message: 'test error',
+        });
+        const assertionContainer = buildAssertionContainer([a1]);
+        const testSuiteResult: any = {
+          status: 'KnownFail',
+          message: 'test file failed',
+          assertionContainer,
+        };
+        context.ext.testResolveProvider.getTestSuiteResult.mockReturnValue(testSuiteResult);
+
+        // triggers testSuiteChanged event listener
+        context.ext.testResolveProvider.events.testSuiteChanged.event.mock.calls[0][0]({
+          type: 'assertions-updated',
+          process: { id: 'whatever', request: {} },
+          files: [file],
+        });
+
+        folder = getChildItem(wsRoot.item, 'tests');
+        testFile = getChildItem(folder, 'a.test.ts');
+        testBlock = getChildItem(testFile, 'test-a');
+      });
+      describe('explorer-triggered runs', () => {
+        const setup = (type: string) => {
+          const getItem = () => {
+            switch (type) {
+              case 'workspace':
+                return wsRoot.item;
+              case 'folder':
+                return folder;
+              case 'testFile':
+                return testFile;
+              case 'testBlock':
+                return testBlock;
+            }
+          };
+          const item = getItem();
+          const data = context.getData(item);
+          data.scheduleTest(runMock, resolveMock, profile);
+          controllerMock.createTestRun.mockClear();
+
+          return item;
+        };
+        let process;
+        beforeEach(() => {
+          process = mockScheduleProcess(context);
+        });
+        describe.each`
+          itemType
+          ${'workspace'}
+          ${'folder'}
+          ${'testFile'}
+          ${'testBlock'}
+        `('will use run passed from explorer throughout for $targetItem item', ({ itemType }) => {
+          it('item will be enqueued after schedule', () => {
+            const item = setup(itemType);
+            expect(process.request.itemRun.run.enqueued).toBeCalledWith(item);
+          });
+          it('item will show started when jest run started', () => {
+            const item = setup(itemType);
+
+            process.request.itemRun.run.enqueued.mockClear();
+
+            // scheduled event has no effect
+            onRunEvent({ type: 'scheduled', process });
+            expect(process.request.itemRun.run.enqueued).not.toBeCalled();
+
+            // starting the process
+            onRunEvent({ type: 'start', process });
+            expect(process.request.itemRun.item).toBe(item);
+            expect(process.request.itemRun.run.started).toBeCalledWith(item);
+
+            //will not create new run
+            expect(controllerMock.createTestRun).not.toBeCalled();
+          });
+          it.each`
+            text      | raw          | newLine      | isError      | outputText | outputNewLine | outputColor
+            ${'text'} | ${'raw'}     | ${true}      | ${false}     | ${'raw'}   | ${true}       | ${undefined}
+            ${'text'} | ${'raw'}     | ${false}     | ${undefined} | ${'raw'}   | ${false}      | ${undefined}
+            ${'text'} | ${'raw'}     | ${undefined} | ${undefined} | ${'raw'}   | ${false}      | ${undefined}
+            ${'text'} | ${'raw'}     | ${true}      | ${true}      | ${'raw'}   | ${true}       | ${'red'}
+            ${'text'} | ${undefined} | ${true}      | ${true}      | ${'text'}  | ${true}       | ${'red'}
+          `(
+            'can output process data: $text, $raw, $newLine, $isError',
+            ({ text, raw, newLine, isError, outputText, outputNewLine, outputColor }) => {
+              setup(itemType);
+              const appendOutput = jest.spyOn(context, 'appendOutput');
+
+              onRunEvent({ type: 'start', process });
+              onRunEvent({ type: 'data', process, text, raw, newLine, isError });
+
+              expect(controllerMock.createTestRun).not.toBeCalled();
+              expect(appendOutput).toBeCalledWith(
+                outputText,
+                process.request.itemRun.run,
+                outputNewLine,
+                outputColor
+              );
+            }
+          );
+          it.each([['end'], ['exit']])(
+            "will only resolve the promise and not close the run for event '%s'",
+            (eventType) => {
+              setup(itemType);
+              onRunEvent({ type: 'start', process });
+              expect(controllerMock.createTestRun).not.toBeCalled();
+              expect(process.request.itemRun.run.started).toBeCalled();
+
+              onRunEvent({ type: eventType, process });
+              expect(process.request.itemRun.run.end).not.toBeCalled();
+              expect(resolveMock).toBeCalled();
+            }
+          );
+          it('can report exit error even if run is ended', () => {
+            setup(itemType);
+
+            onRunEvent({ type: 'start', process });
+            onRunEvent({ type: 'end', process });
+
+            expect(controllerMock.createTestRun).not.toBeCalled();
+            expect(process.request.itemRun.run.end).not.toBeCalled();
+            expect(resolveMock).toBeCalled();
+
+            const error = 'something is wrong';
+            onRunEvent({ type: 'exit', error, process });
+
+            // no new run need to be created
+            expect(controllerMock.createTestRun).not.toBeCalled();
+            expect(process.request.itemRun.run.appendOutput).toBeCalledWith(
+              expect.stringContaining(error)
+            );
+          });
+        });
+      });
+      describe('extension-managed runs', () => {
+        beforeEach(() => {
+          controllerMock.createTestRun.mockClear();
+        });
+        describe.each`
+          request                                                   | withFile
+          ${{ type: 'watch-tests' }}                                | ${false}
+          ${{ type: 'watch-all-tests' }}                            | ${false}
+          ${{ type: 'all-tests' }}                                  | ${false}
+          ${{ type: 'by-file', testFileName: file }}                | ${true}
+          ${{ type: 'by-file-pattern', testFileNamePattern: file }} | ${true}
+        `('will create a new run and use it throughout: $request', ({ request, withFile }) => {
+          it('if run starts before schedule returns: no enqueue', () => {
+            const process = { id: 'whatever', request };
+            const item = withFile ? testFile : wsRoot.item;
+
+            // starting the process
+            onRunEvent({ type: 'start', process });
+            const runMock = controllerMock.lastRunMock();
+            expect(runMock.started).toBeCalledWith(item);
+
+            //followed by scheduled
+            onRunEvent({ type: 'scheduled', process });
+            // run has already started, do nothing,
+            expect(runMock.enqueued).not.toBeCalled();
+
+            //will create 1 new run
+            expect(controllerMock.createTestRun).toBeCalledTimes(1);
+          });
+          it('if run starts after schedule: show enqueue then start', () => {
+            const process = { id: 'whatever', request };
+            const item = withFile ? testFile : wsRoot.item;
+
+            //scheduled
+            onRunEvent({ type: 'scheduled', process });
+            expect(controllerMock.createTestRun).toBeCalledTimes(1);
+            const runMock = controllerMock.lastRunMock();
+            expect(runMock.enqueued).toBeCalledWith(item);
+
+            // followed by starting process
+            onRunEvent({ type: 'start', process });
+            expect(runMock.started).toBeCalledWith(item);
+
+            //will create 1 new run
+            expect(controllerMock.createTestRun).toBeCalledTimes(1);
+          });
+          it.each`
+            text      | raw          | newLine      | isError      | outputText | outputNewLine | outputColor
+            ${'text'} | ${'raw'}     | ${true}      | ${false}     | ${'raw'}   | ${true}       | ${undefined}
+            ${'text'} | ${'raw'}     | ${false}     | ${undefined} | ${'raw'}   | ${false}      | ${undefined}
+            ${'text'} | ${'raw'}     | ${undefined} | ${undefined} | ${'raw'}   | ${false}      | ${undefined}
+            ${'text'} | ${'raw'}     | ${true}      | ${true}      | ${'raw'}   | ${true}       | ${'red'}
+            ${'text'} | ${undefined} | ${true}      | ${true}      | ${'text'}  | ${true}       | ${'red'}
+          `(
+            'can output process data: ($text, $raw, $newLine, $isError)',
+            ({ text, raw, newLine, isError, outputText, outputNewLine, outputColor }) => {
+              const process = { id: 'whatever', request };
+              const appendOutput = jest.spyOn(context, 'appendOutput');
+
+              onRunEvent({ type: 'start', process });
+              onRunEvent({ type: 'data', process, text, raw, newLine, isError });
+
+              expect(controllerMock.createTestRun).toBeCalledTimes(1);
+              const runMock = controllerMock.lastRunMock();
+
+              expect(appendOutput).toBeCalledWith(outputText, runMock, outputNewLine, outputColor);
+            }
+          );
+          it.each([['end'], ['exit']])("close the run on event '%s'", (eventType) => {
+            const process = { id: 'whatever', request: { type: 'all-tests' } };
+            onRunEvent({ type: 'start', process });
+            expect(controllerMock.createTestRun).toBeCalledTimes(1);
+            const runMock = controllerMock.lastRunMock();
+            expect(runMock.started).toBeCalled();
+            expect(runMock.end).not.toBeCalled();
+
+            onRunEvent({ type: eventType, process });
+            expect(runMock.end).toBeCalled();
+          });
+          it('can report exit error even if run is ended', () => {
+            const appendOutput = jest.spyOn(context, 'appendOutput');
+            const process = { id: 'whatever', request: { type: 'all-tests' } };
+            onRunEvent({ type: 'start', process });
+            onRunEvent({ type: 'end', process });
+
+            expect(controllerMock.createTestRun).toBeCalledTimes(1);
+            const runMock = controllerMock.lastRunMock();
+            expect(runMock.end).toBeCalled();
+
+            const error = 'something is wrong';
+            onRunEvent({ type: 'exit', error, process });
+
+            expect(controllerMock.createTestRun).toBeCalledTimes(2);
+            const runMock2 = controllerMock.lastRunMock();
+
+            expect(appendOutput).toBeCalledWith(
+              error,
+              runMock2,
+              expect.anything(),
+              expect.anything()
+            );
+            expect(runMock2.errored).toBeCalled();
+            expect(runMock2.end).toBeCalled();
+          });
+          it('if WorkspaceRoot is disposed before process end, all pending run will be closed', () => {
+            const process = { id: 'whatever', request: { type: 'all-tests' } };
+            onRunEvent({ type: 'start', process });
+
+            expect(controllerMock.createTestRun).toBeCalledTimes(1);
+            const runMock = controllerMock.lastRunMock();
+
+            wsRoot.dispose();
+            expect(runMock.end).toBeCalled();
+          });
+        });
+        describe('request not supported', () => {
+          it.each`
+            request
+            ${{ type: 'not-test' }}
+            ${{ type: 'by-file-test', testFileName: file, testNamePattern: 'whatever' }}
+            ${{ type: 'by-file-test-pattern', testFileNamePattern: file, testNamePattern: 'whatever' }}
+          `('$request', ({ request }) => {
+            const process = { id: 'whatever', request };
+
+            // starting the process
+            onRunEvent({ type: 'start', process });
+            const runMock = controllerMock.lastRunMock();
+            expect(runMock.started).not.toBeCalled();
+
+            //will not create any run
+            expect(controllerMock.createTestRun).not.toBeCalled();
+          });
+        });
+      });
     });
   });
 });

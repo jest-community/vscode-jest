@@ -44,6 +44,7 @@ const Uri = {
   joinPath: jest.fn(),
 };
 const Range = jest.fn();
+const Location = jest.fn();
 const Position = jest.fn();
 const Diagnostic = jest.fn();
 const ThemeIcon = jest.fn();
@@ -83,7 +84,6 @@ const TestMessage = jest.fn();
 const TestRunRequest = jest.fn();
 
 const EventEmitter = jest.fn().mockImplementation(() => {
-  console.log('in mock vscode.EventEmitter');
   return {
     fire: jest.fn(),
   };
@@ -98,6 +98,7 @@ export = {
   OverviewRulerLane,
   Uri,
   Range,
+  Location,
   Position,
   Diagnostic,
   ThemeIcon,

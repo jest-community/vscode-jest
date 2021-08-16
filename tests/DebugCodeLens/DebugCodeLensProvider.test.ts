@@ -49,7 +49,7 @@ jest.mock('vscode', () => {
 });
 
 import { DebugCodeLensProvider } from '../../src/DebugCodeLens/DebugCodeLensProvider';
-import { TestResultProvider, TestResult, TestReconciliationState } from '../../src/TestResults';
+import { TestResult, TestReconciliationState } from '../../src/TestResults';
 import { DebugCodeLens } from '../../src/DebugCodeLens/DebugCodeLens';
 import { extensionName } from '../../src/appGlobals';
 import * as vscode from 'vscode';
@@ -57,15 +57,19 @@ import { TestState } from '../../src/DebugCodeLens';
 import * as helper from '../test-helper';
 
 describe('DebugCodeLensProvider', () => {
-  const testResultProvider = new TestResultProvider();
-  const provideJestExt: any = () => ({ testResultProvider });
+  const getResultsMock = jest.fn();
+  const testResultProviderMock: any = { getResults: getResultsMock };
+  const provideJestExt: any = () => ({ testResultProvider: testResultProviderMock });
   const allTestStates = [TestState.Fail, TestState.Pass, TestState.Skip, TestState.Unknown];
+  beforeEach(() => {
+    getResultsMock.mockClear();
+  });
 
   describe('constructor()', () => {
     it('should set the jest extension provider', () => {
       const sut = new DebugCodeLensProvider(provideJestExt, allTestStates);
 
-      expect((sut as any).getJestExt().testResultProvider).toBe(testResultProvider);
+      expect((sut as any).getJestExt().testResultProvider).toBe(testResultProviderMock);
     });
 
     it('should set which test states to show the CodeLens above', () => {
@@ -125,7 +129,7 @@ describe('DebugCodeLensProvider', () => {
   describe('provideCodeLenses()', () => {
     const document = { fileName: 'file.js' } as any;
     const token = {} as any;
-    const getResults = (testResultProvider.getResults as unknown) as jest.Mock<{}>;
+    const getResults = getResultsMock;
     const testResults = [
       ({
         name: 'should fail',
@@ -163,7 +167,7 @@ describe('DebugCodeLensProvider', () => {
       getResults.mockReturnValueOnce([]);
       sut.provideCodeLenses(document, token);
 
-      expect(testResultProvider.getResults).toBeCalledWith(document.fileName);
+      expect(getResults).toBeCalledWith(document.fileName);
     });
 
     it('should not show the CodeLens above failing tests unless configured', () => {

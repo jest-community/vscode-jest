@@ -9,11 +9,12 @@ import {
 import { TestReconciliationState, TestReconciliationStateType } from './TestReconciliationState';
 import { TestResult, TestResultStatusInfo } from './TestResult';
 import * as match from './match-by-context';
-import { JestExtSessionAware, JestExtSessionContext } from '../JestExt';
+import { JestSessionEvents } from '../JestExt';
 import { TestStats } from '../types';
 import { emptyTestStats } from '../helpers';
 import { createTestResultEvents, TestResultEvents } from './test-result-events';
 import { ContainerNode } from './match-node';
+import { JestProcessInfo } from '../JestProcessManagement';
 
 export interface TestSuiteResult {
   status: TestReconciliationStateType;
@@ -35,24 +36,29 @@ const sortByStatus = (a: TestResult, b: TestResult): number => {
   }
   return TestResultStatusInfo[a.status].precedence - TestResultStatusInfo[b.status].precedence;
 };
-export class TestResultProvider implements JestExtSessionAware {
+export class TestResultProvider {
   verbose: boolean;
   events: TestResultEvents;
   private reconciler: TestReconciler;
   private testSuites: Map<string, TestSuiteResult>;
   private testFiles?: string[];
 
-  constructor(verbose = false) {
+  constructor(extEvents: JestSessionEvents, verbose = false) {
     this.reconciler = new TestReconciler();
     this.verbose = verbose;
     this.events = createTestResultEvents();
     this.testSuites = new Map();
+    extEvents.onTestSessionStarted.event(this.onSessionStart.bind(this));
   }
 
-  public onSessionStart(context: JestExtSessionContext): void {
+  dispose(): void {
+    this.events.testListUpdated.dispose();
+    this.events.testSuiteChanged.dispose();
+  }
+
+  private onSessionStart(): void {
     this.testSuites.clear();
     this.reconciler = new TestReconciler();
-    this.events.testSessionStarted.fire(context);
   }
 
   private groupByRange(results: TestResult[]): TestResult[] {
@@ -228,7 +234,7 @@ export class TestResultProvider implements JestExtSessionAware {
     return result;
   }
 
-  updateTestResults(data: JestTotalResults, pid = 'unknown'): TestFileAssertionStatus[] {
+  updateTestResults(data: JestTotalResults, process: JestProcessInfo): TestFileAssertionStatus[] {
     const results = this.reconciler.updateFileWithJestStatus(data);
     results?.forEach((r) => {
       this.testSuites.set(r.file, {
@@ -240,7 +246,7 @@ export class TestResultProvider implements JestExtSessionAware {
     this.events.testSuiteChanged.fire({
       type: 'assertions-updated',
       files: results.map((r) => r.file),
-      pid,
+      process,
     });
     return results;
   }

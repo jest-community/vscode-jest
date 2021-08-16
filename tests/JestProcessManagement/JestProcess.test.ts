@@ -137,11 +137,11 @@ describe('JestProcess', () => {
       ${'all-tests'}            | ${undefined}                                                     | ${[false, false]} | ${true}         | ${undefined}
       ${'watch-tests'}          | ${undefined}                                                     | ${[true, false]}  | ${true}         | ${undefined}
       ${'watch-all-tests'}      | ${undefined}                                                     | ${[true, true]}   | ${true}         | ${undefined}
-      ${'by-file'}              | ${{ testFileName: '"c:\\a\\b.ts"' }}                             | ${[false, false]} | ${true}         | ${{ args: { args: ['--findRelatedTests', '--watchAll=false'] }, testFileNamePattern: '"C:\\a\\b.ts"' }}
-      ${'by-file-test'}         | ${{ testFileName: '"/a/b.js"', testNamePattern: 'a test' }}      | ${[false, false]} | ${true}         | ${{ args: { args: ['--runTestsByPath', '--watchAll=false'] }, testFileNamePattern: '"/a/b.js"', testNamePattern: '"a test"' }}
-      ${'by-file-pattern'}      | ${{ testFileNamePattern: '"c:\\a\\b.ts"' }}                      | ${[false, false]} | ${true}         | ${{ args: { args: ['--watchAll=false', '--testPathPattern', '"c:\\\\a\\\\b\\.ts"'] } }}
-      ${'by-file-test-pattern'} | ${{ testFileNamePattern: '/a/b.js', testNamePattern: 'a test' }} | ${[false, false]} | ${true}         | ${{ args: { args: ['--watchAll=false', '--testPathPattern', '"/a/b\\.js"'] }, testNamePattern: '"a test"' }}
-      ${'not-test'}             | ${{ args: ['--listTests', '--watchAll=false'] }}                 | ${[false, false]} | ${false}        | ${{ args: { args: ['--listTests', '--watchAll=false'], replace: true } }}
+      ${'by-file'}              | ${{ testFileName: '"c:\\a\\b.ts"' }}                             | ${[false, false]} | ${true}         | ${{ args: { args: ['--findRelatedTests'] }, testFileNamePattern: '"C:\\a\\b.ts"' }}
+      ${'by-file-test'}         | ${{ testFileName: '"/a/b.js"', testNamePattern: 'a test' }}      | ${[false, false]} | ${true}         | ${{ args: { args: ['--runTestsByPath'] }, testFileNamePattern: '"/a/b.js"', testNamePattern: '"a test"' }}
+      ${'by-file-pattern'}      | ${{ testFileNamePattern: '"c:\\a\\b.ts"' }}                      | ${[false, false]} | ${true}         | ${{ args: { args: ['--testPathPattern', '"c:\\\\a\\\\b\\.ts"'] } }}
+      ${'by-file-test-pattern'} | ${{ testFileNamePattern: '/a/b.js', testNamePattern: 'a test' }} | ${[false, false]} | ${true}         | ${{ args: { args: ['--testPathPattern', '"/a/b\\.js"'] }, testNamePattern: '"a test"' }}
+      ${'not-test'}             | ${{ args: ['--listTests', '--watchAll=false'] }}                 | ${[false, false]} | ${false}        | ${{ args: { args: ['--listTests'], replace: true } }}
     `(
       'supports jest process request: $type',
       async ({ type, extraProperty, startArgs, includeReporter, extraRunnerOptions }) => {
@@ -159,20 +159,63 @@ describe('JestProcess', () => {
           expect(options.reporters).toBeUndefined();
         }
 
-        expect(options).toEqual(expect.objectContaining(extraRunnerOptions ?? extraProperty ?? {}));
+        if (extraRunnerOptions) {
+          const { args, ...restOptions } = extraRunnerOptions;
+          expect(options).toEqual(expect.objectContaining(restOptions));
+          const { args: flags, replace } = args;
+          expect(options.args.replace).toEqual(replace);
+          expect(options.args.args).toEqual(expect.arrayContaining(flags));
+        }
         expect(mockRunner.start).toBeCalledWith(...startArgs);
         closeRunner();
         await p;
       }
     );
+    describe('common flags', () => {
+      it.each`
+        type                      | extraProperty                                                    | excludeWatch | withColors
+        ${'all-tests'}            | ${undefined}                                                     | ${true}      | ${true}
+        ${'watch-tests'}          | ${undefined}                                                     | ${false}     | ${true}
+        ${'watch-all-tests'}      | ${undefined}                                                     | ${false}     | ${true}
+        ${'by-file'}              | ${{ testFileName: '"c:\\a\\b.ts"' }}                             | ${true}      | ${true}
+        ${'by-file-test'}         | ${{ testFileName: '"/a/b.js"', testNamePattern: 'a test' }}      | ${true}      | ${true}
+        ${'by-file-pattern'}      | ${{ testFileNamePattern: '"c:\\a\\b.ts"' }}                      | ${true}      | ${true}
+        ${'by-file-test-pattern'} | ${{ testFileNamePattern: '/a/b.js', testNamePattern: 'a test' }} | ${true}      | ${true}
+        ${'not-test'}             | ${{ args: ['--listTests', '--watchAll=false'] }}                 | ${true}      | ${false}
+      `(
+        'request $type: excludeWatch:$excludeWatch, withColors:$withColors',
+        async ({ type, extraProperty, excludeWatch, withColors }) => {
+          expect.hasAssertions();
+          const request = mockRequest(type, extraProperty);
+          jestProcess = new JestProcess(extContext, request);
+          const p = jestProcess.start();
+          closeRunner();
+          await p;
+
+          const [, options] = RunnerClassMock.mock.calls[0];
+          if (withColors) {
+            expect(options.args.args).toContain('--colors');
+          } else {
+            expect(options.args.args).not.toContain('--colors');
+          }
+          if (excludeWatch) {
+            expect(options.args.args).toContain('--watchAll=false');
+          } else {
+            expect(options.args.args).not.toContain('--watchAll=false');
+          }
+        }
+      );
+    });
     it.each`
-      request                                                                                        | expectUpdate
-      ${{ type: 'all-tests', updateSnapshot: true }}                                                 | ${true}
-      ${{ type: 'all-tests', updateSnapshot: false }}                                                | ${false}
-      ${{ type: 'by-file', updateSnapshot: true, testFileName: 'abc' }}                              | ${true}
-      ${{ type: 'by-file-test', updateSnapshot: true, testFileName: 'abc', testNamePattern: 'xyz' }} | ${true}
-      ${{ type: 'watch-tests', updateSnapshot: true }}                                               | ${false}
-      ${{ type: 'watch-all-tests', updateSnapshot: true }}                                           | ${false}
+      request                                                                                                       | expectUpdate
+      ${{ type: 'all-tests', updateSnapshot: true }}                                                                | ${true}
+      ${{ type: 'all-tests', updateSnapshot: false }}                                                               | ${false}
+      ${{ type: 'by-file', updateSnapshot: true, testFileName: 'abc' }}                                             | ${true}
+      ${{ type: 'by-file-pattern', updateSnapshot: true, testFileNamePattern: 'abc' }}                              | ${true}
+      ${{ type: 'by-file-test', updateSnapshot: true, testFileName: 'abc', testNamePattern: 'xyz' }}                | ${true}
+      ${{ type: 'by-file-test-pattern', updateSnapshot: true, testFileNamePattern: 'abc', testNamePattern: 'xyz' }} | ${true}
+      ${{ type: 'watch-tests', updateSnapshot: true }}                                                              | ${false}
+      ${{ type: 'watch-all-tests', updateSnapshot: true }}                                                          | ${false}
     `('can update snapshot with request $request', ({ request, expectUpdate }) => {
       expect.hasAssertions();
       const _request = mockRequest(request.type, request);
@@ -182,7 +225,7 @@ describe('JestProcess', () => {
       if (expectUpdate) {
         expect(options.args.args).toContain('--updateSnapshot');
       } else {
-        expect(options.args).toBeUndefined();
+        expect(options.args.args).not.toContain('--updateSnapshot');
       }
     });
     it('starting on a running process does nothing but returns the same promise', async () => {

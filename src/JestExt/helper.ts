@@ -5,7 +5,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { ProjectWorkspace } from 'jest-editor-support';
 import { JestProcessRequest } from '../JestProcessManagement';
-import { PluginResourceSettings, JestExtAutoRunConfig } from '../Settings';
+import { PluginResourceSettings, JestExtAutoRunConfig, TestExplorerConfig } from '../Settings';
 import { AutoRunMode } from '../StatusBar';
 import { pathToJest, pathToConfig, toFilePath } from '../helpers';
 import { workspaceLogging } from '../logging';
@@ -102,7 +102,6 @@ export const getExtensionResourceSettings = (uri: vscode.Uri): PluginResourceSet
   const config = vscode.workspace.getConfiguration('jest', uri);
   return {
     autoEnable: config.get<boolean>('autoEnable'),
-    enableInlineErrorMessages: config.get<boolean>('enableInlineErrorMessages'),
     enableSnapshotUpdateMessages: config.get<boolean>('enableSnapshotUpdateMessages'),
     pathToConfig: config.get<string>('pathToConfig'),
     jestCommandLine: config.get<string>('jestCommandLine'),
@@ -118,6 +117,7 @@ export const getExtensionResourceSettings = (uri: vscode.Uri): PluginResourceSet
     debugMode: config.get<boolean>('debugMode'),
     coverageColors: config.get<CoverageColors>('coverageColors'),
     autoRun: config.get<JestExtAutoRunConfig>('autoRun'),
+    testExplorer: config.get<TestExplorerConfig>('testExplorer') ?? { enabled: true },
   };
 };
 

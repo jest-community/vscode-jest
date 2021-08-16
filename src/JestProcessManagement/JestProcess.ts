@@ -4,7 +4,7 @@ import { Runner, RunnerEvent, Options } from 'jest-editor-support';
 import { JestExtContext, WatchMode } from '../JestExt/types';
 import { extensionId } from '../appGlobals';
 import { Logging } from '../logging';
-import { JestProcessRequest } from './types';
+import { JestProcessInfo, JestProcessRequest } from './types';
 import { requestString } from './helper';
 import { toFilePath, removeSurroundingQuote, escapeRegExp } from '../helpers';
 
@@ -27,7 +27,7 @@ export type StopReason = 'on-demand' | 'process-end';
 
 let SEQ = 0;
 
-export class JestProcess {
+export class JestProcess implements JestProcessInfo {
   static readonly stopHangTimeout = 500;
 
   private task?: RunnerTask;
@@ -102,53 +102,54 @@ export class JestProcess {
     }
 
     const options: Options = {
-      noColor: true,
+      noColor: false,
       reporters: ['default', `"${this.getReporterPath()}"`],
+      args: { args: ['--colors'] },
     };
+
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const args = options.args!.args;
 
     switch (this.request.type) {
       case 'all-tests':
+        args.push('--watchAll=false');
         if (this.request.updateSnapshot) {
-          options.args = { args: ['--updateSnapshot', '--watchAll=false'] };
+          args.push('--updateSnapshot');
         }
         break;
       case 'by-file': {
         options.testFileNamePattern = this.quoteFileName(this.request.testFileName);
-        const args: string[] = ['--findRelatedTests', '--watchAll=false'];
+        args.push('--findRelatedTests', '--watchAll=false');
         if (this.request.updateSnapshot) {
           args.push('--updateSnapshot');
         }
-        options.args = { args };
         break;
       }
       case 'by-file-pattern': {
         const regex = this.quote(escapeRegExp(this.request.testFileNamePattern));
-        const args: string[] = ['--watchAll=false', '--testPathPattern', regex];
+        args.push('--watchAll=false', '--testPathPattern', regex);
         if (this.request.updateSnapshot) {
           args.push('--updateSnapshot');
         }
-        options.args = { args };
         break;
       }
 
       case 'by-file-test': {
         options.testFileNamePattern = this.quoteFileName(this.request.testFileName);
         options.testNamePattern = this.quote(escapeRegExp(this.request.testNamePattern));
-        const args: string[] = ['--runTestsByPath', '--watchAll=false'];
+        args.push('--runTestsByPath', '--watchAll=false');
         if (this.request.updateSnapshot) {
           args.push('--updateSnapshot');
         }
-        options.args = { args };
         break;
       }
       case 'by-file-test-pattern': {
         const regex = this.quote(escapeRegExp(this.request.testFileNamePattern));
         options.testNamePattern = this.quote(escapeRegExp(this.request.testNamePattern));
-        const args: string[] = ['--watchAll=false', '--testPathPattern', regex];
+        args.push('--watchAll=false', '--testPathPattern', regex);
         if (this.request.updateSnapshot) {
           args.push('--updateSnapshot');
         }
-        options.args = { args };
         break;
       }
       case 'not-test':

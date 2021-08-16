@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
-import { JestExtSessionContext } from '../JestExt';
+import { JestProcessInfo } from '../JestProcessManagement';
 
 export type TestSuiteChangeReason = 'assertions-updated' | 'result-matched';
 export type TestSuitChangeEvent =
   | {
       type: 'assertions-updated';
-      pid: string;
+      process: JestProcessInfo;
       files: string[];
     }
   | {
@@ -17,6 +17,5 @@ export type TestSuitChangeEvent =
 export const createTestResultEvents = () => ({
   testListUpdated: new vscode.EventEmitter<string[] | undefined>(),
   testSuiteChanged: new vscode.EventEmitter<TestSuitChangeEvent>(),
-  testSessionStarted: new vscode.EventEmitter<JestExtSessionContext>(),
 });
 export type TestResultEvents = ReturnType<typeof createTestResultEvents>;

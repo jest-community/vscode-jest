@@ -1,23 +1,31 @@
 import * as vscode from 'vscode';
-import { JestExtResultContext, ScheduledTest, TestItemData } from './types';
+import { JestRunEvent } from '../JestExt';
+import { JestExtExplorerContext, TestItemData } from './types';
 
 /**
  * provide context information from JestExt and test provider state:
  * 1. TestData <-> TestItem
- * 2. ScheduledTest: pid <-> ScheduledTest
  *
  * as well as factory functions to create TestItem and TestRun that could impact the state
  */
+
+// output color support
+export type OUTPUT_COLOR = 'red' | 'green' | 'yellow';
+const COLORS = {
+  ['red']: '\x1b[0;31m',
+  ['green']: '\x1b[0;32m',
+  ['yellow']: '\x1b[0;33m',
+  ['end']: '\x1b[0m',
+};
+
 export class JestTestProviderContext {
   private testItemData: WeakMap<vscode.TestItem, TestItemData>;
-  private scheduledTests: Map<string, ScheduledTest>;
 
   constructor(
-    public readonly ext: JestExtResultContext,
+    public readonly ext: JestExtExplorerContext,
     private readonly controller: vscode.TestController
   ) {
     this.testItemData = new WeakMap();
-    this.scheduledTests = new Map();
   }
   createTestItem = (
     id: string,
@@ -65,8 +73,66 @@ export class JestTestProviderContext {
   createTestRun = (request: vscode.TestRunRequest, name: string): vscode.TestRun => {
     return this.controller.createTestRun(request, name);
   };
-  getScheduledTest = (pid: string): ScheduledTest | undefined => this.scheduledTests.get(pid);
-  setScheduledTest = (pid: string, test: ScheduledTest): void => {
-    this.scheduledTests.set(pid, test);
+
+  appendOutput = (msg: string, run: vscode.TestRun, newLine = true, color?: OUTPUT_COLOR): void => {
+    const converted = msg.replace(/\n/g, '\r\n');
+    let text = newLine ? `[${this.ext.workspace.name}]: ${converted}` : converted;
+    if (color) {
+      text = `${COLORS[color]}${text}${COLORS['end']}`;
+    }
+    run.appendOutput(`${text}${newLine ? '\r\n' : ''}`);
   };
+}
+
+export type RunState = JestRunEvent['type'] | 'assertion-updated';
+export class TestItemRun {
+  public state: Set<RunState>;
+  private _ended: boolean;
+  private endFunctions: (() => void)[];
+
+  /**
+   *
+   * @param item
+   * @param run
+   * @param end optional, default is `run.end()`
+   */
+  constructor(readonly item: vscode.TestItem, readonly run: vscode.TestRun, end?: () => void) {
+    this.state = new Set();
+    this._ended = false;
+    this.endFunctions = [end ?? run.end];
+    run.token.onCancellationRequested(() => this.end());
+  }
+
+  end(): void {
+    if (!this._ended) {
+      this._ended = true;
+      this.endFunctions.forEach((f) => f());
+    } else {
+      console.log('itemRun already ended');
+    }
+  }
+  get ended(): boolean {
+    return this._ended;
+  }
+  appendEnd(f: () => void): void {
+    this.endFunctions.push(f);
+  }
+}
+
+export class ItemRunStore implements vscode.Disposable {
+  private cache: Map<string, TestItemRun> = new Map();
+  add(id: string, run: TestItemRun): void {
+    if (!this.cache.get(id)) {
+      this.cache.set(id, run);
+      const cleanup = () => this.cache.delete(id);
+      run.run.token.onCancellationRequested(cleanup);
+      run.appendEnd(cleanup);
+    }
+  }
+  get(id: string): TestItemRun | undefined {
+    return this.cache.get(id);
+  }
+  dispose(): void {
+    this.cache.forEach((run) => run.end());
+  }
 }

@@ -21,9 +21,12 @@ export type JestExtAutoRunConfig =
       onStartup?: OnStartupType;
       onSave?: OnSaveFileType;
     };
+
+export type TestExplorerConfig =
+  | { enabled: false }
+  | { enabled: true; showClassicStatus?: boolean; showInlineError?: boolean };
 export interface PluginResourceSettings {
   autoEnable?: boolean;
-  enableInlineErrorMessages?: boolean;
   enableSnapshotUpdateMessages?: boolean;
   jestCommandLine?: string;
   pathToConfig?: string;
@@ -36,6 +39,7 @@ export interface PluginResourceSettings {
   debugMode?: boolean;
   coverageColors?: CoverageColors;
   autoRun?: JestExtAutoRunConfig;
+  testExplorer: TestExplorerConfig;
 }
 
 export interface PluginWindowSettings {

@@ -40,6 +40,7 @@ import { TestReconciliationState } from '../../src/TestResults';
 import * as helper from '../test-helper';
 import { ItBlock, TestAssertionStatus, TestReconcilationState } from 'jest-editor-support';
 import * as match from '../../src/TestResults/match-by-context';
+import { mockJestExtEvents } from '../test-helper';
 
 const setupMockParse = (itBlocks: ItBlock[]) => {
   mockParse.mockReturnValue({
@@ -88,6 +89,8 @@ const makeData = (
   message,
 });
 
+const eventsMock: any = mockJestExtEvents();
+
 const newProviderWithData = (testData: TestData[]): TestResultProvider => {
   mockParse.mockImplementation((file) => {
     const data = testData.find((data) => data.file === file);
@@ -110,9 +113,9 @@ const newProviderWithData = (testData: TestData[]): TestResultProvider => {
       assertions: data.assertions,
     }))
   );
-  const sut = new TestResultProvider();
+  const sut = new TestResultProvider(eventsMock);
   // warn up cache
-  sut.updateTestResults({} as any);
+  sut.updateTestResults({} as any, {} as any);
   return sut;
 };
 describe('TestResultProvider', () => {
@@ -148,9 +151,7 @@ describe('TestResultProvider', () => {
     jest.resetAllMocks();
     jest.restoreAllMocks();
     mockTestReconciler.mockReturnValue(mockReconciler);
-    (vscode.EventEmitter as jest.Mocked<any>) = jest.fn().mockImplementation(() => {
-      return { fire: jest.fn() };
-    });
+    (vscode.EventEmitter as jest.Mocked<any>) = jest.fn().mockImplementation(helper.mockEvent);
   });
 
   describe('getResults()', () => {
@@ -217,6 +218,14 @@ describe('TestResultProvider', () => {
       expect(actual[0].shortMessage).not.toBeUndefined();
       expect(actual[0].terseMessage).toBeUndefined();
     });
+    it('fire testSuiteChanged event for newly matched result', () => {
+      const sut = newProviderWithData([makeData([testBlock], [], filePath)]);
+      sut.getResults(filePath);
+      expect(sut.events.testSuiteChanged.fire).toBeCalledWith({
+        type: 'result-matched',
+        file: filePath,
+      });
+    });
     describe('duplicate test names', () => {
       const testBlock2 = helper.makeItBlock(testBlock.name, [5, 3, 7, 5]);
       beforeEach(() => {});
@@ -235,7 +244,7 @@ describe('TestResultProvider', () => {
       it('however when context structures are different, duplicate names within the same layer can not be resolved.', () => {
         setupMockParse([testBlock, testBlock2]);
 
-        const sut = new TestResultProvider();
+        const sut = new TestResultProvider(eventsMock);
         // note: these 2 assertions have the same line number, therefore will be merge
         // into a group-node, which made the context difference: source: 2 nodes, assertion: 1 node.
         // but since the 2 assertions' name matched the testBlock, it will still be considered as 1-to-many match
@@ -531,7 +540,7 @@ describe('TestResultProvider', () => {
       let sut: TestResultProvider;
       const tBlock = helper.makeItBlock('a test', [8, 0, 20, 20]);
       beforeEach(() => {
-        sut = new TestResultProvider();
+        sut = new TestResultProvider(eventsMock);
         setupMockParse([tBlock]);
       });
       it.each([[[]], [undefined]])('for assertions = %s', (assertions) => {
@@ -656,7 +665,7 @@ describe('TestResultProvider', () => {
       mockReconciler.updateFileWithJestStatus.mockReturnValueOnce([
         { file: 'file 1', status: 'KnownSuceess' },
       ]);
-      sut.updateTestResults({} as any);
+      sut.updateTestResults({} as any, {} as any);
 
       // to get result from "file 1" should trigger mockReconciler.assertionsForTestFile
       const r1 = sut.getResults('file 1');
@@ -674,10 +683,10 @@ describe('TestResultProvider', () => {
       const expected: any = [];
       mockReconciler.updateFileWithJestStatus.mockReturnValueOnce(expected);
 
-      const sut = new TestResultProvider();
+      const sut = new TestResultProvider(eventsMock);
       const results: any = {};
 
-      expect(sut.updateTestResults(results)).toBe(expected);
+      expect(sut.updateTestResults(results, {} as any)).toBe(expected);
       expect(mockReconciler.updateFileWithJestStatus).toBeCalledWith(results);
     });
     it('should updated the stats', () => {
@@ -687,10 +696,26 @@ describe('TestResultProvider', () => {
       ];
       mockReconciler.updateFileWithJestStatus.mockReturnValueOnce(results);
 
-      const sut = new TestResultProvider();
-      sut.updateTestResults({} as any);
+      const sut = new TestResultProvider(eventsMock);
+      sut.updateTestResults({} as any, {} as any);
       const stats = sut.getTestSuiteStats();
       expect(stats).toEqual({ success: 1, fail: 1, unknown: 0 });
+    });
+    it('should fire testSuiteChanged event', () => {
+      const results: any = [
+        { file: 'a', status: 'KnownSuccess' },
+        { file: 'b', status: 'KnownFail' },
+      ];
+      mockReconciler.updateFileWithJestStatus.mockReturnValueOnce(results);
+
+      const sut = new TestResultProvider(eventsMock);
+      const process: any = { id: 'a-process' };
+      sut.updateTestResults({} as any, process);
+      expect(sut.events.testSuiteChanged.fire).toBeCalledWith({
+        type: 'assertions-updated',
+        files: ['a', 'b'],
+        process,
+      });
     });
   });
 
@@ -698,7 +723,7 @@ describe('TestResultProvider', () => {
     setupMockParse([]);
     mockReconciler.assertionsForTestFile.mockReturnValue([]);
 
-    const sut = new TestResultProvider();
+    const sut = new TestResultProvider(eventsMock);
 
     sut.getResults('whatever');
     expect(mockParse).toHaveBeenCalledTimes(1);
@@ -721,10 +746,15 @@ describe('TestResultProvider', () => {
       sut.getResults('file1');
       expect(mockParse).toHaveBeenCalled();
     });
+    it('fire testListUpdated event', () => {
+      const sut = newProviderWithData([makeData([], [], 'file1')]);
+      sut.updateTestFileList(['file1']);
+      expect(sut.events.testListUpdated.fire).toHaveBeenCalledWith(['file1']);
+    });
     it('if not available, revert to the legacy behavior: parse any file requested', () => {
       setupMockParse([]);
       mockReconciler.assertionsForTestFile.mockReturnValue([]);
-      const sut = new TestResultProvider();
+      const sut = new TestResultProvider(eventsMock);
       sut.updateTestFileList(['file1']);
       sut.getResults('whatever');
       expect(mockParse).not.toHaveBeenCalled();
@@ -735,43 +765,51 @@ describe('TestResultProvider', () => {
     });
     describe('getTestList', () => {
       it('returns testFiles if available', () => {
-        const sut = new TestResultProvider();
+        const sut = new TestResultProvider(eventsMock);
         expect(sut.getTestList()).toEqual([]);
 
         sut.updateTestFileList(['file1']);
         expect(sut.getTestList()).toEqual(['file1']);
 
         mockReconciler.updateFileWithJestStatus.mockReturnValueOnce([{ file: 'file2' }]);
-        sut.updateTestResults({} as any);
+        sut.updateTestResults({} as any, {} as any);
         expect(sut.getTestList()).toEqual(['file1']);
 
         sut.updateTestFileList([]);
         expect(sut.getTestList()).toEqual([]);
       });
       it('otherwise returns cached result file list', () => {
-        const sut = new TestResultProvider();
+        const sut = new TestResultProvider(eventsMock);
         expect(sut.getTestList()).toEqual([]);
 
         mockReconciler.updateFileWithJestStatus.mockReturnValueOnce([{ file: 'file2' }]);
-        sut.updateTestResults({} as any);
+        sut.updateTestResults({} as any, {} as any);
         expect(sut.getTestList()).toEqual(['file2']);
       });
     });
   });
-  describe('JestExtSessionAware', () => {
-    it('when session start, cache and reconciler will be reset', () => {
-      const sut = newProviderWithData([makeData([], [], 'whatever')]);
-      expect(mockTestReconciler).toHaveBeenCalledTimes(1);
+  describe('events', () => {
+    describe('listen to session events', () => {
+      it('when session start, cache and reconciler will be reset', () => {
+        const sut = newProviderWithData([makeData([], [], 'whatever')]);
+        expect(eventsMock.onTestSessionStarted.event).toBeCalled();
+        expect(mockTestReconciler).toHaveBeenCalledTimes(1);
 
-      sut.getResults('whatever');
-      sut.getResults('whatever');
-      expect(mockParse).toHaveBeenCalledTimes(1);
+        sut.getResults('whatever');
+        sut.getResults('whatever');
+        expect(mockParse).toHaveBeenCalledTimes(1);
 
-      // const spyResetCache = jest.spyOn(sut, 'resetCache');
-      sut.onSessionStart({} as any);
+        const sessionStartListener = eventsMock.onTestSessionStarted.event.mock.calls[0][0];
+        sessionStartListener({} as any);
 
-      // expect(spyResetCache).toHaveBeenCalled();
-      expect(mockTestReconciler).toHaveBeenCalledTimes(2);
+        expect(mockTestReconciler).toHaveBeenCalledTimes(2);
+      });
+    });
+    it('will dispose result events', () => {
+      const sut = new TestResultProvider(eventsMock);
+      sut.dispose();
+      expect(sut.events.testListUpdated.dispose).toBeCalled();
+      expect(sut.events.testSuiteChanged.dispose).toBeCalled();
     });
   });
   describe('invalidateTestResults', () => {
@@ -858,14 +896,14 @@ describe('TestResultProvider', () => {
       ${['file-2']}           | ${['file-1']} | ${'yes'}
       ${['file-2']}           | ${['file-2']} | ${'no'}
     `('$testFiles, $testResults => $expected', ({ testFiles, testResults, expected }) => {
-      const sut = new TestResultProvider();
+      const sut = new TestResultProvider(eventsMock);
       if (testFiles) {
         sut.updateTestFileList(testFiles);
       }
       if (testResults) {
         const mockResults = testResults.map((file) => ({ file, status: 'KnownSuceess' }));
         mockReconciler.updateFileWithJestStatus.mockReturnValueOnce(mockResults);
-        sut.updateTestResults({} as any);
+        sut.updateTestResults({} as any, {} as any);
       }
 
       expect(sut.isTestFile(target)).toEqual(expected);

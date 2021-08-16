@@ -274,5 +274,26 @@ export class ExtensionManager {
         ext.activate();
       }
     }
+    this.showReleaseMessage();
+  }
+  private showReleaseMessage(): void {
+    vscode.window
+      .showInformationMessage(
+        `vscode-jest now supports the official vscode test explorer!!`,
+        'Show Test Explorer',
+        'See Details'
+      )
+      .then((value) => {
+        if (value === 'Show Test Explorer') {
+          vscode.commands.executeCommand('workbench.view.testing.focus');
+        } else {
+          vscode.commands.executeCommand(
+            'vscode.open',
+            vscode.Uri.parse(
+              'https://github.com/jest-community/vscode-jest/blob/master/README.md#how-to-use-the-test-explorer'
+            )
+          );
+        }
+      });
   }
 }

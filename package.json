@@ -2,7 +2,7 @@
   "name": "vscode-jest",
   "displayName": "Jest",
   "description": "Use Facebook's Jest With Pleasure.",
-  "version": "4.1.0-rc.1",
+  "version": "4.1.0-rc.2",
   "publisher": "Orta",
   "engines": {
     "vscode": "^1.59.0"
@@ -20,7 +20,8 @@
     "color": "#384357"
   },
   "categories": [
-    "Other"
+    "Other",
+    "Testing"
   ],
   "keywords": [
     "jest",
@@ -63,7 +64,7 @@
     ],
     "configuration": {
       "type": "object",
-      "title": "Jest configuration",
+      "title": "Jest",
       "properties": {
         "jest.autoEnable": {
           "description": "Automatically start Jest for this project",
@@ -97,13 +98,7 @@
           "default": "",
           "scope": "resource"
         },
-        "jest.enableInlineErrorMessages": {
-          "description": "Whether errors should be reported inline on a file",
-          "type": "boolean",
-          "default": false,
-          "scope": "resource",
-          "markdownDeprecationMessage": "**Deprecated**: in favor of vscode hovering message"
-        },
+        
         "jest.enableSnapshotUpdateMessages": {
           "description": "Whether snapshot update messages should show",
           "type": "boolean",
@@ -197,6 +192,12 @@
           ],
           "default": null,
           "scope": "resource"
+        },
+        "jest.testExplorer": {
+          "markdownDescription": "Configure jest TestExplorer. See valid [formats](https://github.com/jest-community/vscode-jest/blob/master/README.md#testexplorer) or [how to use test explorer](https://github.com/jest-community/vscode-jest/blob/master/README.md#how-to-use-the-test-explorer) for more details",
+          "type": "object",
+          "default": {"enabled": true},
+          "scope": "resource" 
         }
       }
     },

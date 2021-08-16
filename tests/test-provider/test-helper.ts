@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 import * as vscode from 'vscode';
+import { mockJestExtEvents } from '../test-helper';
 
 export class TestItemCollectionMock {
   constructor(public parent?: vscode.TestItem) {}
@@ -23,7 +24,7 @@ export class TestItemCollectionMock {
   };
 }
 
-export const mockResultContext = (wsName = 'ws-1', override: any = {}): any => {
+export const mockExtExplorerContext = (wsName = 'ws-1', override: any = {}): any => {
   return {
     loggingFactory: { create: jest.fn().mockReturnValue(jest.fn()) },
     autoRun: {},
@@ -38,6 +39,8 @@ export const mockResultContext = (wsName = 'ws-1', override: any = {}): any => {
       isTestFile: jest.fn().mockReturnValue('yes'),
       getTestSuiteResult: jest.fn().mockReturnValue({}),
     },
+    debugTests: jest.fn(),
+    sessionEvents: mockJestExtEvents(),
     ...override,
   };
 };
@@ -50,8 +53,10 @@ export const mockRun = (request?: any, name?: any): any => ({
   skipped: jest.fn(),
   errored: jest.fn(),
   failed: jest.fn(),
+  enqueued: jest.fn(),
   appendOutput: jest.fn(),
   end: jest.fn(),
+  token: { onCancellationRequested: jest.fn() },
 });
 export const mockController = (): any => {
   const runMocks = [];
@@ -70,6 +75,7 @@ export const mockController = (): any => {
         id,
         label,
         uri,
+        errored: jest.fn(),
       };
       item.children = new TestItemCollectionMock(item);
       return item;

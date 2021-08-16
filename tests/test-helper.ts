@@ -136,6 +136,17 @@ export const mockProjectWorkspace = (...args: any[]): any => {
 
 export const mockWworkspaceLogging = (): any => ({ create: () => jest.fn() });
 
+export const mockEvent = () => ({
+  event: jest.fn().mockReturnValue({ dispose: jest.fn() }),
+  fire: jest.fn(),
+  dispose: jest.fn(),
+});
+export const mockJestExtEvents: any = () => ({
+  onRunEvent: mockEvent(),
+  onTestSessionStarted: mockEvent(),
+  onTestSessionStopped: mockEvent(),
+});
+
 export const mockJestExtContext = (autoRun?: AutoRunAccessor): any => {
   return {
     workspace: jest.fn(),
@@ -143,14 +154,14 @@ export const mockJestExtContext = (autoRun?: AutoRunAccessor): any => {
     settings: jest.fn(),
     loggingFactory: { create: jest.fn(() => jest.fn()) },
     autoRun: autoRun ?? jest.fn(),
+    events: mockJestExtEvents(),
   };
 };
 
 export const mockJestProcessContext = (): any => {
   return {
     ...mockJestExtContext(),
-    output: { appendLine: jest.fn(), clear: jest.fn() },
-    updateStatusBar: jest.fn(),
+    onRunEvent: mockEvent(),
     updateWithData: jest.fn(),
   };
 };

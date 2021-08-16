@@ -13,21 +13,35 @@ const mockProcessManager = JestProcessManager as jest.Mocked<any>;
 let SEQ = 1;
 describe('ProcessSession', () => {
   let context;
-  const mockScheduleJestProcess = jest.fn();
-  const mockNumberOfProcesses = jest.fn();
-  const mockStopAll = jest.fn();
+  let processManagerMock;
 
   beforeEach(() => {
     jest.resetAllMocks();
-    mockScheduleJestProcess.mockImplementation(() => SEQ++);
-    mockProcessManager.mockReturnValue({
-      scheduleJestProcess: mockScheduleJestProcess,
-      numberOfProcesses: mockNumberOfProcesses,
-      stopAll: mockStopAll,
-    });
+    processManagerMock = {
+      scheduleJestProcess: jest.fn().mockImplementation(() => ({
+        id: SEQ++,
+      })),
+      numberOfProcesses: jest.fn(),
+      stopAll: jest.fn(),
+    };
+    mockProcessManager.mockReturnValue(processManagerMock);
     context = mockJestProcessContext();
   });
   describe('scheduleProcess', () => {
+    it('will fire event for successful schedule', () => {
+      const sm = createProcessSession(context);
+
+      processManagerMock.scheduleJestProcess.mockReturnValueOnce(undefined);
+      let process = sm.scheduleProcess({ type: 'all-tests' });
+      expect(process).toBeUndefined();
+      expect(context.onRunEvent.fire).not.toBeCalled();
+
+      const p = { id: 'whatever' };
+      processManagerMock.scheduleJestProcess.mockReturnValueOnce(p);
+      process = sm.scheduleProcess({ type: 'all-tests' });
+      expect(process).toEqual(p);
+      expect(context.onRunEvent.fire).toBeCalledWith({ type: 'scheduled', process });
+    });
     it.each`
       type                      | inputProperty                                                | expectedSchedule                                                                        | expectedExtraProperty
       ${'all-tests'}            | ${undefined}                                                 | ${{ queue: 'blocking', dedup: { filterByStatus: ['pending'] } }}                        | ${undefined}
@@ -39,16 +53,16 @@ describe('ProcessSession', () => {
       ${'by-file-test-pattern'} | ${{ testFileNamePattern: 'abc', testNamePattern: 'a test' }} | ${{ queue: 'blocking', dedup: { filterByStatus: ['pending'], filterByContent: true } }} | ${undefined}
       ${'list-test-files'}      | ${undefined}                                                 | ${{ queue: 'non-blocking', dedup: { filterByStatus: ['pending'] } }}                    | ${{ type: 'not-test', args: ['--listTests', '--json', '--watchAll=false'] }}
     `(
-      'can schedule "$type" request with ProcessManager',
+      "can schedule '$type' request with ProcessManager",
       ({ type, inputProperty, expectedSchedule, expectedExtraProperty }) => {
         expect.hasAssertions();
         const sm = createProcessSession(context);
         expect(mockProcessManager).toHaveBeenCalledTimes(1);
 
-        const pid = sm.scheduleProcess({ type, ...(inputProperty ?? {}) });
-        expect(pid).not.toBeUndefined();
-        expect(mockScheduleJestProcess).toHaveBeenCalledTimes(1);
-        const request = mockScheduleJestProcess.mock.calls[0][0];
+        const process = sm.scheduleProcess({ type, ...(inputProperty ?? {}) });
+        expect(process).not.toBeUndefined();
+        expect(processManagerMock.scheduleJestProcess).toHaveBeenCalledTimes(1);
+        const request = processManagerMock.scheduleJestProcess.mock.calls[0][0];
         expect(request.schedule).toEqual(expectedSchedule);
         if (inputProperty) {
           expect(request).toMatchObject(inputProperty);
@@ -80,11 +94,11 @@ describe('ProcessSession', () => {
         sm.scheduleProcess({ type: 'update-snapshot', baseRequest });
 
         if (snapshotRequest) {
-          expect(mockScheduleJestProcess).toHaveBeenCalledWith(
+          expect(processManagerMock.scheduleJestProcess).toHaveBeenCalledWith(
             expect.objectContaining(snapshotRequest)
           );
         } else {
-          expect(mockScheduleJestProcess).not.toHaveBeenCalled();
+          expect(processManagerMock.scheduleJestProcess).not.toHaveBeenCalled();
         }
       }
     );
@@ -96,7 +110,7 @@ describe('ProcessSession', () => {
 
       const requestType = type as any;
       sm.scheduleProcess({ type: requestType });
-      expect(mockScheduleJestProcess).not.toHaveBeenCalled();
+      expect(processManagerMock.scheduleJestProcess).not.toHaveBeenCalled();
     });
     describe.each`
       type                 | inputProperty                             | defaultListener
@@ -112,20 +126,20 @@ describe('ProcessSession', () => {
         const sm = createProcessSession(context);
 
         sm.scheduleProcess({ type, ...(inputProperty ?? {}) });
-        expect(mockScheduleJestProcess).toHaveBeenCalledTimes(1);
-        const request = mockScheduleJestProcess.mock.calls[0][0];
+        expect(processManagerMock.scheduleJestProcess).toHaveBeenCalledTimes(1);
+        const request = processManagerMock.scheduleJestProcess.mock.calls[0][0];
         expect(request.listener).not.toBeUndefined();
         expect(defaultListener).toHaveBeenCalledTimes(1);
       });
     });
-    it('can override context', () => {
+    it('can pass custom requet', () => {
       const sm = createProcessSession(context);
       expect(mockProcessManager).toHaveBeenCalledTimes(1);
-      const customOutput: any = jest.fn();
-      sm.scheduleProcess({ type: 'all-tests', context: { output: customOutput } });
-      expect(mockScheduleJestProcess).toHaveBeenCalled();
-      expect(listeners.RunTestListener).toHaveBeenCalledWith(
-        expect.objectContaining({ context: expect.objectContaining({ output: customOutput }) })
+      const extraInfo = 'whatever';
+      sm.scheduleProcess({ type: 'all-tests', extraInfo });
+      expect(processManagerMock.scheduleJestProcess).toHaveBeenCalled();
+      expect(processManagerMock.scheduleJestProcess).toHaveBeenCalledWith(
+        expect.objectContaining({ extraInfo })
       );
     });
   });
@@ -143,11 +157,13 @@ describe('ProcessSession', () => {
         expect.hasAssertions();
         const settings: any = { autoRun };
         context.autoRun = AutoRun(settings);
-        mockNumberOfProcesses.mockReturnValue(0);
+        processManagerMock.numberOfProcesses.mockReturnValue(0);
         const session = createProcessSession(context);
         await session.start();
 
-        const requestTypes = mockScheduleJestProcess.mock.calls.map((c) => c[0].type);
+        const requestTypes = processManagerMock.scheduleJestProcess.mock.calls.map(
+          (c) => c[0].type
+        );
         expect(requestTypes).toEqual(expectedRequests);
       }
     );
@@ -155,21 +171,21 @@ describe('ProcessSession', () => {
       expect.hasAssertions();
       const settings: any = { autoRun: { watch: true } };
       context.autoRun = AutoRun(settings);
-      mockNumberOfProcesses.mockReturnValue(1);
+      processManagerMock.numberOfProcesses.mockReturnValue(1);
       const session = createProcessSession(context);
       await session.start();
-      expect(mockStopAll).toBeCalledTimes(1);
-      expect(mockScheduleJestProcess).toBeCalledTimes(1);
+      expect(processManagerMock.stopAll).toBeCalledTimes(1);
+      expect(processManagerMock.scheduleJestProcess).toBeCalledTimes(1);
     });
   });
   describe('stop', () => {
     it('will stop all processes in the queues', async () => {
       expect.hasAssertions();
       context.pluginSettings = { autoEnable: true };
-      mockNumberOfProcesses.mockReturnValue(1);
+      processManagerMock.numberOfProcesses.mockReturnValue(1);
       const session = createProcessSession(context);
       await session.stop();
-      expect(mockStopAll).toBeCalledTimes(1);
+      expect(processManagerMock.stopAll).toBeCalledTimes(1);
     });
   });
 });

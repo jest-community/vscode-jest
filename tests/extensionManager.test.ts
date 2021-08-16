@@ -585,6 +585,9 @@ describe('ExtensionManager', () => {
       extensionManager = createExtensionManager(['ws-1', 'ws-2']);
       ext1 = extensionManager.getByName('ws-1');
       ext2 = extensionManager.getByName('ws-2');
+      (vscode.window.showInformationMessage as jest.Mocked<any>).mockReturnValue(
+        Promise.resolve('')
+      );
     });
     it('with active editor => can trigger active extension to render it', () => {
       const document: any = { document: { uri: 'ws-2' } };
@@ -605,6 +608,31 @@ describe('ExtensionManager', () => {
       extensionManager.activate();
       expect(ext1.onDidChangeActiveTextEditor).not.toBeCalled();
       expect(ext2.onDidChangeActiveTextEditor).not.toBeCalled();
+    });
+    describe('can show test explore information', () => {
+      beforeEach(() => {
+        (vscode.window.activeTextEditor as any) = undefined;
+      });
+      it('can reveal test explore view', async () => {
+        (vscode.window.showInformationMessage as jest.Mocked<any>).mockReturnValue(
+          Promise.resolve('Show Test Explorer')
+        );
+        await extensionManager.activate();
+        expect(vscode.commands.executeCommand).toBeCalledWith('workbench.view.testing.focus');
+      });
+      it('can show README document', async () => {
+        (vscode.window.showInformationMessage as jest.Mocked<any>).mockReturnValue(
+          Promise.resolve('See Details')
+        );
+        (vscode.Uri.parse as jest.Mocked<any>).mockImplementation((uri) => uri);
+        await extensionManager.activate();
+        expect(vscode.commands.executeCommand).toBeCalledWith(
+          'vscode.open',
+          expect.stringContaining(
+            'jest-community/vscode-jest/blob/master/README.md#how-to-use-the-test-explorer'
+          )
+        );
+      });
     });
   });
 });
