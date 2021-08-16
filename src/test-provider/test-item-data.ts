@@ -268,7 +268,6 @@ export class WorkspaceRoot extends TestItemDataBase {
     }
 
     let itemRun = this.getItemRun(event.process);
-    // this.log('debug', `<onRunEvent> ${event.type} ${event.process.id}`);
 
     try {
       switch (event.type) {

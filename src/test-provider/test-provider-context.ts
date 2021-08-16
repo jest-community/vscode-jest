@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import { JestRunEvent } from '../JestExt';
 import { JestExtExplorerContext, TestItemData } from './types';
 
 /**
@@ -82,57 +81,4 @@ export class JestTestProviderContext {
     }
     run.appendOutput(`${text}${newLine ? '\r\n' : ''}`);
   };
-}
-
-export type RunState = JestRunEvent['type'] | 'assertion-updated';
-export class TestItemRun {
-  public state: Set<RunState>;
-  private _ended: boolean;
-  private endFunctions: (() => void)[];
-
-  /**
-   *
-   * @param item
-   * @param run
-   * @param end optional, default is `run.end()`
-   */
-  constructor(readonly item: vscode.TestItem, readonly run: vscode.TestRun, end?: () => void) {
-    this.state = new Set();
-    this._ended = false;
-    this.endFunctions = [end ?? run.end];
-    run.token.onCancellationRequested(() => this.end());
-  }
-
-  end(): void {
-    if (!this._ended) {
-      this._ended = true;
-      this.endFunctions.forEach((f) => f());
-    } else {
-      console.log('itemRun already ended');
-    }
-  }
-  get ended(): boolean {
-    return this._ended;
-  }
-  appendEnd(f: () => void): void {
-    this.endFunctions.push(f);
-  }
-}
-
-export class ItemRunStore implements vscode.Disposable {
-  private cache: Map<string, TestItemRun> = new Map();
-  add(id: string, run: TestItemRun): void {
-    if (!this.cache.get(id)) {
-      this.cache.set(id, run);
-      const cleanup = () => this.cache.delete(id);
-      run.run.token.onCancellationRequested(cleanup);
-      run.appendEnd(cleanup);
-    }
-  }
-  get(id: string): TestItemRun | undefined {
-    return this.cache.get(id);
-  }
-  dispose(): void {
-    this.cache.forEach((run) => run.end());
-  }
 }
