@@ -56,7 +56,7 @@ jobs:
     name: Testing on ${{ matrix.os }} with Node v${{ matrix.node-version }} 
     strategy:
       matrix:
-        node-version: [14.x]
+        node-version: [14.x, 16.x]
         os: [ubuntu-latest, macOS-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     needs: prepare-yarn-cache
@@ -96,7 +96,5 @@ jobs:
                 
       - name: Coveralls 
         uses: coverallsapp/github-action@master
-        env:
-          NODE_COVERALLS_DEBUG: 1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
