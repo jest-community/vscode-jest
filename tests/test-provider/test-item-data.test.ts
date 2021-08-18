@@ -1132,6 +1132,18 @@ describe('test-item-data', () => {
           });
         });
       });
+      it('scheduled and start events will do deep item status update', () => {
+        const process = mockScheduleProcess(context);
+        const testFileData = context.getData(testFile);
+
+        testFileData.scheduleTest(runMock, resolveMock, profile);
+        expect(runMock.enqueued).toBeCalledTimes(2);
+        [testFile, testBlock].forEach((t) => expect(runMock.enqueued).toBeCalledWith(t));
+
+        onRunEvent({ type: 'start', process });
+        expect(runMock.started).toBeCalledTimes(2);
+        [testFile, testBlock].forEach((t) => expect(runMock.started).toBeCalledWith(t));
+      });
     });
   });
 });

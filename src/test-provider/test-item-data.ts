@@ -24,6 +24,11 @@ type TestItemRunRequest = JestExtRequestType & { itemRun: TestItemRun };
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const isTestItemRunRequest = (arg: any): arg is TestItemRunRequest =>
   arg.itemRun?.item && arg.itemRun?.run && arg.itemRun?.end;
+
+const deepItemState = (item: vscode.TestItem, setState: (item: vscode.TestItem) => void): void => {
+  setState(item);
+  item.children.forEach((child) => deepItemState(child, setState));
+};
 abstract class TestItemDataBase implements TestItemData, JestRunable, WithUri {
   item!: vscode.TestItem;
   log: Logging;
@@ -39,7 +44,7 @@ abstract class TestItemDataBase implements TestItemData, JestRunable, WithUri {
   scheduleTest(run: vscode.TestRun, end: () => void, profile: vscode.TestRunProfile): void {
     const jestRequest = this.getJestRunRequest(profile);
     const itemRun: TestItemRun = { item: this.item, run, end };
-    run.enqueued(this.item);
+    deepItemState(this.item, run.enqueued);
 
     const process = this.context.ext.session.scheduleProcess({
       ...jestRequest,
@@ -276,7 +281,7 @@ export class WorkspaceRoot extends TestItemDataBase {
             itemRun = this.createTestItemRun(event);
             const text = `Scheduled test run "${event.process.id}" for "${itemRun.item.id}"`;
             this.context.appendOutput(text, itemRun.run);
-            itemRun.run.enqueued(itemRun.item);
+            deepItemState(itemRun.item, itemRun.run.enqueued);
           }
 
           break;
@@ -290,7 +295,7 @@ export class WorkspaceRoot extends TestItemDataBase {
         }
         case 'start': {
           itemRun = itemRun ?? this.createTestItemRun(event);
-          itemRun.run.started(itemRun.item);
+          deepItemState(itemRun.item, itemRun.run.started);
           break;
         }
         case 'end': {
