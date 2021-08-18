@@ -98,7 +98,6 @@
           "default": "",
           "scope": "resource"
         },
-        
         "jest.enableSnapshotUpdateMessages": {
           "description": "Whether snapshot update messages should show",
           "type": "boolean",
@@ -196,8 +195,10 @@
         "jest.testExplorer": {
           "markdownDescription": "Configure jest TestExplorer. See valid [formats](https://github.com/jest-community/vscode-jest/blob/master/README.md#testexplorer) or [how to use test explorer](https://github.com/jest-community/vscode-jest/blob/master/README.md#how-to-use-the-test-explorer) for more details",
           "type": "object",
-          "default": {"enabled": true},
-          "scope": "resource" 
+          "default": {
+            "enabled": true
+          },
+          "scope": "resource"
         }
       }
     },
