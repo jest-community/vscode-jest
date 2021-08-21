@@ -285,10 +285,12 @@ Possible status are: `[ "fail", "pass", "skip", "unknown"]`. Please note that th
 
 There are 2 formatters to choose from: 
   1. <details><summary> DefaultFormatter: high light uncovered and partially-covered code inlilne as well as on the right overview ruler. (this is the default)</summary>
+   
         ![coverage-DefaultFormatter.png](./images/coverage-DefaultFormatter.png)
   </details>
 
-  2. <details><summary>GutterFormatter: render coverage status in the gutter as well as the overview ruler.</summary>
+  1. <details><summary>GutterFormatter: render coverage status in the gutter as well as the overview ruler.</summary>
+   
      ![coverage-GutterFormatter.png](./images/coverage-GutterFormatter.png)
   </details>
 
@@ -298,15 +300,16 @@ There are 2 formatters to choose from:
 Besides the formatter, user can also customize the color via `jest.coverageColors` to change color for 3 coverage categories: `"uncovered", "covered", or "partially-covered"`, 
 <details>
 <summary>example</summary>
+
 for example:
-  ```
+  ```json
   "jest.coverageColors": {
     "uncovered": "rgba(255,99,71, 0.2)",
     "partially-covered": "rgba(255,215,0, 0.2)",
   }
   ```
   the default color scheme below, note the opacity might differ per formatter:
-  ```
+  ```json
   "jest.coverageColors": {
     "covered": "rgba(9, 156, 65, 0.4)",
     "uncovered": "rgba(121, 31, 10, 0.4)",
@@ -316,67 +319,69 @@ for example:
 </details>
 
 ##### autoRun
-  ```json
+  ```ts
   AutoRun =
     | 'off'
-    | { watch: true; onStartup?: ["all-tests"] }
+    | { watch: true, onStartup?: ["all-tests"] }
     | {
-        watch: false;
-        onStartup?: ["all-tests"];
-        onSave?: 'test-file' | 'test-src-file';
+        watch: false,
+        onStartup?: ["all-tests"],
+        onSave?: 'test-file' | 'test-src-file',
       }
   ```
   <details>
   <summary>example</summary>
 
-    - Turn off auto run, users need to trigger tests run manually via [run commands](#commands-run) and [menus](#context-menu):
-      ```json
-      "jest.autoRun": "off"
-      ```
-    - Run all the tests in the workspace upon extension startup, followed by jest watch run for subsequent test/src file changes.
-      ``` json
-      "jest.autoRun": {
-        "watch": true, 
-        "onStartup": ["all-tests"]
-      }
-      ```
-    - Only run tests in the test file when the test file itself changed. It will not run all tests for the workspace upon start up, nor triggering any test run when the source file changed. 
-      ``` json
-      "jest.autoRun": {
-         "watch": false, 
-         "onSave": "test-file"
-      }
-      ```
-    - Like the one above but does run all tests upon extension start up
-        ``` json
-        "jest.autoRun": {
-          "watch": false, 
-          "onSave": "test-file",
-          "onStartup": ["all-tests"]
-        }
-        ```
+  - Turn off auto run, users need to trigger tests run manually via [run commands](#commands-run) and [menus](#context-menu):
+    ```json
+    "jest.autoRun": "off"
+    ```
+  - Run all the tests in the workspace upon extension startup, followed by jest watch run for subsequent test/src file changes.
+    ```json
+    "jest.autoRun": {
+      "watch": true,
+      "onStartup": ["all-tests"]
+    }
+    ```
+
+  - Only run tests in the test file when the test file itself changed. It will not run all tests for the workspace upon start up, nor triggering any test run when the source file changed. 
+    ``` json
+    "jest.autoRun": {
+       "watch": false, 
+       "onSave": "test-file"
+    }
+    ```
+  - Like the one above but does run all tests upon extension start up
+    ``` json
+    "jest.autoRun": {
+      "watch": false, 
+      "onSave": "test-file",
+      "onStartup": ["all-tests"]
+    }
+    ```
   - migration rule from settings prior to v4:
     -  if `"jest.autoEnabled" = false` => manual mode: `"jest.autoRun": "off"`
     -  if `"jest.runAllTestsFirst" = false` => `"jest.autoRun": {"watch": true }` 
     -  if no customization of the 2 settings and no `"jest.autoRun"` found => 
-      ``` json
-      "jest.autoRun": {
-         "watch": true, 
-         "onStartup": ["all-tests"]
-      }
-      ```
+         ``` json
+         "jest.autoRun": {
+            "watch": true, 
+            "onStartup": ["all-tests"]
+         }
+         ```
 </details>
 
 ##### testExplorer 
-  ```json
+  ```ts
   testExplorer =
+    | {enabled: true; showClassicStatus?: boolean; showInlineError?: boolean} 
     | {enabled: false} 
-    | {enabled: true, showClassicStatus?: boolean, showInlineError?: boolean} 
   ```
-  - `showClassicStatus`: show status symbol (prior to 4.1) in editor gutter, in addition to explorer status symbols. default is false if explorer is enabled.
-  - `showInlineError`: show vscode style inline error and error message viewer, default is false.
+  - `enabled`: switch to turn on/off the explorer support. Default is true.
+  - `showClassicStatus`: (optional) show status symbol (prior to 4.1) in editor gutter, in addition to explorer status symbols. Default is false if explorer is enabled.
+  - `showInlineError`: (optional) show vscode style inline error and error message viewer. Default is false.
 
-default is `"jest.testExplorer": {"enabled": true}`
+  4.1 default is `"jest.testExplorer": {"enabled": true}`
 >
 ### Debug Config
 

@@ -1,4 +1,5 @@
 .vscode/**
+.vscode-insiders/**
 .vscode-test/**
 src/**
 **/*.map

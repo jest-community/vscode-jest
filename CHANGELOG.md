@@ -1,16 +1,17 @@
 <!--
 
-Please add your own contribution below inside the Master section
-Bug-fixes within the same version aren't needed
+Please add your own contribution below inside the Master section 
 
 ## Master
+* brief change description - @author
+
+-->
+
+### 4.1.0
 * fix type warning in settings.json when using the `{"autoRun": "off"}` option - @tommy
 * fix couple of test result matching issues - @connectdotz (#737)
 * update match API/attributes to support up-coming vscode test provider API. - @connectdotz (#737)
 * support official vscode Test Explorer and API in v1.59 - @connectdotz (#742)
-* 
--->
-
 ### 4.0.3
 * add `--watchAll=false` to non-watch tasks - @connectdotz
 * move save related operations to new SaveTextDocument event listeners to prevent duplicate firing and losing test state for watch-mode + clean-doc-save combination. - @connectdotz
