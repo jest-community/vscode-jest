@@ -30,6 +30,7 @@ vscode.workspace.getConfiguration = jest.fn().mockImplementation((section) => {
 const makeJestExt = (workspace: vscode.WorkspaceFolder): any => {
   return {
     deactivate: jest.fn(),
+    activate: jest.fn(),
     onDidCloseTextDocument: jest.fn(),
     onDidChangeActiveTextEditor: jest.fn(),
     onDidChangeTextDocument: jest.fn(),
@@ -124,9 +125,7 @@ describe('ExtensionManager', () => {
     });
 
     it('should respect disabledWorkspaceFolders', () => {
-      registerInstance('workspaceFolder1');
       registerInstance('workspaceFolder2');
-
       expect(extensionManager.getByName('workspaceFolder1')).toBeDefined();
       expect(extensionManager.getByName('workspaceFolder2')).toBeDefined();
       const newSettings: PluginWindowSettings = {
@@ -139,6 +138,24 @@ describe('ExtensionManager', () => {
       extensionManager.applySettings(newSettings);
       expect(extensionManager.getByName('workspaceFolder1')).toBeUndefined();
       expect(extensionManager.getByName('workspaceFolder2')).toBeDefined();
+    });
+    it('will register workspace not in disable list', () => {
+      expect(extensionManager.getByName('workspaceFolder1')).not.toBeUndefined();
+
+      const newSettings: PluginWindowSettings = {
+        debugCodeLens: {
+          enabled: true,
+          showWhenTestStateIn: [],
+        },
+        disabledWorkspaceFolders: ['workspaceFolder1'],
+      };
+      extensionManager.applySettings(newSettings);
+      expect(extensionManager.getByName('workspaceFolder1')).toBeUndefined();
+
+      newSettings.disabledWorkspaceFolders = [];
+      extensionManager.applySettings(newSettings);
+
+      expect(extensionManager.getByName('workspaceFolder1')).not.toBeUndefined();
     });
   });
 
@@ -568,13 +585,16 @@ describe('ExtensionManager', () => {
       extensionManager = createExtensionManager(['ws-1', 'ws-2']);
       ext1 = extensionManager.getByName('ws-1');
       ext2 = extensionManager.getByName('ws-2');
+      (vscode.window.showInformationMessage as jest.Mocked<any>).mockReturnValue(
+        Promise.resolve('')
+      );
     });
     it('with active editor => can trigger active extension to render it', () => {
       const document: any = { document: { uri: 'ws-2' } };
       (vscode.window.activeTextEditor as any) = document;
       extensionManager.activate();
-      expect(ext1.onDidChangeActiveTextEditor).not.toBeCalled();
-      expect(ext2.onDidChangeActiveTextEditor).toBeCalledWith(document);
+      expect(ext1.activate).not.toBeCalled();
+      expect(ext2.activate).toBeCalled();
     });
     it('without active editor => do nothing', () => {
       (vscode.window.activeTextEditor as any) = undefined;
@@ -588,6 +608,31 @@ describe('ExtensionManager', () => {
       extensionManager.activate();
       expect(ext1.onDidChangeActiveTextEditor).not.toBeCalled();
       expect(ext2.onDidChangeActiveTextEditor).not.toBeCalled();
+    });
+    describe('can show test explore information', () => {
+      beforeEach(() => {
+        (vscode.window.activeTextEditor as any) = undefined;
+      });
+      it('can reveal test explore view', async () => {
+        (vscode.window.showInformationMessage as jest.Mocked<any>).mockReturnValue(
+          Promise.resolve('Show Test Explorer')
+        );
+        await extensionManager.activate();
+        expect(vscode.commands.executeCommand).toBeCalledWith('workbench.view.testing.focus');
+      });
+      it('can show README document', async () => {
+        (vscode.window.showInformationMessage as jest.Mocked<any>).mockReturnValue(
+          Promise.resolve('See Details')
+        );
+        (vscode.Uri.parse as jest.Mocked<any>).mockImplementation((uri) => uri);
+        await extensionManager.activate();
+        expect(vscode.commands.executeCommand).toBeCalledWith(
+          'vscode.open',
+          expect.stringContaining(
+            'jest-community/vscode-jest/blob/master/README.md#how-to-use-the-test-explorer'
+          )
+        );
+      });
     });
   });
 });

@@ -1,7 +1,6 @@
 import { JestTotalResults, ProjectWorkspace } from 'jest-editor-support';
 
 import * as vscode from 'vscode';
-import * as messaging from '../messaging';
 import { LoggingFactory } from '../logging';
 import {
   JestExtAutoRunConfig,
@@ -9,20 +8,16 @@ import {
   OnStartupType,
   PluginResourceSettings,
 } from '../Settings';
-import { WizardTaskId } from '../setup-wizard';
-import { AutoRunMode, StatusBarUpdate } from '../StatusBar';
+import { AutoRunMode } from '../StatusBar';
+import { ProcessSession } from './process-session';
+import { DebugTestIdentifier } from '../DebugCodeLens';
+import { JestProcessInfo } from '../JestProcessManagement';
 
 export enum WatchMode {
   None = 'none',
   Watch = 'watch',
   WatchAll = 'watchAll',
 }
-
-export interface JestExtSessionAware {
-  onSessionStart?: () => void;
-  onSessionStop?: () => void;
-}
-
 export interface AutoRunAccessor {
   config: JestExtAutoRunConfig;
   isOff: boolean;
@@ -39,10 +34,32 @@ export interface JestExtContext {
   autoRun: AutoRunAccessor;
 }
 
+export interface JestExtSessionContext extends JestExtContext {
+  session: ProcessSession;
+}
+export interface RunEventBase {
+  process: JestProcessInfo;
+}
+export type JestRunEvent = RunEventBase &
+  (
+    | { type: 'scheduled' }
+    | { type: 'data'; text: string; raw?: string; newLine?: boolean; isError?: boolean }
+    | { type: 'start' }
+    | { type: 'end' }
+    | { type: 'exit'; error?: string }
+  );
+export interface JestSessionEvents {
+  onRunEvent: vscode.EventEmitter<JestRunEvent>;
+  onTestSessionStarted: vscode.EventEmitter<JestExtSessionContext>;
+  onTestSessionStopped: vscode.EventEmitter<void>;
+}
 export interface JestExtProcessContextRaw extends JestExtContext {
-  output: vscode.OutputChannel;
-  updateStatusBar: (status: StatusBarUpdate) => void;
-  updateWithData: (data: JestTotalResults) => void;
-  setupWizardAction: (taskId: WizardTaskId) => messaging.MessageAction;
+  updateWithData: (data: JestTotalResults, process: JestProcessInfo) => void;
+  onRunEvent: vscode.EventEmitter<JestRunEvent>;
 }
 export type JestExtProcessContext = Readonly<JestExtProcessContextRaw>;
+
+export type DebugFunction = (
+  document: vscode.TextDocument | string,
+  ...ids: DebugTestIdentifier[]
+) => Promise<void>;

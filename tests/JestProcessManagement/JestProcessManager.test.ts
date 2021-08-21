@@ -26,6 +26,7 @@ const getState = (pm: JestProcessManager, process: JestProcess): ProcessState =>
   return state;
 };
 
+let SEQ = 1;
 describe('JestProcessManager', () => {
   let extContext;
 
@@ -39,6 +40,7 @@ describe('JestProcessManager', () => {
       reject = _reject;
     });
     const mockProcess = {
+      id: `${request.type}-${SEQ++}`,
       request,
       start: jest.fn().mockReturnValueOnce(promise),
       stop: jest.fn().mockImplementation(() => resolve('requested to stop')),
@@ -90,7 +92,8 @@ describe('JestProcessManager', () => {
       it('can run process after scheduling', () => {
         expect.hasAssertions();
 
-        pm.scheduleJestProcess(request);
+        const process = pm.scheduleJestProcess(request);
+        expect(process.id).toEqual(expect.stringContaining(request.type));
         expect(jestProcessMock).toBeCalledTimes(1);
         expect(mockProcess.start).toBeCalledTimes(1);
 
@@ -161,12 +164,12 @@ describe('JestProcessManager', () => {
 
         // submit first request
         let scheduled = pm.scheduleJestProcess(requests[0]);
-        expect(scheduled).toEqual(true);
+        expect(scheduled.id).toContain(requests[0].type);
         expect(getState(pm, processes[0])).toEqual({ inQ: true, started: true, qSize: 1 });
 
         // schedule 2nd request while first one is still running
         scheduled = pm.scheduleJestProcess(requests[1]);
-        expect(scheduled).toEqual(true);
+        expect(scheduled.id).toContain(requests[1].type);
         expect(getState(pm, processes[0])).toEqual({ inQ: true, started: true, qSize: 2 });
         expect(getState(pm, processes[1])).toEqual({ inQ: true, started: false, qSize: 2 });
 
@@ -177,7 +180,7 @@ describe('JestProcessManager', () => {
 
         // schedule the 3rd request
         scheduled = pm.scheduleJestProcess(requests[2]);
-        expect(scheduled).toEqual(true);
+        expect(scheduled.id).toContain(requests[2].type);
         expect(getState(pm, processes[1])).toEqual({ inQ: true, started: true, qSize: 2 });
 
         //   getState(pm, processes[1], { 'in-queue': true, started: true, 'queue-length': 1 })
@@ -188,9 +191,9 @@ describe('JestProcessManager', () => {
     describe('can run jest process in parallel', () => {
       const schedule: ScheduleStrategy = { queue: 'non-blocking' };
       const requests = [
-        mockProcessRequest('by-file', { testFileNamePattern: 'file-1', schedule }),
+        mockProcessRequest('by-file', { testFileName: 'file-1', schedule }),
         mockProcessRequest('not-test', { args: ['--listFiles'], schedule }),
-        mockProcessRequest('by-file', { testFileNamePattern: 'file-2', schedule }),
+        mockProcessRequest('by-file', { testFileName: 'file-2', schedule }),
         mockProcessRequest('not-test', { args: ['--listFiles'], schedule }),
       ];
       it('works for scheduling all requests up front', async () => {
@@ -232,20 +235,20 @@ describe('JestProcessManager', () => {
 
         // submit first request
         let scheduled = pm.scheduleJestProcess(requests[0]);
-        expect(scheduled).toEqual(true);
+        expect(scheduled.id).toContain(requests[0].type);
         expect(getState(pm, processes[0])).toEqual({ inQ: true, started: true, qSize: 1 });
 
         // schedule 2nd request while first one is still running
         scheduled = pm.scheduleJestProcess(requests[1]);
-        expect(scheduled).toEqual(true);
+        expect(scheduled.id).toContain(requests[1].type);
         expect(getState(pm, processes[0])).toEqual({ inQ: true, started: true, qSize: 2 });
         expect(getState(pm, processes[1])).toEqual({ inQ: true, started: true, qSize: 2 });
 
         // schedule 3rd and 4th requests
         scheduled = pm.scheduleJestProcess(requests[2]);
-        expect(scheduled).toEqual(true);
+        expect(scheduled.id).toContain(requests[2].type);
         scheduled = pm.scheduleJestProcess(requests[3]);
-        expect(scheduled).toEqual(true);
+        expect(scheduled.id).toContain(requests[3].type);
         expect(getState(pm, processes[0])).toEqual({ inQ: true, started: true, qSize: 4 });
         expect(getState(pm, processes[1])).toEqual({ inQ: true, started: true, qSize: 4 });
         expect(getState(pm, processes[2])).toEqual({ inQ: true, started: true, qSize: 4 });
@@ -274,13 +277,13 @@ describe('JestProcessManager', () => {
         // schedule the first process
         let scheduled = pm.scheduleJestProcess(request);
         // the process is running
-        expect(scheduled).toEqual(true);
+        expect(scheduled).toEqual(process);
         expect(getState(pm, process)).toEqual({ inQ: true, started: true, qSize: 1 });
 
         // schedule the 2nd process which should failed because the process is already running
         const process2 = mockJestProcess(request);
         scheduled = pm.scheduleJestProcess(request);
-        expect(scheduled).toEqual(false);
+        expect(scheduled).toBeUndefined();
         expect(getState(pm, process2)).toEqual({ inQ: false, qSize: 1 });
       });
       it('will not schedule if there is pending process', () => {
@@ -302,13 +305,13 @@ describe('JestProcessManager', () => {
         // schedule the 2nd process which should succeed because there is no pending process
         const process2 = mockJestProcess(request);
         scheduled = pm.scheduleJestProcess(request);
-        expect(scheduled).toEqual(true);
+        expect(scheduled.id).toContain(request.type);
         expect(getState(pm, process2)).toEqual({ inQ: true, started: false, qSize: 2 });
 
         // but the 3rd one would fail because the 2nd process is pending and thus can not add any more
         const process3 = mockJestProcess(request);
         scheduled = pm.scheduleJestProcess(request);
-        expect(scheduled).toEqual(false);
+        expect(scheduled).toBeUndefined();
         expect(getState(pm, process)).toEqual({ inQ: true, started: true, qSize: 2 });
         expect(getState(pm, process2)).toEqual({ inQ: true, started: false, qSize: 2 });
         expect(getState(pm, process3)).toEqual({ inQ: false, qSize: 2 });
@@ -320,11 +323,11 @@ describe('JestProcessManager', () => {
           dedup: { filterByStatus: ['pending'], filterByContent: true },
         };
         const request1 = mockProcessRequest('by-file', {
-          testFileNamePattern: '/file/1',
+          testFileName: '/file/1',
           schedule,
         });
         const request2 = mockProcessRequest('by-file', {
-          testFileNamePattern: '/file/2',
+          testFileName: '/file/2',
           schedule,
         });
 
@@ -333,25 +336,25 @@ describe('JestProcessManager', () => {
         // schedule the first process: no problem
         const process1 = mockJestProcess(request1);
         let scheduled = await pm.scheduleJestProcess(request1);
-        expect(scheduled).toEqual(true);
+        expect(scheduled.id).toContain(request1.type);
         expect(getState(pm, process1)).toEqual({ inQ: true, started: true, qSize: 1 });
 
         // schedule the 2nd process with request1, fine because process1 is running, not pending
         const process2 = mockJestProcess(request1);
         scheduled = await pm.scheduleJestProcess(request1);
-        expect(scheduled).toEqual(true);
+        expect(scheduled.id).toContain(request1.type);
         expect(getState(pm, process2)).toEqual({ inQ: true, started: false, qSize: 2 });
 
         // schedule the 3rd one with different request2, should be fine, no dup
         const process3 = mockJestProcess(request2);
         scheduled = await pm.scheduleJestProcess(request2);
-        expect(scheduled).toEqual(true);
+        expect(scheduled.id).toContain(request2.type);
         expect(getState(pm, process3)).toEqual({ inQ: true, started: false, qSize: 3 });
 
         // schedule the 4th one with request1, should be rejected as there is already one request pending
         const process4 = mockJestProcess(request1);
         scheduled = await pm.scheduleJestProcess(request1);
-        expect(scheduled).toEqual(false);
+        expect(scheduled).toBeUndefined();
         expect(getState(pm, process4)).toEqual({ inQ: false, qSize: 3 });
       });
     });

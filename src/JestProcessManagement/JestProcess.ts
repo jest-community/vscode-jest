@@ -4,9 +4,9 @@ import { Runner, RunnerEvent, Options } from 'jest-editor-support';
 import { JestExtContext, WatchMode } from '../JestExt/types';
 import { extensionId } from '../appGlobals';
 import { Logging } from '../logging';
-import { JestProcessRequest } from './types';
+import { JestProcessInfo, JestProcessRequest } from './types';
 import { requestString } from './helper';
-import { toFilePath, removeSurroundingQuote } from '../helpers';
+import { toFilePath, removeSurroundingQuote, escapeRegExp } from '../helpers';
 
 export const RunnerEvents: RunnerEvent[] = [
   'processClose',
@@ -27,29 +27,29 @@ export type StopReason = 'on-demand' | 'process-end';
 
 let SEQ = 0;
 
-export class JestProcess {
+export class JestProcess implements JestProcessInfo {
   static readonly stopHangTimeout = 500;
 
   private task?: RunnerTask;
   private extContext: JestExtContext;
   private logging: Logging;
   private _stopReason?: StopReason;
-  private _id: string;
+  public readonly id: string;
+  private desc: string;
   public readonly request: JestProcessRequest;
 
   constructor(extContext: JestExtContext, request: JestProcessRequest) {
     this.extContext = extContext;
     this.request = request;
     this.logging = extContext.loggingFactory.create(`JestProcess ${request.type}`);
-    this._id = `id: ${SEQ++}, request: ${requestString(request)}`;
+    this.id = `${request.type}-${SEQ++}`;
+    this.desc = `id: ${this.id}, request: ${requestString(request)}`;
   }
 
   public get stopReason(): StopReason | undefined {
     return this._stopReason;
   }
-  public get id(): string {
-    return this._id;
-  }
+
   private get watchMode(): WatchMode {
     if (this.request.type === 'watch-tests') {
       return WatchMode.Watch;
@@ -61,7 +61,7 @@ export class JestProcess {
   }
 
   public toString(): string {
-    return `JestProcess: ${this.id}; stopReason: ${this.stopReason}`;
+    return `JestProcess: ${this.desc}; stopReason: ${this.stopReason}`;
   }
   public start(): Promise<void> {
     this._stopReason = undefined;
@@ -92,6 +92,9 @@ export class JestProcess {
   private quoteFileName(fileName: string): string {
     return `"${toFilePath(removeSurroundingQuote(fileName))}"`;
   }
+  private quote(aString: string): string {
+    return `"${removeSurroundingQuote(aString)}"`;
+  }
   private startRunner(): Promise<void> {
     if (this.task) {
       this.logging('warn', `the runner task has already started!`);
@@ -99,34 +102,54 @@ export class JestProcess {
     }
 
     const options: Options = {
-      noColor: true,
+      noColor: false,
       reporters: ['default', `"${this.getReporterPath()}"`],
+      args: { args: ['--colors'] },
     };
+
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const args = options.args!.args;
 
     switch (this.request.type) {
       case 'all-tests':
-        if (this.request.updateSnapshot) {
-          options.args = { args: ['--updateSnapshot', '--watchAll=false'] };
-        }
-        break;
-      case 'by-file': {
-        options.testFileNamePattern = this.quoteFileName(this.request.testFileNamePattern);
-        const args: string[] = ['--findRelatedTests', '--watchAll=false'];
+        args.push('--watchAll=false');
         if (this.request.updateSnapshot) {
           args.push('--updateSnapshot');
         }
-        options.args = { args };
+        break;
+      case 'by-file': {
+        options.testFileNamePattern = this.quoteFileName(this.request.testFileName);
+        args.push('--findRelatedTests', '--watchAll=false');
+        if (this.request.updateSnapshot) {
+          args.push('--updateSnapshot');
+        }
+        break;
+      }
+      case 'by-file-pattern': {
+        const regex = this.quote(escapeRegExp(this.request.testFileNamePattern));
+        args.push('--watchAll=false', '--testPathPattern', regex);
+        if (this.request.updateSnapshot) {
+          args.push('--updateSnapshot');
+        }
         break;
       }
 
       case 'by-file-test': {
-        options.testFileNamePattern = this.quoteFileName(this.request.testFileNamePattern);
-        options.testNamePattern = this.request.testNamePattern;
-        const args: string[] = ['--runTestsByPath', '--watchAll=false'];
+        options.testFileNamePattern = this.quoteFileName(this.request.testFileName);
+        options.testNamePattern = this.quote(escapeRegExp(this.request.testNamePattern));
+        args.push('--runTestsByPath', '--watchAll=false');
         if (this.request.updateSnapshot) {
           args.push('--updateSnapshot');
         }
-        options.args = { args };
+        break;
+      }
+      case 'by-file-test-pattern': {
+        const regex = this.quote(escapeRegExp(this.request.testFileNamePattern));
+        options.testNamePattern = this.quote(escapeRegExp(this.request.testNamePattern));
+        args.push('--watchAll=false', '--testPathPattern', regex);
+        if (this.request.updateSnapshot) {
+          args.push('--updateSnapshot');
+        }
         break;
       }
       case 'not-test':

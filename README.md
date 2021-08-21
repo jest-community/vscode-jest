@@ -1,9 +1,19 @@
 # vscode-jest 
 
-[![Build Status](https://travis-ci.org/jest-community/vscode-jest.svg?branch=master)](https://travis-ci.org/jest-community/vscode-jest) [![Coverage Status](https://coveralls.io/repos/github/jest-community/vscode-jest/badge.svg?branch=master)](https://coveralls.io/github/jest-community/vscode-jest?branch=master) [![Visual Studio Marketplace](https://img.shields.io/visual-studio-marketplace/v/Orta.vscode-jest?color=success&label=Visual%20Studio%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=Orta.vscode-jest) 
+[![Build Status](https://github.com/jest-community/vscode-jest/actions/workflows/node-ci.yml/badge.svg)](https://github.com/jest-community/vscode-jest/actions) [![Coverage Status](https://coveralls.io/repos/github/jest-community/vscode-jest/badge.svg?branch=master)](https://coveralls.io/github/jest-community/vscode-jest?branch=master) [![Visual Studio Marketplace](https://img.shields.io/visual-studio-marketplace/v/Orta.vscode-jest?color=success&label=Visual%20Studio%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=Orta.vscode-jest) 
 
 ---
-## v4 Release <!-- omit in toc -->
+## v4.1 with Test Explorer <!-- omit in toc -->
+
+Test explorer is one of the highly requested feature for this extension. Last year vscode announced the plan for the official test explorer and we have been trying out the new proposed API since. Now the vscode test explore is live (2021 July release - v1.59), we are excited to release `v4.1` and our users can finally tap into this great new UI experience 🎉
+
+
+![test-explore.png](images/test-explorer.png)
+
+Please note, the test explorer is new and some of the features might be missing or imperfect (see [How to use test explore](#how-to-use-the-test-explorer) for more details), nevertheless, we will continue to improve it. Please do not hesitate to ask questions or file issues, thanks and have fun!
+
+<details>
+<summary>v4 Release</summary>
 
 After longer than expected development, [v4](https://github.com/jest-community/vscode-jest/releases/tag/v4.0.0) is finally released! 😄
 
@@ -14,6 +24,7 @@ Knowing the scope of the changes is significant, while we tried to test it as mu
 Feel free to read more about the [features and migration](https://github.com/jest-community/vscode-jest/releases/tag/v4.0.0) or come chat with us in the [release discussion](https://github.com/jest-community/vscode-jest/discussions/693) for general comments or questions about this release.
 
 P.S. We find the new version did made the development of this extension a bit easier (yes, we do eat our own dog food :dog:), hopefully, it will do the same for your project. Happy coding!
+</details>
 
 ---
 
@@ -29,9 +40,17 @@ Content
     - [How to use code coverage?](#how-to-use-code-coverage)
     - [How to use the extension with monorepo projects?](#how-to-use-the-extension-with-monorepo-projects)
     - [How to read the StatusBar?](#how-to-read-the-statusbar)
+    - [How to use the Test Explorer?](#how-to-use-the-test-explorer)
   - [Customization](#customization)
     - [Settings](#settings)
       - [Details](#details)
+        - [jestCommandLine](#jestcommandline)
+        - [rootPath](#rootpath)
+        - [debugCodeLens.showWhenTestStateIn](#debugcodelensshowwhenteststatein)
+        - [coverageFormatter](#coverageformatter)
+        - [coverageColors](#coveragecolors)
+        - [autoRun](#autorun)
+        - [testExplorer](#testexplorer)
     - [Debug Config](#debug-config)
   - [Commands](#commands)
   - [Menu](#menu)
@@ -101,7 +120,7 @@ Feel free to checkout the complete list of available [custom settings](#customiz
 
 ### How to trigger the test run?
 
-By default, users need not do anything, the extension will automatically trigger related test run when needed by running jest in the watch mode. However, this can be easily changed if more granular control is desired. Below shows the execution models supported and how to use [jest.autoRun](#autoRun) to opt into it:
+By default, users need not do anything, the extension will automatically trigger related test run when needed by running jest in the watch mode. However, this can be easily changed if more granular control is desired. Below shows the execution models supported and how to use [jest.autoRun](#autorun) to opt into it:
 
 <details>
 <summary>fully automated</summary>
@@ -130,7 +149,7 @@ Note: other than the "off" mode, users can specify the "onStartup" option for an
 
 ### How to debug tests?
 
-A test can be debugged via the debug codeLens appeared above the [debuggable](#showWhenTestStateIn) tests. Simply clicking on the codeLens will launch vscode debugger for the specific test. The extension also supports parameterized tests and allows users to pick the specific parameter set to debug. 
+A test can be debugged via the debug codeLens appeared above the [debuggable](#debugcodelensshowwhenteststatein) tests. Simply clicking on the codeLens will launch vscode debugger for the specific test. The extension also supports parameterized tests and allows users to pick the specific parameter set to debug. 
 
 The simplest use cases should be supported out-of-the-box. If VS Code displays errors about the attribute `program` or `runtimeExecutable` not being available, you can either use [setup wizard]() to help or create your own debug configuration within `launch.json`. See more details in [Customization - Debug Config](#debug-config).
 
@@ -197,6 +216,21 @@ shows the active workspace has onSave for test file only, and that the workspace
 shows the autoRun will be triggered by either test or source file changes.
 </details>
 
+### How to use the Test Explorer?
+Users with `vscode` v1.59 and `vscode-jest` v4.1 and up will start to see tests appearing in the test explorer automatically. Test explorer provides a "test-centric" view (vs. "source-centric" view in the editors), allows users to run/debug tests directly from the explorer (in addition to the inline debug codeLens), and provides a native terminal output experience (with colors!):
+
+![test-explore.png](images/test-explorer.png)
+
+You can further customize the explorer with [jest.testExplorer](#testexplorer) in [settings](#settings). 
+
+However, test explorer is new and some features are still work-in-progress or not available yet:
+- can't turn on/off coverage yet (pending on vscode API change)
+- not able to accurately indicate run/debug eligibility on the item level, this means you might not be able to run/debug some items through run/debug buttons. (pending on vscode API change)
+- the tests stats on the top of the explorer might not be accurate, especially for multiroot workspaces. (pending on vscode fix))
+- for watch-mode workspaces, the run button is turned off since tests will be automatically executed.
+- debug can only be executed for the test blocks, not on the file or folder level. (Please let us know if you have an use case otherwise)
+
+
 ## Customization
 ### Settings
 Users can use the following settings to tailor the extension for their environments. 
@@ -210,13 +244,14 @@ Users can use the following settings to tailor the extension for their environme
 |**Process**|
 |autoEnable :x:|Automatically start Jest for this project|true|Please use `autoRun` instead|
 |[jestCommandLine](#jestCommandLine)|The command line to start jest tests|undefined|`"jest.jestCommandLine": "npm test -"` or `"jest.jestCommandLine": "yarn test"` or `"jest.jestCommandLine": "node_modules/.bin/jest --config custom-config.js"`|
-|[autoRun](#autoRun)|Controls when and what tests should be run|undefined|`"jest.autoRun": "off"` or `"jest.autoRun": {"watch": true, "onStartup": ["all-tests"]}` or `"jest.autoRun": false, onSave:"test-only"}`|
+|[autoRun](#autorun)|Controls when and what tests should be run|undefined|`"jest.autoRun": "off"` or `"jest.autoRun": {"watch": true, "onStartup": ["all-tests"]}` or `"jest.autoRun": false, onSave:"test-only"}`|
 |pathToJest :x:|The path to the Jest binary, or an npm/yarn command to run tests|undefined|Please use `jestCommandLine` instead|
 |pathToConfig :x:|The path to your Jest configuration file"|""|Please use `jestCommandLine` instead|
 |[rootPath](#rootPath)|The path to your frontend src folder|""|`"jest.rootPath":"packages/app"` or `"jest.rootPath":"/apps/my-app"`| 
 |runAllTestsFirst :x:| Run all tests before starting Jest in watch mode|true|Please use `autoRun` instead|
 |**Editor**|
-|enableInlineErrorMessages :x:| Whether errors should be reported inline on a file|false|It is recommended not to use the inline error message and in favor of vscode's hovering messages, especially for parameterized tests|
+|<strike>enableInlineErrorMessages</strike> :x:| Whether errors should be reported inline on a file|--|This is now deprecated in favor of `jest.testExplorer` |
+|[testExplorer](#testexplorer) |Configure jest test explorer|`{"enabled": true}`| `{"enabled": false}`, `{"enabled": true, showClassicStatus: true, showInlineError: true}`|
 |**Snapshot**|
 |enableSnapshotUpdateMessages|Whether snapshot update messages should show|true|`"jest.enableSnapshotUpdateMessages": false`|
 |enableSnapshotPreviews 💼|Whether snapshot previews should show|true|`"jest.enableSnapshotPreviews": false`|
@@ -227,47 +262,43 @@ Users can use the following settings to tailor the extension for their environme
 |[coverageColors](#coverageColors)|Coverage indicator color override|undefined|`"jest.coverageColors": { "uncovered": "rgba(255,99,71, 0.2)", "partially-covered": "rgba(255,215,0, 0.2)"}`|
 |**Debug**|
 |enableCodeLens 💼|Whether codelens for debugging should show|true|`"jest.enableCodeLens": false`|
-|[debugCodeLens.showWhenTestStateIn](#showWhenTestStateIn) 💼|Show the debug CodeLens for the tests with the specified status. (window)|["fail", "unknown"]|`"jest.debugCodeLens.showWhenTestStateIn":["fail", "pass", "unknown"]`|
+|[debugCodeLens.showWhenTestStateIn](#debugcodelensshowwhenteststatein) 💼|Show the debug CodeLens for the tests with the specified status. (window)|["fail", "unknown"]|`"jest.debugCodeLens.showWhenTestStateIn":["fail", "pass", "unknown"]`|
 |**Misc**|
 |debugMode|Enable debug mode to diagnose plugin issues. (see developer console)|false|`"jest.debugMode": true`|         
 |disabledWorkspaceFolders 💼|Disabled workspace folders names in multiroot environment|[]|`"jest.disabledWorkspaceFolders": ["package-a", "package-b"]`|  
 
 #### Details
-<details>
-<summary><a id="jestCommandLine"></a>jestCommandLine</summary>
+##### jestCommandLine
 
 This should be the command users used to kick off the jest tests in the terminal. However, since the extension will append additional options at run time, please make sure the command line can pass along these options, which usually just means if you uses npm, add an additional "--" at the end (e.g. `"npm run test --"`) if you haven't already in your script. 
 It is recommended not to add the following options as they are managed by the extension: `--watch`, `--watchAll`, `--coverage`
-</details>
 
-<details>
-<summary><a id="rootPath"></a>rootPath</summary>
+##### rootPath
 
 If your project doesn't live in the root of your repository, you may want to customize the `jest.rootPath` setting to enlighten the extension as to where to look. For instance: `"jest.rootPath": "src/client-app"` will direct the extension to use the `src/client-app` folder as the root for Jest.
-</details>
 
-<details>
-<summary><a id="showWhenTestStateIn"></a>debugCodeLens.showWhenTestStateIn</summary>
+##### debugCodeLens.showWhenTestStateIn
 
 Possible status are: `[ "fail", "pass", "skip", "unknown"]`. Please note that this is a window level setting, i.e. its value will apply for all workspaces.
-</details>
 
-<details>
-<summary><a id="coverageFormatter"></a>coverageFormatter</summary>
+##### coverageFormatter
 
 There are 2 formatters to choose from: 
-  1. DefaultFormatter: high light uncovered and partially-covered code inlilne as well as on the right overview ruler. (this is the default)
-  ![coverage-DefaultFormatter.png](./images/coverage-DefaultFormatter.png)
+  1. <details><summary> DefaultFormatter: high light uncovered and partially-covered code inlilne as well as on the right overview ruler. (this is the default)</summary>
+        ![coverage-DefaultFormatter.png](./images/coverage-DefaultFormatter.png)
+  </details>
 
-  2. GutterFormatter: render coverage status in the gutter as well as the overview ruler. 
-  ![coverage-GutterFormatter.png](./images/coverage-GutterFormatter.png)
+  2. <details><summary>GutterFormatter: render coverage status in the gutter as well as the overview ruler.</summary>
+     ![coverage-GutterFormatter.png](./images/coverage-GutterFormatter.png)
+  </details>
+
   _(Note, there is an known issue in vscode (microsoft/vscode#5923) that gutter decorators could interfere with debug breakpoints visibility. Therefore, you probably want to disable coverage before debugging or switch to DefaultFormatter)_
-</details>
+##### coverageColors
 
+Besides the formatter, user can also customize the color via `jest.coverageColors` to change color for 3 coverage categories: `"uncovered", "covered", or "partially-covered"`, 
 <details>
-<summary><a id="coverageColors"></a>coverageColors</summary>
-
-Besides the formatter, user can also customize the color via `jest.coverageColors` to change color for 3 coverage categories: `"uncovered", "covered", or "partially-covered"`, for example:
+<summary>example</summary>
+for example:
   ```
   "jest.coverageColors": {
     "uncovered": "rgba(255,99,71, 0.2)",
@@ -283,11 +314,9 @@ Besides the formatter, user can also customize the color via `jest.coverageColor
   }
   ```
 </details>
-<details>
-<summary><a id="autoRun"></a>autoRun</summary>
 
-  - definition:
-  ```
+##### autoRun
+  ```json
   AutoRun =
     | 'off'
     | { watch: true; onStartup?: ["all-tests"] }
@@ -297,7 +326,9 @@ Besides the formatter, user can also customize the color via `jest.coverageColor
         onSave?: 'test-file' | 'test-src-file';
       }
   ```
-  - examples
+  <details>
+  <summary>example</summary>
+
     - Turn off auto run, users need to trigger tests run manually via [run commands](#commands-run) and [menus](#context-menu):
       ```json
       "jest.autoRun": "off"
@@ -336,6 +367,17 @@ Besides the formatter, user can also customize the color via `jest.coverageColor
       ```
 </details>
 
+##### testExplorer 
+  ```json
+  testExplorer =
+    | {enabled: false} 
+    | {enabled: true, showClassicStatus?: boolean, showInlineError?: boolean} 
+  ```
+  - `showClassicStatus`: show status symbol (prior to 4.1) in editor gutter, in addition to explorer status symbols. default is false if explorer is enabled.
+  - `showInlineError`: show vscode style inline error and error message viewer, default is false.
+
+default is `"jest.testExplorer": {"enabled": true}`
+>
 ### Debug Config
 
 This extension looks for `"vscode-jest-tests"` debug config in the workspace `.vscode/launch.json`. If not found, it will attempt to generate a default config that should work for most standard jest or projects bootstrapped by `create-react-app`. 
@@ -405,7 +447,7 @@ Sorry you are having trouble with the extension. If your issue did not get resol
 <details>
 <summary>It seems to make my vscode sluggish</summary>
 
-  By default the extension will run all tests when it is launched followed by a jest watch process. If you have many resource extensive tests or source files that can trigger many tests when changed, this could be the reason. Check out [jest.autoRun](#autoRun) to see how you can change and control when and what tests should be run.
+  By default the extension will run all tests when it is launched followed by a jest watch process. If you have many resource extensive tests or source files that can trigger many tests when changed, this could be the reason. Check out [jest.autoRun](#autorun) to see how you can change and control when and what tests should be run.
 </details>
 
 <details>

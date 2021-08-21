@@ -140,7 +140,6 @@ describe('getExtensionResourceSettings()', () => {
     expect(getExtensionResourceSettings(uri)).toEqual({
       autoEnable: true,
       coverageFormatter: 'DefaultFormatter',
-      enableInlineErrorMessages: false,
       enableSnapshotUpdateMessages: true,
       pathToConfig: '',
       pathToJest: null,
@@ -152,6 +151,7 @@ describe('getExtensionResourceSettings()', () => {
       debugMode: false,
       coverageColors: null,
       autoRun: null,
+      testExplorer: { enabled: true },
     });
   });
 });

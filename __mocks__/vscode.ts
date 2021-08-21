@@ -44,6 +44,7 @@ const Uri = {
   joinPath: jest.fn(),
 };
 const Range = jest.fn();
+const Location = jest.fn();
 const Position = jest.fn();
 const Diagnostic = jest.fn();
 const ThemeIcon = jest.fn();
@@ -69,7 +70,26 @@ const QuickInputButtons = {
   Back: {},
 };
 
-export {
+const tests = {
+  createTestController: jest.fn(),
+};
+
+const TestRunProfileKind = {
+  Run: 1,
+  Debug: 2,
+  Coverage: 3,
+};
+
+const TestMessage = jest.fn();
+const TestRunRequest = jest.fn();
+
+const EventEmitter = jest.fn().mockImplementation(() => {
+  return {
+    fire: jest.fn(),
+  };
+});
+
+export = {
   CodeLens,
   languages,
   StatusBarAlignment,
@@ -78,6 +98,7 @@ export {
   OverviewRulerLane,
   Uri,
   Range,
+  Location,
   Position,
   Diagnostic,
   ThemeIcon,
@@ -86,4 +107,9 @@ export {
   debug,
   commands,
   QuickInputButtons,
+  tests,
+  TestRunProfileKind,
+  EventEmitter,
+  TestMessage,
+  TestRunRequest,
 };

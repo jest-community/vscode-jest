@@ -4,21 +4,25 @@ jest.unmock('../../src/JestProcessManagement/helper');
 
 describe('isRequestEqual', () => {
   it.each`
-    r1                                                                              | r2                                                                              | isEqual
-    ${{ type: 'all-tests' }}                                                        | ${{ type: 'all-tests' }}                                                        | ${true}
-    ${{ type: 'all-tests' }}                                                        | ${{ type: 'watch-tests' }}                                                      | ${false}
-    ${{ type: 'watch-tests' }}                                                      | ${{ type: 'watch-all-tests' }}                                                  | ${false}
-    ${{ type: 'by-file', testFileNamePattern: 'abc' }}                              | ${{ type: 'by-file', testFileNamePattern: 'abc' }}                              | ${true}
-    ${{ type: 'by-file', testFileNamePattern: 'abc' }}                              | ${{ type: 'by-file', testFileNamePattern: 'abc', extra: 'whatever' }}           | ${true}
-    ${{ type: 'by-file', testFileNamePattern: 'abc' }}                              | ${{ type: 'by-file', testFileNamePattern: 'def' }}                              | ${false}
-    ${{ type: 'by-file', testFileNamePattern: undefined }}                          | ${{ type: 'by-file', testFileNamePattern: null }}                               | ${false}
-    ${{ type: 'by-file', testFileNamePattern: 'abc' }}                              | ${{ type: 'by-file' }}                                                          | ${false}
-    ${{ type: 'by-file-test', testFileNamePattern: 'abc', testNamePattern: '123' }} | ${{ type: 'by-file-test', testFileNamePattern: 'abc', testNamePattern: '123' }} | ${true}
-    ${{ type: 'by-file-test', testFileNamePattern: 'abc' }}                         | ${{ type: 'by-file-test', testFileNamePattern: 'abc', testNamePattern: '123' }} | ${false}
-    ${{ type: 'by-file-test', testFileNamePattern: 'abc' }}                         | ${{ type: 'by-file-test', testFileNamePattern: 'abc' }}                         | ${true}
-    ${{ type: 'not-test', args: ['abc', 'xyz'] }}                                   | ${{ type: 'not-test', args: ['abc', 'xyz'] }}                                   | ${true}
-    ${{ type: 'not-test', args: ['abc', 'xyz'] }}                                   | ${{ type: 'not-test', args: ['abc'] }}                                          | ${false}
-    ${{ type: 'not-test', args: [] }}                                               | ${{ type: 'not-test', args: ['abc'] }}                                          | ${false}
+    r1                                                                                      | r2                                                                                      | isEqual
+    ${{ type: 'all-tests' }}                                                                | ${{ type: 'all-tests' }}                                                                | ${true}
+    ${{ type: 'all-tests' }}                                                                | ${{ type: 'watch-tests' }}                                                              | ${false}
+    ${{ type: 'watch-tests' }}                                                              | ${{ type: 'watch-all-tests' }}                                                          | ${false}
+    ${{ type: 'by-file', testFileName: 'abc' }}                                             | ${{ type: 'by-file', testFileName: 'abc' }}                                             | ${true}
+    ${{ type: 'by-file', testFileName: 'abc' }}                                             | ${{ type: 'by-file', testFileName: 'abc', extra: 'whatever' }}                          | ${true}
+    ${{ type: 'by-file', testFileName: 'abc' }}                                             | ${{ type: 'by-file', testFileName: 'def' }}                                             | ${false}
+    ${{ type: 'by-file', testFileName: undefined }}                                         | ${{ type: 'by-file', testFileName: null }}                                              | ${false}
+    ${{ type: 'by-file', testFileName: 'abc' }}                                             | ${{ type: 'by-file' }}                                                                  | ${false}
+    ${{ type: 'by-file-pattern', testFileNamePattern: 'abc' }}                              | ${{ type: 'by-file-pattern', testFileNamePattern: 'abc' }}                              | ${true}
+    ${{ type: 'by-file-pattern', testFileNamePattern: 'abc' }}                              | ${{ type: 'by-file-pattern', testFileNamePattern: 'Abc' }}                              | ${false}
+    ${{ type: 'by-file-test', testFileName: 'abc', testNamePattern: '123' }}                | ${{ type: 'by-file-test', testFileName: 'abc', testNamePattern: '123' }}                | ${true}
+    ${{ type: 'by-file-test', testFileName: 'abc' }}                                        | ${{ type: 'by-file-test', testFileName: 'abc', testNamePattern: '123' }}                | ${false}
+    ${{ type: 'by-file-test', testFileName: 'abc' }}                                        | ${{ type: 'by-file-test', testFileName: 'abc' }}                                        | ${true}
+    ${{ type: 'by-file-test-pattern', testFileNamePattern: 'abc', testNamePattern: '123' }} | ${{ type: 'by-file-test-pattern', testFileNamePattern: 'abc', testNamePattern: '123' }} | ${true}
+    ${{ type: 'by-file-test-pattern', testFileNamePattern: 'abc', testNamePattern: '123' }} | ${{ type: 'by-file-test', testFileName: 'abc', testNamePattern: '123' }}                | ${false}
+    ${{ type: 'not-test', args: ['abc', 'xyz'] }}                                           | ${{ type: 'not-test', args: ['abc', 'xyz'] }}                                           | ${true}
+    ${{ type: 'not-test', args: ['abc', 'xyz'] }}                                           | ${{ type: 'not-test', args: ['abc'] }}                                                  | ${false}
+    ${{ type: 'not-test', args: [] }}                                                       | ${{ type: 'not-test', args: ['abc'] }}                                                  | ${false}
   `('$r1 ?== $r2 ? $isEqual', ({ r1, r2, isEqual }) => {
     expect(isRequestEqual(r1, r2)).toEqual(isEqual);
   });
@@ -61,23 +65,23 @@ describe('isDup', () => {
     expect(isDup(task, request)).toEqual(expected);
   });
   it.each`
-    type                 | status         | testFileNamePattern | expected
-    ${'by-file'}         | ${['running']} | ${'abc'}            | ${false}
-    ${'by-file'}         | ${['pending']} | ${'abc'}            | ${true}
-    ${'by-file'}         | ${['pending']} | ${'def'}            | ${false}
-    ${'by-file'}         | ${['pending']} | ${undefined}        | ${false}
-    ${'by-file'}         | ${undefined}   | ${'abc'}            | ${true}
-    ${'watch-all-tests'} | ${['pending']} | ${'abc'}            | ${false}
+    type                 | status         | testFileName | expected
+    ${'by-file'}         | ${['running']} | ${'abc'}     | ${false}
+    ${'by-file'}         | ${['pending']} | ${'abc'}     | ${true}
+    ${'by-file'}         | ${['pending']} | ${'def'}     | ${false}
+    ${'by-file'}         | ${['pending']} | ${undefined} | ${false}
+    ${'by-file'}         | ${undefined}   | ${'abc'}     | ${true}
+    ${'watch-all-tests'} | ${['pending']} | ${'abc'}     | ${false}
   `(
     'can check by $type, $status, filterByContent=$filterByContent, isDup = $expected',
-    ({ type, status, testFileNamePattern, expected }) => {
+    ({ type, status, testFileName, expected }) => {
       const task: any = {
-        data: { request: { type: 'by-file', testFileNamePattern: 'abc' } },
+        data: { request: { type: 'by-file', testFileName: 'abc' } },
         status: 'pending',
       };
       const request: any = {
         type,
-        testFileNamePattern,
+        testFileName,
         schedule: { dedup: { filterByStatus: status, filterByContent: true } },
       };
 

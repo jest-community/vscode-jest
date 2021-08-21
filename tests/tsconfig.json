@@ -1,8 +1,9 @@
 {
   "extends": "../tsconfig.json",
   "compilerOptions": {
-    "strict": false,
-    "alwaysStrict": true,
+    "strict": true,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
   },
-  "include": ["**/*.ts", "../custom.d.ts"]
+  "exclude": ["../__mocks__"]
 }

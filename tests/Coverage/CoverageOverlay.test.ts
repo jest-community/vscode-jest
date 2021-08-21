@@ -23,7 +23,6 @@ jest.mock('vscode', () => {
 import { CoverageOverlay } from '../../src/Coverage/CoverageOverlay';
 import { DefaultFormatter } from '../../src/Coverage/Formatters/DefaultFormatter';
 import { GutterFormatter } from '../../src/Coverage/Formatters/GutterFormatter';
-import { hasDocument } from '../../src/editor';
 
 describe('CoverageOverlay', () => {
   const coverageMapProvider: any = {};
@@ -134,7 +133,6 @@ describe('CoverageOverlay', () => {
   describe('update()', () => {
     it('should do nothing if the editor does not have a valid document', () => {
       const sut = new CoverageOverlay(null, coverageMapProvider);
-      ((hasDocument as unknown) as jest.Mock<{}>).mockReturnValueOnce(false);
 
       const editor: any = {};
       sut.update(editor);
@@ -146,9 +144,8 @@ describe('CoverageOverlay', () => {
     it('should add the overlay when enabled', () => {
       const enabled = true;
       const sut = new CoverageOverlay(null, coverageMapProvider, enabled);
-      ((hasDocument as unknown) as jest.Mock<{}>).mockReturnValueOnce(true);
 
-      const editor: any = {};
+      const editor: any = { document: {} };
       sut.update(editor);
 
       expect(sut.formatter.format).toBeCalledWith(editor);
@@ -157,9 +154,8 @@ describe('CoverageOverlay', () => {
     it('should remove the overlay when disabled', () => {
       const enabled = false;
       const sut = new CoverageOverlay(null, coverageMapProvider, enabled);
-      ((hasDocument as unknown) as jest.Mock<{}>).mockReturnValueOnce(true);
 
-      const editor: any = {};
+      const editor: any = { document: {} };
       sut.update(editor);
 
       expect(sut.formatter.clear).toBeCalledWith(editor);

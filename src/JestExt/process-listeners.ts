@@ -1,19 +1,21 @@
 import * as vscode from 'vscode';
 import { JestTotalResults } from 'jest-editor-support';
-import * as messaging from '../messaging';
 import { cleanAnsi } from '../helpers';
-import { JestProcess, JestProcessEvent, JestProcessListener } from '../JestProcessManagement';
+import { JestProcess, JestProcessEvent } from '../JestProcessManagement';
 import { ListenerSession, ListTestFilesCallback } from './process-session';
 import { isWatchRequest, prefixWorkspace } from './helper';
 import { Logging } from '../logging';
+import { JestRunEvent } from './types';
 
-export class AbstractProcessListener implements JestProcessListener {
+export class AbstractProcessListener {
   protected session: ListenerSession;
   protected readonly logging: Logging;
+  public onRunEvent: vscode.EventEmitter<JestRunEvent>;
 
   constructor(session: ListenerSession) {
     this.session = session;
     this.logging = session.context.loggingFactory.create(this.name);
+    this.onRunEvent = session.context.onRunEvent;
   }
   protected get name(): string {
     return 'AbstractProcessListener';
@@ -27,7 +29,7 @@ export class AbstractProcessListener implements JestProcessListener {
       }
       case 'executableStdErr': {
         const data = (args[0] as Buffer).toString();
-        this.onExecutableStdErr(jestProcess, cleanAnsi(data));
+        this.onExecutableStdErr(jestProcess, cleanAnsi(data), data);
         break;
       }
       case 'executableJSON': {
@@ -35,11 +37,13 @@ export class AbstractProcessListener implements JestProcessListener {
         break;
       }
       case 'executableOutput': {
-        this.onExecutableOutput(jestProcess, cleanAnsi(args[0] as string));
+        const str = args[0] as string;
+        this.onExecutableOutput(jestProcess, cleanAnsi(str), str);
         break;
       }
       case 'terminalError': {
-        this.onTerminalError(jestProcess, cleanAnsi(args[0] as string));
+        const str = args[0] as string;
+        this.onTerminalError(jestProcess, cleanAnsi(str), str);
         break;
       }
       case 'processClose': {
@@ -62,38 +66,34 @@ export class AbstractProcessListener implements JestProcessListener {
   }
 
   protected onProcessStarting(process: JestProcess): void {
-    this.session.context.updateStatusBar({ state: 'running' });
+    this.session.context.onRunEvent.fire({ type: 'start', process });
     this.logging('debug', `${process.request.type} onProcessStarting`);
   }
-  protected onExecutableStdErr(process: JestProcess, data: string): void {
+  protected onExecutableStdErr(process: JestProcess, data: string, _raw: string): void {
     this.logging('debug', `${process.request.type} onExecutableStdErr:`, data);
   }
   protected onExecutableJSON(process: JestProcess, data: JestTotalResults): void {
     this.logging('debug', `${process.request.type} onExecutableJSON:`, data);
   }
-  protected onExecutableOutput(process: JestProcess, data: string): void {
+  protected onExecutableOutput(process: JestProcess, data: string, _raw: string): void {
     this.logging('debug', `${process.request.type} onExecutableOutput:`, data);
   }
-  protected onTerminalError(process: JestProcess, data: string): void {
+  protected onTerminalError(process: JestProcess, data: string, _raw: string): void {
     this.logging('error', `${process.request.type} onTerminalError:`, data);
   }
   protected onProcessClose(_process: JestProcess, _code?: number, _signal?: string): void {
     // no default behavior...
   }
   protected onProcessExit(process: JestProcess, code?: number, signal?: string): void {
-    this.session.context.updateStatusBar({ state: 'done' });
     // code = 1 is general error, usually mean the command emit error, which should already handled by other event processing, for example when jest has failed tests.
     // However, error beyond 1, usually means some error outside of the command it is trying to execute, so reporting here for debugging purpose
     // see shell error code: https://www.linuxjournal.com/article/10844
     if (code && code > 1) {
-      this.session.context.updateStatusBar({ state: 'stopped' });
-      this.logging(
-        'debug',
-        `${process.request.type} onProcessExit: process exit with code=${code}, signal=${signal}:`,
-        process.toString()
-      );
+      const error = `${process.request.type} onProcessExit: process exit with code=${code}, signal=${signal}`;
+      this.session.context.onRunEvent.fire({ type: 'exit', process, error });
+      this.logging('debug', `${error} :`, process.toString());
     } else {
-      this.session.context.updateStatusBar({ state: 'done' });
+      this.session.context.onRunEvent.fire({ type: 'exit', process });
     }
   }
 }
@@ -150,7 +150,10 @@ export class RunTestListener extends AbstractProcessListener {
   private shouldIgnoreOutput(text: string): boolean {
     // this fails when snapshots change - to be revised - returning always false for now
     return (
-      text.includes('Watch Usage') || text.includes('onRunComplete') || text.includes('onRunStart')
+      text.length <= 0 ||
+      text.includes('Watch Usage') ||
+      text.includes('onRunComplete') ||
+      text.includes('onRunStart')
     );
   }
 
@@ -168,7 +171,7 @@ export class RunTestListener extends AbstractProcessListener {
     ) {
       const scope =
         process.request.type === 'by-file'
-          ? `for file "${process.request.testFileNamePattern}"`
+          ? `for file "${process.request.testFileName}"`
           : `for all files in "${this.session.context.workspace.name}"`;
       vscode.window
         .showInformationMessage(`Would you like to update snapshots ${scope}?`, {
@@ -181,7 +184,12 @@ export class RunTestListener extends AbstractProcessListener {
               type: 'update-snapshot',
               baseRequest: process.request,
             });
-            this.session.context.output.appendLine('Updating snapshots...');
+            this.onRunEvent.fire({
+              type: 'data',
+              process,
+              text: 'Updating snapshots...',
+              newLine: true,
+            });
           }
         });
     }
@@ -204,7 +212,7 @@ export class RunTestListener extends AbstractProcessListener {
   }
 
   // watch process should not exit unless we request it to be closed
-  private handleWatchProcessCrash(process: JestProcess) {
+  private handleWatchProcessCrash(process: JestProcess): string | undefined {
     if (
       (process.request.type === 'watch-tests' || process.request.type === 'watch-all-tests') &&
       process.stopReason !== 'on-demand'
@@ -215,62 +223,53 @@ export class RunTestListener extends AbstractProcessListener {
       );
       this.logging('warn', msg);
 
-      this.session.context.output.appendLine(
-        `${msg}\n see troubleshooting: ${messaging.TROUBLESHOOTING_URL}`
-      );
-      this.session.context.output.show(true);
-      messaging.systemErrorMessage(
-        msg,
-        messaging.showTroubleshootingAction,
-        this.session.context.setupWizardAction('cmdLine')
-      );
+      return msg;
     }
   }
 
   //=== event handlers ===
-  protected onProcessStarting(process: JestProcess): void {
-    super.onProcessStarting(process);
-    this.session.context.output.clear();
+  protected onExecutableJSON(process: JestProcess, data: JestTotalResults): void {
+    this.session.context.updateWithData(data, process);
   }
 
-  protected onExecutableJSON(_process: JestProcess, data: JestTotalResults): void {
-    this.session.context.updateWithData(data);
-  }
-
-  protected onExecutableStdErr(process: JestProcess, message: string): void {
+  protected onExecutableStdErr(process: JestProcess, message: string, raw: string): void {
     if (this.shouldIgnoreOutput(message)) {
       return;
     }
 
-    this.session.context.output.append(message);
+    this.onRunEvent.fire({ type: 'data', process, text: message, raw });
 
     this.handleSnapshotTestFailuer(process, message);
 
     this.handleWatchNotSupportedError(process, message);
   }
 
-  protected onExecutableOutput(process: JestProcess, output: string): void {
+  protected onExecutableOutput(process: JestProcess, output: string, raw: string): void {
     if (output.includes('onRunStart')) {
-      this.session.context.updateStatusBar({ state: 'running' });
       if (isWatchRequest(process.request)) {
-        this.session.context.output.clear();
+        this.onRunEvent.fire({ type: 'start', process });
       }
     }
     if (output.includes('onRunComplete')) {
-      this.session.context.updateStatusBar({ state: 'done' });
+      if (isWatchRequest(process.request)) {
+        this.onRunEvent.fire({ type: 'end', process });
+      }
     }
 
     if (!this.shouldIgnoreOutput(output)) {
-      this.session.context.output.append(output);
+      this.onRunEvent.fire({ type: 'data', process, text: output, raw });
     }
   }
 
-  protected onTerminalError(_process: JestProcess, data: string): void {
-    this.session.context.output.appendLine(`\nException raised: ${data}`);
-    this.session.context.output.show(true);
+  protected onTerminalError(process: JestProcess, data: string, raw: string): void {
+    this.onRunEvent.fire({ type: 'data', process, text: data, raw, newLine: true, isError: true });
+  }
+  protected onProcessExit(_process: JestProcess): void {
+    //override parent method so we will fire run event only when process closed
   }
   protected onProcessClose(process: JestProcess): void {
     super.onProcessClose(process);
-    this.handleWatchProcessCrash(process);
+    const error = this.handleWatchProcessCrash(process);
+    this.onRunEvent.fire({ type: 'exit', process, error });
   }
 }

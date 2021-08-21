@@ -1,4 +1,3 @@
-/* eslint-disable jest/no-conditional-expect */
 jest.unmock('events');
 jest.unmock('../../src/JestExt/core');
 jest.unmock('../../src/JestExt/helper');
@@ -12,13 +11,12 @@ jest.mock('os');
 jest.mock('../../src/decorations/test-status', () => ({
   TestStatus: jest.fn(),
 }));
-jest.mock('../../src/decorations/inline-error', () => ({
-  default: jest.fn(),
-}));
 
-const update = jest.fn();
+const sbUpdateMock = jest.fn();
 const statusBar = {
-  bind: () => ({ update }),
+  bind: () => ({
+    update: sbUpdateMock,
+  }),
 };
 jest.mock('../../src/StatusBar', () => ({ statusBar }));
 jest.mock('jest-editor-support');
@@ -26,12 +24,9 @@ jest.mock('jest-editor-support');
 import * as vscode from 'vscode';
 import { JestExt } from '../../src/JestExt/core';
 import { createProcessSession } from '../../src/JestExt/process-session';
-import { window, workspace, debug, ExtensionContext, TextEditorDecorationType } from 'vscode';
-import { hasDocument, isOpenInMultipleEditors } from '../../src/editor';
 import { TestStatus } from '../../src/decorations/test-status';
 import { updateCurrentDiagnostics, updateDiagnostics } from '../../src/diagnostics';
 import { CoverageMapProvider } from '../../src/Coverage';
-import inlineError from '../../src/decorations/inline-error';
 import * as helper from '../../src/helpers';
 import { TestIdentifier, resultsWithLowerCaseWindowsDriveLetters } from '../../src/TestResults';
 import * as messaging from '../../src/messaging';
@@ -41,6 +36,7 @@ import { workspaceLogging } from '../../src/logging';
 import { ProjectWorkspace } from 'jest-editor-support';
 import { mockProjectWorkspace, mockWworkspaceLogging } from '../test-helper';
 import { startWizard } from '../../src/setup-wizard';
+import { JestTestProvider } from '../../src/test-provider';
 
 /* eslint jest/expect-expect: ["error", { "assertFunctionNames": ["expect", "expectItTakesNoAction"] }] */
 const mockHelpers = helper as jest.Mocked<any>;
@@ -54,17 +50,18 @@ const EmptySortedResult = {
 const mockGetExtensionResourceSettings = jest.spyOn(extHelper, 'getExtensionResourceSettings');
 
 describe('JestExt', () => {
-  const getConfiguration = workspace.getConfiguration as jest.Mock<any>;
+  const getConfiguration = vscode.workspace.getConfiguration as jest.Mock<any>;
   const StateDecorationsMock = TestStatus as jest.Mock;
-  const context: any = { asAbsolutePath: (text) => text } as ExtensionContext;
+  const context: any = { asAbsolutePath: (text) => text } as vscode.ExtensionContext;
   const workspaceFolder = { name: 'test-folder' } as any;
   const channelStub = {
     appendLine: jest.fn(),
+    append: jest.fn(),
     clear: jest.fn(),
     show: jest.fn(),
     dispose: jest.fn(),
   } as any;
-  const extensionSettings = { debugCodeLens: {} } as any;
+  const extensionSettings = { debugCodeLens: {}, testExplorer: { enabled: true } } as any;
   const debugCodeLensProvider = {} as any;
   const debugConfigurationProvider = {
     provideDebugConfigurations: jest.fn(),
@@ -105,6 +102,10 @@ describe('JestExt', () => {
     };
   };
 
+  const mockTestProvider: any = {
+    dispose: jest.fn(),
+  };
+
   beforeEach(() => {
     jest.resetAllMocks();
 
@@ -115,80 +116,9 @@ describe('JestExt', () => {
     (createProcessSession as jest.Mocked<any>).mockReturnValue(mockProcessSession);
     (ProjectWorkspace as jest.Mocked<any>).mockImplementation(mockProjectWorkspace);
     (workspaceLogging as jest.Mocked<any>).mockImplementation(mockWworkspaceLogging);
-  });
-
-  describe('resetInlineErrorDecorators()', () => {
-    let sut: JestExt;
-    const editor = mockEditor('file.js', 'javascript');
-    const decorationType: any = { dispose: jest.fn() };
-
-    beforeEach(() => {
-      sut = newJestExt();
-
-      sut.debugCodeLensProvider.didChange = jest.fn();
-      ((sut.testResultProvider.getSortedResults as unknown) as jest.Mock<{}>).mockReturnValueOnce(
-        EmptySortedResult
-      );
-    });
-    it('should initialize the cached decoration types as an empty array', () => {
-      expect(sut.failingAssertionDecorators[editor.document.fileName]).toBeUndefined();
-      sut.triggerUpdateActiveEditor(editor);
-
-      expect(sut.failingAssertionDecorators[editor.document.fileName]).toEqual([]);
-      expect(isOpenInMultipleEditors).not.toBeCalled();
-    });
-
-    it('should not clear the cached decorations types when the document is open more than once', () => {
-      ((isOpenInMultipleEditors as unknown) as jest.Mock<{}>).mockReturnValueOnce(true);
-
-      sut.failingAssertionDecorators[editor.document.fileName] = {
-        forEach: jest.fn(),
-      } as any;
-      sut.triggerUpdateActiveEditor(editor);
-
-      expect(sut.failingAssertionDecorators[editor.document.fileName].forEach).not.toBeCalled();
-    });
-
-    it('should dispose of each cached decoration type', () => {
-      sut.failingAssertionDecorators[editor.document.fileName] = [decorationType];
-      sut.triggerUpdateActiveEditor(editor);
-
-      expect(decorationType.dispose).toBeCalled();
-    });
-
-    it('should reset the cached decoration types', () => {
-      sut.failingAssertionDecorators[editor.document.fileName] = [decorationType];
-      sut.triggerUpdateActiveEditor(editor);
-
-      expect(sut.failingAssertionDecorators[editor.document.fileName]).toEqual([]);
-    });
-  });
-
-  describe('generateInlineErrorDecorator()', () => {
-    it('should add the decoration type to the cache', () => {
-      const settings: any = {
-        debugCodeLens: {},
-        enableInlineErrorMessages: true,
-      };
-      const expected = { key: 'value' };
-      const failingAssertionStyle = inlineError as jest.Mock;
-      failingAssertionStyle.mockReturnValueOnce(expected);
-      const sut = newJestExt({ settings });
-      const editor = mockEditor('file.ts');
-      sut.testResultProvider.getSortedResults = jest.fn().mockReturnValueOnce({
-        success: [],
-        fail: [
-          {
-            start: {},
-          },
-        ],
-        skip: [],
-        unknown: [],
-      });
-      sut.debugCodeLensProvider.didChange = jest.fn();
-      sut.triggerUpdateActiveEditor(editor);
-
-      expect(sut.failingAssertionDecorators[editor.document.fileName]).toEqual([expected]);
+    (JestTestProvider as jest.Mocked<any>).mockImplementation(() => mockTestProvider);
+    (vscode.EventEmitter as jest.Mocked<any>) = jest.fn().mockImplementation(() => {
+      return { fire: jest.fn(), event: jest.fn(), dispose: jest.fn() };
     });
   });
 
@@ -204,7 +134,7 @@ describe('JestExt', () => {
     const mockShowQuickPick = jest.fn();
     let mockConfigurations = [];
     beforeEach(() => {
-      startDebugging = (debug.startDebugging as unknown) as jest.Mock<{}>;
+      startDebugging = (vscode.debug.startDebugging as unknown) as jest.Mock<{}>;
       ((startDebugging as unknown) as jest.Mock<{}>).mockImplementation(
         async (_folder: any, nameOrConfig: any) => {
           // trigger fallback to default configuration
@@ -226,24 +156,29 @@ describe('JestExt', () => {
 
       sut = newJestExt();
     });
-    it('should run the supplied test', async () => {
-      const testNamePattern = 'testNamePattern';
-      await sut.debugTests(document, testNamePattern);
-      expect(debug.startDebugging).toHaveBeenCalledWith(workspaceFolder, debugConfiguration);
-      const configuration = startDebugging.mock.calls[startDebugging.mock.calls.length - 1][1];
-      expect(configuration).toBeDefined();
-      expect(configuration.type).toBe('dummyconfig');
-      expect(sut.debugConfigurationProvider.prepareTestRun).toBeCalledWith(
-        fileName,
-        testNamePattern
-      );
+    describe('should run the supplied test', () => {
+      it.each([[document], ['fileName']])('support document paramter: %s', async (doc) => {
+        const testNamePattern = 'testNamePattern';
+        await sut.debugTests(doc, testNamePattern);
+        expect(vscode.debug.startDebugging).toHaveBeenCalledWith(
+          workspaceFolder,
+          debugConfiguration
+        );
+        const configuration = startDebugging.mock.calls[startDebugging.mock.calls.length - 1][1];
+        expect(configuration).toBeDefined();
+        expect(configuration.type).toBe('dummyconfig');
+        expect(sut.debugConfigurationProvider.prepareTestRun).toBeCalledWith(
+          fileName,
+          testNamePattern
+        );
+      });
     });
     it('can handle testIdentifier argument', async () => {
       const tId = makeIdentifier('test-1', ['d-1', 'd-1-1']);
       const fullName = 'd-1 d-1-1 test-1';
       mockHelpers.testIdString.mockReturnValue(fullName);
       await sut.debugTests(document, tId);
-      expect(debug.startDebugging).toHaveBeenCalledWith(workspaceFolder, debugConfiguration);
+      expect(vscode.debug.startDebugging).toHaveBeenCalledWith(workspaceFolder, debugConfiguration);
       const configuration = startDebugging.mock.calls[startDebugging.mock.calls.length - 1][1];
       expect(configuration).toBeDefined();
       expect(configuration.type).toBe('dummyconfig');
@@ -265,14 +200,17 @@ describe('JestExt', () => {
         expect(mockHelpers.escapeRegExp).toHaveBeenCalled();
       }
       if (startDebug) {
-        expect(debug.startDebugging).toHaveBeenCalledWith(workspaceFolder, debugConfiguration);
+        expect(vscode.debug.startDebugging).toHaveBeenCalledWith(
+          workspaceFolder,
+          debugConfiguration
+        );
         const configuration = startDebugging.mock.calls[startDebugging.mock.calls.length - 1][1];
         expect(configuration).toBeDefined();
         expect(configuration.type).toBe('dummyconfig');
         expect(sut.debugConfigurationProvider.prepareTestRun).toHaveBeenCalled();
       } else {
         expect(sut.debugConfigurationProvider.prepareTestRun).not.toHaveBeenCalled();
-        expect(debug.startDebugging).not.toHaveBeenCalled();
+        expect(vscode.debug.startDebugging).not.toHaveBeenCalled();
       }
     });
     describe('paramerterized test', () => {
@@ -314,7 +252,10 @@ describe('JestExt', () => {
           const selected = [tId1, tId2, tId3][selectIdx];
           expect(mockHelpers.escapeRegExp).toBeCalledWith(selected);
           // verify the actual test to be run is the one we selected: tId2
-          expect(debug.startDebugging).toHaveBeenCalledWith(workspaceFolder, debugConfiguration);
+          expect(vscode.debug.startDebugging).toHaveBeenCalledWith(
+            workspaceFolder,
+            debugConfiguration
+          );
           const configuration = startDebugging.mock.calls[startDebugging.mock.calls.length - 1][1];
           expect(configuration).toBeDefined();
           expect(configuration.type).toBe('dummyconfig');
@@ -324,13 +265,13 @@ describe('JestExt', () => {
           selectIdx = -1;
           await sut.debugTests(document, tId1, tId2, tId3);
           expect(mockShowQuickPick).toHaveBeenCalledTimes(1);
-          expect(debug.startDebugging).not.toHaveBeenCalled();
+          expect(vscode.debug.startDebugging).not.toHaveBeenCalled();
         });
         it('if pass zero testId, nothing will be run', async () => {
           await sut.debugTests(document);
           expect(mockShowQuickPick).not.toHaveBeenCalled();
           expect(mockHelpers.testIdString).not.toBeCalled();
-          expect(debug.startDebugging).not.toHaveBeenCalled();
+          expect(vscode.debug.startDebugging).not.toHaveBeenCalled();
         });
       });
     });
@@ -355,13 +296,13 @@ describe('JestExt', () => {
         expect(startDebugging).toBeCalledTimes(1);
         if (shouldShowWarning) {
           // debug with generated config
-          expect(debug.startDebugging).toHaveBeenLastCalledWith(
+          expect(vscode.debug.startDebugging).toHaveBeenLastCalledWith(
             workspaceFolder,
             debugConfiguration
           );
         } else {
           // debug with existing config
-          expect(debug.startDebugging).toHaveBeenLastCalledWith(workspaceFolder, {
+          expect(vscode.debug.startDebugging).toHaveBeenLastCalledWith(workspaceFolder, {
             name: 'vscode-jest-tests',
           });
         }
@@ -404,11 +345,6 @@ describe('JestExt', () => {
       sut.onDidCloseTextDocument(document);
       expect(sut.removeCachedTestResults).toBeCalledWith(document);
     });
-
-    it('should remove the cached decorations', () => {
-      sut.onDidCloseTextDocument(document);
-      expect(sut.removeCachedDecorationTypes).toBeCalled();
-    });
   });
 
   describe('removeCachedTestResults()', () => {
@@ -445,30 +381,6 @@ describe('JestExt', () => {
     });
   });
 
-  describe('removeCachedAnnotations()', () => {
-    let sut;
-    beforeEach(() => {
-      sut = newJestExt();
-
-      sut.failingAssertionDecorators = {
-        'file.js': [],
-      };
-    });
-
-    it('should do nothing when the document is falsy', () => {
-      sut.onDidCloseTextDocument(null);
-
-      expect(sut.failingAssertionDecorators['file.js']).toBeDefined();
-    });
-
-    it('should remove the annotations for the document', () => {
-      const document: any = { fileName: 'file.js' } as any;
-      sut.onDidCloseTextDocument(document);
-
-      expect(sut.failingAssertionDecorators['file.js']).toBeUndefined();
-    });
-  });
-
   describe('onDidChangeActiveTextEditor()', () => {
     const editor: any = {};
     let sut;
@@ -480,7 +392,7 @@ describe('JestExt', () => {
     });
 
     it('should update the annotations when the editor has a document', () => {
-      ((hasDocument as unknown) as jest.Mock<{}>).mockReturnValueOnce(true);
+      editor.document = {};
       sut.onDidChangeActiveTextEditor(editor);
 
       expect(sut.triggerUpdateActiveEditor).toBeCalledWith(editor);
@@ -549,17 +461,16 @@ describe('JestExt', () => {
     it('should trigger updateActiveEditor', () => {
       const editor: any = { document: event.document };
       sut.triggerUpdateActiveEditor = jest.fn();
-      window.visibleTextEditors = [editor];
+      vscode.window.visibleTextEditors = [editor];
       sut.onDidChangeTextDocument(event);
 
       expect(sut.triggerUpdateActiveEditor).toBeCalledWith(editor);
     });
     it('should update statusBar for stats', () => {
-      const updateStatusBarSpy = jest.spyOn(sut as any, 'updateStatusBar');
       sut.onDidChangeTextDocument(event);
 
       expect(sut.testResultProvider.getTestSuiteStats).toBeCalled();
-      expect(updateStatusBarSpy).toBeCalled();
+      expect(sbUpdateMock).toBeCalled();
     });
   });
 
@@ -567,7 +478,7 @@ describe('JestExt', () => {
     it.each([[true], [false]])(
       'ony invalidate test status if document is dirty: isDirty=%d',
       (isDirty) => {
-        window.visibleTextEditors = [];
+        vscode.window.visibleTextEditors = [];
         const sut: any = newJestExt();
         sut.testResultProvider.invalidateTestResults = jest.fn();
         const event = {
@@ -612,8 +523,7 @@ describe('JestExt', () => {
             fileName,
           };
 
-          window.visibleTextEditors = [];
-          const updateStatusBarSpy = jest.spyOn(sut as any, 'updateStatusBar');
+          vscode.window.visibleTextEditors = [];
 
           (sut.testResultProvider.isTestFile as jest.Mocked<any>).mockReturnValueOnce(isTestFile);
           mockProcessSession.scheduleProcess.mockClear();
@@ -622,14 +532,12 @@ describe('JestExt', () => {
 
           if (shouldSchedule) {
             expect(mockProcessSession.scheduleProcess).toBeCalledWith(
-              expect.objectContaining({ type: 'by-file', testFileNamePattern: fileName })
+              expect.objectContaining({ type: 'by-file', testFileName: fileName })
             );
           } else {
             expect(mockProcessSession.scheduleProcess).not.toBeCalled();
           }
-          expect(updateStatusBarSpy).toBeCalledWith(
-            expect.objectContaining({ stats: { isDirty } })
-          );
+          expect(sbUpdateMock).toBeCalledWith(expect.objectContaining({ stats: { isDirty } }));
         }
       );
     });
@@ -707,6 +615,7 @@ describe('JestExt', () => {
     });
     it('when failed to get test result, it should report error and clear the decorators and diagnostics', () => {
       const sut = newJestExt();
+      sut.debugCodeLensProvider.didChange = jest.fn();
       const editor = mockEditor('a');
       (sut.testResultProvider.getSortedResults as jest.Mocked<any>).mockImplementation(() => {
         throw new Error('force error');
@@ -733,6 +642,7 @@ describe('JestExt', () => {
           }
         );
         updateDecoratorsSpy = jest.spyOn(sut, 'updateDecorators');
+        sut.debugCodeLensProvider.didChange = jest.fn();
       });
       it.each`
         languageId           | shouldSkip
@@ -795,7 +705,6 @@ describe('JestExt', () => {
     let sut: JestExt;
     const mockEditor: any = { document: { uri: { fsPath: `file://a/b/c.js` } } };
     const emptyTestResults = { success: [], fail: [], skip: [], unknown: [] };
-    const failingAssertionStyle = inlineError as jest.Mock;
 
     const settings: any = {
       debugCodeLens: {},
@@ -811,58 +720,62 @@ describe('JestExt', () => {
 
     beforeEach(() => {
       StateDecorationsMock.mockImplementation(() => ({
-        passing: { key: 'pass' } as TextEditorDecorationType,
-        failing: { key: 'fail' } as TextEditorDecorationType,
-        skip: { key: 'skip' } as TextEditorDecorationType,
-        unknown: { key: 'unknown' } as TextEditorDecorationType,
+        passing: { key: 'pass' } as vscode.TextEditorDecorationType,
+        failing: { key: 'fail' } as vscode.TextEditorDecorationType,
+        skip: { key: 'skip' } as vscode.TextEditorDecorationType,
+        unknown: { key: 'unknown' } as vscode.TextEditorDecorationType,
       }));
-      sut = newJestExt(settings);
 
       mockEditor.setDecorations = jest.fn();
-      sut.debugCodeLensProvider.didChange = jest.fn();
     });
 
-    it('will reset decorator if testResults is empty', () => {
-      sut.updateDecorators(emptyTestResults, mockEditor);
-      expect(mockEditor.setDecorations).toHaveBeenCalledTimes(4);
-      for (const args of mockEditor.setDecorations.mock.calls) {
-        expect(args[1].length).toBe(0);
-      }
-    });
-    it('will generate dot dectorations for test results', () => {
-      const testResults2: any = { success: [tr1], fail: [tr2], skip: [], unknown: [] };
-      sut.updateDecorators(testResults2, mockEditor);
-      expect(mockEditor.setDecorations).toHaveBeenCalledTimes(4);
-      for (const args of mockEditor.setDecorations.mock.calls) {
-        let expectedLength = -1;
-        switch (args[0].key) {
-          case 'fail':
-          case 'pass':
-            expectedLength = 1;
-            break;
-          case 'skip':
-          case 'unknown':
-            expectedLength = 0;
-            break;
+    describe('when "showClassicStatus" is on', () => {
+      beforeEach(() => {
+        sut = newJestExt({
+          settings: { ...settings, testExplorer: { enabled: true, showClassicStatus: true } },
+        });
+        sut.debugCodeLensProvider.didChange = jest.fn();
+      });
+      it('will reset decorator if testResults is empty', () => {
+        sut.updateDecorators(emptyTestResults, mockEditor);
+        expect(mockEditor.setDecorations).toHaveBeenCalledTimes(4);
+        for (const args of mockEditor.setDecorations.mock.calls) {
+          expect(args[1].length).toBe(0);
         }
-        expect(args[1].length).toBe(expectedLength);
-      }
+      });
+      it('will generate dot dectorations for test results', () => {
+        const testResults2: any = { success: [tr1], fail: [tr2], skip: [], unknown: [] };
+        sut.updateDecorators(testResults2, mockEditor);
+        expect(mockEditor.setDecorations).toHaveBeenCalledTimes(4);
+        for (const args of mockEditor.setDecorations.mock.calls) {
+          let expectedLength = -1;
+          switch (args[0].key) {
+            case 'fail':
+            case 'pass':
+              expectedLength = 1;
+              break;
+            case 'skip':
+            case 'unknown':
+              expectedLength = 0;
+              break;
+          }
+          expect(args[1].length).toBe(expectedLength);
+        }
+      });
     });
-
-    it('will update inlineError decorator only if setting is enabled', () => {
-      const testResults2: any = { success: [], fail: [tr1, tr2], skip: [], unknown: [] };
-      const expected = {};
-      failingAssertionStyle.mockReturnValueOnce(expected);
-      sut.updateDecorators(testResults2, mockEditor);
-      expect(failingAssertionStyle).not.toBeCalled();
-      expect(mockEditor.setDecorations).toHaveBeenCalledTimes(4);
-
-      jest.clearAllMocks();
-      settings.enableInlineErrorMessages = true;
-      sut = newJestExt({ settings });
-      sut.updateDecorators(testResults2, mockEditor);
-      expect(failingAssertionStyle).toHaveBeenCalledTimes(2);
-      expect(mockEditor.setDecorations).toHaveBeenCalledTimes(6);
+    describe('when showDecorations for "status.classic" is off', () => {
+      it.each([[{ enabled: true }], [{ enabled: true, showClassicStatus: false }]])(
+        'no dot decorators will be generatred for testExplore config: %s',
+        (testExplorerConfig) => {
+          sut = newJestExt({
+            settings: { ...settings, testExplorer: testExplorerConfig },
+          });
+          sut.debugCodeLensProvider.didChange = jest.fn();
+          const testResults2: any = { success: [tr1], fail: [tr2], skip: [], unknown: [] };
+          sut.updateDecorators(testResults2, mockEditor);
+          expect(mockEditor.setDecorations).toHaveBeenCalledTimes(0);
+        }
+      );
     });
   });
 
@@ -874,17 +787,31 @@ describe('JestExt', () => {
     };
     beforeEach(() => {});
     describe('startSession', () => {
-      it('starts a new session and notify session aware components', async () => {
+      it('starts a new session and file event', async () => {
         const sut = createJestExt();
         await sut.startSession();
         expect(mockProcessSession.start).toHaveBeenCalled();
-        expect(sut.testResultProvider.onSessionStart).toHaveBeenCalled();
+        expect(JestTestProvider).toHaveBeenCalled();
+
+        expect(sut.events.onTestSessionStarted.fire).toHaveBeenCalledWith(
+          expect.objectContaining({ session: mockProcessSession })
+        );
       });
       it('if failed to start session, show error', async () => {
         mockProcessSession.start.mockReturnValueOnce(Promise.reject('forced error'));
         const sut = createJestExt();
         await sut.startSession();
         expect(messaging.systemErrorMessage).toBeCalled();
+      });
+      it('dispose existing jestProvider before creating new one', async () => {
+        expect.hasAssertions();
+        const sut = createJestExt();
+        await sut.startSession();
+        expect(JestTestProvider).toHaveBeenCalledTimes(1);
+
+        await sut.startSession();
+        expect(mockTestProvider.dispose).toBeCalledTimes(1);
+        expect(JestTestProvider).toHaveBeenCalledTimes(2);
       });
       describe('will update test file list', () => {
         it.each`
@@ -898,7 +825,6 @@ describe('JestExt', () => {
           async ({ fileNames, error, expectedTestFiles }) => {
             expect.hasAssertions();
             const sut = createJestExt();
-            const updateStatusBarSpy = jest.spyOn(sut as any, 'updateStatusBar');
             const stats = { success: 1000, isDirty: false };
             sut.testResultProvider.getTestSuiteStats = jest.fn().mockReturnValueOnce(stats);
 
@@ -914,22 +840,31 @@ describe('JestExt', () => {
 
             // stats will be updated in status baar accordingly
             expect(sut.testResultProvider.getTestSuiteStats).toBeCalled();
-            expect(updateStatusBarSpy).toBeCalledWith({ stats });
+            expect(sbUpdateMock).toBeCalledWith({ stats });
           }
         );
       });
     });
     describe('stopSession', () => {
-      it('notify session aware components', async () => {
+      it('will fire event', async () => {
         const sut = createJestExt();
         await sut.stopSession();
         expect(mockProcessSession.stop).toHaveBeenCalled();
+        expect(sut.events.onTestSessionStopped.fire).toHaveBeenCalled();
+      });
+      it('dispose existing testProvider', async () => {
+        const sut = createJestExt();
+        await sut.startSession();
+        expect(JestTestProvider).toHaveBeenCalledTimes(1);
+
+        await sut.stopSession();
+        expect(mockTestProvider.dispose).toBeCalledTimes(1);
+        expect(JestTestProvider).toHaveBeenCalledTimes(1);
       });
       it('updatae statusBar status', async () => {
         const sut = createJestExt();
-        const mockUpdateStatusBar = jest.spyOn(sut as any, 'updateStatusBar');
         await sut.stopSession();
-        expect(mockUpdateStatusBar).toHaveBeenCalledWith({ state: 'stopped' });
+        expect(sbUpdateMock).toHaveBeenCalledWith({ state: 'stopped' });
       });
       it('if failed to stop session, show error', async () => {
         mockProcessSession.stop.mockReturnValueOnce(Promise.reject('forced error'));
@@ -965,7 +900,7 @@ describe('JestExt', () => {
       sut.runAllTests(editor);
       expect(mockProcessSession.scheduleProcess).toBeCalledWith({
         type: 'by-file',
-        testFileNamePattern: 'whatever',
+        testFileName: 'whatever',
       });
     });
   });
@@ -1025,17 +960,19 @@ describe('JestExt', () => {
       });
     });
     it('will invoke internal components to process test results', () => {
-      updateWithData({});
+      updateWithData({}, 'test-all-12');
       expect(mockCoverageMapProvider.update).toBeCalled();
-      expect(sut.testResultProvider.updateTestResults).toBeCalled();
+      expect(sut.testResultProvider.updateTestResults).toBeCalledWith(
+        expect.anything(),
+        'test-all-12'
+      );
       expect(updateDiagnostics).toBeCalled();
     });
 
     it('will calculate stats and update statusBar', () => {
-      const updateStatusBarSpy = jest.spyOn(sut as any, 'updateStatusBar');
       updateWithData({});
       expect(sut.testResultProvider.getTestSuiteStats).toBeCalled();
-      expect(updateStatusBarSpy).toBeCalled();
+      expect(sbUpdateMock).toBeCalled();
     });
     it('will update visible editors for the current workspace', () => {
       (vscode.window.visibleTextEditors as any) = [
@@ -1058,6 +995,98 @@ describe('JestExt', () => {
       sut.deactivate();
       expect(mockProcessSession.stop).toBeCalledTimes(1);
       expect(channelStub.dispose).toBeCalledTimes(1);
+    });
+    it('will dispose test provider if initialized', () => {
+      const sut = newJestExt();
+      sut.deactivate();
+      expect(mockTestProvider.dispose).not.toBeCalledTimes(1);
+      sut.startSession();
+      sut.deactivate();
+      expect(mockTestProvider.dispose).toBeCalledTimes(1);
+    });
+    it('will dispose all events', () => {
+      const sut = newJestExt();
+      sut.deactivate();
+      expect(sut.events.onRunEvent.dispose).toHaveBeenCalled();
+      expect(sut.events.onTestSessionStarted.dispose).toHaveBeenCalled();
+      expect(sut.events.onTestSessionStopped.dispose).toHaveBeenCalled();
+    });
+  });
+  describe('activate', () => {
+    it('will invoke onDidChangeActiveTextEditor for activeTextEditor', () => {
+      const sut = newJestExt();
+      const spy = jest.spyOn(sut, 'onDidChangeActiveTextEditor').mockImplementation(() => {});
+      vscode.window.activeTextEditor = undefined;
+
+      sut.activate();
+      expect(spy).not.toHaveBeenCalled();
+
+      (vscode.window.activeTextEditor as any) = {
+        document: { uri: 'whatever' },
+      };
+      (vscode.workspace.getWorkspaceFolder as jest.Mocked<any>).mockReturnValue(workspaceFolder);
+
+      sut.activate();
+      expect(spy).toHaveBeenCalled();
+    });
+  });
+  describe('runEvents', () => {
+    let sut, onRunEvent, process;
+    beforeEach(() => {
+      sut = newJestExt();
+      onRunEvent = (sut.events.onRunEvent.event as jest.Mocked<any>).mock.calls[0][0];
+      process = { id: 'a process id' };
+    });
+
+    describe('can process run events', () => {
+      it('register onRunEvent listener', () => {
+        expect(sut.events.onRunEvent.event).toBeCalledTimes(1);
+      });
+      it('scheduled event: output to channel', () => {
+        onRunEvent({ type: 'scheduled', process });
+        expect(sut.channel.appendLine).toBeCalledWith(expect.stringContaining(process.id));
+      });
+      it('data event: relay clean-text to channel', () => {
+        onRunEvent({
+          type: 'data',
+          text: 'plain text',
+          raw: 'raw text',
+          newLine: true,
+          isError: true,
+          process,
+        });
+        expect(sut.channel.appendLine).toBeCalledWith(expect.stringContaining('plain text'));
+        expect(sut.channel.show).toBeCalled();
+        sut.channel.show.mockClear();
+
+        onRunEvent({ type: 'data', text: 'plain text 2', raw: 'raw text', process });
+        expect(sut.channel.append).toBeCalledWith(expect.stringContaining('plain text 2'));
+        expect(sut.channel.show).not.toBeCalled();
+      });
+      it('start event: notify status bar and clear channel', () => {
+        onRunEvent({ type: 'start', process });
+        expect(sbUpdateMock).toBeCalledWith({ state: 'running' });
+        expect(sut.channel.clear).toBeCalled();
+      });
+      it('end event: notify status bar', () => {
+        onRunEvent({ type: 'end', process });
+        expect(sbUpdateMock).toBeCalledWith({ state: 'done' });
+      });
+      describe('exit event: notify status bar', () => {
+        it('if no error: status bar done', () => {
+          onRunEvent({ type: 'exit', process });
+          expect(sbUpdateMock).toBeCalledWith({ state: 'done' });
+        });
+        it('if error: status bar stopped and show error', () => {
+          onRunEvent({ type: 'exit', error: 'something is wrong', process });
+          expect(sbUpdateMock).toBeCalledWith({ state: 'stopped' });
+          expect(messaging.systemErrorMessage).toHaveBeenCalled();
+        });
+      });
+    });
+    it('events are disposed when extensioin deactivated', () => {
+      sut.deactivate();
+      expect(sut.events.onRunEvent.dispose).toBeCalled();
     });
   });
 });

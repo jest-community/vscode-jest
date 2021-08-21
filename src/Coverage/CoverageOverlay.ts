@@ -3,7 +3,6 @@ import { CoverageMapProvider } from './CoverageMapProvider';
 import { DefaultFormatter } from './Formatters/DefaultFormatter';
 import { GutterFormatter } from './Formatters/GutterFormatter';
 import * as vscode from 'vscode';
-import { hasDocument } from '../editor';
 
 export type CoverageStatus = 'covered' | 'partially-covered' | 'uncovered';
 export type CoverageColors = {
@@ -61,7 +60,7 @@ export class CoverageOverlay {
   }
 
   update(editor: vscode.TextEditor): void {
-    if (!hasDocument(editor)) {
+    if (!editor.document) {
       return;
     }
 

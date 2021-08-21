@@ -7,6 +7,10 @@ export interface JestProcessListener {
   onEvent: (process: JestProcess, event: JestProcessEvent, ...args: unknown[]) => unknown;
 }
 export type JestProcessStatus = 'pending' | 'running' | 'stopping' | 'stoppped';
+export interface JestProcessInfo {
+  readonly id: string;
+  readonly request: JestProcessRequest;
+}
 
 export type TaskStatus = 'running' | 'pending';
 export interface Task<T> {
@@ -49,11 +53,22 @@ export type JestProcessRequestBase =
     }
   | {
       type: Extract<JestTestProcessType, 'by-file'>;
-      testFileNamePattern: string;
+      testFileName: string;
       updateSnapshot?: boolean;
     }
   | {
       type: Extract<JestTestProcessType, 'by-file-test'>;
+      testFileName: string;
+      testNamePattern: string;
+      updateSnapshot?: boolean;
+    }
+  | {
+      type: Extract<JestTestProcessType, 'by-file-pattern'>;
+      testFileNamePattern: string;
+      updateSnapshot?: boolean;
+    }
+  | {
+      type: Extract<JestTestProcessType, 'by-file-test-pattern'>;
       testFileNamePattern: string;
       testNamePattern: string;
       updateSnapshot?: boolean;
@@ -62,6 +77,7 @@ export type JestProcessRequestBase =
       type: Extract<JestTestProcessType, 'not-test'>;
       args: string[];
     };
+
 export type JestProcessRequest = JestProcessRequestBase & JestProcessRequestCommon;
 
 export interface TaskArrayFunctions<T> {

@@ -1,5 +1,5 @@
 import { JestProcess } from './JestProcess';
-import { TaskArrayFunctions, JestProcessRequest, QueueType, Task } from './types';
+import { TaskArrayFunctions, JestProcessRequest, QueueType, Task, JestProcessInfo } from './types';
 import { Logging } from '../logging';
 import { createTaskQueue, TaskQueue } from './task-queue';
 import { isDup, requestString } from './helper';
@@ -41,22 +41,22 @@ export class JestProcessManager implements TaskArrayFunctions<JestProcess> {
   /**
    * schedule a jest process and handle duplication process if dedup is requested.
    * @param request
-   * @returns a boolean to indicate if the process is scheduled
+   * @returns a jest process id if successfully scheduled, otherwise undefined
    */
-  public scheduleJestProcess(request: JestProcessRequest): boolean {
+  public scheduleJestProcess(request: JestProcessRequest): JestProcessInfo | undefined {
     if (this.foundDup(request)) {
       this.logging(
         'debug',
         `duplicate request found, process is not scheduled: ${requestString(request)}`
       );
-      return false;
+      return;
     }
 
     const queue = this.getQueue(request.schedule.queue);
     const process = new JestProcess(this.extContext, request);
     queue.add(process);
     this.run(queue);
-    return true;
+    return process;
   }
 
   // run the first process in the queue
@@ -90,7 +90,7 @@ export class JestProcessManager implements TaskArrayFunctions<JestProcess> {
       promises = queue.map((t) => t.data.stop());
       queue.reset();
     }
-    await Promise.all(promises);
+    await Promise.allSettled(promises);
     return;
   }
 

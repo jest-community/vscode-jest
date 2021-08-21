@@ -4,23 +4,25 @@ import {
   TestFileAssertionStatus,
   IParseResults,
   parse,
+  TestAssertionStatus,
 } from 'jest-editor-support';
 import { TestReconciliationState, TestReconciliationStateType } from './TestReconciliationState';
 import { TestResult, TestResultStatusInfo } from './TestResult';
 import * as match from './match-by-context';
-import { JestExtSessionAware } from '../JestExt';
+import { JestSessionEvents } from '../JestExt';
 import { TestStats } from '../types';
 import { emptyTestStats } from '../helpers';
+import { createTestResultEvents, TestResultEvents } from './test-result-events';
+import { ContainerNode } from './match-node';
+import { JestProcessInfo } from '../JestProcessManagement';
 
-interface TestSuiteResult {
+export interface TestSuiteResult {
   status: TestReconciliationStateType;
+  message: string;
+  assertionContainer?: ContainerNode<TestAssertionStatus>;
   results?: TestResult[];
   sorted?: SortedTestResults;
 }
-type TestSuiteResultMap = {
-  [filePath: string]: TestSuiteResult;
-};
-
 export interface SortedTestResults {
   fail: TestResult[];
   skip: TestResult[];
@@ -34,25 +36,29 @@ const sortByStatus = (a: TestResult, b: TestResult): number => {
   }
   return TestResultStatusInfo[a.status].precedence - TestResultStatusInfo[b.status].precedence;
 };
-export class TestResultProvider implements JestExtSessionAware {
+export class TestResultProvider {
   verbose: boolean;
+  events: TestResultEvents;
   private reconciler: TestReconciler;
-  private testSuites: TestSuiteResultMap = {};
+  private testSuites: Map<string, TestSuiteResult>;
   private testFiles?: string[];
 
-  constructor(verbose = false) {
+  constructor(extEvents: JestSessionEvents, verbose = false) {
     this.reconciler = new TestReconciler();
-    this.resetCache();
     this.verbose = verbose;
+    this.events = createTestResultEvents();
+    this.testSuites = new Map();
+    extEvents.onTestSessionStarted.event(this.onSessionStart.bind(this));
   }
 
-  public onSessionStart(): void {
-    this.resetCache();
+  dispose(): void {
+    this.events.testListUpdated.dispose();
+    this.events.testSuiteChanged.dispose();
+  }
+
+  private onSessionStart(): void {
+    this.testSuites.clear();
     this.reconciler = new TestReconciler();
-  }
-
-  resetCache(): void {
-    this.testSuites = {};
   }
 
   private groupByRange(results: TestResult[]): TestResult[] {
@@ -89,11 +95,19 @@ export class TestResultProvider implements JestExtSessionAware {
     this.testFiles = testFiles;
 
     // clear the cache in case we have cached some non-test files prior
-    this.testSuites = {};
+    this.testSuites.clear();
+
+    this.events.testListUpdated.fire(testFiles);
+  }
+  getTestList(): string[] {
+    if (this.testFiles && this.testFiles.length > 0) {
+      return this.testFiles;
+    }
+    return Array.from(this.testSuites.keys());
   }
 
   isTestFile(fileName: string): 'yes' | 'no' | 'unknown' {
-    if (this.testFiles?.includes(fileName) || this.testSuites[fileName] != null) {
+    if (this.testFiles?.includes(fileName) || this.testSuites.get(fileName) != null) {
       return 'yes';
     }
     if (!this.testFiles) {
@@ -102,24 +116,41 @@ export class TestResultProvider implements JestExtSessionAware {
     return 'no';
   }
 
-  private matchResults(filePath: string, { root, itBlocks }: IParseResults): TestSuiteResult {
-    try {
+  public getTestSuiteResult(filePath: string): TestSuiteResult | undefined {
+    const cache = this.testSuites.get(filePath);
+    if (cache && !cache.assertionContainer) {
       const assertions = this.reconciler.assertionsForTestFile(filePath);
       if (assertions && assertions.length > 0) {
-        const status = this.reconciler.stateForTestFile(filePath);
-        return {
-          status,
-          results: this.groupByRange(
-            match.matchTestAssertions(filePath, root, assertions, this.verbose)
-          ),
-        };
+        cache.assertionContainer = match.buildAssertionContainer(assertions);
+        this.testSuites.set(filePath, cache);
       }
+    }
+    return cache;
+  }
+  private matchResults(filePath: string, { root, itBlocks }: IParseResults): TestSuiteResult {
+    let error: string | undefined;
+    try {
+      const cache = this.getTestSuiteResult(filePath);
+      if (cache?.assertionContainer) {
+        cache.results = this.groupByRange(
+          match.matchTestAssertions(filePath, root, cache.assertionContainer, this.verbose)
+        );
+        this.events.testSuiteChanged.fire({
+          type: 'result-matched',
+          file: filePath,
+        });
+        return cache;
+      }
+      error = 'no assertion generated for file';
     } catch (e) {
       console.warn(`failed to match test results for ${filePath}:`, e);
+      error = `encountered internal match error: ${e}`;
     }
+
     // no need to do groupByRange as the source block will not have blocks under the same location
     return {
       status: 'Unknown',
+      message: error,
       results: itBlocks.map((t) => match.toMatchResult(t, 'no assertion found', 'match-failed')),
     };
   }
@@ -132,7 +163,7 @@ export class TestResultProvider implements JestExtSessionAware {
    * @throws if parsing or matching internal error
    */
   getResults(filePath: string): TestResult[] | undefined {
-    const results = this.testSuites[filePath]?.results;
+    const results = this.testSuites.get(filePath)?.results;
     if (results) {
       return results;
     }
@@ -141,19 +172,16 @@ export class TestResultProvider implements JestExtSessionAware {
       return;
     }
 
-    let suiteResult: TestSuiteResult = { status: 'Unknown', results: [] };
     try {
       const parseResult = parse(filePath);
-      suiteResult = this.matchResults(filePath, parseResult);
+      this.testSuites.set(filePath, this.matchResults(filePath, parseResult));
+      return this.testSuites.get(filePath)?.results;
     } catch (e) {
-      console.warn(`failed to get test results for ${filePath}:`, e);
-      suiteResult = { status: 'KnownFail', results: [] };
+      const message = `failed to get test results for ${filePath}`;
+      console.warn(message, e);
+      this.testSuites.set(filePath, { status: 'KnownFail', message, results: [] });
       throw e;
-    } finally {
-      this.testSuites[filePath] = suiteResult;
     }
-
-    return suiteResult.results;
   }
 
   /**
@@ -164,7 +192,7 @@ export class TestResultProvider implements JestExtSessionAware {
    */
 
   getSortedResults(filePath: string): SortedTestResults | undefined {
-    const cached = this.testSuites[filePath]?.sorted;
+    const cached = this.testSuites.get(filePath)?.sorted;
     if (cached) {
       return cached;
     }
@@ -198,23 +226,33 @@ export class TestResultProvider implements JestExtSessionAware {
         }
       }
     } finally {
-      if (this.testSuites[filePath]) {
-        this.testSuites[filePath].sorted = result;
+      const cached = this.testSuites.get(filePath);
+      if (cached) {
+        cached.sorted = result;
       }
     }
     return result;
   }
 
-  updateTestResults(data: JestTotalResults): TestFileAssertionStatus[] {
+  updateTestResults(data: JestTotalResults, process: JestProcessInfo): TestFileAssertionStatus[] {
     const results = this.reconciler.updateFileWithJestStatus(data);
     results?.forEach((r) => {
-      this.testSuites[r.file] = { status: r.status };
+      this.testSuites.set(r.file, {
+        status: r.status,
+        message: r.message,
+        assertionContainer: r.assertions ? match.buildAssertionContainer(r.assertions) : undefined,
+      });
+    });
+    this.events.testSuiteChanged.fire({
+      type: 'assertions-updated',
+      files: results.map((r) => r.file),
+      process,
     });
     return results;
   }
 
   removeCachedResults(filePath: string): void {
-    delete this.testSuites[filePath];
+    this.testSuites.delete(filePath);
   }
   invalidateTestResults(filePath: string): void {
     this.removeCachedResults(filePath);
@@ -224,7 +262,7 @@ export class TestResultProvider implements JestExtSessionAware {
   // test stats
   getTestSuiteStats(): TestStats {
     const stats = emptyTestStats();
-    for (const suite of Object.values(this.testSuites)) {
+    this.testSuites.forEach((suite) => {
       if (suite.status === 'KnownSuccess') {
         stats.success += 1;
       } else if (suite.status === 'KnownFail') {
@@ -232,7 +270,7 @@ export class TestResultProvider implements JestExtSessionAware {
       } else {
         stats.unknown += 1;
       }
-    }
+    });
 
     if (this.testFiles) {
       if (this.testFiles.length > stats.fail + stats.success + stats.unknown) {

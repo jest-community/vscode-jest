@@ -7,7 +7,9 @@ export type JestTestProcessType =
   | 'watch-all-tests'
   | 'by-file'
   | 'by-file-test'
-  | 'not-test';
+  | 'not-test'
+  | 'by-file-test-pattern'
+  | 'by-file-pattern';
 
 export type OnStartupType = Extract<JestTestProcessType, 'all-tests'>[];
 export type OnSaveFileType = 'test-file' | 'test-src-file';
@@ -19,9 +21,12 @@ export type JestExtAutoRunConfig =
       onStartup?: OnStartupType;
       onSave?: OnSaveFileType;
     };
+
+export type TestExplorerConfig =
+  | { enabled: false }
+  | { enabled: true; showClassicStatus?: boolean; showInlineError?: boolean };
 export interface PluginResourceSettings {
   autoEnable?: boolean;
-  enableInlineErrorMessages?: boolean;
   enableSnapshotUpdateMessages?: boolean;
   jestCommandLine?: string;
   pathToConfig?: string;
@@ -34,6 +39,7 @@ export interface PluginResourceSettings {
   debugMode?: boolean;
   coverageColors?: CoverageColors;
   autoRun?: JestExtAutoRunConfig;
+  testExplorer: TestExplorerConfig;
 }
 
 export interface PluginWindowSettings {

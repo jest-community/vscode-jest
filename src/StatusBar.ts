@@ -65,7 +65,7 @@ const createStatusBarItem = (type: StatusType, priority: number): SpinnableStatu
     set text(_text: string) {
       item.text = _text;
     },
-    set tooltip(_tooltip: string | undefined) {
+    set tooltip(_tooltip: string | vscode.MarkdownString | undefined) {
       item.tooltip = _tooltip;
     },
   };

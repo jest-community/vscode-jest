@@ -23,12 +23,12 @@ describe('jest process listeners', () => {
       context: {
         settings: {},
         autoRun: {},
-        updateStatusBar: jest.fn(),
         workspace: {},
         setupWizardAction: jest.fn(),
         loggingFactory: {
           create: jest.fn(() => mockLogging),
         },
+        onRunEvent: { fire: jest.fn() },
       },
     };
     mockProcess = { request: { type: 'watch' } };
@@ -104,44 +104,57 @@ describe('jest process listeners', () => {
         show: jest.fn(),
       };
       mockSession.context.updateWithData = jest.fn();
-      mockSession.context.updateStatusBar = jest.fn();
       mockProcess = { request: { type: 'watch-tests' } };
     });
 
-    it('can handle test result', () => {
-      expect.hasAssertions();
-      const listener = new RunTestListener(mockSession);
-      const mockData = {};
-      listener.onEvent(mockProcess, 'executableJSON', mockData);
-      expect(mockSession.context.updateWithData).toBeCalledWith(mockData);
+    describe('can handle test result', () => {
+      it.each([[true], [false]])('with full output implementation: %s', (fullOutput) => {
+        if (!fullOutput) {
+          delete mockSession.context.output.clear;
+          delete mockSession.context.output.show;
+        }
+        expect.hasAssertions();
+        const listener = new RunTestListener(mockSession);
+        const mockData = {};
+        mockProcess = { id: 'mock-id' };
+        listener.onEvent(mockProcess, 'executableJSON', mockData);
+        expect(mockSession.context.updateWithData).toBeCalledWith(mockData, mockProcess);
+      });
     });
     describe.each`
-      output             | stdout   | stderr   | error
-      ${'whatever'}      | ${true}  | ${true}  | ${true}
-      ${'onRunStart'}    | ${false} | ${false} | ${true}
-      ${'onRunComplete'} | ${false} | ${false} | ${true}
-      ${'Watch Usage'}   | ${false} | ${false} | ${true}
-    `('propagate process output: $output', ({ output, stdout, stderr, error }) => {
-      it('from stdout: show=$stdout', () => {
+      output             | stdout       | stderr       | error
+      ${'whatever'}      | ${'data'}    | ${'data'}    | ${'data'}
+      ${'onRunStart'}    | ${'start'}   | ${undefined} | ${'data'}
+      ${'onRunComplete'} | ${'end'}     | ${undefined} | ${'data'}
+      ${'Watch Usage'}   | ${undefined} | ${undefined} | ${'data'}
+    `('propagate run events: $output', ({ output, stdout, stderr, error }) => {
+      it('from stdout: eventType=$stdout', () => {
         expect.hasAssertions();
         const listener = new RunTestListener(mockSession);
         // stdout
         listener.onEvent(mockProcess, 'executableOutput', output);
         if (stdout) {
-          expect(mockSession.context.output.append).toBeCalledWith(output);
+          expect(mockSession.context.onRunEvent.fire).toBeCalledWith(
+            expect.objectContaining({
+              type: stdout,
+            })
+          );
         } else {
-          expect(mockSession.context.output.append).not.toBeCalled();
+          expect(mockSession.context.onRunEvent.fire).not.toBeCalled();
         }
       });
-      it('from stderr: show=$stderr', () => {
+      it('from stderr: eventyType=$stderr', () => {
         expect.hasAssertions();
         const listener = new RunTestListener(mockSession);
-        // stdout
         listener.onEvent(mockProcess, 'executableStdErr', Buffer.from(output));
         if (stderr) {
-          expect(mockSession.context.output.append).toBeCalledWith(output);
+          expect(mockSession.context.onRunEvent.fire).toBeCalledWith(
+            expect.objectContaining({
+              type: stderr,
+            })
+          );
         } else {
-          expect(mockSession.context.output.append).not.toBeCalled();
+          expect(mockSession.context.onRunEvent.fire).not.toBeCalled();
         }
       });
       it('from error event: show=$error', () => {
@@ -150,53 +163,52 @@ describe('jest process listeners', () => {
         // stdout
         listener.onEvent(mockProcess, 'terminalError', output);
         if (error) {
-          expect(mockSession.context.output.appendLine).toBeCalledWith(
-            expect.stringContaining(output)
+          expect(mockSession.context.onRunEvent.fire).toBeCalledWith(
+            expect.objectContaining({
+              type: error,
+            })
           );
         } else {
-          expect(mockSession.context.output.appendLine).not.toBeCalled();
+          expect(mockSession.context.onRunEvent.fire).not.toBeCalled();
         }
       });
     });
 
-    describe('can clear output and manage running state', () => {
+    describe('can notify start/end events', () => {
       it('when process start and end', () => {
         expect.hasAssertions();
         const listener = new RunTestListener(mockSession);
         // stdout
         listener.onEvent(mockProcess, 'processStarting');
-        expect(mockSession.context.updateStatusBar).toHaveBeenLastCalledWith({ state: 'running' });
-        expect(mockSession.context.output.clear).toBeCalledTimes(1);
+        expect(mockSession.context.onRunEvent.fire).toBeCalledTimes(1);
+        expect(mockSession.context.onRunEvent.fire).toBeCalledWith(
+          expect.objectContaining({ type: 'start' })
+        );
 
+        mockSession.context.onRunEvent.fire.mockClear();
         listener.onEvent(mockProcess, 'processExit');
-        expect(mockSession.context.updateStatusBar).toHaveBeenLastCalledWith({ state: 'done' });
-        expect(mockSession.context.output.clear).toBeCalledTimes(1);
+        expect(mockSession.context.onRunEvent.fire).not.toBeCalled();
+
+        listener.onEvent(mockProcess, 'processClose');
+        expect(mockSession.context.onRunEvent.fire).toBeCalledWith(
+          expect.objectContaining({ type: 'exit' })
+        );
       });
-      it.each`
-        procType             | clearCount
-        ${'watch-tests'}     | ${1}
-        ${'watch-all-tests'} | ${1}
-        ${'all-tests'}       | ${0}
-        ${'by-file'}         | ${0}
-      `(
-        'for watch mode runs, where process do not stop, perform cleaning/reporting also from content',
-        ({ procType, clearCount }) => {
-          expect.hasAssertions();
-          const listener = new RunTestListener(mockSession);
-          mockProcess.request.type = procType;
+      it('when reporters reports start/end', () => {
+        expect.hasAssertions();
+        const listener = new RunTestListener(mockSession);
 
-          // stdout
-          listener.onEvent(mockProcess, 'executableOutput', 'onRunStart');
-          expect(mockSession.context.updateStatusBar).toHaveBeenLastCalledWith({
-            state: 'running',
-          });
-          expect(mockSession.context.output.clear).toBeCalledTimes(clearCount);
+        // stdout
+        listener.onEvent(mockProcess, 'executableOutput', 'onRunStart');
+        expect(mockSession.context.onRunEvent.fire).toBeCalledWith(
+          expect.objectContaining({ type: 'start' })
+        );
 
-          listener.onEvent(mockProcess, 'executableOutput', 'onRunComplete');
-          expect(mockSession.context.updateStatusBar).toHaveBeenLastCalledWith({ state: 'done' });
-          expect(mockSession.context.output.clear).toBeCalledTimes(clearCount);
-        }
-      );
+        listener.onEvent(mockProcess, 'executableOutput', 'onRunComplete');
+        expect(mockSession.context.onRunEvent.fire).toBeCalledWith(
+          expect.objectContaining({ type: 'end' })
+        );
+      });
     });
     describe('when snapshot test failed', () => {
       it.each`
@@ -309,15 +321,19 @@ describe('jest process listeners', () => {
         beforeEach(() => {
           mockSession.context.workspace = { name: 'workspace-xyz' };
           mockProcess.request = { type: 'watch-tests' };
-          (messaging as jest.Mocked<any>).systemErrorMessage = jest.fn();
         });
-        it('will show error message with help', () => {
+        it('will fire exit with error', () => {
           expect.hasAssertions();
 
           const listener = new RunTestListener(mockSession);
 
           listener.onEvent(mockProcess, 'processClose', 1);
-          expect(messaging.systemErrorMessage).toBeCalled();
+          expect(mockSession.context.onRunEvent.fire).toBeCalledWith(
+            expect.objectContaining({
+              type: 'exit',
+              error: expect.anything(),
+            })
+          );
         });
         it('in single-root env, folder name will not be shown in the message', () => {
           expect.hasAssertions();
@@ -327,9 +343,10 @@ describe('jest process listeners', () => {
           const listener = new RunTestListener(mockSession);
 
           listener.onEvent(mockProcess, 'processClose', 1);
-          expect(messaging.systemErrorMessage).toBeCalled();
-          const [msg] = (messaging.systemErrorMessage as jest.Mocked<any>).mock.calls[0];
-          expect(msg).not.toContain('workspace-xyz');
+          expect(mockSession.context.onRunEvent.fire).toBeCalled();
+
+          const event = mockSession.context.onRunEvent.fire.mock.calls[0][0];
+          expect(event.error).not.toContain('workspace-xyz');
         });
         it('in multi-root env, folder name will be shown in the message', () => {
           expect.hasAssertions();
@@ -339,9 +356,10 @@ describe('jest process listeners', () => {
           const listener = new RunTestListener(mockSession);
 
           listener.onEvent(mockProcess, 'processClose', 1);
-          expect(messaging.systemErrorMessage).toBeCalled();
-          const [msg] = (messaging.systemErrorMessage as jest.Mocked<any>).mock.calls[0];
-          expect(msg).toContain('workspace-xyz');
+          expect(mockSession.context.onRunEvent.fire).toBeCalled();
+
+          const event = mockSession.context.onRunEvent.fire.mock.calls[0][0];
+          expect(event.error).toContain('workspace-xyz');
         });
       });
     });

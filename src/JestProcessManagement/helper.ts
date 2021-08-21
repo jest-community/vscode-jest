@@ -4,8 +4,16 @@ import { JestProcessRequest, Task, TaskPredicate } from './types';
 export const isRequestEqual = (r1: JestProcessRequest, r2: JestProcessRequest): boolean => {
   switch (r1.type) {
     case 'by-file':
+      return r2.type === r1.type && r1.testFileName === r2.testFileName;
+    case 'by-file-pattern':
       return r2.type === r1.type && r1.testFileNamePattern === r2.testFileNamePattern;
     case 'by-file-test':
+      return (
+        r2.type === r1.type &&
+        r1.testFileName === r2.testFileName &&
+        r1.testNamePattern === r2.testNamePattern
+      );
+    case 'by-file-test-pattern':
       return (
         r2.type === r1.type &&
         r1.testFileNamePattern === r2.testFileNamePattern &&
