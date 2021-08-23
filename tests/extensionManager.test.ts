@@ -587,11 +587,11 @@ describe('ExtensionManager', () => {
   });
   describe('activate', () => {
     let ext1, ext2;
-    let workspaceState;
     beforeEach(() => {
-      workspaceState = {
-        get: jest.fn(),
-        update: jest.fn(),
+      const map = new Map<string, boolean>();
+      const workspaceState = {
+        get: jest.fn((key) => map.get(key)),
+        update: jest.fn((key: string, value: boolean) => map.set(key, value)),
       };
 
       extensionManager = createExtensionManager(['ws-1', 'ws-2'], { workspaceState });
@@ -624,7 +624,6 @@ describe('ExtensionManager', () => {
     describe('can show test explore information once per workspace', () => {
       beforeEach(() => {
         (vscode.window.activeTextEditor as any) = undefined;
-        workspaceState.get.mockReturnValue(false);
       });
       it('can reveal test explore view', async () => {
         (vscode.window.showInformationMessage as jest.Mocked<any>).mockReturnValue(
@@ -652,11 +651,9 @@ describe('ExtensionManager', () => {
         );
         await extensionManager.activate();
         expect(vscode.window.showInformationMessage).toBeCalled();
-        expect(workspaceState.get).toBeCalled();
-        expect(workspaceState.update).toBeCalledWith(expect.anything(), true);
+
         (vscode.window.showInformationMessage as jest.Mocked<any>).mockClear();
 
-        workspaceState.get.mockReturnValue(true);
         await extensionManager.activate();
         expect(vscode.window.showInformationMessage).not.toBeCalled();
       });
