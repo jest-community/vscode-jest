@@ -51,7 +51,7 @@ const mockJestExt = () => {
     return makeJestExt(args[1]);
   });
 };
-const createExtensionManager = (workspaceFolders: string[]): ExtensionManager => {
+const createExtensionManager = (workspaceFolders: string[], context?: any): ExtensionManager => {
   (vscode.workspace as any).workspaceFolders =
     workspaceFolders?.map((f) => makeWorkspaceFolder(f)) ?? [];
 
@@ -59,7 +59,13 @@ const createExtensionManager = (workspaceFolders: string[]): ExtensionManager =>
     return vscode.workspace.workspaceFolders.find((ws) => ws.name === uri);
   });
   mockJestExt();
-  const em = new ExtensionManager({} as any);
+  const extensionContext = context ?? {
+    workspaceState: {
+      get: jest.fn(),
+      update: jest.fn(),
+    },
+  };
+  const em = new ExtensionManager(extensionContext);
   vscode.workspace.workspaceFolders.forEach((ws) => em.register(ws));
   return em;
 };
@@ -581,8 +587,14 @@ describe('ExtensionManager', () => {
   });
   describe('activate', () => {
     let ext1, ext2;
+    let workspaceState;
     beforeEach(() => {
-      extensionManager = createExtensionManager(['ws-1', 'ws-2']);
+      workspaceState = {
+        get: jest.fn(),
+        update: jest.fn(),
+      };
+
+      extensionManager = createExtensionManager(['ws-1', 'ws-2'], { workspaceState });
       ext1 = extensionManager.getByName('ws-1');
       ext2 = extensionManager.getByName('ws-2');
       (vscode.window.showInformationMessage as jest.Mocked<any>).mockReturnValue(
@@ -609,9 +621,10 @@ describe('ExtensionManager', () => {
       expect(ext1.onDidChangeActiveTextEditor).not.toBeCalled();
       expect(ext2.onDidChangeActiveTextEditor).not.toBeCalled();
     });
-    describe('can show test explore information', () => {
+    describe('can show test explore information once per workspace', () => {
       beforeEach(() => {
         (vscode.window.activeTextEditor as any) = undefined;
+        workspaceState.get.mockReturnValue(false);
       });
       it('can reveal test explore view', async () => {
         (vscode.window.showInformationMessage as jest.Mocked<any>).mockReturnValue(
@@ -632,6 +645,20 @@ describe('ExtensionManager', () => {
             'jest-community/vscode-jest/blob/master/README.md#how-to-use-the-test-explorer'
           )
         );
+      });
+      it('will not show again once it has been seen', async () => {
+        (vscode.window.showInformationMessage as jest.Mocked<any>).mockReturnValue(
+          Promise.resolve('Show Test Explorer')
+        );
+        await extensionManager.activate();
+        expect(vscode.window.showInformationMessage).toBeCalled();
+        expect(workspaceState.get).toBeCalled();
+        expect(workspaceState.update).toBeCalledWith(expect.anything(), true);
+        (vscode.window.showInformationMessage as jest.Mocked<any>).mockClear();
+
+        workspaceState.get.mockReturnValue(true);
+        await extensionManager.activate();
+        expect(vscode.window.showInformationMessage).not.toBeCalled();
       });
     });
   });

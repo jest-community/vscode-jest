@@ -4,7 +4,7 @@ Please add your own contribution below inside the Master section
 
 ## Master
 * brief change description - @author
-
+* show release message once per workspace - @connetdotz
 -->
 
 ### 4.1.0
