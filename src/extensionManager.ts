@@ -277,23 +277,28 @@ export class ExtensionManager {
     this.showReleaseMessage();
   }
   private showReleaseMessage(): void {
-    vscode.window
-      .showInformationMessage(
-        `vscode-jest now supports the official vscode test explorer!!`,
-        'Show Test Explorer',
-        'See Details'
-      )
-      .then((value) => {
-        if (value === 'Show Test Explorer') {
-          vscode.commands.executeCommand('workbench.view.testing.focus');
-        } else {
-          vscode.commands.executeCommand(
-            'vscode.open',
-            vscode.Uri.parse(
-              'https://github.com/jest-community/vscode-jest/blob/master/README.md#how-to-use-the-test-explorer'
-            )
-          );
-        }
-      });
+    const key = 'didShowMessage-4.1';
+    const didShow = this.context.workspaceState.get<boolean>(key, false);
+    if (!didShow) {
+      vscode.window
+        .showInformationMessage(
+          `vscode-jest now supports the official vscode test explorer.`,
+          'Show Test Explorer',
+          'See Details'
+        )
+        .then((value) => {
+          if (value === 'Show Test Explorer') {
+            vscode.commands.executeCommand('workbench.view.testing.focus');
+          } else if (value === 'See Details') {
+            vscode.commands.executeCommand(
+              'vscode.open',
+              vscode.Uri.parse(
+                'https://github.com/jest-community/vscode-jest/blob/master/README.md#how-to-use-the-test-explorer'
+              )
+            );
+          }
+        });
+      this.context.workspaceState.update(key, true);
+    }
   }
 }
