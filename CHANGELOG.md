@@ -4,9 +4,10 @@ Please add your own contribution below inside the Master section
 
 ## Master
 * brief change description - @author
-* show release message once per workspace - @connetdotz
 -->
 
+### 4.1.1
+* show release message once per workspace - @connetdotz (#756)
 ### 4.1.0
 * fix type warning in settings.json when using the `{"autoRun": "off"}` option - @tommy
 * fix couple of test result matching issues - @connectdotz (#737)

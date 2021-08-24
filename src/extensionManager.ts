@@ -282,14 +282,14 @@ export class ExtensionManager {
     if (!didShow) {
       vscode.window
         .showInformationMessage(
-          `vscode-jest now supports the official vscode test explorer!!`,
+          `vscode-jest now supports the official vscode test explorer.`,
           'Show Test Explorer',
           'See Details'
         )
         .then((value) => {
           if (value === 'Show Test Explorer') {
             vscode.commands.executeCommand('workbench.view.testing.focus');
-          } else {
+          } else if (value === 'See Details') {
             vscode.commands.executeCommand(
               'vscode.open',
               vscode.Uri.parse(

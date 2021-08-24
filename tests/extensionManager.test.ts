@@ -645,6 +645,13 @@ describe('ExtensionManager', () => {
           )
         );
       });
+      it('if close without selecting any action, should exit with no-op', async () => {
+        (vscode.window.showInformationMessage as jest.Mocked<any>).mockReturnValue(
+          Promise.resolve(undefined)
+        );
+        await extensionManager.activate();
+        expect(vscode.commands.executeCommand).not.toBeCalled();
+      });
       it('will not show again once it has been seen', async () => {
         (vscode.window.showInformationMessage as jest.Mocked<any>).mockReturnValue(
           Promise.resolve('Show Test Explorer')
