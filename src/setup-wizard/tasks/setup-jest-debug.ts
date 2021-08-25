@@ -162,7 +162,7 @@ export const setupJestDebug: SetupTask = async (context: WizardContext): Promise
       actionItem(
         DebugSetupActionId.acceptExisting,
         '$(check) Use current',
-        'aceept then current debug config without change',
+        'accept the current debug config without change',
         () => {
           message('jest debug config did not change');
           return Promise.resolve('success');
