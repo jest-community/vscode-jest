@@ -43,10 +43,13 @@ jobs:
           cache: yarn
       - name: install
         run: yarn --immutable
+
+      # can only post comment from report itself, not from the forked PR
       - name: Danger
         env:
           DANGER_GITHUB_API_TOKEN: ${{ secrets.DANGER_GITHUB_API_TOKEN }}
         run: yarn danger ci
+
       - name: run tsc
         run: yarn tsc
       - name: run eslint
