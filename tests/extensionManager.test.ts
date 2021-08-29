@@ -621,49 +621,5 @@ describe('ExtensionManager', () => {
       expect(ext1.onDidChangeActiveTextEditor).not.toBeCalled();
       expect(ext2.onDidChangeActiveTextEditor).not.toBeCalled();
     });
-    describe('can show test explore information once per workspace', () => {
-      beforeEach(() => {
-        (vscode.window.activeTextEditor as any) = undefined;
-      });
-      it('can reveal test explore view', async () => {
-        (vscode.window.showInformationMessage as jest.Mocked<any>).mockReturnValue(
-          Promise.resolve('Show Test Explorer')
-        );
-        await extensionManager.activate();
-        expect(vscode.commands.executeCommand).toBeCalledWith('workbench.view.testing.focus');
-      });
-      it('can show README document', async () => {
-        (vscode.window.showInformationMessage as jest.Mocked<any>).mockReturnValue(
-          Promise.resolve('See Details')
-        );
-        (vscode.Uri.parse as jest.Mocked<any>).mockImplementation((uri) => uri);
-        await extensionManager.activate();
-        expect(vscode.commands.executeCommand).toBeCalledWith(
-          'vscode.open',
-          expect.stringContaining(
-            'jest-community/vscode-jest/blob/master/README.md#how-to-use-the-test-explorer'
-          )
-        );
-      });
-      it('if close without selecting any action, should exit with no-op', async () => {
-        (vscode.window.showInformationMessage as jest.Mocked<any>).mockReturnValue(
-          Promise.resolve(undefined)
-        );
-        await extensionManager.activate();
-        expect(vscode.commands.executeCommand).not.toBeCalled();
-      });
-      it('will not show again once it has been seen', async () => {
-        (vscode.window.showInformationMessage as jest.Mocked<any>).mockReturnValue(
-          Promise.resolve('Show Test Explorer')
-        );
-        await extensionManager.activate();
-        expect(vscode.window.showInformationMessage).toBeCalled();
-
-        (vscode.window.showInformationMessage as jest.Mocked<any>).mockClear();
-
-        await extensionManager.activate();
-        expect(vscode.window.showInformationMessage).not.toBeCalled();
-      });
-    });
   });
 });
