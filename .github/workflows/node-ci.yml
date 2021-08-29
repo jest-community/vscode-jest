@@ -47,7 +47,7 @@ jobs:
       # can only post comment from report itself, not from the forked PR
       - name: Danger
         env:
-          DANGER_GITHUB_API_TOKEN: ${{ secrets.DANGER_GITHUB_API_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: yarn danger ci
 
       - name: run tsc
