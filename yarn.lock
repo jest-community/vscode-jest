@@ -1825,10 +1825,10 @@ cssstyle@^2.2.0:
   dependencies:
     cssom "~0.3.6"
 
-danger@^10.1.1:
-  version "10.1.1"
-  resolved "https://registry.yarnpkg.com/danger/-/danger-10.1.1.tgz#25400316f27720f14059476c6b9ab40d96564681"
-  integrity sha512-kRJW7TrVYe3nzTILRahXuEvG/+EZwyHrDXTTHA6nkd+4Ga+F4A4AFNkT7d0hEi7OlhhVx8W9BkxNcSO1xEJrAA==
+danger@^10.6.6:
+  version "10.6.6"
+  resolved "https://registry.yarnpkg.com/danger/-/danger-10.6.6.tgz#d9861506dc70eb98c5f00754b520f32e86400dcc"
+  integrity sha512-RBqANs6xbWSCqZMy3+/eIYuC9kd7g5NqJ8PqDJKylPhvBoJEDkDrHQvExYHiP2UquvaZcPWsKohmOQXrosrpdw==
   dependencies:
     "@babel/polyfill" "^7.2.5"
     "@octokit/rest" "^16.43.1"
@@ -1854,7 +1854,7 @@ danger@^10.1.1:
     memfs-or-file-map-to-github-branch "^1.1.0"
     micromatch "^3.1.10"
     node-cleanup "^2.1.2"
-    node-fetch "^2.3.0"
+    node-fetch "2.6.1"
     override-require "^1.1.1"
     p-limit "^2.1.0"
     parse-diff "^0.7.0"
@@ -4489,7 +4489,7 @@ node-cleanup@^2.1.2:
   resolved "https://registry.yarnpkg.com/node-cleanup/-/node-cleanup-2.1.2.tgz#7ac19abd297e09a7f72a71545d951b517e4dde2c"
   integrity sha1-esGavSl+Caf3KnFUXZUbUX5N3iw=
 
-node-fetch@^2.3.0, node-fetch@^2.6.0:
+node-fetch@2.6.1, node-fetch@^2.3.0, node-fetch@^2.6.0:
   version "2.6.1"
   resolved "https://registry.yarnpkg.com/node-fetch/-/node-fetch-2.6.1.tgz#045bd323631f76ed2e2b55573394416b639a0052"
   integrity sha512-V4aYg89jEoVRxRb2fJdAg8FHvI7cEyYdVAh94HH0UIK8oJxUfkjlDQN9RbMx+bEjP7+ggMiFRprSti032Oipxw==
