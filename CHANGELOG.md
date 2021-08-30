@@ -6,6 +6,9 @@ Please add your own contribution below inside the Master section
 * brief change description - @author
 -->
 
+### 4.1.2
+* remove release message - @connectdotz (#763)
+* hacking CI danger file to report error directly - @connectdotz (#763)
 ### 4.1.1
 * show release message once per workspace - @connetdotz (#756)
 ### 4.1.0
