@@ -8,8 +8,8 @@ const isForkedRepo = (): boolean => {
   if (headRepoName !== baseRepoName) {
     // This is shown inline in the output and also integrates with the GitHub
     // Action reporting UI and produces a warning
-    console.warn(
-      "Running from a forked repo. Danger won't be able to post comments, you will most likely see a 403 error below..."
+    console.log(
+      "::warning::Running from a forked repo. Danger won't be able to post comments, you will most likely see a 403 error below..."
     );
     return true;
   }
@@ -38,7 +38,7 @@ if (modifiedAppFiles.length > 0 && !trivialPR && !changelogChanges) {
   const message =
     '**No CHANGELOG added.** If this is a small PR, or a bug-fix for an unreleased bug add `#trivial` to your PR message and re-run CI.';
   if (isForkedRepo()) {
-    console.error(message);
+    console.log(`::error::${message}`);
   }
   fail(message);
 }
