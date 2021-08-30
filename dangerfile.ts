@@ -6,15 +6,10 @@ const isForkedRepo = (): boolean => {
   const baseRepoName = danger.github.pr.base.repo.full_name;
 
   if (headRepoName !== baseRepoName) {
-    // This is shown inline in the output
-    console.log(
-      "\033[1;31mRunning from a forked repo. Danger won't be able to post comments on the main repo unless GitHub Actions are enabled on the fork, too.\033[0m"
-    );
-
     // This is shown inline in the output and also integrates with the GitHub
     // Action reporting UI and produces a warning
-    console.log(
-      "##[warning]Running from a forked repo. Danger won't be able to post comments on the main repo unless GitHub Actions are enabled on the fork, too.\033[0m"
+    console.warn(
+      "Running from a forked repo. Danger won't be able to post comments, you will most likely see a 403 error below..."
     );
     return true;
   }
@@ -43,7 +38,7 @@ if (modifiedAppFiles.length > 0 && !trivialPR && !changelogChanges) {
   const message =
     '**No CHANGELOG added.** If this is a small PR, or a bug-fix for an unreleased bug add `#trivial` to your PR message and re-run CI.';
   if (isForkedRepo()) {
-    console.log(`\033[1;31m${message}\033[0m`);
+    console.error(message);
   }
   fail(message);
 }
