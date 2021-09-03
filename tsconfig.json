@@ -4,6 +4,7 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "noUnusedLocals": true,
+    "allowSyntheticDefaultImports": true,
     "noUnusedParameters": true,
     "target": "es6",
     "outDir": "out",
