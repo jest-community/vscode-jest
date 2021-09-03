@@ -2,7 +2,7 @@
   "name": "vscode-jest",
   "displayName": "Jest",
   "description": "Use Facebook's Jest With Pleasure.",
-  "version": "4.1.1",
+  "version": "4.1.2",
   "publisher": "Orta",
   "engines": {
     "vscode": "^1.59.0"
@@ -407,7 +407,7 @@
     "@typescript-eslint/parser": "^4.14.2",
     "copy-webpack-plugin": "^8.1.0",
     "coveralls": "^3.1.0",
-    "danger": "^10.1.1",
+    "danger": "^10.6.6",
     "eslint": "^7.0.0",
     "eslint-config-prettier": "^7.2.0",
     "eslint-plugin-import": "^2.22.1",
