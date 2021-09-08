@@ -78,6 +78,9 @@ describe('test-item-data', () => {
       .fn()
       .mockImplementation((uri, p) => ({ fsPath: `${uri.fsPath}/${p}` }));
     vscode.Uri.file = jest.fn().mockImplementation((f) => ({ fsPath: f }));
+    (vscode.window.onDidChangeActiveTextEditor as jest.Mocked<any>).mockReturnValue({
+      dispose: jest.fn(),
+    });
   });
 
   describe('discover children', () => {
@@ -225,6 +228,7 @@ describe('test-item-data', () => {
         describe('when testSuiteChanged.assertions-updated event filed', () => {
           it('all item data will be updated accordingly', () => {
             context.ext.testResolveProvider.getTestList.mockReturnValueOnce([]);
+            context.ext.settings = { testExplorer: { enabled: true, showInlineError: true } };
 
             const wsRoot = new WorkspaceRoot(context);
             wsRoot.discoverTest(runMock);
@@ -465,6 +469,7 @@ describe('test-item-data', () => {
         const file = '/ws-1/a.test.ts';
         let wsRoot;
         beforeEach(() => {
+          jest.clearAllMocks();
           context.ext.testResolveProvider.getTestList.mockReturnValueOnce([file]);
           wsRoot = new WorkspaceRoot(context);
 
@@ -565,11 +570,9 @@ describe('test-item-data', () => {
             const tItem = getChildItem(dItem, 'test-b');
             expect(runMock.failed).toBeCalledWith(tItem, expect.anything());
             if (hasLocation) {
-              expect(vscode.Location).toHaveBeenCalledWith(tItem.uri, expect.anything());
-              expect(vscode.Position).toBeCalledTimes(2);
-              expect(vscode.Position).toBeCalledWith(12, 0);
+              expect(vscode.TestMessage).toBeCalled();
             } else {
-              expect(vscode.Location).not.toBeCalled();
+              expect(vscode.TestMessage).not.toBeCalled();
             }
           }
         );

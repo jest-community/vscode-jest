@@ -147,6 +147,12 @@ export class TestResultProvider {
       error = `encountered internal match error: ${e}`;
     }
 
+    this.events.testSuiteChanged.fire({
+      type: 'test-parsed',
+      file: filePath,
+      testContainer: match.buildSourceContainer(root),
+    });
+
     // no need to do groupByRange as the source block will not have blocks under the same location
     return {
       status: 'Unknown',

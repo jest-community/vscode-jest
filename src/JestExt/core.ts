@@ -281,7 +281,7 @@ export class JestExt {
     try {
       sortedResults = this.testResultProvider.getSortedResults(filePath);
     } catch (e) {
-      this.channel.appendLine(`${filePath}: failed to parse test results: ${e.toString()}`);
+      this.channel.appendLine(`${filePath}: failed to parse test results: ${e}`);
       // assign an empty result so we can clear the outdated decorators/diagnostics etc
       sortedResults = {
         fail: [],
@@ -580,7 +580,6 @@ export class JestExt {
   onWillSaveTextDocument(event: vscode.TextDocumentWillSaveEvent): void {
     if (event.document.isDirty) {
       this.removeCachedTestResults(event.document, true);
-      this.refreshDocumentChange(event.document);
     }
   }
   onDidSaveTextDocument(document: vscode.TextDocument): void {
