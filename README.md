@@ -344,7 +344,8 @@ for example:
     }
     ```
 
-  - Only run tests in the test file when the test file itself changed. It will not run all tests for the workspace upon start up, nor triggering any test run when the source file changed.
+
+  - Only run tests in the test file when the test file itself changes. It will neither run all tests for the workspace upon startup nor trigger any test run when the source file changes. 
     ``` json
     "jest.autoRun": {
        "watch": false,
