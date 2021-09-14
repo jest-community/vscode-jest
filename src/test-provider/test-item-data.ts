@@ -122,26 +122,11 @@ export class WorkspaceRoot extends TestItemDataBase {
       this.context.ext.testResolveProvider.events.testListUpdated.event(this.onTestListUpdated),
       this.context.ext.testResolveProvider.events.testSuiteChanged.event(this.onTestSuiteChanged),
       this.context.ext.sessionEvents.onRunEvent.event(this.onRunEvent),
-      vscode.window.onDidChangeActiveTextEditor(this.onDidChangeActiveTextEditor, this),
     ];
   };
   private unregisterEvents = (): void => {
     this.listeners.forEach((l) => l.dispose());
     this.listeners.length = 0;
-  };
-
-  private onDidChangeActiveTextEditor = (editor?: vscode.TextEditor): void => {
-    if (!editor?.document?.uri) {
-      return;
-    }
-    const workspace = vscode.workspace.getWorkspaceFolder(editor.document.uri);
-    if (workspace?.name !== this.context.ext.workspace.name) {
-      return;
-    }
-    const testDoc = this.testDocuments.get(editor.document.uri.fsPath);
-    if (testDoc) {
-      vscode.commands.executeCommand('vscode.revealTestInExplorer', testDoc.item, true);
-    }
   };
 
   private createRun = (name?: string, item?: vscode.TestItem): vscode.TestRun => {
@@ -169,7 +154,7 @@ export class WorkspaceRoot extends TestItemDataBase {
    */
   private addTestFile = (
     absoluteFileName: string,
-    onTestDocument?: (doc: TestDocumentRoot) => void
+    onTestDocument: (doc: TestDocumentRoot) => void
   ): TestDocumentRoot => {
     let docRoot = this.testDocuments.get(absoluteFileName);
     if (!docRoot) {
@@ -180,7 +165,7 @@ export class WorkspaceRoot extends TestItemDataBase {
       this.testDocuments.set(absoluteFileName, docRoot);
     }
 
-    onTestDocument?.(docRoot);
+    onTestDocument(docRoot);
 
     return docRoot;
   };
@@ -525,7 +510,6 @@ export class TestDocumentRoot extends TestResultData {
       const container =
         parsedRoot ??
         this.context.ext.testResolveProvider.getTestSuiteResult(this.item.id)?.assertionContainer;
-      // const suiteResult = this.context.ext.testResolveProvider.getTestSuiteResult(this.item.id);
       if (!container) {
         this.item.children.replace([]);
       } else {

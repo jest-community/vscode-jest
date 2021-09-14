@@ -33,7 +33,10 @@ import {
 } from '../../src/test-provider/test-item-data';
 import * as helper from '../test-helper';
 import { JestTestProviderContext } from '../../src/test-provider/test-provider-context';
-import { buildAssertionContainer } from '../../src/TestResults/match-by-context';
+import {
+  buildAssertionContainer,
+  buildSourceContainer,
+} from '../../src/TestResults/match-by-context';
 import * as path from 'path';
 import { mockController, mockExtExplorerContext } from './test-helper';
 
@@ -78,11 +81,7 @@ describe('test-item-data', () => {
       .fn()
       .mockImplementation((uri, p) => ({ fsPath: `${uri.fsPath}/${p}` }));
     vscode.Uri.file = jest.fn().mockImplementation((f) => ({ fsPath: f }));
-    (vscode.window.onDidChangeActiveTextEditor as jest.Mocked<any>).mockReturnValue({
-      dispose: jest.fn(),
-    });
   });
-
   describe('discover children', () => {
     describe('WorkspaceRoot', () => {
       it('create test document tree for testFiles list', () => {
@@ -345,6 +344,41 @@ describe('test-item-data', () => {
                 testNode.attrs.range.end.column,
               ],
             });
+          });
+        });
+        describe('when testSuiteChanged.test-parsed event filed', () => {
+          it('test items will be added based on parsed test files (test blocks)', () => {
+            // assertion should be discovered prior
+            context.ext.testResolveProvider.getTestList.mockReturnValueOnce(['/ws-1/a.test.ts']);
+
+            const t1 = helper.makeItBlock('test-1', [1, 1, 5, 1]);
+            const t2 = helper.makeItBlock('test-2', [6, 1, 7, 1]);
+            const sourceRoot = helper.makeRoot([t2, t1]);
+            const testContainer = buildSourceContainer(sourceRoot);
+
+            const wsRoot = new WorkspaceRoot(context);
+            wsRoot.discoverTest(runMock);
+            expect(context.ext.testResolveProvider.getTestSuiteResult).toHaveBeenCalledTimes(1);
+
+            expect(wsRoot.item.children.size).toBe(1);
+            const docItem = getChildItem(wsRoot.item, 'a.test.ts');
+            expect(docItem.children.size).toEqual(0);
+            controllerMock.createTestRun.mockClear();
+            context.ext.testResolveProvider.getTestSuiteResult.mockClear();
+
+            context.ext.testResolveProvider.events.testSuiteChanged.event.mock.calls[0][0]({
+              type: 'test-parsed',
+              file: '/ws-1/a.test.ts',
+              testContainer,
+            });
+            expect(docItem.children.size).toEqual(2);
+            let dItem = getChildItem(docItem, 'test-1');
+            expect(dItem.range).toEqual({ args: [0, 0, 4, 0] });
+            dItem = getChildItem(docItem, 'test-2');
+            expect(dItem.range).toEqual({ args: [5, 0, 6, 0] });
+
+            expect(context.ext.testResolveProvider.getTestSuiteResult).not.toHaveBeenCalled();
+            expect(controllerMock.createTestRun).not.toBeCalled();
           });
         });
       });

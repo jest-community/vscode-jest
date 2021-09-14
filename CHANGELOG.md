@@ -4,6 +4,7 @@ Please add your own contribution below inside the Master section
 
 ## Master
 * brief change description - @author
+* expose test file parse result to TestExplorer so the status indicators and test item menu are accessible for all run modes. - @connectdotz
 -->
 
 ### 4.1.2
