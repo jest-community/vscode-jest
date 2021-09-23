@@ -139,8 +139,10 @@ export class ListTestFileListener extends AbstractProcessListener {
 }
 
 const SnapshotFailRegex = /(snapshots? failed)|(snapshot test failed)/i;
-const IS_OUTSIDE_REPOSITORY_REGEXP = /Test suite failed to run[\s\S]*fatal:[\s\S]*is outside repository/im;
-const WATCH_IS_NOT_SUPPORTED_REGEXP = /^s*--watch is not supported without git\/hg, please use --watchAlls*/im;
+const IS_OUTSIDE_REPOSITORY_REGEXP =
+  /Test suite failed to run[\s\S]*fatal:[\s\S]*is outside repository/im;
+const WATCH_IS_NOT_SUPPORTED_REGEXP =
+  /^s*--watch is not supported without git\/hg, please use --watchAlls*/im;
 
 export class RunTestListener extends AbstractProcessListener {
   protected get name(): string {

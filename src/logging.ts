@@ -5,20 +5,22 @@ export interface LoggingFactory {
 }
 
 export const workspaceLogging = (workspaceName: string, verbose: boolean): LoggingFactory => {
-  const create = (id: string): Logging => (type: LoggingType, ...args: unknown[]): void => {
-    const name = `[${workspaceName}/${id}]`;
-    if (type === 'debug') {
-      if (verbose) {
-        console.log(name, ...args);
+  const create =
+    (id: string): Logging =>
+    (type: LoggingType, ...args: unknown[]): void => {
+      const name = `[${workspaceName}/${id}]`;
+      if (type === 'debug') {
+        if (verbose) {
+          console.log(name, ...args);
+        }
+        return;
       }
-      return;
-    }
-    if (type === 'warn') {
-      console.warn(name, ...args);
-      return;
-    }
+      if (type === 'warn') {
+        console.warn(name, ...args);
+        return;
+      }
 
-    console.error(name, ...args);
-  };
+      console.error(name, ...args);
+    };
   return { create };
 };

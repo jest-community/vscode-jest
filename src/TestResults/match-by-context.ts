@@ -148,17 +148,19 @@ type MessagingInfo = {
   aContainer: ContainerNode<TestAssertionStatus>;
 };
 
-const createMessaging = (fileName: string, _verbose: boolean) => (info: MessagingInfo): void => {
-  const build = (msg: string): Parameters<typeof console.log> => [
-    `[test resut matching] ${info.type} : ${msg} : "${fileName}"\n`,
-    info,
-  ];
-  switch (info.type) {
-    case 'report-unmatched':
-      console.warn(...build(`${info.unmatchedItBlocks.length} unmatched test blocks`));
-      break;
-  }
-};
+const createMessaging =
+  (fileName: string, _verbose: boolean) =>
+  (info: MessagingInfo): void => {
+    const build = (msg: string): Parameters<typeof console.log> => [
+      `[test resut matching] ${info.type} : ${msg} : "${fileName}"\n`,
+      info,
+    ];
+    switch (info.type) {
+      case 'report-unmatched':
+        console.warn(...build(`${info.unmatchedItBlocks.length} unmatched test blocks`));
+        break;
+    }
+  };
 
 type MatchResultType<C extends ContextType> = [
   ChildNodeType<ItBlock, C>,

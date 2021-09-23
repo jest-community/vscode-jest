@@ -65,7 +65,7 @@ describe('StatusBar', () => {
       statusBar.register(() => undefined);
       expect(vscode.commands.registerCommand).toBeCalledTimes(2);
 
-      const registerCommand = (vscode.commands.registerCommand as unknown) as jest.Mock<{}>;
+      const registerCommand = vscode.commands.registerCommand as unknown as jest.Mock<{}>;
       const calls = registerCommand.mock.calls;
       expect(calls.some((c) => c[0].includes('show-summary-output'))).toBe(true);
       expect(calls.some((c) => c[0].includes('show-active-output'))).toBe(true);
@@ -267,7 +267,7 @@ describe('StatusBar', () => {
   });
 
   describe('StatusBarItem', () => {
-    const registerCommand = (vscode.commands.registerCommand as unknown) as jest.Mock<{}>;
+    const registerCommand = vscode.commands.registerCommand as unknown as jest.Mock<{}>;
 
     afterEach(() => {
       (vscode.workspace as any).workspaceFolders = [];
@@ -303,9 +303,9 @@ describe('StatusBar', () => {
         { name: 'testproject3', uri: vscode.Uri.file(''), index: 2 },
       ];
       const projectUrl = vscode.Uri.file('projecturl');
-      vscode.window.activeTextEditor = ({
+      vscode.window.activeTextEditor = {
         document: { uri: projectUrl },
-      } as unknown) as vscode.TextEditor;
+      } as unknown as vscode.TextEditor;
       vscode.workspace.getWorkspaceFolder = (url) =>
         url === projectUrl ? vscode.workspace.workspaceFolders[1] : undefined;
       statusBarClickHandler();

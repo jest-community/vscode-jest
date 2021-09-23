@@ -281,7 +281,7 @@ export class JestExt {
     try {
       sortedResults = this.testResultProvider.getSortedResults(filePath);
     } catch (e) {
-      this.channel.appendLine(`${filePath}: failed to parse test results: ${e.toString()}`);
+      this.channel.appendLine(`${filePath}: failed to parse test results: ${e}`);
       // assign an empty result so we can clear the outdated decorators/diagnostics etc
       sortedResults = {
         fail: [],

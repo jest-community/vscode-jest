@@ -17,8 +17,10 @@ module.exports = (env, argv) => {
 
   // during development keep the largest external dependencies out of the bundle in order to speed up build time
   if (isDevelopment) {
-    externals.push('typescript', /^@babel\/.*/, 'babylon');
+    externals.push('typescript');
   }
+  console.log(`context=__dirname: ${__dirname}`);
+
   return {
     context: __dirname,
     target: 'node',
@@ -38,6 +40,7 @@ module.exports = (env, argv) => {
       extensions: ['.ts', '.js'],
     },
     module: {
+      // noParse: /\.md|LICENSE|fsevents\.node/,
       rules: [
         {
           test: /\.ts$/,

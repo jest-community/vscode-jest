@@ -345,22 +345,22 @@ export const getWizardSettings = (workspace: vscode.WorkspaceFolder): WizardSett
   return wsSettings;
 };
 
-export const createSaveConfig = (context: WizardContext) => (
-  ...entries: ConfigEntry[]
-): Promise<void> => {
-  const { workspace, message } = context;
-  const config = vscode.workspace.getConfiguration(undefined, workspace.uri);
+export const createSaveConfig =
+  (context: WizardContext) =>
+  (...entries: ConfigEntry[]): Promise<void> => {
+    const { workspace, message } = context;
+    const config = vscode.workspace.getConfiguration(undefined, workspace.uri);
 
-  const promises = entries.map((e) => {
-    message(`Updating "${e.name}" in vscode`);
-    return config.update(e.name, e.value, vscode.ConfigurationTarget.WorkspaceFolder);
-  });
-  return Promise.all(promises)
-    .then(() => {
-      message(`All updates saved successfully`);
-    })
-    .catch((e) => {
-      message(`Some config.update failed: ${jsonOut(e)}`);
-      throw e;
+    const promises = entries.map((e) => {
+      message(`Updating "${e.name}" in vscode`);
+      return config.update(e.name, e.value, vscode.ConfigurationTarget.WorkspaceFolder);
     });
-};
+    return Promise.all(promises)
+      .then(() => {
+        message(`All updates saved successfully`);
+      })
+      .catch((e) => {
+        message(`Some config.update failed: ${jsonOut(e)}`);
+        throw e;
+      });
+  };

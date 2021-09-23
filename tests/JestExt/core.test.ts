@@ -134,8 +134,8 @@ describe('JestExt', () => {
     const mockShowQuickPick = jest.fn();
     let mockConfigurations = [];
     beforeEach(() => {
-      startDebugging = (vscode.debug.startDebugging as unknown) as jest.Mock<{}>;
-      ((startDebugging as unknown) as jest.Mock<{}>).mockImplementation(
+      startDebugging = vscode.debug.startDebugging as unknown as jest.Mock<{}>;
+      (startDebugging as unknown as jest.Mock<{}>).mockImplementation(
         async (_folder: any, nameOrConfig: any) => {
           // trigger fallback to default configuration
           if (typeof nameOrConfig === 'string') {
@@ -562,9 +562,8 @@ describe('JestExt', () => {
       sut.coverageOverlay.enabled = false;
       await sut.toggleCoverageOverlay();
 
-      const {
-        runnerWorkspace: runnerWorkspace2,
-      } = (createProcessSession as jest.Mocked<any>).mock.calls[1][0];
+      const { runnerWorkspace: runnerWorkspace2 } = (createProcessSession as jest.Mocked<any>).mock
+        .calls[1][0];
       expect(runnerWorkspace2.collectCoverage).toBe(false);
     });
   });
@@ -583,7 +582,7 @@ describe('JestExt', () => {
       sut.updateDecorators = jest.fn();
       const editor = mockEditor('file://a/b/c.ts');
 
-      ((sut.testResultProvider.getSortedResults as unknown) as jest.Mock<{}>).mockReturnValueOnce({
+      (sut.testResultProvider.getSortedResults as unknown as jest.Mock<{}>).mockReturnValueOnce({
         success: [],
         fail: [],
         skip: [],
@@ -633,14 +632,12 @@ describe('JestExt', () => {
       let updateDecoratorsSpy;
       beforeEach(() => {
         sut = newJestExt();
-        ((sut.testResultProvider.getSortedResults as unknown) as jest.Mock<{}>).mockReturnValueOnce(
-          {
-            success: [],
-            fail: [],
-            skip: [],
-            unknown: [],
-          }
-        );
+        (sut.testResultProvider.getSortedResults as unknown as jest.Mock<{}>).mockReturnValueOnce({
+          success: [],
+          fail: [],
+          skip: [],
+          unknown: [],
+        });
         updateDecoratorsSpy = jest.spyOn(sut, 'updateDecorators');
         sut.debugCodeLensProvider.didChange = jest.fn();
       });

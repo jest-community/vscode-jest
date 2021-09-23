@@ -26,7 +26,7 @@ const defaultContextMock = {
 
 function testStatusStyle(property: string) {
   it('should be decoration', () => {
-    const mock = (vscode.window.createTextEditorDecorationType as unknown) as jest.Mock;
+    const mock = vscode.window.createTextEditorDecorationType as unknown as jest.Mock;
     mock.mockReturnValue(property);
 
     const decorations = new TestStatus(defaultContextMock);
@@ -35,7 +35,7 @@ function testStatusStyle(property: string) {
   });
 
   it('should have been created with proper attributes', () => {
-    const mock = (vscode.window.createTextEditorDecorationType as unknown) as jest.Mock;
+    const mock = vscode.window.createTextEditorDecorationType as unknown as jest.Mock;
     mock.mockImplementation((args) => args);
 
     const decoration = new TestStatus(defaultContextMock)[property];

@@ -42,7 +42,7 @@ export class CoverageMapProvider {
     this._map.data[filePath] = map.fileCoverageFor(filePath);
   }
   public getFileCoverage(filePath: string): FileCoverage {
-    return this._map.data[filePath];
+    return this._map.data[filePath] as FileCoverage;
   }
   public onVisibilityChanged(visible: boolean): void {
     if (!visible) {

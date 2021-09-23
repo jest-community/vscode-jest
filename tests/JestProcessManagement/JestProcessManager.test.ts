@@ -30,7 +30,7 @@ let SEQ = 1;
 describe('JestProcessManager', () => {
   let extContext;
 
-  const jestProcessMock = (JestProcess as any) as jest.Mock<any>;
+  const jestProcessMock = JestProcess as any as jest.Mock<any>;
 
   const mockJestProcess = (request?: any): any => {
     let resolve;
