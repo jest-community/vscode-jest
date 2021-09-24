@@ -1,8 +1,7 @@
-//@ts-check
-
 'use strict';
 
 const path = require('path');
+const IgnoreDynamicRequire = require('webpack-ignore-dynamic-require');
 
 /**@returns {import('webpack').Configuration}*/
 module.exports = (env, argv) => {
@@ -13,14 +12,14 @@ module.exports = (env, argv) => {
   const externals = [
     { 'jest-config': 'root {}' }, // the jest-config module isn't utilized in this plugin, compiling it would result in unnecessary overhead and errors
     { vscode: 'commonjs vscode' }, // the vscode-module is created on-the-fly and must be excluded.
+    { fsevents: 'fsevents' }, // extension will not need to do any 'watch' directly, no need for this library
+    'typescript',
   ];
 
   // during development keep the largest external dependencies out of the bundle in order to speed up build time
   if (isDevelopment) {
     externals.push('typescript');
   }
-  console.log(`context=__dirname: ${__dirname}`);
-
   return {
     context: __dirname,
     target: 'node',
@@ -28,6 +27,7 @@ module.exports = (env, argv) => {
       extension: './src/extension.ts',
       reporter: './src/reporter.ts',
     },
+    plugins: [new IgnoreDynamicRequire()],
     output: {
       path: path.resolve(__dirname, 'out'),
       filename: '[name].js',
@@ -40,7 +40,7 @@ module.exports = (env, argv) => {
       extensions: ['.ts', '.js'],
     },
     module: {
-      // noParse: /\.md|LICENSE|fsevents\.node/,
+      noParse: [/babel-preset-current-node-syntax\/src\/index\.js/],
       rules: [
         {
           test: /\.ts$/,
