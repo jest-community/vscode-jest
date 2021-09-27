@@ -33,7 +33,7 @@ class SnapshotCodeLensProvider implements vscode.CodeLensProvider {
   }
 }
 
-export function registerSnapshotCodeLens(enableSnapshotPreviews: boolean) {
+export function registerSnapshotCodeLens(enableSnapshotPreviews: boolean): vscode.Disposable[] {
   if (!enableSnapshotPreviews) {
     return [];
   }
