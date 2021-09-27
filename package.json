@@ -394,7 +394,7 @@
   "dependencies": {
     "istanbul-lib-coverage": "^3.0.0",
     "istanbul-lib-source-maps": "^4.0.0",
-    "jest-editor-support": "^30.0.1",
+    "jest-editor-support": "^30.0.2",
     "vscode-codicons": "^0.0.4"
   },
   "devDependencies": {
