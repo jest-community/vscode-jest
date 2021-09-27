@@ -20,6 +20,8 @@ module.exports = {
     'core-js',
     'debug',
     '@babel/template',
+    'graceful-fs',
+    '@babel/core',
   ],
   moduleNameMapper: {
     '\\.(svg)$': '<rootDir>/tests/fileMock.ts',

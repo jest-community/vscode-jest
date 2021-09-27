@@ -88,7 +88,9 @@ export const coverageMapWithLowerCaseWindowsDriveLetters = (data: JestTotalResul
   const result: any = {};
   const filePaths = Object.keys(data.coverageMap);
   for (const filePath of filePaths) {
-    const newFileCoverage = fileCoverageWithLowerCaseWindowsDriveLetter(data.coverageMap[filePath]);
+    const newFileCoverage = fileCoverageWithLowerCaseWindowsDriveLetter(
+      data.coverageMap[filePath] as FileCoverage
+    );
     result[newFileCoverage.path] = newFileCoverage;
   }
 

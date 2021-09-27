@@ -131,7 +131,7 @@ describe('DebugCodeLensProvider', () => {
     const token = {} as any;
     const getResults = getResultsMock;
     const testResults = [
-      ({
+      {
         name: 'should fail',
         identifier: {
           title: 'should fail',
@@ -146,7 +146,7 @@ describe('DebugCodeLensProvider', () => {
           column: 4,
         },
         status: TestReconciliationState.KnownFail,
-      } as any) as TestResult,
+      } as any as TestResult,
     ];
 
     it('should return an empty array when the provider is disabled', () => {

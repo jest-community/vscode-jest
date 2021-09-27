@@ -20,10 +20,10 @@ describe('DebugConfigurationProvider', () => {
     expect(config.program).toMatch('jest');
   });
   it('should return a valid CRA DebugConfiguration', () => {
-    ((getTestCommand as unknown) as jest.Mock<{}>).mockReturnValueOnce(
+    (getTestCommand as unknown as jest.Mock<{}>).mockReturnValueOnce(
       'react-scripts test --env=jsdom'
     );
-    ((isCreateReactAppTestCommand as unknown) as jest.Mock<{}>).mockReturnValueOnce(true);
+    (isCreateReactAppTestCommand as unknown as jest.Mock<{}>).mockReturnValueOnce(true);
 
     const folder: any = { uri: { fsPath: null } };
     const sut = new DebugConfigurationProvider();
@@ -46,7 +46,7 @@ describe('DebugConfigurationProvider', () => {
     ${[]}              | ${['--testNamePattern', testName, '--runTestsByPath', fileName]}
     ${['--runInBand']} | ${['--runInBand', '--testNamePattern', testName, '--runTestsByPath', fileName]}
   `('should append the specified tests arguments', ({ debugConfigArgs, expectedArgs }) => {
-    ((toFilePath as unknown) as jest.Mock<{}>).mockImplementation((s) => s);
+    (toFilePath as unknown as jest.Mock<{}>).mockImplementation((s) => s);
 
     let configuration: any = { name: 'vscode-jest-tests', args: debugConfigArgs };
 

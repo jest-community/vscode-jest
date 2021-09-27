@@ -24,7 +24,7 @@ describe('task-queue', () => {
       ${['running', 'pending', 'pending']} | ${2}      | ${1}
       ${['running', 'running', 'pending']} | ${2}      | ${undefined}
     `(
-      'task status: $statusList with maxWorker=$maxWorker ',
+      'task status: $statusList with maxWorker=$maxWorker',
       ({ statusList, maxWorker, lastRunnableTaskIdx }) => {
         expect.hasAssertions();
         const data = statusList.map((s) => mockData(s));
