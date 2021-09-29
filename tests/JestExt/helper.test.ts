@@ -118,7 +118,9 @@ describe('isWatchRequest', () => {
 });
 
 describe('getExtensionResourceSettings()', () => {
+  let userSettings: any;
   beforeEach(() => {
+    userSettings = {};
     vscode.workspace.getConfiguration = jest.fn().mockImplementation((section) => {
       const data = readFileSync('./package.json');
       const config = JSON.parse(data.toString()).contributes.configuration.properties;
@@ -131,7 +133,9 @@ describe('getExtensionResourceSettings()', () => {
       }
 
       return {
-        get: jest.fn().mockImplementation((key) => defaults[`${section}.${key}`]),
+        get: jest
+          .fn()
+          .mockImplementation((key) => userSettings[key] ?? defaults[`${section}.${key}`]),
       };
     });
   });
@@ -153,5 +157,18 @@ describe('getExtensionResourceSettings()', () => {
       autoRun: null,
       testExplorer: { enabled: true },
     });
+  });
+  it('can read user settings', () => {
+    userSettings = {
+      testExplorer: { enable: false },
+      nodeEnv: { whatever: '1' },
+      shell: '/bin/bash',
+    };
+    const uri: any = { fsPath: 'workspaceFolder1' };
+    expect(getExtensionResourceSettings(uri)).toEqual(
+      expect.objectContaining({
+        ...userSettings,
+      })
+    );
   });
 });

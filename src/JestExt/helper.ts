@@ -5,7 +5,12 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { ProjectWorkspace } from 'jest-editor-support';
 import { JestProcessRequest } from '../JestProcessManagement';
-import { PluginResourceSettings, JestExtAutoRunConfig, TestExplorerConfig } from '../Settings';
+import {
+  PluginResourceSettings,
+  JestExtAutoRunConfig,
+  TestExplorerConfig,
+  NodeEnv,
+} from '../Settings';
 import { AutoRunMode } from '../StatusBar';
 import { pathToJest, pathToConfig, toFilePath } from '../helpers';
 import { workspaceLogging } from '../logging';
@@ -87,7 +92,9 @@ export const createJestExtContext = (
     currentJestVersion,
     workspaceFolder.name,
     settings.showCoverageOnLoad,
-    settings.debugMode
+    settings.debugMode,
+    settings.nodeEnv,
+    settings.shell
   );
   return {
     workspace: workspaceFolder,
@@ -118,6 +125,8 @@ export const getExtensionResourceSettings = (uri: vscode.Uri): PluginResourceSet
     coverageColors: config.get<CoverageColors>('coverageColors'),
     autoRun: config.get<JestExtAutoRunConfig>('autoRun'),
     testExplorer: config.get<TestExplorerConfig>('testExplorer') ?? { enabled: true },
+    nodeEnv: config.get<NodeEnv | null>('nodeEnv') ?? undefined,
+    shell: config.get<string | null>('shell') ?? undefined,
   };
 };
 

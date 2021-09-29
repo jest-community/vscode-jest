@@ -1,5 +1,6 @@
 import { TestState } from '../DebugCodeLens';
 import { CoverageColors } from '../Coverage/CoverageOverlay';
+import { ProjectWorkspace } from 'jest-editor-support';
 
 export type JestTestProcessType =
   | 'all-tests'
@@ -25,6 +26,7 @@ export type JestExtAutoRunConfig =
 export type TestExplorerConfig =
   | { enabled: false }
   | { enabled: true; showClassicStatus?: boolean; showInlineError?: boolean };
+export type NodeEnv = ProjectWorkspace['nodeEnv'];
 export interface PluginResourceSettings {
   autoEnable?: boolean;
   enableSnapshotUpdateMessages?: boolean;
@@ -40,6 +42,8 @@ export interface PluginResourceSettings {
   coverageColors?: CoverageColors;
   autoRun?: JestExtAutoRunConfig;
   testExplorer: TestExplorerConfig;
+  nodeEnv?: NodeEnv;
+  shell?: string;
 }
 
 export interface PluginWindowSettings {

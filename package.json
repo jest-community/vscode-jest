@@ -98,6 +98,24 @@
           "default": "",
           "scope": "resource"
         },
+        "jest.nodeEnv": {
+          "markdownDescription": "The env passed to runner process in addtion to `process.env`",
+          "type": [
+            "object",
+            "null"
+          ],
+          "default": null,
+          "scope": "resource"
+        },
+        "jest.shell": {
+          "markdownDescription": "The shell path to override jest runner process default shell (see Node [child_process.spawn()](https://nodejs.org/api/child_process.html#child_process_child_process_spawn_command_args_options)) for more detail)",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "scope": "resource"
+        },
         "jest.enableSnapshotUpdateMessages": {
           "description": "Whether snapshot update messages should show",
           "type": "boolean",
