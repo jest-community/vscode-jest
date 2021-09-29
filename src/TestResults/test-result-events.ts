@@ -1,5 +1,7 @@
+import { ItBlock } from 'jest-editor-support';
 import * as vscode from 'vscode';
 import { JestProcessInfo } from '../JestProcessManagement';
+import { ContainerNode } from './match-node';
 
 export type TestSuiteChangeReason = 'assertions-updated' | 'result-matched';
 export type TestSuitChangeEvent =
@@ -11,6 +13,11 @@ export type TestSuitChangeEvent =
   | {
       type: 'result-matched';
       file: string;
+    }
+  | {
+      type: 'test-parsed';
+      file: string;
+      testContainer: ContainerNode<ItBlock>;
     };
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types

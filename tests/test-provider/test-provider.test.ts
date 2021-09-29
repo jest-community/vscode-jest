@@ -118,9 +118,22 @@ describe('JestTestProvider', () => {
   });
 
   describe('can  discover tests', () => {
+    it('should only discover items with canResolveChildren = true', () => {
+      new JestTestProvider(extExplorerContextMock);
+      const data = setupTestItemData('whatever', true, workspaceRootMock.context);
+      data.item.canResolveChildren = true;
+      controllerMock.resolveHandler(data.item);
+      expect(controllerMock.createTestRun).toBeCalled();
+      controllerMock.createTestRun.mockClear();
+
+      data.item.canResolveChildren = false;
+      controllerMock.resolveHandler(data.item);
+      expect(controllerMock.createTestRun).not.toBeCalled();
+    });
     describe('when no test item is requested', () => {
       it('will resolve the whole workspace via workspaceRoot', () => {
         new JestTestProvider(extExplorerContextMock);
+        workspaceRootMock.item.canResolveChildren = true;
         controllerMock.resolveHandler();
         expect(controllerMock.createTestRun).toBeCalled();
         expect(workspaceRootMock.discoverTest).toBeCalledTimes(1);
@@ -137,6 +150,7 @@ describe('JestTestProvider', () => {
       it('will forward the request to the item', () => {
         new JestTestProvider(extExplorerContextMock);
         const data = setupTestItemData('whatever', true, workspaceRootMock.context);
+        data.item.canResolveChildren = true;
         controllerMock.resolveHandler(data.item);
         expect(controllerMock.createTestRun).toBeCalled();
         expect(data.discoverTest).toBeCalledWith(controllerMock.lastRunMock());
@@ -150,7 +164,7 @@ describe('JestTestProvider', () => {
       it('should not crash if item not found in the item-data map', () => {
         new JestTestProvider(extExplorerContextMock);
         const data = makeItemData(true);
-        controllerMock.resolveHandler({});
+        controllerMock.resolveHandler({ canResolveChildren: true });
         expect(controllerMock.createTestRun).toBeCalled();
         expect(data.discoverTest).not.toBeCalled();
         expect(workspaceRootMock.discoverTest).not.toBeCalled();
@@ -168,6 +182,7 @@ describe('JestTestProvider', () => {
         workspaceRootMock.discoverTest.mockImplementation(() => {
           throw new Error('forced crash');
         });
+        workspaceRootMock.item.canResolveChildren = true;
         controllerMock.resolveHandler();
         expect(workspaceRootMock.item.error).toEqual(expect.stringContaining('discoverTest error'));
 
