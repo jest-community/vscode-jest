@@ -56,6 +56,9 @@ export class JestTestProvider {
 
   private discoverTest = (item: vscode.TestItem | undefined): void => {
     const theItem = item ?? this.workspaceRoot.item;
+    if (!theItem.canResolveChildren) {
+      return;
+    }
     const run = this.context.createTestRun(
       new vscode.TestRunRequest([theItem]),
       `disoverTest: ${this.controller.id}`

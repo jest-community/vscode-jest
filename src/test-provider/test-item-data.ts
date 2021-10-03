@@ -4,8 +4,8 @@ import { JestRunEvent } from '../JestExt';
 import { TestSuiteResult } from '../TestResults';
 import * as path from 'path';
 import { JestExtRequestType } from '../JestExt/process-session';
-import { TestAssertionStatus } from 'jest-editor-support';
-import { DataNode, NodeType, ROOT_NODE_NAME } from '../TestResults/match-node';
+import { ItBlock, TestAssertionStatus } from 'jest-editor-support';
+import { ContainerNode, DataNode, NodeType, ROOT_NODE_NAME } from '../TestResults/match-node';
 import { Logging } from '../logging';
 import { TestSuitChangeEvent } from '../TestResults/test-result-events';
 import { Debuggable, TestItemData, TestItemRun } from './types';
@@ -154,7 +154,7 @@ export class WorkspaceRoot extends TestItemDataBase {
    */
   private addTestFile = (
     absoluteFileName: string,
-    onTestDocument?: (doc: TestDocumentRoot) => void
+    onTestDocument: (doc: TestDocumentRoot) => void
   ): TestDocumentRoot => {
     let docRoot = this.testDocuments.get(absoluteFileName);
     if (!docRoot) {
@@ -165,7 +165,7 @@ export class WorkspaceRoot extends TestItemDataBase {
       this.testDocuments.set(absoluteFileName, docRoot);
     }
 
-    onTestDocument?.(docRoot);
+    onTestDocument(docRoot);
 
     return docRoot;
   };
@@ -223,6 +223,11 @@ export class WorkspaceRoot extends TestItemDataBase {
       case 'result-matched': {
         this.addTestFile(event.file, (testRoot) => testRoot.onTestMatched());
         break;
+      }
+      case 'test-parsed': {
+        this.addTestFile(event.file, (testRoot) =>
+          testRoot.discoverTest(undefined, event.testContainer)
+        );
       }
     }
   };
@@ -353,11 +358,17 @@ export class FolderData extends TestItemDataBase {
   }
 }
 
-const isDataNode = (arg: NodeType<TestAssertionStatus>): arg is DataNode<TestAssertionStatus> =>
+type ItemNodeType = NodeType<ItBlock | TestAssertionStatus>;
+type ItemDataNodeType = DataNode<ItBlock | TestAssertionStatus>;
+const isDataNode = (arg: ItemNodeType): arg is ItemDataNodeType =>
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (arg as any).data != null;
 
-type AssertNode = NodeType<TestAssertionStatus>;
+const isAssertDataNode = (arg: ItemNodeType): arg is DataNode<TestAssertionStatus> =>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  isDataNode(arg) && (arg.data as any).fullName;
+
+// type AssertNode = NodeType<TestAssertionStatus>;
 abstract class TestResultData extends TestItemDataBase {
   constructor(readonly context: JestTestProviderContext, name: string) {
     super(context, name);
@@ -381,16 +392,25 @@ abstract class TestResultData extends TestItemDataBase {
         run.skipped(this.item);
         break;
       case 'KnownFail': {
-        const message = new vscode.TestMessage(result.message);
-        message.location = errorLocation;
+        if (
+          this.context.ext.settings.testExplorer.enabled &&
+          this.context.ext.settings.testExplorer.showInlineError
+        ) {
+          const message = new vscode.TestMessage(result.message);
+          if (errorLocation) {
+            message.location = errorLocation;
+          }
 
-        run.failed(this.item, message);
+          run.failed(this.item, message);
+        } else {
+          run.failed(this.item, []);
+        }
         break;
       }
     }
   }
 
-  makeTestId(fileUri: vscode.Uri, target?: NodeType<TestAssertionStatus>, extra?: string): string {
+  makeTestId(fileUri: vscode.Uri, target?: ItemNodeType, extra?: string): string {
     const parts = [fileUri.fsPath];
     if (target && target.name !== ROOT_NODE_NAME) {
       parts.push(target.fullName);
@@ -409,7 +429,7 @@ abstract class TestResultData extends TestItemDataBase {
     const truncateExtra = (id: string): string => id.replace(/(.*)(#[0-9]+$)/, '$1');
     return truncateExtra(id1) === truncateExtra(id2);
   }
-  syncChildNodes(node: AssertNode): void {
+  syncChildNodes(node: ItemNodeType): void {
     const testId = this.makeTestId(this.uri, node);
     if (!this.isSameId(testId, this.item.id)) {
       this.item.error = 'invalid node';
@@ -419,12 +439,12 @@ abstract class TestResultData extends TestItemDataBase {
 
     if (!isDataNode(node)) {
       const idMap = [...node.childContainers, ...node.childData]
-        .flatMap((n) => n.getAll() as AssertNode[])
+        .flatMap((n) => n.getAll() as ItemDataNodeType[])
         .reduce((map, node) => {
           const id = this.makeTestId(this.uri, node);
           map.set(id, map.get(id)?.concat(node) ?? [node]);
           return map;
-        }, new Map<string, AssertNode[]>());
+        }, new Map<string, ItemDataNodeType[]>());
 
       const newItems: vscode.TestItem[] = [];
       idMap.forEach((nodes, id) => {
@@ -478,18 +498,22 @@ export class TestDocumentRoot extends TestResultData {
     return item;
   }
 
-  discoverTest = (run: vscode.TestRun): void => {
-    this.createChildItems();
-    this.updateResultState(run);
+  discoverTest = (run?: vscode.TestRun, parsedRoot?: ContainerNode<ItBlock>): void => {
+    this.createChildItems(parsedRoot);
+    if (run) {
+      this.updateResultState(run);
+    }
   };
 
-  private createChildItems = (): void => {
+  private createChildItems = (parsedRoot?: ContainerNode<ItBlock>): void => {
     try {
-      const suiteResult = this.context.ext.testResolveProvider.getTestSuiteResult(this.item.id);
-      if (!suiteResult || !suiteResult.assertionContainer) {
+      const container =
+        parsedRoot ??
+        this.context.ext.testResolveProvider.getTestSuiteResult(this.item.id)?.assertionContainer;
+      if (!container) {
         this.item.children.replace([]);
       } else {
-        this.syncChildNodes(suiteResult.assertionContainer);
+        this.syncChildNodes(container);
       }
     } catch (e) {
       this.log('error', `[TestDocumentRoot] "${this.item.id}" createChildItems failed:`, e);
@@ -524,7 +548,7 @@ export class TestData extends TestResultData implements Debuggable {
   constructor(
     readonly context: JestTestProviderContext,
     fileUri: vscode.Uri,
-    private node: AssertNode,
+    private node: ItemNodeType,
     parent: vscode.TestItem,
     extraId?: string
   ) {
@@ -575,7 +599,7 @@ export class TestData extends TestResultData implements Debuggable {
     this.item.range = undefined;
   }
 
-  updateNode(node: NodeType<TestAssertionStatus>): void {
+  updateNode(node: ItemNodeType): void {
     this.node = node;
     this.updateItemRange();
     this.syncChildNodes(node);
@@ -590,14 +614,10 @@ export class TestData extends TestResultData implements Debuggable {
   }
 
   public updateResultState(run: vscode.TestRun): void {
-    if (this.node && isDataNode(this.node)) {
+    if (this.node && isAssertDataNode(this.node)) {
       const assertion = this.node.data;
       const errorLine =
-        assertion.line != null &&
-        this.context.ext.settings.testExplorer.enabled &&
-        this.context.ext.settings.testExplorer.showInlineError
-          ? this.createLocation(this.uri, assertion.line - 1)
-          : undefined;
+        assertion.line != null ? this.createLocation(this.uri, assertion.line - 1) : undefined;
       this.updateItemState(run, assertion, errorLine);
     }
     this.item.children.forEach((childItem) =>

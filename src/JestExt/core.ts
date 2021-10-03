@@ -580,7 +580,6 @@ export class JestExt {
   onWillSaveTextDocument(event: vscode.TextDocumentWillSaveEvent): void {
     if (event.document.isDirty) {
       this.removeCachedTestResults(event.document, true);
-      this.refreshDocumentChange(event.document);
     }
   }
   onDidSaveTextDocument(document: vscode.TextDocument): void {

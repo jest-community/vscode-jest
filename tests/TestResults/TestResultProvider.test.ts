@@ -210,7 +210,7 @@ describe('TestResultProvider', () => {
     });
 
     it('unmatched test should report the reason', () => {
-      const sut = newProviderWithData([makeData([testBlock], [], filePath)]);
+      const sut = newProviderWithData([makeData([testBlock], null, filePath)]);
       const actual = sut.getResults(filePath);
 
       expect(actual).toHaveLength(1);
@@ -218,6 +218,7 @@ describe('TestResultProvider', () => {
       expect(actual[0].shortMessage).not.toBeUndefined();
       expect(actual[0].terseMessage).toBeUndefined();
     });
+
     it('fire testSuiteChanged event for newly matched result', () => {
       const sut = newProviderWithData([makeData([testBlock], [], filePath)]);
       sut.getResults(filePath);
@@ -226,6 +227,16 @@ describe('TestResultProvider', () => {
         file: filePath,
       });
     });
+    it('unmatched test will file test-parsed event instead', () => {
+      const sut = newProviderWithData([makeData([testBlock], null, filePath)]);
+      sut.getResults(filePath);
+      expect(sut.events.testSuiteChanged.fire).toBeCalledWith({
+        type: 'test-parsed',
+        file: filePath,
+        testContainer: expect.anything(),
+      });
+    });
+
     describe('duplicate test names', () => {
       const testBlock2 = helper.makeItBlock(testBlock.name, [5, 3, 7, 5]);
       beforeEach(() => {});
