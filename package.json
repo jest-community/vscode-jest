@@ -52,7 +52,8 @@
           ".jsx.snap",
           ".ts.snap",
           ".tsx.snap"
-        ]
+        ],
+        "configuration": "./language-configuration.json"
       }
     ],
     "grammars": [
