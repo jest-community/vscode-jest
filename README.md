@@ -151,7 +151,7 @@ Note: other than the "off" mode, users can specify the "onStartup" option for an
 
 A test can be debugged via the debug codeLens appeared above the [debuggable](#debugcodelensshowwhenteststatein) tests. Simply clicking on the codeLens will launch vscode debugger for the specific test. The extension also supports parameterized tests and allows users to pick the specific parameter set to debug.
 
-The simplest use cases should be supported out-of-the-box. If VS Code displays errors about the attribute `program` or `runtimeExecutable` not being available, you can either use [setup wizard]() to help or create your own debug configuration within `launch.json`. See more details in [Customization - Debug Config](#debug-config).
+The simplest use cases should be supported out-of-the-box. If VS Code displays errors about the attribute `program` or `runtimeExecutable` not being available, you can either use [setup wizard](setup-wizard.md) to help or create your own debug configuration within `launch.json`. See more details in [Customization - Debug Config](#debug-config).
 
 <details>
 <summary>Illustration</summary>
@@ -244,6 +244,8 @@ Users can use the following settings to tailor the extension for their environme
 |**Process**|
 |autoEnable :x:|Automatically start Jest for this project|true|Please use `autoRun` instead|
 |[jestCommandLine](#jestCommandLine)|The command line to start jest tests|undefined|`"jest.jestCommandLine": "npm test -"` or `"jest.jestCommandLine": "yarn test"` or `"jest.jestCommandLine": "node_modules/.bin/jest --config custom-config.js"`|
+|nodeEnv|Add additional env variables to spawned jest process|null|`"jest.nodeEnv": {"PORT": "9800", "BAR":"true"}` |
+|shell|Custom shell (path) for jest process|null|`"jest.shell": "/bin/bash"` or `"jest.shell": "powershell"` |
 |[autoRun](#autorun)|Controls when and what tests should be run|undefined|`"jest.autoRun": "off"` or `"jest.autoRun": {"watch": true, "onStartup": ["all-tests"]}` or `"jest.autoRun": false, onSave:"test-only"}`|
 |pathToJest :x:|The path to the Jest binary, or an npm/yarn command to run tests|undefined|Please use `jestCommandLine` instead|
 |pathToConfig :x:|The path to your Jest configuration file"|""|Please use `jestCommandLine` instead|
@@ -285,12 +287,12 @@ Possible status are: `[ "fail", "pass", "skip", "unknown"]`. Please note that th
 
 There are 2 formatters to choose from:
   1. <details><summary> DefaultFormatter: high light uncovered and partially-covered code inlilne as well as on the right overview ruler. (this is the default)</summary>
-
+  
         ![coverage-DefaultFormatter.png](./images/coverage-DefaultFormatter.png)
   </details>
 
   1. <details><summary>GutterFormatter: render coverage status in the gutter as well as the overview ruler.</summary>
-
+  
      ![coverage-GutterFormatter.png](./images/coverage-GutterFormatter.png)
   </details>
 
@@ -427,7 +429,7 @@ Please see [vscode Key Bindings](https://code.visualstudio.com/docs/getstarted/k
 
 
 ## Troubleshooting
-Sorry you are having trouble with the extension. If your issue did not get resolved after checking out the [how-to](#how-to-use-the-extension) section and the tips below, feel free to [ask](https://github.com/jest-community/vscode-jest/issues) the community, chances are some one else had a similar experience and could help resolving it.
+Sorry you are having trouble with the extension. If your issue did not get resolved after checking out the [how-to](#how-to-use-the-extension) section and the tips below (click arrows to expand), feel free to [ask](https://github.com/jest-community/vscode-jest/issues) the community, chances are some one else had a similar experience and could help resolving it.
 
 <details>
 <summary>I don't see "Jest" in the bottom status bar</summary>
@@ -439,15 +441,18 @@ Sorry you are having trouble with the extension. If your issue did not get resol
 <details>
 <summary>I got "Jest Process xxx failed unexpectedly..." or "Jest failed too many times..." error message</summary>
 
-  This usually mean the extension is not able to start jest process for you. First check the Jest OUTPUT channel or developer console to see what is the actual error (see [self-diagnosis](#self-diagnosis)).
+  This usually means the extension is not able to start jest process for you. First check the TestExplorer Output, Jest OUTPUT channel or developer console to see what is the actual error (see [self-diagnosis](#self-diagnosis)).
 
   If it is related to the run time environment, such as
   ```
   env: node: No such file or directory
   ```
-  The issue is probably not related to this extension. If this only happened occasionally after launch or you saw vscode warning about shell start up slow, try to simplified the env files, restart vscode or reload windows. See [Resolving Shell Environment is Slow](https://code.visualstudio.com/docs/supporting/faq#_resolving-shell-environment-is-slow-error-warning).
 
-  If you see error about not able to find `jest` or some other jest related runtime error: if you can run jest from terminal then you can use the **"Run Setup Wizard"** button in the error panel to help resolving the configuration issue, see [Setup Wizard](setup-wizard.md) for more details. There could be other causes, such as jest test root path is different from the project's, which can be fixed by setting [jest.rootPath](#rootPath). Feel free to check out the [customization](#customization) section to manually adjust the extension if needed.
+  Most likely the child_process environment is not correctly initialized. There are many possible causes, sometimes restarting vscode will fix it, otherwise feel free to check out a more in-depth explanation/suggestion [here](https://github.com/jest-community/vscode-jest/issues/741#issuecomment-921222851). 
+
+  If you see error about not able to find `jest` or some other jest related runtime error: if you can run jest from terminal then you can use the **"Run Setup Wizard"** button in the error panel to help resolving the configuration issue, see [Setup Wizard](setup-wizard.md). If jest doesn't even run from the terminal, then please reference [jest](https://jestjs.io/docs/configuration) to set up your jest test environment. 
+  
+  There could be other causes, such as jest test root path is different from the project's, which can be fixed by setting [jest.rootPath](#rootPath). Feel free to check out the [customization](#customization) section to manually adjust the extension if needed.
 </details>
 
 <details>
@@ -469,13 +474,15 @@ If the above did not resolve your issue, please see the [self-diagnosis](#self-d
 <summary><a id='self-diagnosis'></a>The extension is not behaving as expected, what is going on? (try self diagnosis)</summary>
 
 If your can execute jest tests on command line but vscode-jest was not running as expected, here is what you can do to find out more information:
-  - See jest process output in the "OUTPUT" channel, which is usually named after the workspace folder, such as `Jest (your-workspace-name)`. Or you can click on `Jest` label on status bar to show Jest Output window. This will show you the jest run output and the errors.
-   <img src="https://github.com/jest-community/vscode-jest/raw/master/images/output-channel.png" alt="Screenshot of the tool" width="100%">
+  - You can see jest process output with either one of the methods:
+    - If you uses TestExplorer, you can see color coded jest output from the TestExplorer's Output terminal (the square arrow icon on the top of the Explorer View) 
+    - Otherwise you can see the output in "OUTPUT" channel, which is usually named after the workspace folder, such as `Jest (your-workspace-name)`. Or you can click on `Jest` label on status bar to show Jest Output window. This will show you the jest run output and the errors.
+    <img src="https://github.com/jest-community/vscode-jest/raw/master/images/output-channel.png" alt="Screenshot of the tool" width="100%">
 
-  - Turn on the debug mode to see more internal debugging message:
+  - See additional logging from the developer console (via `Help > Toggle Developer Tools` menu), for example to examine the environment variables passed to jest runner: [examine-env.git](https://github.com/jest-community/vscode-jest/blob/master/images/vscode-jest-env-log.gif)
+  
+  - Turn on the debug mode to see more internal debugging message in the developer console:
     - set `"jest.debugMode": true` in `.vscode/settings.json`
-    - restart vscode-jest or reload the window (via `Reload Window` command)
-    - open the developer tool (via `Help > Toggle Developer Tools` menu), you should see more information including how we extract jest config and spawn jest processes.
 
   Hopefully most issues would be pretty obvious after seeing these extra output, and you can probably fix most yourself by [customizing](#customization) the `jest.jestCommandLine` and others.
 </details>
