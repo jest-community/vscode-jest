@@ -3,7 +3,21 @@
 [![Build Status](https://github.com/jest-community/vscode-jest/actions/workflows/node-ci.yml/badge.svg)](https://github.com/jest-community/vscode-jest/actions) [![Coverage Status](https://coveralls.io/repos/github/jest-community/vscode-jest/badge.svg?branch=master)](https://coveralls.io/github/jest-community/vscode-jest?branch=master) [![Visual Studio Marketplace](https://img.shields.io/visual-studio-marketplace/v/Orta.vscode-jest?color=success&label=Visual%20Studio%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=Orta.vscode-jest)
 
 ---
-## v4.1 with Test Explorer <!-- omit in toc -->
+## Release Notes<!-- omit in toc -->
+### Latest: v4.2 <!-- omit in toc -->
+
+Test menu is now accessible for all tests, regardless of run mode. If cursor jumping when editing tests is a bit annoying, you can now alternatively disable the DebugCodeLens and use "Debug Test" from the test menu:
+
+![image](https://user-images.githubusercontent.com/891093/136676501-45ea5fa2-0bc5-496e-9c70-971700d954e8.png)
+
+For users struggled with the jest process environment, this release added 2 new settings to 
+  1. modify nodejs process env (`"jest.nodeEnv"`) 
+  2. use custom shell when spawning jest process (`"jest.shell"`)
+
+More details see [v4.2 release](https://github.com/jest-community/vscode-jest/releases/tag/v4.2.0).
+
+<details>
+<summary>v4.1 with Test Explorer</summary>
 
 Test explorer is one of the highly requested feature for this extension. Last year vscode announced the plan for the official test explorer and we have been trying out the new proposed API since. Now the vscode test explorer is live (2021 July release - v1.59), we are excited to release `v4.1` and our users can finally tap into this great new UI experience 🎉
 
@@ -11,6 +25,7 @@ Test explorer is one of the highly requested feature for this extension. Last ye
 ![test-explorer.png](images/test-explorer.png)
 
 Please note, the test explorer is new and some of the features might be missing or imperfect (see [How to use test explorer](#how-to-use-the-test-explorer) for more details), nevertheless, we will continue to improve it. Please do not hesitate to ask questions or file issues, thanks and have fun!
+</details>
 
 <details>
 <summary>v4 Release</summary>
