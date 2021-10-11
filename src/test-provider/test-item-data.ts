@@ -113,7 +113,14 @@ export class WorkspaceRoot extends TestItemDataBase {
   }
   discoverTest(run: vscode.TestRun): void {
     const testList = this.context.ext.testResolveProvider.getTestList();
-    this.onTestListUpdated(testList, run);
+    // only trigger update when testList is not empty because it's possible test-list is not available yet,
+    // in such case we should just wait for the testListUpdated event to trigger the update
+    if (testList.length > 0) {
+      this.onTestListUpdated(testList, run);
+    } else {
+      run.end();
+      this.item.canResolveChildren = false;
+    }
   }
 
   // test result event handling
@@ -156,14 +163,21 @@ export class WorkspaceRoot extends TestItemDataBase {
     absoluteFileName: string,
     onTestDocument: (doc: TestDocumentRoot) => void
   ): TestDocumentRoot => {
-    let docRoot = this.testDocuments.get(absoluteFileName);
+    const parent = this.addPath(absoluteFileName) ?? this;
+    let docRoot = this.context.getChildData<TestDocumentRoot>(parent.item, absoluteFileName);
     if (!docRoot) {
-      const parent = this.addPath(absoluteFileName) ?? this;
-      docRoot =
-        this.context.getChildData<TestDocumentRoot>(parent.item, absoluteFileName) ??
-        new TestDocumentRoot(this.context, vscode.Uri.file(absoluteFileName), parent.item);
-      this.testDocuments.set(absoluteFileName, docRoot);
+      docRoot = this.testDocuments.get(absoluteFileName);
+      if (docRoot) {
+        parent.item.children.add(docRoot.item);
+      } else {
+        docRoot = new TestDocumentRoot(
+          this.context,
+          vscode.Uri.file(absoluteFileName),
+          parent.item
+        );
+      }
     }
+    this.testDocuments.set(absoluteFileName, docRoot);
 
     onTestDocument(docRoot);
 
@@ -171,21 +185,28 @@ export class WorkspaceRoot extends TestItemDataBase {
   };
 
   /**
-   * Wwhen test list updated, rebuild the whole testItem tree for all the test files (DocumentRoot)
-   * Note: this could be optimized to only updat the differences if needed.
+   * Wwhen test list updated, rebuild the whole testItem tree for all the test files (DocumentRoot).
+   * But will reuse the existing test document from cache (testDocuments) to preserve info
+   * such as parsed result that could be stored before test list update
    */
   private onTestListUpdated = (
     absoluteFileNames: string[] | undefined,
     run?: vscode.TestRun
   ): void => {
     this.item.children.replace([]);
-    this.testDocuments.clear();
+    const testRoots: TestDocumentRoot[] = [];
 
     const aRun = run ?? this.createRun();
     try {
       absoluteFileNames?.forEach((f) =>
-        this.addTestFile(f, (testRoot) => testRoot.updateResultState(aRun))
+        this.addTestFile(f, (testRoot) => {
+          testRoot.updateResultState(aRun);
+          testRoots.push(testRoot);
+        })
       );
+      //sync testDocuments
+      this.testDocuments.clear();
+      testRoots.forEach((t) => this.testDocuments.set(t.item.id, t));
     } catch (e) {
       this.log('error', `[WorkspaceRoot] "${this.item.id}" onTestListUpdated failed:`, e);
     } finally {

@@ -121,12 +121,31 @@ describe('test-item-data', () => {
         //verify state after the discovery
         expect(wsRoot.item.canResolveChildren).toBe(false);
       });
-      it('if no testFiles yet, should still turn off canResolveChildren', () => {
-        context.ext.testResolveProvider.getTestList.mockReturnValue([]);
-        const wsRoot = new WorkspaceRoot(context);
-        wsRoot.discoverTest(runMock);
-        expect(wsRoot.item.children.size).toEqual(0);
-        expect(wsRoot.item.canResolveChildren).toBe(false);
+      describe('when no testFiles yet', () => {
+        it('if no testFiles yet, will still turn off canResolveChildren and close the run', () => {
+          context.ext.testResolveProvider.getTestList.mockReturnValue([]);
+          const wsRoot = new WorkspaceRoot(context);
+          wsRoot.discoverTest(runMock);
+          expect(wsRoot.item.children.size).toEqual(0);
+          expect(wsRoot.item.canResolveChildren).toBe(false);
+          expect(runMock.end).toBeCalledTimes(1);
+        });
+        it('will not wipe out existing test items', () => {
+          // first time discover 1 file
+          context.ext.testResolveProvider.getTestList.mockReturnValue(['/ws-1/a.test.ts']);
+          const wsRoot = new WorkspaceRoot(context);
+          wsRoot.discoverTest(runMock);
+          expect(wsRoot.item.children.size).toEqual(1);
+          expect(wsRoot.item.canResolveChildren).toBe(false);
+          expect(runMock.end).toBeCalledTimes(1);
+
+          // 2nd time if no test-file: testItems will not change
+          context.ext.testResolveProvider.getTestList.mockReturnValue([]);
+          wsRoot.discoverTest(runMock);
+          expect(wsRoot.item.children.size).toEqual(1);
+          expect(wsRoot.item.canResolveChildren).toBe(false);
+          expect(runMock.end).toBeCalledTimes(2);
+        });
       });
       it('will only discover up to the test file level', () => {
         const a1 = helper.makeAssertion('test-1', 'KnownSuccess', [], [1, 0]);
@@ -141,6 +160,7 @@ describe('test-item-data', () => {
         wsRoot.discoverTest(runMock);
         const docItem = wsRoot.item.children.get(testFiles[0]);
         expect(docItem.children.size).toEqual(0);
+        expect(context.ext.testResolveProvider.getTestSuiteResult).toBeCalled();
       });
       it('will remove folder item if no test file exist any more', () => {
         const a1 = helper.makeAssertion('test-1', 'KnownSuccess', [], [1, 0]);
@@ -381,6 +401,38 @@ describe('test-item-data', () => {
             expect(controllerMock.createTestRun).not.toBeCalled();
           });
         });
+      });
+      it('can preserve parse-result occurred before discover', () => {
+        const wsRoot = new WorkspaceRoot(context);
+
+        // record parse result
+        const t1 = helper.makeItBlock('test-1', [1, 1, 5, 1]);
+        const t2 = helper.makeItBlock('test-2', [6, 1, 7, 1]);
+        const sourceRoot = helper.makeRoot([t2, t1]);
+        const testContainer = buildSourceContainer(sourceRoot);
+        context.ext.testResolveProvider.events.testSuiteChanged.event.mock.calls[0][0]({
+          type: 'test-parsed',
+          file: '/ws-1/a.test.ts',
+          testContainer,
+        });
+        expect(wsRoot.item.children.size).toBe(1);
+        let docItem = getChildItem(wsRoot.item, 'a.test.ts');
+        expect(docItem.children.size).toEqual(2);
+
+        // now call discovery with additional files
+        context.ext.testResolveProvider.getTestList.mockReturnValueOnce([
+          '/ws-1/a.test.ts',
+          '/ws-1/b.test.ts',
+        ]);
+        wsRoot.discoverTest(runMock);
+        expect(wsRoot.item.children.size).toBe(2);
+        // a.test.ts should still have 2 children
+        docItem = getChildItem(wsRoot.item, 'a.test.ts');
+        expect(docItem.children.size).toEqual(2);
+
+        // while b.test.ts has none
+        docItem = getChildItem(wsRoot.item, 'b.test.ts');
+        expect(docItem.children.size).toEqual(0);
       });
     });
     describe('TestDocumentRoot', () => {
