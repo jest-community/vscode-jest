@@ -185,7 +185,7 @@ export class WorkspaceRoot extends TestItemDataBase {
   };
 
   /**
-   * Wwhen test list updated, rebuild the whole testItem tree for all the test files (DocumentRoot).
+   * When test list updated, rebuild the whole testItem tree for all the test files (DocumentRoot).
    * But will reuse the existing test document from cache (testDocuments) to preserve info
    * such as parsed result that could be stored before test list update
    */
