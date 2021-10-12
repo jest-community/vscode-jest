@@ -14,7 +14,7 @@ For users struggled with the jest process environment, this release added 2 new 
   1. modify nodejs process env (`"jest.nodeEnv"`) 
   2. use custom shell when spawning jest process (`"jest.shell"`)
 
-More details see [v4.2 release](https://github.com/jest-community/vscode-jest/releases/tag/v4.2.0).
+Also fixed inline error pop-up in vscode 1.61, and enhanced snapshot language support. More details see [v4.2 release](https://github.com/jest-community/vscode-jest/releases/tag/v4.2.0).
 
 <details>
 <summary>v4.1 with Test Explorer</summary>
