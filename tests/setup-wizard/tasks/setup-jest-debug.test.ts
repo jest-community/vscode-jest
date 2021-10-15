@@ -212,6 +212,15 @@ describe('wizard-tasks', () => {
         // launch.json has been shown in editor with target selected
         expect(hasShownLaunchFile('/_uri_/.vscode/launch.json')).toBeTruthy();
       });
+      it('if failed to genetate the default config, error will be thrown', async () => {
+        mockProvideDebugConfigurations.mockReturnValue([]);
+        expect.hasAssertions();
+
+        wizardSettings = { jestCommandLine: 'jest' };
+        mockShowActionMenu(DebugSetupActionId.create);
+
+        await expect(setupJestDebug(context)).rejects.toThrow();
+      });
     });
     describe('when there is existing jest debug config and jestCommandLine', () => {
       const existingConfig: any = { name: `${DEBUG_CONFIG_NAME}.v2` };
@@ -263,6 +272,34 @@ describe('wizard-tasks', () => {
             expect(mockShowTextDocument).not.toBeCalled();
           }
         }
+      });
+      it.each`
+        text                                                   | validateIndex
+        ${`"${DEBUG_CONFIG_NAME}"; "${DEBUG_CONFIG_NAME}.v2"`} | ${(idx) => idx > 5}
+        ${`"${DEBUG_CONFIG_NAME}.v2";`}                        | ${(idx) => idx === 0}
+        ${`"${DEBUG_CONFIG_NAME}";`}                           | ${(idx) => idx === 0}
+      `('edit can position correct config entry: $text', async ({ text, validateIndex }) => {
+        expect.hasAssertions();
+        mockShowActionMenu(DebugSetupActionId.edit);
+
+        // if both config exist, the v2 will be focus
+        mockTextDocument.getText.mockReturnValueOnce(text);
+        await expect(setupJestDebug(context)).resolves.toEqual('success');
+
+        expect(hasShownLaunchFile('/_uri_/.vscode/launch.json')).toBeTruthy();
+        expect(mockTextDocument.positionAt).toBeCalledTimes(1);
+        const index = mockTextDocument.positionAt.mock.calls[0][0];
+        expect(validateIndex(index)).toBeTruthy();
+      });
+      it('an v1 config will be considered valid/existing config', async () => {
+        const v1Config: any = { name: `${DEBUG_CONFIG_NAME}` };
+        wizardSettings = {
+          jestCommandLine: 'whatever',
+          configurations: [v1Config, otherConfig],
+        };
+        expect.hasAssertions();
+        mockShowActionMenu(DebugSetupActionId.acceptExisting);
+        await expect(setupJestDebug(context)).resolves.toEqual('success');
       });
     });
     it(`can abort task`, async () => {
