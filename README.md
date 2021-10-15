@@ -8,7 +8,9 @@
 <details>
 <summary>more control with debug config v2</summary>
 
-This release is mainly about debug config v2, moving from **"injecting arguments"** to **"variable substitution"** model. After observing frameworks and platforms having constraints on what flag can/cannot be used (#675), we realized the injection model is not flexible enough. In debug config v2, the runtime logic (injecting test file and test block names) is replaced with variable-substitution instead. For example, a default jest debug config in v2 will look like:
+This release introduced debug config v2, which changed how we inject jest runtime information, such as test file and name, to the debug config. Replacing the "behind-the-scene-injection"  with a "variable-substitution" model, so no more hidden operations and surprises, the extension will only substitute the jest specific variables present in the config. 
+
+A default jest debug config in v2 will look like this:
 
 ```json
 {
@@ -33,30 +35,9 @@ This release is mainly about debug config v2, moving from **"injecting arguments
   }
 }
 ```
-Jest like vscode [variables](https://code.visualstudio.com/docs/editor/variables-reference), the `"${jest.testNamePattern}"` and `"${jest.testFile}"` are jest specific variables and will be substituted by the extension upon debugging. Note the name change as well: `"vscode-jest-tests.v2"`, which signal the extension to use the substitution mode. All the existing config with name `"vscode-jest-tests"` will remain unchanged. 
+Jest like vscode [variables](https://code.visualstudio.com/docs/editor/variables-reference), the `"${jest.testNamePattern}"` and `"${jest.testFile}"` are jest specific variables and, if present, will be substituted by the extension upon debugging. Note the name change as well: `"vscode-jest-tests.v2"`, which signal the extension to use the substitution mode. 
 
-Users will now have full control of the argument list, for example, Angular users with yarn, a v2 config can look like this:
-```json
-{
-  "type": "node",
-  "name": "vscode-jest-tests.v2",
-  "request": "launch",
-  "runtimeExecutable": "yarn",
-  "args": [
-    "test",
-    "--run-in-band",
-    "--watch-all=false",
-    "--test-name-pattern",
-    "${jest.testNamePattern}",
-    "--test-path-pattern",
-    "${jest.testFilePattern}"
-  ],
-  "cwd": "${workspaceFolder}",
-  "console": "integratedTerminal",
-  "internalConsoleOptions": "neverOpen",
-  "disableOptimisticBPs": true
-}
-```
+This change is backward compatible. All existing config (with `"vscode-jest-tests"`) will continue to work as it is. 
 
 More info see [Debug Config v2](#debug-config-v2)
 
