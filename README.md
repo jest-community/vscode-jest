@@ -4,6 +4,66 @@
 
 ---
 ## Release Notes<!-- omit in toc -->
+### Pre-Release v4.3.0 
+<details>
+<summary>more control with debug config v2</summary>
+
+This release is mainly about debug config v2, moving from **"injecting arguments"** to **"variable substitution"** model. After observing frameworks and platforms having constraints on what flag can/cannot be used (#675), we realized the injection model is not flexible enough. In debug config v2, the runtime logic (injecting test file and test block names) is replaced with variable-substitution instead. For example, a default jest debug config in v2 will look like:
+
+```json
+{
+  "type": "node",
+  "name": "vscode-jest-tests.v2",
+  "request": "launch",
+  "program": "${workspaceFolder}/node_modules/.bin/jest",
+  "args": [
+    "--runInBand",
+    "--watchAll=false",
+    "--testNamePattern",
+    "${jest.testNamePattern}",
+    "--runTestsByPath",
+    "${jest.testFile}"
+  ],
+  "cwd": "${workspaceFolder}",
+  "console": "integratedTerminal",
+  "internalConsoleOptions": "neverOpen",
+  "disableOptimisticBPs": true,
+  "windows": {
+    "program": "${workspaceFolder}/node_modules/jest/bin/jest"
+  }
+}
+```
+Jest like vscode [variables](https://code.visualstudio.com/docs/editor/variables-reference), the `"${jest.testNamePattern}"` and `"${jest.testFile}"` are jest specific variables and will be substituted by the extension upon debugging. Note the name change as well: `"vscode-jest-tests.v2"`, which signal the extension to use the substitution mode. All the existing config with name `"vscode-jest-tests"` will remain unchanged. 
+
+Users will now have full control of the argument list, for example, Angular users with yarn, a v2 config can look like this:
+```json
+{
+  "type": "node",
+  "name": "vscode-jest-tests.v2",
+  "request": "launch",
+  "runtimeExecutable": "yarn",
+  "args": [
+    "test",
+    "--run-in-band",
+    "--watch-all=false",
+    "--test-name-pattern",
+    "${jest.testNamePattern}",
+    "--test-path-pattern",
+    "${jest.testFilePattern}"
+  ],
+  "cwd": "${workspaceFolder}",
+  "console": "integratedTerminal",
+  "internalConsoleOptions": "neverOpen",
+  "disableOptimisticBPs": true
+}
+```
+
+More info see [Debug Config v2](#debug-config-v2)
+
+<!-- Try out pre-release [v4.3.0-rc.1](https://github.com/jest-community/vscode-jest/releases/tag/v4.3.0-rc1) -->
+
+</details>
+
 ### Latest: v4.2 <!-- omit in toc -->
 
 Test menu is now accessible for all tests, regardless of run mode. If cursor jumping when editing tests is a bit annoying, you can now alternatively disable the DebugCodeLens and use "Debug Test" from the test menu:
@@ -45,6 +105,7 @@ P.S. We find the new version did made the development of this extension a bit ea
 
 Content
 - [vscode-jest](#vscode-jest)
+    - [Pre-Release v4.3.0](#pre-release-v430)
   - [The Aim](#the-aim)
   - [Features](#features)
   - [Installation](#installation)
@@ -67,6 +128,7 @@ Content
         - [autoRun](#autorun)
         - [testExplorer](#testexplorer)
     - [Debug Config](#debug-config)
+    - [Debug Config v2](#debug-config-v2)
   - [Commands](#commands)
   - [Menu](#menu)
   - [Troubleshooting](#troubleshooting)
@@ -403,7 +465,7 @@ for example:
 >
 ### Debug Config
 
-This extension looks for `"vscode-jest-tests"` debug config in the workspace `.vscode/launch.json`. If not found, it will attempt to generate a default config that should work for most standard jest or projects bootstrapped by `create-react-app`.
+This extension looks for jest specific debug config (`"vscode-jest-tests"` or `"vscode-jest-tests.v2"`) in the workspace `.vscode/launch.json`. If not found, it will attempt to generate a default config that should work for most standard jest or projects bootstrapped by `create-react-app`.
 
 If the default config is not working for your project, you can either use the [setup wizard](setup-wizard.md), probably the easier approach (available in v4), or edit the `launch.json` file manually.
 
@@ -415,7 +477,65 @@ There are many information online about how to setup vscode debug config for spe
   - [Launch configurations for common scenarios](https://code.visualstudio.com/docs/nodejs/nodejs-debugging#_launch-configurations-for-common-scenarios)
   - [vscode-recipes for debug jest tests](https://github.com/microsoft/vscode-recipes/tree/master/debugging-jest-tests)
 
+### Debug Config v2
 
+v4.3.0 introduces a "variable substitution" based config with test name `"vscode-jest-tests.v2"`. The extension will merely substituted the jest variables in the config, without adding/removing anything else. 
+
+Currently supported variables:
+- **${jest.testNamePattern}** - will be replaced by the test block's full name (include the surrounding describe block names).
+- **${jest.testFile}** - will be replaced by the test file name.
+- **${jest.testFilePattern}** - will be replaced by the test file name suitable for regex arguments such as `--testPathPattern`.
+  
+<details>
+<summary>Examples</summary>
+
+- Plain jest debug config:
+  ```json
+  {
+    "type": "node",
+    "name": "vscode-jest-tests.v2",
+    "request": "launch",
+    "program": "${workspaceFolder}/node_modules/.bin/jest",
+    "args": [
+      "--runInBand",
+      "--watchAll=false",
+      "--testNamePattern",
+      "${jest.testNamePattern}",
+      "--runTestsByPath",
+      "${jest.testFile}"
+    ],
+    "cwd": "${workspaceFolder}",
+    "console": "integratedTerminal",
+    "internalConsoleOptions": "neverOpen",
+    "disableOptimisticBPs": true,
+    "windows": {
+      "program": "${workspaceFolder}/node_modules/jest/bin/jest"
+    }
+  }
+  ```
+- Angular users using yarn:
+  ```json
+  {
+    "type": "node",
+    "name": "vscode-jest-tests.v2",
+    "request": "launch",
+    "runtimeExecutable": "yarn",
+    "args": [
+      "test",
+      "--run-in-band",
+      "--watch-all=false",
+      "--test-name-pattern",
+      "${jest.testNamePattern}",
+      "--test-path-pattern",
+      "${jest.testFilePattern}"
+    ],
+    "cwd": "${workspaceFolder}",
+    "console": "integratedTerminal",
+    "internalConsoleOptions": "neverOpen",
+    "disableOptimisticBPs": true
+  }
+  ``` 
+</details>
 ## Commands
 This extension contributes the following commands and can be accessed via [Command Palette](https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette):
 |command|description|availability|

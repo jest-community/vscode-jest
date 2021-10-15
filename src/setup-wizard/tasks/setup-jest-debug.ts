@@ -51,6 +51,10 @@ export const setupJestDebug: SetupTask = async (context: WizardContext): Promise
   const jestCommandLine = settings.jestCommandLine;
   const launchConfigs = settings.configurations;
 
+  const getDebugConfig = (configs = launchConfigs): vscode.DebugConfiguration | undefined =>
+    configs?.find((c) => c.name === `${DEBUG_CONFIG_NAME}.v2`) ??
+    configs?.find((c) => c.name === DEBUG_CONFIG_NAME);
+
   // save config to workspaceFolder launch.json file
   const save = async (config: vscode.DebugConfiguration): Promise<string | undefined> => {
     let renamed;
@@ -69,9 +73,9 @@ export const setupJestDebug: SetupTask = async (context: WizardContext): Promise
     });
 
     if (renamed) {
-      message(`existing "${DEBUG_CONFIG_NAME}" config has been renamed to "${renamed}"`);
+      message(`existing "${config.name}" config has been renamed to "${renamed}"`);
     }
-    message(`a new debug config "${DEBUG_CONFIG_NAME}" has been added in launch.json`);
+    message(`a new debug config "${config.name}" has been added in launch.json`);
     return renamed;
   };
 
@@ -80,7 +84,10 @@ export const setupJestDebug: SetupTask = async (context: WizardContext): Promise
     const launchFile = vscode.Uri.joinPath(workspace.uri, '.vscode', 'launch.json');
     const doc = await vscode.workspace.openTextDocument(launchFile);
     const text = doc.getText();
-    const offset = text.indexOf(`"${DEBUG_CONFIG_NAME}"`);
+    let offset = text.indexOf(`"${DEBUG_CONFIG_NAME}.v2"`);
+    if (offset < 0) {
+      offset = text.indexOf(`"${DEBUG_CONFIG_NAME}"`);
+    }
     const startPos = doc.positionAt(offset);
     const endPos = new vscode.Position(
       startPos.line,
@@ -112,7 +119,7 @@ export const setupJestDebug: SetupTask = async (context: WizardContext): Promise
     return showActionMessage(
       'info',
       `${renamed ? `The existing config has been renamed to "${renamed}".\n` : ''}` +
-        `A new debug config "${DEBUG_CONFIG_NAME}" has been added in launch.json.\n\n` +
+        `A new debug config "${finalConfig.name}" has been added in launch.json.\n\n` +
         'Please review and update as needed.',
       {
         id: DebugSetupActionId.info,
@@ -125,16 +132,19 @@ export const setupJestDebug: SetupTask = async (context: WizardContext): Promise
 
   const generateConfig = (): Promise<WizardStatus> => {
     const configs = debugConfigProvider.provideDebugConfigurations?.(workspace);
-    const config = Array.isArray(configs) && configs.find((c) => c.name === DEBUG_CONFIG_NAME);
+    const config = Array.isArray(configs) && getDebugConfig(configs);
+
     if (!config) {
-      console.error(`no ${DEBUG_CONFIG_NAME} is generated: configs=`, configs);
-      throw new Error(`no ${DEBUG_CONFIG_NAME} is generated`);
+      console.error(`no ${DEBUG_CONFIG_NAME}.v2 is generated: configs=`, configs);
+      throw new Error(`no ${DEBUG_CONFIG_NAME}.v2 is generated`);
     }
     return updateConfigWithCmdline(config);
   };
 
   const withoutExistingConfig = async (): Promise<WizardStatus> => {
-    message(`no debug config with name "${DEBUG_CONFIG_NAME}" was found`);
+    message(
+      `no debug config with name "${DEBUG_CONFIG_NAME}.v2" or "${DEBUG_CONFIG_NAME}" was found`
+    );
     const menuItems: ActionableMenuItem[] = [
       actionItem(
         DebugSetupActionId.create,
@@ -155,7 +165,7 @@ export const setupJestDebug: SetupTask = async (context: WizardContext): Promise
       verbose: context.verbose,
     });
   };
-  const withExistingConfig = async (): Promise<WizardStatus> => {
+  const withExistingConfig = async (config: vscode.DebugConfiguration): Promise<WizardStatus> => {
     message(`found existing setting:\n${jsonOut(settings)}\n`);
 
     const menuItems: ActionableMenuItem[] = [
@@ -184,14 +194,14 @@ export const setupJestDebug: SetupTask = async (context: WizardContext): Promise
     return await showActionMenu(menuItems, {
       title: 'Set up Debug Config',
       enableBackButton: true,
-      placeholder: `Found existing debug config: "${DEBUG_CONFIG_NAME}"`,
+      placeholder: `Found existing debug config: "${config.name}"`,
       verbose: context.verbose,
     });
   };
 
   message(`Set up jest debug config for workspace "${workspace.name}"`, 'setupJestDebug');
 
-  const jestDebug = launchConfigs?.find((c) => c.name === DEBUG_CONFIG_NAME);
+  const jestDebug = getDebugConfig();
 
-  return jestDebug ? await withExistingConfig() : await withoutExistingConfig();
+  return jestDebug ? await withExistingConfig(jestDebug) : await withoutExistingConfig();
 };

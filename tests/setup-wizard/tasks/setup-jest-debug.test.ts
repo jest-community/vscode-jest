@@ -13,11 +13,18 @@ import { validateTaskConfigUpdate, createWizardContext } from './task-test-helpe
 
 const { setupJestDebug, DebugSetupActionId, DEBUG_CONFIG_NAME } = SetupJestDebug;
 
-const DefaultJestDebugConfig = {
+const defaultJestDebugConfig = {
   type: 'node',
-  name: 'vscode-jest-tests',
+  name: 'vscode-jest-tests.v2',
   request: 'launch',
-  args: ['--runInBand'],
+  args: [
+    '--runInBand',
+    '--watchAll=false',
+    '--testNamePattern',
+    '${jest.testNamePattern}',
+    '--runTestsByPath',
+    '${jest.testFile}',
+  ],
   cwd: '${workspaceFolder}',
   console: 'integratedTerminal',
   internalConsoleOptions: 'neverOpen',
@@ -80,7 +87,7 @@ describe('wizard-tasks', () => {
     mockHelper.getWizardSettings.mockImplementation(() => wizardSettings);
     mockHelper.createSaveConfig.mockReturnValue(mockSaveConfig);
 
-    mockProvideDebugConfigurations.mockReturnValue([DefaultJestDebugConfig]);
+    mockProvideDebugConfigurations.mockReturnValue([defaultJestDebugConfig]);
     mockOpenTextDocument.mockReturnValue(mockTextDocument);
   });
 
@@ -89,7 +96,9 @@ describe('wizard-tasks', () => {
       const _callBack = callBack
         ? (value?: vscode.DebugConfiguration) => {
             if (Array.isArray(value)) {
-              const jestDebugConfig = value.find((c) => c.name === DEBUG_CONFIG_NAME);
+              const jestDebugConfig =
+                value.find((c) => c.name === `${DEBUG_CONFIG_NAME}.v2`) ??
+                value.find((c) => c.name === DEBUG_CONFIG_NAME);
               callBack(jestDebugConfig);
             } else {
               callBack();
@@ -105,7 +114,9 @@ describe('wizard-tasks', () => {
       const [config, cmdLine, rootPath] = mockHelper.mergeDebugConfigWithCmdLine.mock.calls[0];
       expect(cmdLine).toEqual(commandLine);
       expect(rootPath).toEqual(absoluteRootPath);
-      expect(config.name).toEqual(DEBUG_CONFIG_NAME);
+      expect(
+        config.name === DEBUG_CONFIG_NAME || config.name === `${DEBUG_CONFIG_NAME}.v2`
+      ).toBeTruthy();
       return true;
     };
     const hasShownLaunchFile = (filePath: string): boolean => {
@@ -196,14 +207,14 @@ describe('wizard-tasks', () => {
         ).toBeTruthy();
         // a default config will be generated and saved
         validateConfigUpdate((jestDebugConfig) =>
-          expect(jestDebugConfig).toEqual(DefaultJestDebugConfig)
+          expect(jestDebugConfig).toEqual(defaultJestDebugConfig)
         );
         // launch.json has been shown in editor with target selected
         expect(hasShownLaunchFile('/_uri_/.vscode/launch.json')).toBeTruthy();
       });
     });
     describe('when there is existing jest debug config and jestCommandLine', () => {
-      const existingConfig: any = { name: DEBUG_CONFIG_NAME };
+      const existingConfig: any = { name: `${DEBUG_CONFIG_NAME}.v2` };
       const otherConfig: any = { name: 'other-config' };
       beforeEach(() => {
         wizardSettings = {
@@ -214,7 +225,7 @@ describe('wizard-tasks', () => {
       it.each`
         desc                      | menuId                               | isConfigUpdated | expected
         ${'menu: acceptExisting'} | ${DebugSetupActionId.acceptExisting} | ${false}        | ${existingConfig}
-        ${'menu: replace'}        | ${DebugSetupActionId.replace}        | ${true}         | ${DefaultJestDebugConfig}
+        ${'menu: replace'}        | ${DebugSetupActionId.replace}        | ${true}         | ${defaultJestDebugConfig}
         ${'menu: edit'}           | ${DebugSetupActionId.edit}           | ${false}        | ${undefined}
       `('$desc', async ({ menuId, isConfigUpdated, expected }) => {
         expect.hasAssertions();

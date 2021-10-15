@@ -2,7 +2,7 @@
   "name": "vscode-jest",
   "displayName": "Jest",
   "description": "Use Facebook's Jest With Pleasure.",
-  "version": "4.2.1",
+  "version": "4.3.0-rc.1",
   "publisher": "Orta",
   "engines": {
     "vscode": "^1.59.0"
@@ -338,12 +338,16 @@
             "description": "Running tests by directly running jest",
             "body": {
               "type": "node",
-              "name": "vscode-jest-tests",
+              "name": "vscode-jest-tests.v2",
               "request": "launch",
               "program": "^\"\\${workspaceFolder}/node_modules/.bin/jest\"",
               "args": [
                 "--runInBand",
-                "--watchAll=false"
+                "--watchAll=false",
+                "--testNamePattern",
+                "${jest.testNamePattern}",
+                "--runTestsByPath",
+                "${jest.testFile}"
               ],
               "cwd": "^\"\\${workspaceFolder}\"",
               "console": "integratedTerminal",
@@ -359,14 +363,18 @@
             "description": "Running jest within apps bootstrapped by create-react-app (and similar); you may have to edit `runtimeExecutable`",
             "body": {
               "type": "node",
-              "name": "vscode-jest-tests",
+              "name": "vscode-jest-tests.v2",
               "request": "launch",
               "runtimeExecutable": "^\"\\${workspaceFolder}/node_modules/.bin/react-scripts\"",
               "args": [
                 "test",
                 "--env=jsdom",
                 "--runInBand",
-                "--watchAll=false"
+                "--watchAll=false",
+                "--testNamePattern",
+                "${jest.testNamePattern}",
+                "--runTestsByPath",
+                "${jest.testFile}"
               ],
               "cwd": "^\"\\${workspaceFolder}\"",
               "console": "integratedTerminal",
@@ -380,17 +388,44 @@
             "description": "Running jest within apps bootstrapped by create-react-app (and similar) after ejecting",
             "body": {
               "type": "node",
-              "name": "vscode-jest-tests",
+              "name": "vscode-jest-tests.v2",
               "request": "launch",
               "program": "^\"\\${workspaceFolder}/scripts/test\"",
               "args": [
                 "--env=jsdom",
                 "--runInBand",
-                "--watchAll=false"
+                "--watchAll=false",
+                "--testNamePattern",
+                "${jest.testNamePattern}",
+                "--runTestsByPath",
+                "${jest.testFile}"
               ],
               "cwd": "^\"\\${workspaceFolder}\"",
               "console": "integratedTerminal",
               "protocol": "inspector",
+              "internalConsoleOptions": "neverOpen",
+              "disableOptimisticBPs": true
+            }
+          },
+          {
+            "label": "Jest: Angular (with Yarn)",
+            "description": "Running tests by using 'yarn test'",
+            "body": {
+              "type": "node",
+              "name": "vscode-jest-tests.v2",
+              "request": "launch",
+              "runtimeExecutable": "yarn",
+              "args": [
+                "test",
+                "--run-in-band",
+                "--watch-all=false",
+                "--test-name-pattern",
+                "${jest.testNamePattern}",
+                "--test-path-pattern",
+                "${jest.testFilePattern}"
+              ],
+              "cwd": "^\"\\${workspaceFolder}\"",
+              "console": "integratedTerminal",
               "internalConsoleOptions": "neverOpen",
               "disableOptimisticBPs": true
             }
