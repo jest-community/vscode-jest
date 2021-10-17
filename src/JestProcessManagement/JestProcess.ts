@@ -6,7 +6,7 @@ import { extensionId } from '../appGlobals';
 import { Logging } from '../logging';
 import { JestProcessInfo, JestProcessRequest } from './types';
 import { requestString } from './helper';
-import { toFilePath, removeSurroundingQuote, escapeRegExp } from '../helpers';
+import { toFilePath, removeSurroundingQuote, escapeRegExp, shellQuote } from '../helpers';
 
 export const RunnerEvents: RunnerEvent[] = [
   'processClose',
@@ -92,7 +92,7 @@ export class JestProcess implements JestProcessInfo {
   private quoteFileName(fileName: string): string {
     return `"${toFilePath(removeSurroundingQuote(fileName))}"`;
   }
-  private quote(aString: string): string {
+  private quoteFilePattern(aString: string): string {
     return `"${removeSurroundingQuote(aString)}"`;
   }
   private startRunner(): Promise<void> {
@@ -126,7 +126,7 @@ export class JestProcess implements JestProcessInfo {
         break;
       }
       case 'by-file-pattern': {
-        const regex = this.quote(escapeRegExp(this.request.testFileNamePattern));
+        const regex = this.quoteFilePattern(escapeRegExp(this.request.testFileNamePattern));
         args.push('--watchAll=false', '--testPathPattern', regex);
         if (this.request.updateSnapshot) {
           args.push('--updateSnapshot');
@@ -136,7 +136,10 @@ export class JestProcess implements JestProcessInfo {
 
       case 'by-file-test': {
         options.testFileNamePattern = this.quoteFileName(this.request.testFileName);
-        options.testNamePattern = this.quote(escapeRegExp(this.request.testNamePattern));
+        options.testNamePattern = shellQuote(
+          escapeRegExp(this.request.testNamePattern),
+          this.extContext.settings.shell
+        );
         args.push('--runTestsByPath', '--watchAll=false');
         if (this.request.updateSnapshot) {
           args.push('--updateSnapshot');
@@ -144,8 +147,11 @@ export class JestProcess implements JestProcessInfo {
         break;
       }
       case 'by-file-test-pattern': {
-        const regex = this.quote(escapeRegExp(this.request.testFileNamePattern));
-        options.testNamePattern = this.quote(escapeRegExp(this.request.testNamePattern));
+        const regex = this.quoteFilePattern(escapeRegExp(this.request.testFileNamePattern));
+        options.testNamePattern = shellQuote(
+          escapeRegExp(this.request.testNamePattern),
+          this.extContext.settings.shell
+        );
         args.push('--watchAll=false', '--testPathPattern', regex);
         if (this.request.updateSnapshot) {
           args.push('--updateSnapshot');
