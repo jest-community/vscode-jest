@@ -234,15 +234,18 @@ export const shellQuote = (str: string, shell?: string): string => {
 
   switch (shellType) {
     case 'powershell': {
-      const s = str.replace(/'/g, "''");
-      if (s.length > 0 && s.charAt(s.length - 1) === '\\') {
-        return `'${s}\\'`;
+      const s = str.replace(/(['"])/g, "$1$1");
+      if (s.length > 2 && s.slice(-2) === '\\\\') {
+        return `'${s}\\\\'`;
       }
       return `'${s}'`;
     }
 
     case 'cmd': {
-      const s = str.replace(/"/g, '""');
+      let s = str.replace(/"/g, '""');
+      if (s.length > 2 && s.slice(-2) === '\\\\') {
+        s = `${s}\\\\`;
+      }
       return s.indexOf(' ') >= 0 || s.indexOf('"') >= 0 || s.length === 0 ? `"${s}"` : s;
     }
 
