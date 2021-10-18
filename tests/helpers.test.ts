@@ -313,6 +313,9 @@ describe('shellQuote', () => {
     ${'win32'}  | ${'powershell'} | ${''}                    | ${"''"}
     ${'win32'}  | ${undefined}    | ${''}                    | ${'""'}
     ${'darwin'} | ${undefined}    | ${''}                    | ${'""'}
+    ${'win32'}  | ${'powershell'} | ${'with \\ and \\\\'}    | ${"'with \\ and \\\\\\\\'"}
+    ${'win32'}  | ${undefined}    | ${'with \\ and \\\\'}    | ${'"with \\ and \\\\\\\\"'}
+    ${'linux'}  | ${undefined}    | ${'with \\ and \\\\'}    | ${'"with \\\\ and \\\\\\\\"'}
     ${'win32'}  | ${'powershell'} | ${'something\\'}         | ${"'something\\'"}
     ${'win32'}  | ${undefined}    | ${'something\\'}         | ${'something\\'}
     ${'darwin'} | ${undefined}    | ${'something\\'}         | ${'something\\\\'}
