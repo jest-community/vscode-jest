@@ -251,7 +251,7 @@ describe('JestProcess', () => {
         ${'darwin'} | ${undefined}    | ${'with special $character.abc*'} | ${'"with special \\\\\\$character\\\\.abc\\\\*"'}
         ${'darwin'} | ${'zsh'}        | ${'with special $character.abc*'} | ${'"with special \\\\\\$character\\\\.abc\\\\*"'}
         ${'win32'}  | ${undefined}    | ${'with "$double quote"'}         | ${'"with ""\\$double quote"""'}
-        ${'win32'}  | ${'powershell'} | ${'with "$double quote"'}         | ${'\'with "\\$double quote"\''}
+        ${'win32'}  | ${'powershell'} | ${'with "$double quote"'}         | ${'\'with ""\\$double quote""\''}
         ${'linux'}  | ${'bash'}       | ${'with "$double quote"'}         | ${'"with \\"\\\\\\$double quote\\""'}
         ${'win32'}  | ${undefined}    | ${"with '$single quote'"}         | ${'"with \'\\$single quote\'"'}
         ${'win32'}  | ${'powershell'} | ${"with '$single quote'"}         | ${"'with ''\\$single quote'''"}

@@ -304,7 +304,7 @@ describe('shellQuote', () => {
     ${'linux'}  | ${'bash'}       | ${"with 'single quote'"} | ${'"with \\\'single quote\\\'"'}
     ${'win32'}  | ${undefined}    | ${"with 'single quote'"} | ${'"with \'single quote\'"'}
     ${'linux'}  | ${undefined}    | ${"with 'single quote'"} | ${'"with \\\'single quote\\\'"'}
-    ${'win32'}  | ${'powershell'} | ${'with "double quote"'} | ${'\'with "double quote"\''}
+    ${'win32'}  | ${'powershell'} | ${'with "double quote"'} | ${'\'with ""double quote""\''}
     ${'win32'}  | ${'cmd.exe'}    | ${'with "double quote"'} | ${'"with ""double quote"""'}
     ${'linux'}  | ${'bash'}       | ${'with "double quote"'} | ${'"with \\"double quote\\""'}
     ${'win32'}  | ${'powershell'} | ${'with \\$name\\.txt'}  | ${"'with \\$name\\.txt'"}
@@ -313,10 +313,10 @@ describe('shellQuote', () => {
     ${'win32'}  | ${'powershell'} | ${''}                    | ${"''"}
     ${'win32'}  | ${undefined}    | ${''}                    | ${'""'}
     ${'darwin'} | ${undefined}    | ${''}                    | ${'""'}
-    ${'win32'}  | ${'powershell'} | ${'something\\'}         | ${"'something\\\\'"}
+    ${'win32'}  | ${'powershell'} | ${'something\\'}         | ${"'something\\'"}
     ${'win32'}  | ${undefined}    | ${'something\\'}         | ${'something\\'}
     ${'darwin'} | ${undefined}    | ${'something\\'}         | ${'something\\\\'}
-  `('can quote $str for $shell on $platform', ({ platform, shell, str, expected }) => {
+  `('can quote "$str" for $shell on $platform', ({ platform, shell, str, expected }) => {
     jest.resetAllMocks();
     mockPlatform.mockReturnValueOnce(platform);
     expect(shellQuote(str, shell)).toEqual(expected);

@@ -213,8 +213,12 @@ export const emptyTestStats = (): TestStats => {
 };
 
 /**
- * quoting a given string for it to be used as shell command arguments. This logic is largely copied from vscode's excellent debug argument handling code:
- * https://github.com/microsoft/vscode/blob/c0001d7becf437944f5898a7c9485922d60dd8d3/src/vs/workbench/contrib/debug/node/terminals.ts#L82
+ * quoting a given string for it to be used as shell command arguments.
+ *
+ * Note: the logic is based on vscode's debug argument handling:
+ * https://github.com/microsoft/vscode/blob/c0001d7becf437944f5898a7c9485922d60dd8d3/src/vs/workbench/contrib/debug/node/terminals.ts#L82 .
+ * However, had to modify a few places for windows platform.
+ *
  **/
 
 export const shellQuote = (str: string, shell?: string): string => {
@@ -234,7 +238,7 @@ export const shellQuote = (str: string, shell?: string): string => {
 
   switch (shellType) {
     case 'powershell': {
-      const s = str.replace(/(['"])/g, "$1$1");
+      const s = str.replace(/(['"])/g, '$1$1');
       if (s.length > 2 && s.slice(-2) === '\\\\') {
         return `'${s}\\\\'`;
       }
