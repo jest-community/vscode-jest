@@ -1,47 +1,33 @@
 jest.unmock('../../src/setup-wizard/wizard-helper');
 jest.unmock('../../src/setup-wizard/types');
 jest.unmock('./test-helper');
-jest.unmock('../test-helper');
-jest.unmock('../../src/helpers');
-jest.unmock('../../src/virtual-workspace-folder');
-
-const mockExistsSync = jest.fn();
-jest.mock('fs', () => ({
-  existsSync: mockExistsSync,
-}));
 
 import * as vscode from 'vscode';
 
 import * as path from 'path';
+import * as os from 'os';
 
 import {
   showActionMenu,
   showActionInputBox,
   getConfirmation,
+  mergeDebugConfigWithCmdLine,
+  DEBUG_CONFIG_PLATFORMS,
+  cleanupCommand,
+  parseCmdLine,
   getWizardSettings,
   createSaveConfig,
   showActionMessage,
   validateCommandLine,
-  selectWorkspaceFolder,
-  validateRootPath,
-  toVirtualFolderSettings,
 } from '../../src/setup-wizard/wizard-helper';
 import { ActionMessageType, WizardStatus } from '../../src/setup-wizard/types';
 import { throwError } from './test-helper';
-import { makeWorkspaceFolder } from '../test-helper';
-import { createJestSettingGetter } from '../../src/Settings';
-import { VirtualWorkspaceFolder } from '../../src/virtual-workspace-folder';
 
 describe('QuickInput Proxy', () => {
   const mockOnDidTriggerButton = jest.fn();
   const triggerButton = async (button: any) => {
     const callBack = mockOnDidTriggerButton.mock.calls[0][0];
     await callBack(button);
-  };
-  const mockOnDidTriggerItemButton = jest.fn();
-  const triggerItemButton = async (button: any) => {
-    const callBack = mockOnDidTriggerItemButton.mock.calls[0][0];
-    await callBack({ button });
   };
 
   const mockButton = (action?: () => Promise<WizardStatus>): any => ({
@@ -73,7 +59,6 @@ describe('QuickInput Proxy', () => {
           handleSelection = callback;
         },
         onDidTriggerButton: mockOnDidTriggerButton,
-        onDidTriggerItemButton: mockOnDidTriggerItemButton,
       };
       vscode.window.createQuickPick = jest.fn().mockReturnValue(mockQuickPick);
     });
@@ -88,7 +73,7 @@ describe('QuickInput Proxy', () => {
       };
       const items = [];
       const p = showActionMenu(items, options);
-      expect(mockShow).toHaveBeenCalledTimes(1);
+      expect(mockShow).toBeCalledTimes(1);
       await triggerSelection(mockItem('selected-item', () => Promise.resolve('success')));
 
       await p;
@@ -98,7 +83,7 @@ describe('QuickInput Proxy', () => {
       expect(mockQuickPick.placeholder).toEqual(options.placeholder);
       expect(mockQuickPick.items).toBe(items);
       expect(mockQuickPick.buttons).toBe(options.rightButtons);
-      expect(mockDispose).toHaveBeenCalledTimes(1);
+      expect(mockDispose).toBeCalledTimes(1);
     });
     it.each`
       action                                           | expected
@@ -112,28 +97,14 @@ describe('QuickInput Proxy', () => {
       const p = showActionMenu([]);
 
       // trigger selection
-      const item = mockItem('selected-item', action);
+      const item = action ? mockItem('selected-item', action) : [];
       await triggerSelection(item);
       const result = await p;
 
       expect(result).toEqual(expected);
-      expect(mockDispose).toHaveBeenCalledTimes(1);
+      expect(mockDispose).toBeCalledTimes(1);
     });
-    it('can only select 1 item', async () => {
-      expect.hasAssertions();
 
-      const p = showActionMenu([]);
-
-      // trigger incorrect selection
-      const item1 = mockItem('selected-item-1', jest.fn());
-      const item2 = mockItem('selected-item-2', jest.fn());
-      await expect(triggerSelection([item1, item2])).rejects.toThrow();
-
-      // trigger correct selection
-      await triggerSelection([item1]);
-      await p;
-      expect(mockDispose).toHaveBeenCalledTimes(1);
-    });
     it.each`
       action                                   | expected
       ${() => throwError('item throws')}       | ${new Error('item throws')}
@@ -146,7 +117,7 @@ describe('QuickInput Proxy', () => {
       // trigger selection
       await triggerSelection(mockItem('selected-item', action));
       await expect(p).rejects.toEqual(expected);
-      expect(mockDispose).toHaveBeenCalledTimes(1);
+      expect(mockDispose).toBeCalledTimes(1);
     });
     it.each`
       enableBackButton | expected
@@ -168,7 +139,7 @@ describe('QuickInput Proxy', () => {
       const result = await p;
 
       expect(result).toEqual(expected);
-      expect(mockDispose).toHaveBeenCalledTimes(1);
+      expect(mockDispose).toBeCalledTimes(1);
     });
     describe('can have action buttons', () => {
       it.each`
@@ -181,12 +152,12 @@ describe('QuickInput Proxy', () => {
         const button = mockButton(action);
         const p = showActionMenu([], { rightButtons: [button] });
 
-        expect(mockShow).toHaveBeenCalledTimes(1);
+        expect(mockShow).toBeCalledTimes(1);
         await triggerButton(button);
         const result = await p;
 
         expect(result).toEqual(expected);
-        expect(mockDispose).toHaveBeenCalledTimes(1);
+        expect(mockDispose).toBeCalledTimes(1);
       });
       it.each`
         action                              | expected
@@ -198,74 +169,11 @@ describe('QuickInput Proxy', () => {
         const button = mockButton(action);
         const p = showActionMenu([], { rightButtons: [button] });
 
-        expect(mockShow).toHaveBeenCalledTimes(1);
+        expect(mockShow).toBeCalledTimes(1);
         await triggerButton(button);
         await expect(p).rejects.toEqual(expected);
-        expect(mockDispose).toHaveBeenCalledTimes(1);
+        expect(mockDispose).toBeCalledTimes(1);
       });
-    });
-    describe('allowNoAction', () => {
-      it('no action button', async () => {
-        expect.hasAssertions();
-
-        const button1 = mockButton();
-        const button2 = mockButton();
-        button2.action = undefined;
-        const items = [{ id: 1, label: 'item-1', buttons: [button1, button2] }];
-
-        // without allowNoAction, throw exception
-        let p = showActionMenu(items);
-        await triggerItemButton(button2);
-        await expect(p).resolves.toBeUndefined();
-
-        mockOnDidTriggerItemButton.mockClear();
-
-        // works with allowNoAction
-        p = showActionMenu(items, { allowNoAction: true });
-        // no ops
-        await triggerItemButton(button2);
-        // trigger button1 to exit
-        await triggerItemButton(button1);
-
-        await expect(p).resolves.toEqual('success');
-      });
-      it('no action item', async () => {
-        expect.hasAssertions();
-
-        const exitButton = mockButton();
-        const item = { id: 1, label: 'item-1', buttons: [exitButton] };
-
-        // without allowNoAction, throw exception
-        let p = showActionMenu([item]);
-        await triggerSelection(item);
-        await expect(p).resolves.toBeUndefined();
-
-        mockOnDidTriggerItemButton.mockClear();
-
-        // works with allowNoAction
-        p = showActionMenu([item], { allowNoAction: true });
-        // no ops
-        await triggerSelection(item);
-        // trigger button1 to exit
-        await triggerItemButton(exitButton);
-        await expect(p).resolves.toEqual('success');
-      });
-    });
-
-    it('can have item action button', async () => {
-      expect.hasAssertions();
-
-      const bAction = jest.fn().mockReturnValue('success');
-      const button = mockButton(bAction);
-      const items = [{ id: 1, label: 'item-1', buttons: [button] }];
-      const p = showActionMenu(items, { allowNoAction: true });
-
-      expect(mockShow).toHaveBeenCalledTimes(1);
-      await triggerItemButton(button);
-      const result = await p;
-
-      expect(result).toEqual('success');
-      expect(mockDispose).toHaveBeenCalledTimes(1);
     });
     it.each`
       selectItemIdx | isValidIndex
@@ -275,7 +183,7 @@ describe('QuickInput Proxy', () => {
       ${1}          | ${true}
       ${100}        | ${false}
     `(
-      'can change quickPick selection programmatically with $selectItemIdx => $isValidIndex',
+      'can change quickPick selection programatically with $selectItemIdx => $isValidIndex',
       async ({ selectItemIdx, isValidIndex }) => {
         expect.hasAssertions();
 
@@ -286,13 +194,13 @@ describe('QuickInput Proxy', () => {
         ];
         const p = showActionMenu(items, { selectItemIdx });
 
-        expect(mockShow).toHaveBeenCalledTimes(1);
+        expect(mockShow).toBeCalledTimes(1);
 
         // exit the menu with the button that returns undefined
         await triggerButton(mockButton(() => Promise.resolve(undefined)));
         await p;
 
-        expect(mockDispose).toHaveBeenCalledTimes(1);
+        expect(mockDispose).toBeCalledTimes(1);
         if (isValidIndex) {
           expect(mockQuickPick.selectedItems).toEqual([items[selectItemIdx]]);
         } else {
@@ -318,8 +226,8 @@ describe('QuickInput Proxy', () => {
         await triggerSelection(item);
         await expect(p).resolves.toEqual('success');
 
-        expect(mockShow).toHaveBeenCalledTimes(1);
-        expect(console.log).toHaveBeenCalledWith(expect.stringMatching('item-1'));
+        expect(mockShow).toBeCalledTimes(1);
+        expect(console.log).toBeCalledWith(expect.stringMatching('item-1'));
       });
       it('when back button is triggered', async () => {
         expect.hasAssertions();
@@ -330,7 +238,7 @@ describe('QuickInput Proxy', () => {
         await triggerButton(vscode.QuickInputButtons.Back);
         await expect(p).resolves.toEqual(undefined);
 
-        expect(mockDispose).toHaveBeenCalledTimes(1);
+        expect(mockDispose).toBeCalledTimes(1);
       });
     });
   });
@@ -349,7 +257,7 @@ describe('QuickInput Proxy', () => {
 
     const options = {
       prompt: 'a title',
-      value: 'initial value',
+      value: 'initial vlaue',
       title: 'an inputBox',
       rightButtons: [mockButton()],
     };
@@ -371,14 +279,14 @@ describe('QuickInput Proxy', () => {
       const inputValue = 'something';
       const p = showActionInputBox(options);
 
-      expect(mockShow).toHaveBeenCalledTimes(1);
+      expect(mockShow).toBeCalledTimes(1);
       await triggerInput(inputValue);
       const result = await p;
       expect(result).toEqual(inputValue);
       expect(mockInputBox.title).toEqual(options.title);
       expect(mockInputBox.prompt).toEqual(options.prompt);
       expect(mockInputBox.buttons).toEqual(options.rightButtons);
-      expect(mockDispose).toHaveBeenCalledTimes(1);
+      expect(mockDispose).toBeCalledTimes(1);
     });
     it('"escape" input returns undefined', async () => {
       expect.hasAssertions();
@@ -389,10 +297,10 @@ describe('QuickInput Proxy', () => {
 
       expect(result).toBeUndefined();
 
-      expect(mockShow).toHaveBeenCalledTimes(1);
+      expect(mockShow).toBeCalledTimes(1);
       expect(mockInputBox.title).toEqual(options.title);
       expect(mockInputBox.prompt).toEqual(options.prompt);
-      expect(mockDispose).toHaveBeenCalledTimes(1);
+      expect(mockDispose).toBeCalledTimes(1);
     });
     it('hide after accept should have no impact', async () => {
       expect.hasAssertions();
@@ -400,7 +308,7 @@ describe('QuickInput Proxy', () => {
       const inputValue = 'something2';
       const p = showActionInputBox(options);
 
-      expect(mockShow).toHaveBeenCalledTimes(1);
+      expect(mockShow).toBeCalledTimes(1);
       await triggerInput(inputValue);
       await triggerInput();
 
@@ -408,7 +316,7 @@ describe('QuickInput Proxy', () => {
       expect(result).toEqual(inputValue);
       expect(mockInputBox.title).toEqual(options.title);
       expect(mockInputBox.prompt).toEqual(options.prompt);
-      expect(mockDispose).toHaveBeenCalledTimes(1);
+      expect(mockDispose).toBeCalledTimes(1);
     });
     it.each`
       enableBackButton | expected
@@ -430,7 +338,7 @@ describe('QuickInput Proxy', () => {
       const result = await p;
 
       expect(result).toEqual(expected);
-      expect(mockDispose).toHaveBeenCalledTimes(1);
+      expect(mockDispose).toBeCalledTimes(1);
     });
     describe('on button click', () => {
       it.each`
@@ -445,9 +353,9 @@ describe('QuickInput Proxy', () => {
         await triggerButton(button);
 
         const result = await p;
-        expect(mockShow).toHaveBeenCalledTimes(1);
+        expect(mockShow).toBeCalledTimes(1);
         expect(result).toEqual(expected);
-        expect(mockDispose).toHaveBeenCalledTimes(1);
+        expect(mockDispose).toBeCalledTimes(1);
       });
       it.each`
         action                                    | expected
@@ -461,8 +369,8 @@ describe('QuickInput Proxy', () => {
         await triggerButton(button);
 
         await expect(p).rejects.toEqual(expected);
-        expect(mockShow).toHaveBeenCalledTimes(1);
-        expect(mockDispose).toHaveBeenCalledTimes(1);
+        expect(mockShow).toBeCalledTimes(1);
+        expect(mockDispose).toBeCalledTimes(1);
       });
     });
     describe('can be verbose', () => {
@@ -471,7 +379,7 @@ describe('QuickInput Proxy', () => {
         console.log = jest.fn();
         verboseOptions = {
           prompt: 'a title',
-          value: 'initial value',
+          value: 'initial vlaue',
           title: 'an inputBox',
           verbose: true,
           enableBackButton: true,
@@ -485,8 +393,8 @@ describe('QuickInput Proxy', () => {
 
         await expect(p).resolves.toEqual('some value');
 
-        expect(mockShow).toHaveBeenCalledTimes(1);
-        expect(console.log).toHaveBeenCalledWith(expect.stringMatching('some value'));
+        expect(mockShow).toBeCalledTimes(1);
+        expect(console.log).toBeCalledWith(expect.stringMatching('some value'));
       });
       it('when back button is triggered', async () => {
         const p = showActionInputBox(verboseOptions);
@@ -494,7 +402,7 @@ describe('QuickInput Proxy', () => {
 
         await expect(p).resolves.toEqual(undefined);
 
-        expect(mockShow).toHaveBeenCalledTimes(1);
+        expect(mockShow).toBeCalledTimes(1);
       });
     });
   });
@@ -504,8 +412,8 @@ describe('showActionMessage', () => {
     type === 'info'
       ? vscode.window.showInformationMessage
       : type === 'warning'
-        ? vscode.window.showWarningMessage
-        : vscode.window.showErrorMessage;
+      ? vscode.window.showWarningMessage
+      : vscode.window.showErrorMessage;
 
   beforeEach(() => {
     jest.resetAllMocks();
@@ -620,6 +528,208 @@ describe('validateCommandLine', () => {
   });
 });
 
+const canRunTest = (isWin32: boolean) =>
+  (isWin32 && os.platform() === 'win32') || (!isWin32 && os.platform() !== 'win32');
+
+describe('mergeDebugConfigWithCmdLine', () => {
+  const hasPlatformSection = (config: vscode.DebugConfiguration): boolean =>
+    DEBUG_CONFIG_PLATFORMS.find((p) => config[p] != null) != null;
+  const config1 = {
+    type: 'node',
+    name: 'vscode-jest-tests',
+    request: 'launch',
+    args: ['--runInBand'],
+    cwd: '${workspaceFolder}',
+    console: 'integratedTerminal',
+    internalConsoleOptions: 'neverOpen',
+    disableOptimisticBPs: true,
+    program: '${workspaceFolder}/node_modules/.bin/jest',
+    windows: {
+      program: '${workspaceFolder}/node_modules/jest/bin/jest',
+    },
+  };
+  const config2 = {
+    type: 'node',
+    name: 'vscode-jest-tests.v2',
+    request: 'launch',
+    args: [
+      '--runInBand',
+      '--watchAll=false',
+      '--testNamePattern',
+      '${jest.testNamePattern}',
+      '--runTestsByPath',
+      '${jest.testFile}',
+    ],
+    cwd: '${workspaceFolder}',
+    console: 'integratedTerminal',
+    internalConsoleOptions: 'neverOpen',
+    disableOptimisticBPs: true,
+    program: '${workspaceFolder}/node_modules/.bin/jest',
+    windows: {
+      program: '${workspaceFolder}/node_modules/jest/bin/jest',
+    },
+  };
+  describe.each`
+    name                      | config
+    ${'vscode-jest-tests'}    | ${config1}
+    ${'vscode-jest-tests.v2'} | ${config2}
+  `('with config $name', ({ config }) => {
+    it.each`
+      command                                      | expected
+      ${'cleanCmd'}                                | ${'cleanCmd'}
+      ${'"with double quote"'}                     | ${'with double quote'}
+      ${"'with single quote'"}                     | ${'with single quote'}
+      ${'"with quotes "in the middle" is fine"'}   | ${'with quotes "in the middle" is fine'}
+      ${"'with quotes 'in the middle' is fine'"}   | ${"with quotes 'in the middle' is fine"}
+      ${'with quotes "in the middle" is fine'}     | ${'with quotes "in the middle" is fine'}
+      ${'with escape "in the \'middle\'" is fine'} | ${'with escape "in the \'middle\'" is fine'}
+      ${'with escape "in the "middle"" is fine'}   | ${'with escape "in the "middle"" is fine'}
+      ${"'c:\\quoted root\\window\\command'"}      | ${'c:\\quoted root\\window\\command'}
+      ${"'\\quoted root\\window\\command'"}        | ${'\\quoted root\\window\\command'}
+    `(
+      'uses cleanupCommand to remove surrouding quotes for command: $command',
+      ({ command, expected }) => {
+        expect(cleanupCommand(command)).toEqual(expected);
+      }
+    );
+
+    describe('when merge should succeed', () => {
+      describe.each`
+        isWin32  | cmdLine                                                       | expected
+        ${false} | ${'jest'}                                                     | ${{ cmd: 'jest', args: [], program: '${workspaceFolder}/jest' }}
+        ${false} | ${'./node_modules/.bin/jest'}                                 | ${{ cmd: 'node_modules/.bin/jest', args: [], program: '${workspaceFolder}/node_modules/.bin/jest' }}
+        ${false} | ${'./node_modules/.bin/..//jest'}                             | ${{ cmd: 'node_modules/jest', args: [], program: '${workspaceFolder}/node_modules/jest' }}
+        ${false} | ${'../jest --config ../jest-config.json'}                     | ${{ cmd: '../jest', args: ['--config', '../jest-config.json'], program: '${workspaceFolder}/../jest' }}
+        ${false} | ${'../jest --config "../jest-config.json"'}                   | ${{ cmd: '../jest', args: ['--config', '"../jest-config.json"'], program: '${workspaceFolder}/../jest' }}
+        ${false} | ${'../jest --config=../jest-config.json'}                     | ${{ cmd: '../jest', args: ['--config=../jest-config.json'], program: '${workspaceFolder}/../jest' }}
+        ${false} | ${'../jest --config="../jest-config.json"'}                   | ${{ cmd: '../jest', args: ['--config=', '"../jest-config.json"'], program: '${workspaceFolder}/../jest' }}
+        ${false} | ${'../jest --config "a dir/jest-config.json" --coverage'}     | ${{ cmd: '../jest', args: ['--config', '"a dir/jest-config.json"', '--coverage'], program: '${workspaceFolder}/../jest' }}
+        ${false} | ${'jest --config "../dir with space/jest-config.json"'}       | ${{ cmd: 'jest', args: ['--config', '"../dir with space/jest-config.json"'], program: '${workspaceFolder}/jest' }}
+        ${false} | ${'/absolute/jest --runInBand'}                               | ${{ cmd: '/absolute/jest', args: ['--runInBand'], program: '/absolute/jest' }}
+        ${false} | ${'"dir with space/jest" --arg1=1 --arg2 2 "some string"'}    | ${{ cmd: 'dir with space/jest', args: ['--arg1=1', '--arg2', '2', '"some string"'], program: '${workspaceFolder}/dir with space/jest' }}
+        ${false} | ${'"/dir with space/jest" --arg1=1 --arg2 2 "some string"'}   | ${{ cmd: '/dir with space/jest', args: ['--arg1=1', '--arg2', '2', '"some string"'], program: '/dir with space/jest' }}
+        ${false} | ${"'/dir with space/jest' --arg1=1 --arg2 2 'some string'"}   | ${{ cmd: '/dir with space/jest', args: ['--arg1=1', '--arg2', '2', "'some string'"], program: '/dir with space/jest' }}
+        ${false} | ${'jest --arg1 "escaped \\"this\\" string" --arg2 2'}         | ${{ cmd: 'jest', args: ['--arg1', '"escaped \\"this\\" string"', '--arg2', '2'], program: '${workspaceFolder}/jest' }}
+        ${true}  | ${'.\\node_modules\\.bin\\jest'}                              | ${{ cmd: 'node_modules\\.bin\\jest', args: [], program: '${workspaceFolder}\\node_modules\\.bin\\jest' }}
+        ${true}  | ${'..\\jest --config="..\\jest-config.json"'}                 | ${{ cmd: '..\\jest', args: ['--config=', '"..\\jest-config.json"'], program: '${workspaceFolder}\\..\\jest' }}
+        ${true}  | ${'jest --config "..\\dir with space\\jest-config.json"'}     | ${{ cmd: 'jest', args: ['--config', '"..\\dir with space\\jest-config.json"'], program: '${workspaceFolder}\\jest' }}
+        ${true}  | ${'\\absolute\\jest --runInBand'}                             | ${{ cmd: '\\absolute\\jest', args: ['--runInBand'], program: '\\absolute\\jest' }}
+        ${true}  | ${'"\\dir with space\\jest" --arg1=1 --arg2 2 "some string"'} | ${{ cmd: '\\dir with space\\jest', args: ['--arg1=1', '--arg2', '2', '"some string"'], program: '\\dir with space\\jest' }}
+        ${true}  | ${'c:\\jest --arg1 "escaped \\"this\\" string" --arg2 2'}     | ${{ cmd: 'c:\\jest', args: ['--arg1', '"escaped \\"this\\" string"', '--arg2', '2'], program: 'c:\\jest' }}
+      `('$cmdLine', ({ cmdLine, expected, isWin32 }) => {
+        it('can parseCmdLine', () => {
+          if (!canRunTest(isWin32)) {
+            return;
+          }
+          const [actualCmd, ...actualArgs] = parseCmdLine(cmdLine);
+          expect(actualCmd).toEqual(expected.cmd);
+          expect(actualArgs).toEqual(expected.args);
+        });
+        it('can mergeDebugConfigWithCmdLine (for win32 only? $isWin32)', () => {
+          if (!canRunTest(isWin32)) {
+            return;
+          }
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { args, program, windows, ...restConfig } = config;
+          const {
+            args: newArgs,
+            program: newProgram,
+            ...restNewConfig
+          } = mergeDebugConfigWithCmdLine(config, cmdLine);
+          expect(newArgs).toContain('--runInBand');
+          expect(newArgs).toEqual([...expected.args, ...args]);
+          expect(newProgram).toEqual(expected.program);
+          expect(hasPlatformSection({ ...restNewConfig })).toBeFalsy();
+          expect(restNewConfig).toEqual(restConfig);
+        });
+      });
+    });
+    it.each`
+      cmdLine
+      ${''}
+    `(
+      'mergeDebugConfigWithCmdLine should throw error for invalid cmdLine: $cmdLine',
+      ({ cmdLine }) => {
+        expect(() => mergeDebugConfigWithCmdLine(config, cmdLine)).toThrow('invalid cmdLine');
+      }
+    );
+    it.each`
+      cmd       | cArgs                                           | appendExtraArg
+      ${'yarn'} | ${['test']}                                     | ${false}
+      ${'yarn'} | ${['test', '--config', 'test-jest.json']}       | ${false}
+      ${'npm'}  | ${['run', 'test']}                              | ${true}
+      ${'npm'}  | ${['test', '--', '--config', 'test-jest.json']} | ${false}
+    `('can merge yarn or npm command line: $cmd $cArgs', ({ cmd, cArgs, appendExtraArg }) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { args, program, windows, ...restConfig } = config;
+
+      const cmdLine = [cmd, ...cArgs].join(' ');
+      const {
+        args: newArgs,
+        program: newProgram,
+        runtimeExecutable,
+        ...restNewConfig
+      } = mergeDebugConfigWithCmdLine(config, cmdLine);
+      expect(newArgs).toContain('--runInBand');
+      expect(runtimeExecutable).toEqual(cmd);
+      expect(newProgram).toBeUndefined();
+
+      const expectArgs = [...cArgs];
+      if (appendExtraArg) {
+        expectArgs.push('--');
+      }
+      expectArgs.push(...args);
+
+      expect(newArgs).toEqual(expectArgs);
+      expect(hasPlatformSection({ ...restNewConfig })).toBeFalsy();
+      expect(restNewConfig).toEqual(restConfig);
+    });
+
+    it('platform specific sections are not processed but can be preserved if neeeded.', () => {
+      const newConfig = mergeDebugConfigWithCmdLine(config, 'whatever', undefined, true);
+      expect(newConfig.windows).toEqual(config.windows);
+    });
+
+    describe.each`
+      isWin32  | absoluteRootPath              | cmdLine        | expected
+      ${false} | ${undefined}                  | ${'jest'}      | ${{ program: '${workspaceFolder}/jest', cwd: '${workspaceFolder}' }}
+      ${false} | ${'/absolute/root/path'}      | ${'jest'}      | ${{ program: '/absolute/root/path/jest' }}
+      ${false} | ${'/absolute/root/path'}      | ${'./jest'}    | ${{ program: '/absolute/root/path/jest' }}
+      ${false} | ${'/absolute/root/path'}      | ${'../jest'}   | ${{ program: '/absolute/root/jest' }}
+      ${false} | ${'/absolute/root/path'}      | ${'yarn test'} | ${{ runtimeExecutable: 'yarn' }}
+      ${true}  | ${undefined}                  | ${'jest'}      | ${{ program: '${workspaceFolder}\\jest', cwd: '${workspaceFolder}' }}
+      ${true}  | ${'c:\\absolute\\root\\path'} | ${'..\\jest'}  | ${{ program: 'c:\\absolute\\root\\jest' }}
+      ${true}  | ${'\\absolute\\root\\path'}   | ${'yarn test'} | ${{ runtimeExecutable: 'yarn' }}
+    `('with rootPath: $absoluteRootPath', ({ isWin32, absoluteRootPath, cmdLine, expected }) => {
+      it('debugConfig.cwd will be based on absolute rootPath', () => {
+        if (!canRunTest(isWin32)) {
+          return;
+        }
+        const { cwd } = mergeDebugConfigWithCmdLine(config, cmdLine, absoluteRootPath);
+        expect(cwd).toEqual(expected.cwd ?? absoluteRootPath);
+      });
+      it('program will be adjust by rootPath', () => {
+        if (!canRunTest(isWin32)) {
+          return;
+        }
+        const { program } = mergeDebugConfigWithCmdLine(config, cmdLine, absoluteRootPath);
+        expect(program).toEqual(expected.program);
+      });
+      it('runtimeExecutable will NOT be adjusted by rootPath', () => {
+        if (!canRunTest(isWin32)) {
+          return;
+        }
+        const { runtimeExecutable } = mergeDebugConfigWithCmdLine(
+          config,
+          cmdLine,
+          absoluteRootPath
+        );
+        expect(runtimeExecutable).toEqual(expected.runtimeExecutable);
+      });
+    });
+  });
+});
+
 describe('getWizardSettings', () => {
   const workspace: any = {
     name: 'a workspace',
@@ -632,7 +742,6 @@ describe('getWizardSettings', () => {
     jest.resetAllMocks();
 
     vscodeSettings = {};
-    (createJestSettingGetter as jest.Mocked<any>).mockReturnValue(mockConfigGet);
     vscode.workspace.getConfiguration = jest.fn().mockReturnValue({
       get: mockConfigGet,
     });
@@ -640,32 +749,47 @@ describe('getWizardSettings', () => {
   });
   it('extracted from vscode settings and launch config', () => {
     getWizardSettings(workspace);
-    expect(createJestSettingGetter).toHaveBeenCalled();
-    expect(vscode.workspace.getConfiguration).toHaveBeenCalledWith('launch', workspace.uri);
+    expect(vscode.workspace.getConfiguration).toHaveBeenCalledTimes(2);
+    expect(vscode.workspace.getConfiguration).toHaveBeenNthCalledWith(1, 'jest', workspace.uri);
+    expect(vscode.workspace.getConfiguration).toHaveBeenNthCalledWith(2, 'launch', workspace.uri);
   });
   it.each`
-    seq  | settings                                                 | expectedSettings
-    ${1} | ${{}}                                                    | ${{}}
-    ${5} | ${{ jestCommandLine: ' ' }}                              | ${{}}
-    ${6} | ${{ jestCommandLine: 'jest' }}                           | ${{ jestCommandLine: 'jest' }}
-    ${7} | ${{ jestCommandLine: '"../dir with space" --whatever' }} | ${{ jestCommandLine: '"../dir with space" --whatever' }}
-    ${8} | ${{ configurations: [] }}                                | ${{ configurations: [] }}
-    ${9} | ${{ configurations: undefined }}                         | ${{}}
+    seq  | settings                                                     | expectedSettings
+    ${1} | ${{}}                                                        | ${{}}
+    ${2} | ${{ pathToJest: 'jest', debugMode: true }}                   | ${{ pathToJest: 'jest' }}
+    ${3} | ${{ pathToJest: '' }}                                        | ${{}}
+    ${4} | ${{ pathToJest: 'jest ' }}                                   | ${{ pathToJest: 'jest' }}
+    ${5} | ${{ jestCommandLine: ' ' }}                                  | ${{}}
+    ${6} | ${{ jestCommandLine: 'jest', pathToConfig: '../config.js' }} | ${{ jestCommandLine: 'jest', pathToConfig: '../config.js' }}
+    ${7} | ${{ jestCommandLine: '"../dir with space" --whatever' }}     | ${{ jestCommandLine: '"../dir with space" --whatever' }}
+    ${8} | ${{ configurations: [] }}                                    | ${{ configurations: [] }}
+    ${9} | ${{ configurations: undefined }}                             | ${{}}
   `('extract settings - $seq', ({ settings, expectedSettings }) => {
     vscodeSettings = settings;
     expect(getWizardSettings(workspace)).toEqual(expectedSettings);
   });
   it.each`
-    case  | rootPath                                            | absoluteRootPath
-    ${6}  | ${undefined}                                        | ${undefined}
-    ${7}  | ${path.join('..', 'parent')}                        | ${path.resolve(path.sep, 'parent')}
-    ${8}  | ${path.resolve(path.sep, 'root')}                   | ${path.resolve(path.sep, 'root')}
-    ${9}  | ${path.resolve(path.sep, 'root with space', 'dir')} | ${path.resolve(path.sep, 'root with space', 'dir')}
-    ${10} | ${path.join('dir with space', 'tests')}             | ${path.resolve(workspace.uri.fsPath, 'dir with space', 'tests')}
-  `('case $case: can resolve rootPath to absoluteRootPath', ({ rootPath, absoluteRootPath }) => {
-    vscodeSettings['rootPath'] = rootPath;
-    expect(getWizardSettings(workspace)).toEqual({ rootPath, absoluteRootPath });
-  });
+    isWin32  | rootPath                      | absoluteRootPath
+    ${false} | ${undefined}                  | ${undefined}
+    ${false} | ${'../parent'}                | ${'/parent'}
+    ${false} | ${'/root'}                    | ${'/root'}
+    ${false} | ${'"/root with space/dir"'}   | ${'/root with space/dir'}
+    ${false} | ${'dir with space/tests'}     | ${'/workspace/dir with space/tests'}
+    ${true}  | ${undefined}                  | ${undefined}
+    ${true}  | ${'..\\parent'}               | ${'\\parent'}
+    ${true}  | ${'\\root'}                   | ${'\\root'}
+    ${true}  | ${'"\\root with space\\dir"'} | ${'\\root with space\\dir'}
+    ${true}  | ${'dir with space\\tests'}    | ${'\\workspace\\dir with space\\tests'}
+  `(
+    'compute absoluteRootPath: $rootPath => $absoluteRootPath',
+    ({ isWin32, rootPath, absoluteRootPath }) => {
+      if (!canRunTest(isWin32)) {
+        return;
+      }
+      vscodeSettings['rootPath'] = rootPath;
+      expect(getWizardSettings(workspace)).toEqual({ rootPath, absoluteRootPath });
+    }
+  );
 });
 
 describe('createSaveConfig', () => {
@@ -686,8 +810,8 @@ describe('createSaveConfig', () => {
     const entry = { name: 'jest.jestCommandLine', value: 'whatever' };
     await saveConfig(entry);
 
-    expect(mockUpdate).toHaveBeenCalledTimes(1);
-    expect(mockUpdate).toHaveBeenCalledWith(
+    expect(mockUpdate).toBeCalledTimes(1);
+    expect(mockUpdate).toBeCalledWith(
       entry.name,
       entry.value,
       vscode.ConfigurationTarget.WorkspaceFolder
@@ -701,7 +825,7 @@ describe('createSaveConfig', () => {
     const entry2 = { name: 'launch.configurations', value: [1, 2, 3] };
     await saveConfig(entry1, entry2);
 
-    expect(mockUpdate).toHaveBeenCalledTimes(2);
+    expect(mockUpdate).toBeCalledTimes(2);
     expect(mockUpdate).toHaveBeenNthCalledWith(
       1,
       entry1.name,
@@ -712,38 +836,6 @@ describe('createSaveConfig', () => {
       2,
       entry2.name,
       entry2.value,
-      vscode.ConfigurationTarget.WorkspaceFolder
-    );
-  });
-  it('will save to workspace target if no workspace is given', async () => {
-    expect.hasAssertions();
-    mockUpdate.mockReturnValue(Promise.resolve());
-    context.workspace = undefined;
-    const saveConfig = createSaveConfig(context);
-    const entry = { name: 'jest.disabledWorkspaceFolders', value: '[]' };
-    await saveConfig(entry);
-
-    expect(mockUpdate).toHaveBeenCalledTimes(1);
-    expect(mockUpdate).toHaveBeenCalledWith(
-      entry.name,
-      entry.value,
-      vscode.ConfigurationTarget.Workspace
-    );
-  });
-  it('will save to actual workspace folder for virtual workspace folder', async () => {
-    expect.hasAssertions();
-    mockUpdate.mockReturnValue(Promise.resolve());
-    const ws = makeWorkspaceFolder('ws');
-    context.workspace = new VirtualWorkspaceFolder(ws, 'virtual');
-    const saveConfig = createSaveConfig(context);
-    const entry = { name: 'jest.virtualFolders', value: '[]' };
-    await saveConfig(entry);
-
-    expect(vscode.workspace.getConfiguration).toHaveBeenCalledWith(undefined, ws.uri);
-    expect(mockUpdate).toHaveBeenCalledTimes(1);
-    expect(mockUpdate).toHaveBeenCalledWith(
-      entry.name,
-      entry.value,
       vscode.ConfigurationTarget.WorkspaceFolder
     );
   });
@@ -759,90 +851,6 @@ describe('createSaveConfig', () => {
     const entry3 = { name: 'entry-3', value: 42 };
     await expect(saveConfig(entry1, entry2, entry3)).rejects.toEqual('failed');
 
-    expect(mockUpdate).toHaveBeenCalledTimes(3);
-  });
-});
-
-describe('selectWorkspace', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-  it.each`
-    desc                    | workspaceFolders                                              | callCount
-    ${'single-workspace'}   | ${[makeWorkspaceFolder('single-root')]}                       | ${0}
-    ${'multiple-workspace'} | ${[makeWorkspaceFolder('ws-1'), makeWorkspaceFolder('ws-2')]} | ${1}
-    ${'no-workspace'}       | ${undefined}                                                  | ${0}
-  `('will only prompt to picker if multi-root: $desc', async ({ workspaceFolders, callCount }) => {
-    expect.hasAssertions();
-    (vscode.workspace as any).workspaceFolders = workspaceFolders;
-    (vscode.window.showQuickPick as jest.Mocked<any>).mockResolvedValueOnce(undefined);
-    await selectWorkspaceFolder();
-    expect(vscode.window.showQuickPick).toHaveBeenCalledTimes(callCount);
-  });
-});
-
-describe('validateRootPath', () => {
-  const workspace = makeWorkspaceFolder('ws1');
-  beforeEach(() => {
-    jest.resetAllMocks();
-  });
-  it.each`
-    case | rootPath                              | expectedPath
-    ${1} | ${'sub-folder'}                       | ${path.resolve(workspace.uri.fsPath, 'sub-folder')}
-    ${2} | ${'"sub folder"'}                     | ${path.resolve(workspace.uri.fsPath, 'sub folder')}
-    ${3} | ${path.resolve('root', 'sub-folder')} | ${path.resolve('root', 'sub-folder')}
-    ${4} | ${''}                                 | ${workspace.uri.fsPath}
-  `('case $case', ({ rootPath, expectedPath }) => {
-    validateRootPath(workspace, rootPath);
-    expect(mockExistsSync).toHaveBeenCalledWith(expectedPath);
-  });
-});
-
-describe('toVirtualFolderSettings', () => {
-  let mockConfigGet;
-  beforeEach(() => {
-    jest.resetAllMocks();
-
-    mockConfigGet = jest.fn();
-    vscode.workspace.getConfiguration = jest.fn().mockReturnValue({
-      get: mockConfigGet,
-    });
-  });
-  it('can transform jest setting updates to virtual folder settings', () => {
-    const actualFolder = makeWorkspaceFolder('ws');
-    const vFolder = new VirtualWorkspaceFolder(actualFolder, 'v-1');
-
-    const callArgs: [any, any, any] = [
-      vFolder,
-      { name: 'jest.rootPath', value: 'a-1' },
-      { name: 'jest.jestCommandLine', value: 'new-command' },
-    ];
-
-    // error handling: throws if no virtual folder is found
-    expect(() => toVirtualFolderSettings(...callArgs)).toThrow();
-
-    // config with virtualFolders, now it should work
-    const vFolderSettings = [
-      { name: 'v-1', rootPath: 'a' },
-      { name: 'v-2', rootPath: 'b' },
-    ];
-    mockConfigGet.mockImplementation((name) => {
-      if (name === 'virtualFolders') {
-        return vFolderSettings;
-      }
-    });
-
-    const expectedSettings = [
-      {
-        ...vFolderSettings[0],
-        rootPath: 'a-1',
-        jestCommandLine: 'new-command',
-      },
-      vFolderSettings[1],
-    ];
-    expect(toVirtualFolderSettings(...callArgs)).toEqual({
-      name: 'jest.virtualFolders',
-      value: expectedSettings,
-    });
+    expect(mockUpdate).toBeCalledTimes(3);
   });
 });

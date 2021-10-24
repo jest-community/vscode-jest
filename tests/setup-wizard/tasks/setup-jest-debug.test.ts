@@ -1,6 +1,5 @@
 jest.unmock('../../../src/setup-wizard/tasks/setup-jest-debug');
 jest.unmock('../test-helper');
-jest.unmock('../../test-helper');
 jest.unmock('./task-test-helper');
 
 import * as vscode from 'vscode';
@@ -10,21 +9,42 @@ import * as SetupJestDebug from '../../../src/setup-wizard/tasks/setup-jest-debu
 import { setupJestCmdLine } from '../../../src/setup-wizard/tasks/setup-jest-cmdline';
 
 import { mockWizardHelper } from '../test-helper';
-import { createWizardContext } from './task-test-helper';
-import { getValidJestCommand } from '../../../src/helpers';
+import { validateTaskConfigUpdate, createWizardContext } from './task-test-helper';
 
 const { setupJestDebug, DebugSetupActionId, DEBUG_CONFIG_NAME } = SetupJestDebug;
 
+const defaultJestDebugConfig = {
+  type: 'node',
+  name: 'vscode-jest-tests.v2',
+  request: 'launch',
+  args: [
+    '--runInBand',
+    '--watchAll=false',
+    '--testNamePattern',
+    '${jest.testNamePattern}',
+    '--runTestsByPath',
+    '${jest.testFile}',
+  ],
+  cwd: '${workspaceFolder}',
+  console: 'integratedTerminal',
+  internalConsoleOptions: 'neverOpen',
+  disableOptimisticBPs: true,
+  program: '${workspaceFolder}/node_modules/.bin/jest',
+  windows: {
+    program: '${workspaceFolder}/node_modules/jest/bin/jest',
+  },
+};
+
 const mockHelper = helper as jest.Mocked<any>;
-const { mockShowActionMenu, mockHelperSetup, mockSelectWorkspace } = mockWizardHelper(mockHelper);
+const { mockShowActionMenu, mockShowActionMessage, mockHelperSetup } = mockWizardHelper(mockHelper);
 
 describe('wizard-tasks', () => {
+  const mockProvideDebugConfigurations = jest.fn();
   const mockSaveConfig = jest.fn();
   const mockShowTextDocument = jest.fn();
   const mockOpenTextDocument = jest.fn();
   const debugConfigProvider = {
-    createDebugConfig: jest.fn(),
-    getDebugConfigNames: jest.fn(),
+    provideDebugConfigurations: mockProvideDebugConfigurations,
   };
   let mockTextDocument;
   let wizardSettings: { [key: string]: any };
@@ -37,34 +57,84 @@ describe('wizard-tasks', () => {
       positionAt: jest.fn().mockReturnValue({ line: 0, character: 0 }),
     };
 
-    mockShowTextDocument.mockResolvedValue(undefined);
-    mockOpenTextDocument.mockResolvedValue(mockTextDocument);
     vscode.window.showTextDocument = mockShowTextDocument;
     vscode.workspace.openTextDocument = mockOpenTextDocument;
-
     vscode.Uri.joinPath = jest.fn();
+
+    vscode.window.createOutputChannel = jest.fn().mockReturnValue({
+      show: jest.fn(),
+      clear: jest.fn(),
+      appendLine: jest.fn(),
+    });
+    vscode.workspace.getConfiguration = jest.fn().mockReturnValue({
+      // get: mockConfigGet,
+      update: mockSaveConfig,
+    });
 
     wizardSettings = {};
     mockHelperSetup();
 
     // default helper function
-    mockHelper.showActionMenu.mockResolvedValue(undefined);
-    mockSaveConfig.mockResolvedValue('whatever');
+    mockHelper.showActionMenu.mockReturnValue('success');
+    mockHelper.showActionInputBox.mockImplementation(({ value }) => value);
+    mockSaveConfig.mockImplementation(() => Promise.resolve());
 
+    mockHelper.mergeDebugConfigWithCmdLine.mockImplementation((config) => config);
+    mockHelper.showActionMessage.mockImplementation((_, options) => {
+      return options?.action?.();
+    });
+    // mockHelper.getWizardSettings = jest.fn().mockReturnValue(wizardSettings);
     mockHelper.getWizardSettings.mockImplementation(() => wizardSettings);
     mockHelper.createSaveConfig.mockReturnValue(mockSaveConfig);
+
+    mockProvideDebugConfigurations.mockReturnValue([defaultJestDebugConfig]);
+    mockOpenTextDocument.mockReturnValue(mockTextDocument);
   });
 
   describe('setupJestDebug', () => {
-    let context;
-    let mockGetValidJestCommand;
-    let mockSetupJestDebug;
-    beforeEach(() => {
-      context = createWizardContext(debugConfigProvider, 'single-root');
-      mockGetValidJestCommand = getValidJestCommand as jest.Mocked<any>;
-      mockSetupJestDebug = jest.spyOn(SetupJestDebug, 'setupJestDebug');
+    const validateConfigUpdate = (callBack?: (value?: vscode.DebugConfiguration) => void) => {
+      const _callBack = callBack
+        ? (value?: vscode.DebugConfiguration) => {
+            if (Array.isArray(value)) {
+              const jestDebugConfig =
+                value.find((c) => c.name === `${DEBUG_CONFIG_NAME}.v2`) ??
+                value.find((c) => c.name === DEBUG_CONFIG_NAME);
+              callBack(jestDebugConfig);
+            } else {
+              callBack();
+            }
+          }
+        : undefined;
+      validateTaskConfigUpdate(mockSaveConfig, 'launch.configurations', _callBack);
+    };
 
-      mockSelectWorkspace('whatever');
+    let context;
+    const isMergedWithCommandLine = (commandLine?: string, absoluteRootPath?: string): boolean => {
+      expect(mockHelper.mergeDebugConfigWithCmdLine).toHaveBeenCalledTimes(1);
+      const [config, cmdLine, rootPath] = mockHelper.mergeDebugConfigWithCmdLine.mock.calls[0];
+      expect(cmdLine).toEqual(commandLine);
+      expect(rootPath).toEqual(absoluteRootPath);
+      expect(
+        config.name === DEBUG_CONFIG_NAME || config.name === `${DEBUG_CONFIG_NAME}.v2`
+      ).toBeTruthy();
+      return true;
+    };
+    const hasShownLaunchFile = (filePath: string): boolean => {
+      expect(mockOpenTextDocument).toBeCalledTimes(1);
+      const [aPath] = mockOpenTextDocument.mock.calls[0];
+      expect(aPath).toEqual(filePath);
+
+      expect(mockShowTextDocument).toBeCalledTimes(1);
+      const [doc, { selection }] = mockShowTextDocument.mock.calls[0];
+      expect(doc).toBe(mockTextDocument);
+      expect(selection).not.toBeUndefined();
+      return true;
+    };
+
+    beforeEach(() => {
+      context = createWizardContext('single-root', debugConfigProvider);
+
+      mockShowActionMessage('info', DebugSetupActionId.info);
 
       mockTextDocument.getText.mockReturnValue(`
         line 1...
@@ -77,173 +147,166 @@ describe('wizard-tasks', () => {
         .fn()
         .mockImplementation((_uri: any, ...paths: string[]) => `/_uri_/${paths.join('/')}`);
     });
-    describe('always works with explicit workspace', () => {
-      it.each`
-        case | wsInContext  | selectWs     | willAbort
-        ${1} | ${undefined} | ${undefined} | ${true}
-        ${2} | ${undefined} | ${'ws-2'}    | ${false}
-        ${3} | ${'ws-1'}    | ${undefined} | ${false}
-        ${4} | ${'ws-1'}    | ${undefined} | ${false}
-      `('case $case', async ({ wsInContext, selectWs, willAbort }) => {
-        expect.hasAssertions();
-
-        mockSelectWorkspace(selectWs);
-        const c = createWizardContext(debugConfigProvider, wsInContext);
-        mockShowActionMenu(undefined);
-
-        await setupJestDebug(c);
-
-        if (wsInContext) {
-          expect(mockHelper.selectWorkspaceFolder).not.toHaveBeenCalled();
-        } else {
-          expect(mockHelper.selectWorkspaceFolder).toHaveBeenCalled();
-        }
-        if (willAbort) {
-          expect(mockHelper.showActionMenu).not.toHaveBeenCalled();
-        } else {
-          expect(mockHelper.showActionMenu).toHaveBeenCalled();
-        }
-      });
-    });
-    describe('requires valid jestCommandLine and rootPath', () => {
+    describe(`will prompt user to setup jestCommandLine if missing`, () => {
       let mockCmdLineTask;
+      let mockDeubgConfigTask;
       beforeEach(() => {
         mockCmdLineTask = setupJestCmdLine;
-        mockGetValidJestCommand.mockResolvedValue({ validSettings: [] });
+        mockDeubgConfigTask = jest.spyOn(SetupJestDebug, 'setupJestDebug');
       });
 
-      it('after setup the jestCommandLine, will resume debug setup', async () => {
+      it('if user choose cancel, task will abort', async () => {
         expect.hasAssertions();
-        mockCmdLineTask.mockImplementation(() => {
-          wizardSettings.jestCommandLine = 'yarn test';
-          return Promise.resolve('success');
-        });
-        mockShowActionMenu(DebugSetupActionId.generate, undefined);
-        await expect(setupJestDebug(context)).resolves.toEqual(undefined);
-        expect(mockSetupJestDebug).toHaveBeenCalledTimes(1);
-      });
-
-      it('will prompt user to setup the jestCommandLine if missing', async () => {
-        expect.hasAssertions();
-        mockCmdLineTask.mockResolvedValue('abort');
-        mockShowActionMenu(DebugSetupActionId.generate);
+        mockHelper.showActionMessage.mockReturnValueOnce(undefined);
         await expect(setupJestDebug(context)).resolves.toEqual('abort');
-        expect(mockSetupJestDebug).toHaveBeenCalledTimes(0);
+        expect(mockHelper.showActionMessage).toBeCalledTimes(1);
+      });
+      it.each`
+        cmdLineResult | debugConfigResult | finalResult
+        ${undefined}  | ${null}           | ${'abort'}
+        ${'abort'}    | ${null}           | ${'abort'}
+        ${'error'}    | ${null}           | ${'abort'}
+        ${'success'}  | ${'success'}      | ${'success'}
+        ${'success'}  | ${'abort'}        | ${'abort'}
+        ${'success'}  | ${'error'}        | ${'error'}
+        ${'success'}  | ${undefined}      | ${undefined}
+      `(
+        'if user choose setup: setupCmdLine=$cmdLineResult, setupDebugTask=$debugConfigResult => $finalResult',
+        async ({ cmdLineResult, debugConfigResult, finalResult }) => {
+          expect.hasAssertions();
+
+          mockCmdLineTask.mockImplementation(() => Promise.resolve(cmdLineResult));
+          mockDeubgConfigTask.mockImplementation(() => Promise.resolve(debugConfigResult));
+
+          // user select setup
+          mockShowActionMessage('error', DebugSetupActionId.setupJestCmdLine);
+
+          await expect(setupJestDebug(context)).resolves.toEqual(finalResult);
+          expect(mockHelper.showActionMessage).toBeCalledTimes(1);
+          expect(mockCmdLineTask).toBeCalledTimes(1);
+          expect(mockDeubgConfigTask).toBeCalledTimes(debugConfigResult === null ? 0 : 1);
+        }
+      );
+    });
+    describe('when no existing jest debug config', () => {
+      it.each`
+        desc                              | settings
+        ${'jestCommandLine'}              | ${{ jestCommandLine: 'jest' }}
+        ${'jestCommandLine and rootPath'} | ${{ jestCommandLine: 'jest', absoluteRootPath: '/a/b' }}
+      `('can merge $desc', async ({ settings }) => {
+        expect.hasAssertions();
+
+        wizardSettings = settings;
+        mockShowActionMenu(DebugSetupActionId.create);
+
+        await expect(setupJestDebug(context)).resolves.toEqual('success');
+
+        // debug config has been merged with commandLine
+        expect(
+          isMergedWithCommandLine(wizardSettings.jestCommandLine, wizardSettings.absoluteRootPath)
+        ).toBeTruthy();
+        // a default config will be generated and saved
+        validateConfigUpdate((jestDebugConfig) =>
+          expect(jestDebugConfig).toEqual(defaultJestDebugConfig)
+        );
+        // launch.json has been shown in editor with target selected
+        expect(hasShownLaunchFile('/_uri_/.vscode/launch.json')).toBeTruthy();
+      });
+      it('if failed to genetate the default config, error will be thrown', async () => {
+        mockProvideDebugConfigurations.mockReturnValue([]);
+        expect.hasAssertions();
+
+        wizardSettings = { jestCommandLine: 'jest' };
+        mockShowActionMenu(DebugSetupActionId.create);
+
+        await expect(setupJestDebug(context)).rejects.toThrow();
       });
     });
-    describe('generate config with setting overrides', () => {
-      const configName = `${DEBUG_CONFIG_NAME}.v2`;
-      const existingConfig: any = { name: configName };
+    describe('when there is existing jest debug config and jestCommandLine', () => {
+      const existingConfig: any = { name: `${DEBUG_CONFIG_NAME}.v2` };
       const otherConfig: any = { name: 'other-config' };
-      const newDebugConfig = { ...existingConfig };
       beforeEach(() => {
         wizardSettings = {
+          jestCommandLine: 'whatever',
           configurations: [existingConfig, otherConfig],
         };
-
-        mockGetValidJestCommand.mockResolvedValue({
-          validSettings: [{ jestCommandLine: 'jest' }],
-        });
-        context.debugConfigProvider.createDebugConfig.mockReturnValue(newDebugConfig);
-        debugConfigProvider.getDebugConfigNames.mockReturnValue({ sorted: ['whatever'] });
-
-        mockShowActionMenu(DebugSetupActionId.generate, undefined);
       });
-      describe('with settings', () => {
-        it.each`
-          case | settings                                                                                                    | exception
-          ${1} | ${{}}                                                                                                       | ${{ jestCommandLine: 'jest' }}
-          ${2} | ${{ jestCommandLine: 'yarn test' }}                                                                         | ${undefined}
-          ${3} | ${{ rootPath: '/a/b/c' }}                                                                                   | ${{ jestCommandLine: 'jest', rootPath: '/a/b/c' }}
-          ${4} | ${{ nodeEnv: { NODE_ENV: '--experimental-vm-modules' } }}                                                   | ${{ jestCommandLine: 'jest', nodeEnv: { NODE_ENV: '--experimental-vm-modules' } }}
-          ${5} | ${{ jestCommandLine: 'yarn test', rootPath: '/a/b/c', nodeEnv: { NODE_ENV: '--experimental-vm-modules' } }} | ${undefined}
-        `('case $case', async ({ settings, exception }) => {
-          expect.hasAssertions();
-          context.debugConfigProvider.createDebugConfig.mockReturnValue(newDebugConfig);
+      it.each`
+        desc                      | menuId                               | isConfigUpdated | expected
+        ${'menu: acceptExisting'} | ${DebugSetupActionId.acceptExisting} | ${false}        | ${existingConfig}
+        ${'menu: replace'}        | ${DebugSetupActionId.replace}        | ${true}         | ${defaultJestDebugConfig}
+        ${'menu: edit'}           | ${DebugSetupActionId.edit}           | ${false}        | ${undefined}
+      `('$desc', async ({ menuId, isConfigUpdated, expected }) => {
+        expect.hasAssertions();
+        mockShowActionMenu(menuId);
 
-          wizardSettings = { ...wizardSettings, ...settings };
+        await expect(setupJestDebug(context)).resolves.toEqual('success');
 
-          if (settings.rootPath) {
-            mockGetValidJestCommand.mockResolvedValue({
-              validSettings: [{ jestCommandLine: 'jest', rootPath: settings.rootPath }],
-            });
-          }
+        if (isConfigUpdated) {
+          expect(isMergedWithCommandLine(wizardSettings.jestCommandLine)).toBeTruthy();
 
-          mockShowActionMenu(DebugSetupActionId.generate, undefined);
-          await expect(setupJestDebug(context)).resolves.toEqual(undefined);
+          // launch.json file will be shown
+          expect(hasShownLaunchFile('/_uri_/.vscode/launch.json')).toBeTruthy();
 
-          expect(context.debugConfigProvider.createDebugConfig).toHaveBeenCalledWith(
-            expect.anything(),
-            exception ?? settings
-          );
+          // validate config update
+          validateConfigUpdate((debugConfig) => expect(debugConfig).toEqual(expected));
 
-          // config should be saved
-          expect(mockSaveConfig).toHaveBeenCalledWith({
-            name: 'launch.configurations',
-            value: expect.arrayContaining([newDebugConfig]),
-          });
-
-          // config should be displayed
-          expect(vscode.workspace.openTextDocument).toHaveBeenCalled();
-        });
-      });
-      describe('can save debugConfig in launch.json', () => {
-        it('will rename existing debugConfig in launch.json', async () => {
-          expect.hasAssertions();
-
-          await expect(setupJestDebug(context)).resolves.toEqual(undefined);
-
-          // config should be saved
-          expect(mockSaveConfig).toHaveBeenCalledTimes(1);
-          const config = mockSaveConfig.mock.calls[0][0];
-
-          expect(config.name).toEqual('launch.configurations');
-          expect(config.value).toHaveLength(3);
-          expect(config.value).toContain(newDebugConfig);
-
-          // renamed previous config
+          // validate config update entries
+          const entries = mockSaveConfig.mock.calls[0];
+          expect(entries).toHaveLength(1);
+          const { name, value: configs } = entries[0];
+          expect(name).toEqual('launch.configurations');
+          expect(configs).toHaveLength(wizardSettings.configurations.length + 1);
+          expect(configs.find((c) => c.name === 'other-config')).not.toBeUndefined();
           expect(
-            config.value.find((config) => config.name.startsWith(`${configName}-`))
+            configs.find((c) => c.name.startsWith(`${existingConfig.name}-`))
           ).not.toBeUndefined();
-        });
+          expect(configs.find((c) => c.name === existingConfig.name)).not.toBeUndefined();
+        } else {
+          // the rest of methods are not invoked
+          expect(mockHelper.mergeDebugConfigWithCmdLine).not.toBeCalled();
+          validateConfigUpdate();
+          if (menuId === DebugSetupActionId.edit) {
+            expect(mockShowTextDocument).toBeCalled();
+          } else {
+            expect(mockShowTextDocument).not.toBeCalled();
+          }
+        }
       });
-      describe('will show new debugConfig in launch.json', () => {
-        it.each`
-          case | text                                                   | validateIndex
-          ${1} | ${`"${DEBUG_CONFIG_NAME}"; "${DEBUG_CONFIG_NAME}.v2"`} | ${(idx) => idx > 5}
-          ${2} | ${`"${DEBUG_CONFIG_NAME}.v2";`}                        | ${(idx) => idx > -1}
-          ${3} | ${`"${DEBUG_CONFIG_NAME}";`}                           | ${(idx) => idx > -1}
-          ${4} | ${`"${DEBUG_CONFIG_NAME}.v2.single-root";`}            | ${(idx) => idx > -1}
-        `('case $case: can position correct config entry', async ({ text, validateIndex }) => {
-          expect.hasAssertions();
+      it.each`
+        text                                                   | validateIndex
+        ${`"${DEBUG_CONFIG_NAME}"; "${DEBUG_CONFIG_NAME}.v2"`} | ${(idx) => idx > 5}
+        ${`"${DEBUG_CONFIG_NAME}.v2";`}                        | ${(idx) => idx === 0}
+        ${`"${DEBUG_CONFIG_NAME}";`}                           | ${(idx) => idx === 0}
+      `('edit can position correct config entry: $text', async ({ text, validateIndex }) => {
+        expect.hasAssertions();
+        mockShowActionMenu(DebugSetupActionId.edit);
 
-          debugConfigProvider.getDebugConfigNames.mockReturnValue({
-            sorted: [
-              `${DEBUG_CONFIG_NAME}.v2.single-root`,
-              `${DEBUG_CONFIG_NAME}.v2`,
-              `${DEBUG_CONFIG_NAME}.single-root`,
-              `${DEBUG_CONFIG_NAME}`,
-            ],
-          });
-          // if both config exist, the v2 will be focus
-          mockTextDocument.getText.mockReturnValueOnce(text);
-          await setupJestDebug(context);
+        // if both config exist, the v2 will be focus
+        mockTextDocument.getText.mockReturnValueOnce(text);
+        await expect(setupJestDebug(context)).resolves.toEqual('success');
 
-          const filePath = '/_uri_/.vscode/launch.json';
-          expect(mockOpenTextDocument).toHaveBeenCalledTimes(1);
-          const [aPath] = mockOpenTextDocument.mock.calls[0];
-          expect(aPath).toEqual(filePath);
-
-          expect(mockShowTextDocument).toHaveBeenCalledTimes(1);
-          const [doc, { selection }] = mockShowTextDocument.mock.calls[0];
-          expect(doc).toBe(mockTextDocument);
-          expect(selection).not.toBeUndefined();
-
-          expect(mockTextDocument.positionAt).toHaveBeenCalledTimes(1);
-          const index = mockTextDocument.positionAt.mock.calls[0][0];
-          expect(validateIndex(index)).toBeTruthy();
-        });
+        expect(hasShownLaunchFile('/_uri_/.vscode/launch.json')).toBeTruthy();
+        expect(mockTextDocument.positionAt).toBeCalledTimes(1);
+        const index = mockTextDocument.positionAt.mock.calls[0][0];
+        expect(validateIndex(index)).toBeTruthy();
       });
+      it('an v1 config will be considered valid/existing config', async () => {
+        const v1Config: any = { name: `${DEBUG_CONFIG_NAME}` };
+        wizardSettings = {
+          jestCommandLine: 'whatever',
+          configurations: [v1Config, otherConfig],
+        };
+        expect.hasAssertions();
+        mockShowActionMenu(DebugSetupActionId.acceptExisting);
+        await expect(setupJestDebug(context)).resolves.toEqual('success');
+      });
+    });
+    it(`can abort task`, async () => {
+      expect.hasAssertions();
+      mockHelper.showActionMenu.mockReturnValue(undefined);
+      wizardSettings = { jestCommandLine: 'something' };
+      await expect(setupJestDebug(context)).resolves.toBeUndefined();
     });
   });
 });

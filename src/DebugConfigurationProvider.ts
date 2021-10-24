@@ -1,6 +1,9 @@
 import * as vscode from 'vscode';
-import { toFilePath, getTestCommand, isCreateReactAppTestCommand } from './helpers';
+import { toFilePath, getTestCommand, isCreateReactAppTestCommand, escapeRegExp } from './helpers';
 
+const testNamePatternRegex = /\$\{jest.testNamePattern\}/g;
+const testFileRegex = /\$\{jest.testFile\}/g;
+const testFilePatternRegex = /\$\{jest.testFilePattern\}/g;
 export class DebugConfigurationProvider implements vscode.DebugConfigurationProvider {
   private fileNameToRun = '';
   private testToRun = '';
@@ -9,7 +12,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
    * Prepares injecting the name of the test, which has to be debugged, into the `DebugConfiguration`,
    * This function has to be called before `vscode.debug.startDebugging`.
    */
-  public prepareTestRun(fileNameToRun: string, testToRun: string) {
+  public prepareTestRun(fileNameToRun: string, testToRun: string): void {
     this.fileNameToRun = fileNameToRun;
     this.testToRun = testToRun;
   }
@@ -18,7 +21,10 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     _folder: vscode.WorkspaceFolder | undefined,
     debugConfiguration: vscode.DebugConfiguration,
     _token?: vscode.CancellationToken
-  ) {
+  ): vscode.DebugConfiguration {
+    if (debugConfiguration.name === 'vscode-jest-tests.v2') {
+      return this.resolveDebugConfig2(debugConfiguration);
+    }
     if (debugConfiguration.name !== 'vscode-jest-tests') {
       return debugConfiguration;
     }
@@ -47,10 +53,53 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     return debugConfiguration;
   }
 
+  /**
+   * resolve v2 debug config
+   * @param debugConfiguration v2 debug config
+   * @returns
+   */
+  resolveDebugConfig2(debugConfiguration: vscode.DebugConfiguration): vscode.DebugConfiguration {
+    if (
+      !debugConfiguration.args ||
+      !Array.isArray(debugConfiguration.args) ||
+      debugConfiguration.args.length <= 0
+    ) {
+      return debugConfiguration;
+    }
+    const args = debugConfiguration.args.map((arg) => {
+      if (typeof arg !== 'string') {
+        return arg;
+      }
+      switch (true) {
+        case testFileRegex.test(arg): {
+          return arg.replace(testFileRegex, toFilePath(this.fileNameToRun));
+        }
+        case testFilePatternRegex.test(arg): {
+          return arg.replace(testFilePatternRegex, escapeRegExp(this.fileNameToRun));
+        }
+        case testNamePatternRegex.test(arg): {
+          return arg.replace(testNamePatternRegex, this.testToRun);
+        }
+
+        default:
+          return arg;
+      }
+    });
+    debugConfiguration.args = args;
+
+    return debugConfiguration;
+  }
+
+  /**
+   * generate a v2 debug configuration
+   * @param folder
+   * @param _token
+   * @returns
+   */
   provideDebugConfigurations(
     folder: vscode.WorkspaceFolder | undefined,
     _token?: vscode.CancellationToken
-  ) {
+  ): vscode.DebugConfiguration[] {
     // default jest config according to:
     // https://github.com/Microsoft/vscode-recipes/tree/master/debugging-jest-tests#configure-launchjson-file-for-your-test-framework
 
@@ -60,9 +109,16 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     // tslint:disable no-invalid-template-strings
     const debugConfiguration: vscode.DebugConfiguration = {
       type: 'node',
-      name: 'vscode-jest-tests',
+      name: 'vscode-jest-tests.v2',
       request: 'launch',
-      args: ['--runInBand', '--watchAll=false'],
+      args: [
+        '--runInBand',
+        '--watchAll=false',
+        '--testNamePattern',
+        '${jest.testNamePattern}',
+        '--runTestsByPath',
+        '${jest.testFile}',
+      ],
       cwd: '${workspaceFolder}',
       console: 'integratedTerminal',
       internalConsoleOptions: 'neverOpen',
