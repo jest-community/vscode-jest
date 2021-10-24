@@ -203,11 +203,60 @@ export function prepareIconFile(
   return resultIconPath;
 }
 
-const SurroundingQuoteRegex = /^["']+|["']+$/g;
+const SurroundingQuoteRegex = /^["']|["']$/g;
 export const removeSurroundingQuote = (command: string): string =>
   command.replace(SurroundingQuoteRegex, '');
 
 // TestStats
 export const emptyTestStats = (): TestStats => {
   return { success: 0, fail: 0, unknown: 0 };
+};
+
+/**
+ * quoting a given string for it to be used as shell command arguments.
+ *
+ * Note: the logic is based on vscode's debug argument handling:
+ * https://github.com/microsoft/vscode/blob/c0001d7becf437944f5898a7c9485922d60dd8d3/src/vs/workbench/contrib/debug/node/terminals.ts#L82 .
+ * However, had to modify a few places for windows platform.
+ *
+ **/
+
+export const shellQuote = (str: string, shell?: string): string => {
+  const targetShell = shell && shell.trim().toLowerCase();
+
+  // try to determine the shell type
+  let shellType: 'powershell' | 'cmd' | 'sh';
+  if (!targetShell) {
+    shellType = platform() === 'win32' ? 'cmd' : 'sh';
+  } else if (targetShell.indexOf('powershell') >= 0 || targetShell.indexOf('pwsh') >= 0) {
+    shellType = 'powershell';
+  } else if (targetShell.indexOf('cmd.exe') >= 0) {
+    shellType = 'cmd';
+  } else {
+    shellType = 'sh';
+  }
+
+  switch (shellType) {
+    case 'powershell': {
+      const s = str.replace(/(['"])/g, '$1$1');
+      if (s.length > 2 && s.slice(-2) === '\\\\') {
+        return `'${s}\\\\'`;
+      }
+      return `'${s}'`;
+    }
+
+    case 'cmd': {
+      let s = str.replace(/"/g, '""');
+      if (s.length > 2 && s.slice(-2) === '\\\\') {
+        s = `${s}\\\\`;
+      }
+      return s.indexOf(' ') >= 0 || s.indexOf('"') >= 0 || s.length === 0 ? `"${s}"` : s;
+    }
+
+    default: {
+      //'sh'
+      const s = str.replace(/(["'\\$])/g, '\\$1');
+      return s.indexOf(' ') >= 0 || s.indexOf(';') >= 0 || s.length === 0 ? `"${s}"` : s;
+    }
+  }
 };

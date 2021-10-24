@@ -35,6 +35,7 @@ import {
   toFilePath,
   toLowerCaseDriveLetter,
   toUpperCaseDriveLetter,
+  shellQuote,
 } from '../src/helpers';
 
 // Manually (forcefully) set the executable's file extension to test its addition independendly of the operating system.
@@ -249,7 +250,7 @@ describe('removeSurroundingQuote', () => {
     ${'no quote'}                | ${'no quote'}
     ${'"double quote"'}          | ${'double quote'}
     ${"'single quote'"}          | ${'single quote'}
-    ${"''single single quote''"} | ${'single single quote'}
+    ${"''single single quote''"} | ${"'single single quote'"}
   `('can remove surrounding quotes from $str', ({ str, expected }) => {
     expect(removeSurroundingQuote(str)).toEqual(expected);
   });
@@ -290,5 +291,37 @@ describe('toUpperCaseDriveLetter', () => {
     ${'/path/file.ext'}     | ${undefined}
   `('$filePath => $expected', ({ filePath, expected }) => {
     expect(toUpperCaseDriveLetter(filePath)).toBe(expected);
+  });
+});
+
+describe('shellQuote', () => {
+  it.each`
+    platform    | shell           | str                      | expected
+    ${'win32'}  | ${undefined}    | ${'plain text'}          | ${'"plain text"'}
+    ${'linux'}  | ${undefined}    | ${'plain text'}          | ${'"plain text"'}
+    ${'win32'}  | ${'powershell'} | ${"with 'single quote'"} | ${"'with ''single quote'''"}
+    ${'win32'}  | ${'cmd.exe'}    | ${"with 'single quote'"} | ${'"with \'single quote\'"'}
+    ${'linux'}  | ${'bash'}       | ${"with 'single quote'"} | ${'"with \\\'single quote\\\'"'}
+    ${'win32'}  | ${undefined}    | ${"with 'single quote'"} | ${'"with \'single quote\'"'}
+    ${'linux'}  | ${undefined}    | ${"with 'single quote'"} | ${'"with \\\'single quote\\\'"'}
+    ${'win32'}  | ${'powershell'} | ${'with "double quote"'} | ${'\'with ""double quote""\''}
+    ${'win32'}  | ${'cmd.exe'}    | ${'with "double quote"'} | ${'"with ""double quote"""'}
+    ${'linux'}  | ${'bash'}       | ${'with "double quote"'} | ${'"with \\"double quote\\""'}
+    ${'win32'}  | ${'powershell'} | ${'with \\$name\\.txt'}  | ${"'with \\$name\\.txt'"}
+    ${'win32'}  | ${'cmd.exe'}    | ${'with \\$name\\.txt'}  | ${'"with \\$name\\.txt"'}
+    ${'linux'}  | ${'bash'}       | ${'with \\$name\\.txt'}  | ${'"with \\\\\\$name\\\\.txt"'}
+    ${'win32'}  | ${'powershell'} | ${''}                    | ${"''"}
+    ${'win32'}  | ${undefined}    | ${''}                    | ${'""'}
+    ${'darwin'} | ${undefined}    | ${''}                    | ${'""'}
+    ${'win32'}  | ${'powershell'} | ${'with \\ and \\\\'}    | ${"'with \\ and \\\\\\\\'"}
+    ${'win32'}  | ${undefined}    | ${'with \\ and \\\\'}    | ${'"with \\ and \\\\\\\\"'}
+    ${'linux'}  | ${undefined}    | ${'with \\ and \\\\'}    | ${'"with \\\\ and \\\\\\\\"'}
+    ${'win32'}  | ${'powershell'} | ${'something\\'}         | ${"'something\\'"}
+    ${'win32'}  | ${undefined}    | ${'something\\'}         | ${'something\\'}
+    ${'darwin'} | ${undefined}    | ${'something\\'}         | ${'something\\\\'}
+  `('can quote "$str" for $shell on $platform', ({ platform, shell, str, expected }) => {
+    jest.resetAllMocks();
+    mockPlatform.mockReturnValueOnce(platform);
+    expect(shellQuote(str, shell)).toEqual(expected);
   });
 });

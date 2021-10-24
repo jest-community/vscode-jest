@@ -3,6 +3,9 @@ jest.unmock('../test-helper');
 jest.unmock('../../src/JestProcessManagement/helper');
 jest.unmock('../../src/helpers');
 
+const mockPlatform = jest.fn();
+jest.mock('os', () => ({ platform: mockPlatform }));
+
 import { Runner } from 'jest-editor-support';
 import { JestProcess, RunnerEvents } from '../../src/JestProcessManagement/JestProcess';
 import { EventEmitter } from 'events';
@@ -238,6 +241,38 @@ describe('JestProcess', () => {
       expect(RunnerClassMock).toBeCalledTimes(1);
       expect(mockRunner.start).toBeCalledTimes(1);
       expect(p1).toBe(p2);
+    });
+    describe('can prepare testNamePattern for used in correspoding spawned shell', () => {
+      it.each`
+        platform    | shell           | testNamePattern                   | expected
+        ${'win32'}  | ${undefined}    | ${'with special $character.abc*'} | ${'"with special \\$character\\.abc\\*"'}
+        ${'win32'}  | ${'CMD.EXE'}    | ${'with special $character.abc*'} | ${'"with special \\$character\\.abc\\*"'}
+        ${'win32'}  | ${'powershell'} | ${'with special $character.abc*'} | ${"'with special \\$character\\.abc\\*'"}
+        ${'darwin'} | ${undefined}    | ${'with special $character.abc*'} | ${'"with special \\\\\\$character\\\\.abc\\\\*"'}
+        ${'darwin'} | ${'zsh'}        | ${'with special $character.abc*'} | ${'"with special \\\\\\$character\\\\.abc\\\\*"'}
+        ${'win32'}  | ${undefined}    | ${'with "$double quote"'}         | ${'"with ""\\$double quote"""'}
+        ${'win32'}  | ${'powershell'} | ${'with "$double quote"'}         | ${'\'with ""\\$double quote""\''}
+        ${'linux'}  | ${'bash'}       | ${'with "$double quote"'}         | ${'"with \\"\\\\\\$double quote\\""'}
+        ${'win32'}  | ${undefined}    | ${"with '$single quote'"}         | ${'"with \'\\$single quote\'"'}
+        ${'win32'}  | ${'powershell'} | ${"with '$single quote'"}         | ${"'with ''\\$single quote'''"}
+        ${'darwin'} | ${'bash'}       | ${"with '$single quote'"}         | ${'"with \\\'\\\\\\$single quote\\\'"'}
+      `(
+        'convert "$testNamePattern" on $platform, $shell',
+        ({ platform, shell, testNamePattern, expected }) => {
+          expect.hasAssertions();
+          mockPlatform.mockReturnValue(platform);
+          const request = mockRequest('by-file-test-pattern', {
+            type: 'by-file-test-pattern',
+            testFileNamePattern: 'abc',
+            testNamePattern,
+          });
+          extContext.settings = { shell };
+          jestProcess = new JestProcess(extContext, request);
+          jestProcess.start();
+          const [, options] = RunnerClassMock.mock.calls[0];
+          expect(options.testNamePattern).toEqual(expected);
+        }
+      );
     });
   });
 
