@@ -276,14 +276,15 @@ describe('JestExt', () => {
       });
     });
     it.each`
-      configNames                        | shouldShowWarning | debugMode
-      ${undefined}                       | ${true}           | ${true}
-      ${[]}                              | ${true}           | ${true}
-      ${['a', 'b']}                      | ${true}           | ${false}
-      ${['a', 'vscode-jest-tests', 'b']} | ${false}          | ${false}
+      configNames                           | shouldShowWarning | debugMode | v2
+      ${undefined}                          | ${true}           | ${true}   | ${false}
+      ${[]}                                 | ${true}           | ${true}   | ${false}
+      ${['a', 'b']}                         | ${true}           | ${false}  | ${false}
+      ${['a', 'vscode-jest-tests.v2', 'b']} | ${false}          | ${false}  | ${true}
+      ${['a', 'vscode-jest-tests', 'b']}    | ${false}          | ${false}  | ${false}
     `(
       'provides setup wizard in warning message if no "vscode-jest-tests" in launch.json: $configNames',
-      async ({ configNames, shouldShowWarning, debugMode }) => {
+      async ({ configNames, shouldShowWarning, debugMode, v2 }) => {
         expect.hasAssertions();
         const testNamePattern = 'testNamePattern';
         mockConfigurations = configNames ? configNames.map((name) => ({ name })) : undefined;
@@ -303,7 +304,7 @@ describe('JestExt', () => {
         } else {
           // debug with existing config
           expect(vscode.debug.startDebugging).toHaveBeenLastCalledWith(workspaceFolder, {
-            name: 'vscode-jest-tests',
+            name: v2 ? 'vscode-jest-tests.v2' : 'vscode-jest-tests',
           });
         }
 

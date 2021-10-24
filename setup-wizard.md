@@ -55,13 +55,13 @@ Because the extension appends additional options to this commandLine at run time
 **Please note, `"jest.jestCommandLine"` setting is required to configure the debug config below.**
 
 ### Debug Config
-When clicked on the debug codeLens, the extension will look for a debug config named `"vscode-jest-tests"`, and append the additional arguments (such as `--testNamePattern`) when launching the debugger.
+When clicked on the debug codeLens, the extension will look for a debug config named `"vscode-jest-tests.v2"` or `"vscode-jest-tests"`, and translate the jest specific information when launching the debugger.
 
 If there is no existing `"jest.jestCommandLine"`, it will suggest to set one up before proceed, after all, a working jest environment is the prerequisite of this extension.
 
 The wizard will examine the `launch.json` for existing config. If found, users can choose to use it as it is, replace (rename the old one and generate a new one) or manually editing it; if not found, wizard will try to [generate](#note-2) a new one. 
 
-The debug config is saved in `launch.json` in workspace folder and shown at the end of the setup for review or adjustment. If the user chooses to "replace" the existing config, the old configure will be renamed to `vscode-jest-tests-xxxxx` for reference purpose only, which can be safely deleted if not needed.
+The debug config is saved in `launch.json` in workspace folder and shown at the end of the setup for review or adjustment. If the user chooses to "replace" the existing config, the old configure will be renamed to `vscode-jest-tests.v2-xxxxx` for reference purpose only, which can be safely deleted if not needed.
 
 The generated config probably work fine for most projects, but could require further adjustment for projects including but not limited to the following:
 - projects use different jest config between debug and regular test run
@@ -110,7 +110,7 @@ Check out [here](#note-4) if you are having problem running vscode-jest debug co
     ...
      {
        type: "node",
-       name: "vscode-jest-tests",
+       name: "vscode-jest-tests.v2",
        ...
        program = "${workspaceFolder}/node_modules/.bin/jest",
        windows = {

@@ -455,15 +455,18 @@ export class JestExt {
       escapeRegExp(idString('full-name', testId))
     );
 
-    let debugConfig = vscode.workspace
+    const configs = vscode.workspace
       .getConfiguration('launch', this.extContext.workspace.uri)
-      ?.get<vscode.DebugConfiguration[]>('configurations')
-      ?.filter((config) => config.name === 'vscode-jest-tests')[0];
+      ?.get<vscode.DebugConfiguration[]>('configurations');
+    let debugConfig =
+      configs?.find((c) => c.name === 'vscode-jest-tests.v2') ??
+      configs?.find((c) => c.name === 'vscode-jest-tests');
+
     if (!debugConfig) {
       messaging.systemWarningMessage(
         prefixWorkspace(
           this.extContext,
-          'No debug config named "vscode-jest-tests" found in launch.json, will use a default config.\nIf you encountered debugging problems, feel free to try the setup wizard below'
+          'No debug config named "vscode-jest-tests.v2" or "vscode-jest-tests" found in launch.json, will use a default config.\nIf you encountered debugging problems, feel free to try the setup wizard below'
         ),
         this.setupWizardAction('debugConfig')
       );
