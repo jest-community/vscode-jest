@@ -651,6 +651,7 @@ describe('JestExt', () => {
         ${'javascriptreact'} | ${false}
         ${'typescript'}      | ${false}
         ${'typescriptreact'} | ${false}
+        ${'vue'}             | ${false}
       `('if languageId=languageId => skip? $shouldSkip', ({ languageId, shouldSkip }) => {
         const editor = mockEditor('file', languageId);
         sut.triggerUpdateActiveEditor(editor);

@@ -5,4 +5,5 @@ export const SupportedLanguageIds = [
   'javascriptreact',
   'typescript',
   'typescriptreact',
+  'vue',
 ];
