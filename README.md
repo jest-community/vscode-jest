@@ -517,7 +517,9 @@ Currently supported variables:
   }
   ``` 
 </details>
+
 ## Commands
+
 This extension contributes the following commands and can be accessed via [Command Palette](https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette):
 |command|description|availability|
 |---|---|---|
