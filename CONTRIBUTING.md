@@ -55,7 +55,7 @@ yarn install
 code .
 ```
 
-The other part is inside the [jest-editor-support](https://github.com/jest-community/jest-editor-support)".
+The other part is inside the [jest-editor-support](https://github.com/jest-community/jest-editor-support).
 
 It's very possible that you're going to want to make changes inside here, if you're doing something that touches the test runner process or file parsers. To get that set up to work I'd recommend doing this:
 
