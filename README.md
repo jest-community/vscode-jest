@@ -521,6 +521,8 @@ Currently supported variables:
 ## Commands
 
 This extension contributes the following commands and can be accessed via [Command Palette](https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette):
+
+
 |command|description|availability|
 |---|---|---|
 |Jest: Start All Runners| start or restart all jest runners|always
@@ -539,6 +541,8 @@ One can assign keyboard shortcut to any of these commands, see [vscode Key Bindi
 
 ## Menu
 In interactive mode, user can trigger the following action from the text editor context-menu
+
+
 |menu|description|keyboard shortcut
 |---|---|---|
 |Jest: Run Related Tests| if in test file, run all tests in the file; if in source file, run all tests with dependency to the file|Ctrl-Option-t (Mac) or Ctrl-Alt-t|
