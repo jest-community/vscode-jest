@@ -591,7 +591,8 @@ If the above did not resolve your issue, please see the [self-diagnosis](#self-d
 <details>
 <summary><a id='self-diagnosis'></a>The extension is not behaving as expected, what is going on? (try self diagnosis)</summary>
 
-If your can execute jest tests on command line but vscode-jest was not running as expected, here is what you can do to find out more information:
+If you can execute jest tests on command line but vscode-jest was not running as expected, here is what you can do to find out more information:
+  - [Try configuring the `jest.jestCommandLine`](#jestcommandline) with `yarn test` or `npm run test --`. The extension can auto-config common configurations like create react apps but not custom scripts like [CRACO](https://github.com/gsoft-inc/craco).
   - You can see jest process output with either one of the methods:
     - If you uses TestExplorer, you can see color coded jest output from the TestExplorer's Output terminal (the square arrow icon on the top of the Explorer View) 
     - Otherwise you can see the output in "OUTPUT" channel, which is usually named after the workspace folder, such as `Jest (your-workspace-name)`. Or you can click on `Jest` label on status bar to show Jest Output window. This will show you the jest run output and the errors.
