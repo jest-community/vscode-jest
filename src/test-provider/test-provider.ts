@@ -28,6 +28,8 @@ export class JestTestProvider {
 
     this.context = new JestTestProviderContext(jestContext, this.controller);
     this.workspaceRoot = new WorkspaceRoot(this.context);
+
+    vscode.commands.executeCommand('testing.showMostRecentOutput');
   }
 
   private createController = (

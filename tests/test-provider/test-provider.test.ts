@@ -90,6 +90,11 @@ describe('JestTestProvider', () => {
 
       expect(WorkspaceRoot).toBeCalled();
     });
+    it('will open testExplorer output terminal', () => {
+      new JestTestProvider(extExplorerContextMock);
+      expect(vscode.commands.executeCommand).toBeCalledTimes(1);
+      expect(vscode.commands.executeCommand).toBeCalledWith('testing.showMostRecentOutput');
+    });
     it.each`
       isWatchMode | createRunProfile
       ${true}     | ${false}
