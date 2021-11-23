@@ -253,7 +253,8 @@ export class WorkspaceRoot extends TestItemDataBase {
     }
   };
 
-  private getItemFromProcess = (process: JestProcessInfo): vscode.TestItem => {
+  /** get test item from jest process. If running tests from source file, will return undefined */
+  private getItemFromProcess = (process: JestProcessInfo): vscode.TestItem | undefined => {
     let fileName;
     switch (process.request.type) {
       case 'watch-tests':
@@ -270,15 +271,11 @@ export class WorkspaceRoot extends TestItemDataBase {
         throw new Error(`unsupported external process type ${process.request.type}`);
     }
 
-    const item = this.testDocuments.get(fileName)?.item;
-    if (item) {
-      return item;
-    }
-    throw new Error(`No test file found for ${fileName}`);
+    return this.testDocuments.get(fileName)?.item;
   };
 
   private createTestItemRun = (event: JestRunEvent): TestItemRun => {
-    const item = this.getItemFromProcess(event.process);
+    const item = this.getItemFromProcess(event.process) ?? this.item;
     const run = this.createRun(`${event.type}:${event.process.id}`, item);
     const end = () => {
       this.cachedRun.delete(event.process.id);

@@ -506,6 +506,7 @@ describe('JestExt', () => {
         ${{ watch: true }}                           | ${'javascript'} | ${'yes'}     | ${false}       | ${false}
         ${{ watch: false }}                          | ${'javascript'} | ${'yes'}     | ${false}       | ${true}
         ${{ watch: false, onSave: 'test-src-file' }} | ${'javascript'} | ${'no'}      | ${true}        | ${false}
+        ${{ watch: false, onSave: 'test-src-file' }} | ${'javascript'} | ${'unknown'} | ${true}        | ${false}
         ${{ watch: false, onSave: 'test-src-file' }} | ${'javascript'} | ${'yes'}     | ${true}        | ${false}
         ${{ watch: false, onSave: 'test-src-file' }} | ${'json'}       | ${'no'}      | ${false}       | ${false}
         ${{ watch: false, onSave: 'test-file' }}     | ${'javascript'} | ${'no'}      | ${false}       | ${true}
@@ -533,7 +534,11 @@ describe('JestExt', () => {
 
           if (shouldSchedule) {
             expect(mockProcessSession.scheduleProcess).toBeCalledWith(
-              expect.objectContaining({ type: 'by-file', testFileName: fileName })
+              expect.objectContaining({
+                type: 'by-file',
+                testFileName: fileName,
+                notTestFile: isTestFile !== 'yes',
+              })
             );
           } else {
             expect(mockProcessSession.scheduleProcess).not.toBeCalled();
@@ -888,20 +893,69 @@ describe('JestExt', () => {
     });
   });
   describe('runAllTests', () => {
-    it('can run all test for the workspace', () => {
-      const sut = newJestExt();
-      sut.runAllTests();
-      expect(mockProcessSession.scheduleProcess).toBeCalledWith({ type: 'all-tests' });
-    });
-    it('can run all test for the given editor', () => {
-      const sut = newJestExt();
-      const editor: any = { document: { fileName: 'whatever' } };
-      sut.runAllTests(editor);
-      expect(mockProcessSession.scheduleProcess).toBeCalledWith({
-        type: 'by-file',
-        testFileName: 'whatever',
+    describe.each`
+      scheduleProcess
+      ${{}}
+      ${undefined}
+    `('scheduleProcess returns $scheduleProcess', ({ scheduleProcess }) => {
+      beforeEach(() => {
+        mockProcessSession.scheduleProcess.mockReturnValueOnce(scheduleProcess);
+      });
+      it('can run all test for the workspace', () => {
+        const sut = newJestExt();
+        const dirtyFiles: any = sut['dirtyFiles'];
+        dirtyFiles.clear = jest.fn();
+
+        sut.runAllTests();
+        expect(mockProcessSession.scheduleProcess).toBeCalledWith({ type: 'all-tests' });
+        if (scheduleProcess) {
+          expect(dirtyFiles.clear).toBeCalled();
+        } else {
+          expect(dirtyFiles.clear).not.toBeCalled();
+        }
+      });
+      it('can run all test for the given editor', () => {
+        const sut = newJestExt();
+
+        const dirtyFiles: any = sut['dirtyFiles'];
+        dirtyFiles.delete = jest.fn();
+
+        const editor: any = { document: { fileName: 'whatever' } };
+
+        sut.runAllTests(editor);
+        expect(mockProcessSession.scheduleProcess).toBeCalledWith({
+          type: 'by-file',
+          testFileName: editor.document.fileName,
+          notTestFile: true,
+        });
+        if (scheduleProcess) {
+          expect(dirtyFiles.delete).toBeCalledWith(editor.document.fileName);
+        } else {
+          expect(dirtyFiles.delete).not.toBeCalled();
+        }
       });
     });
+    it.each`
+      isTestFile   | notTestFile
+      ${'yes'}     | ${false}
+      ${'no'}      | ${true}
+      ${'unknown'} | ${true}
+    `(
+      'treat unknown as notTestFile: isTestFile=$isTestFile => notTestFile=$notTestFile',
+      ({ isTestFile, notTestFile }) => {
+        const sut = newJestExt();
+        const editor: any = { document: { fileName: 'whatever' } };
+
+        (sut.testResultProvider.isTestFile as jest.Mocked<any>).mockReturnValueOnce(isTestFile);
+
+        sut.runAllTests(editor);
+        expect(mockProcessSession.scheduleProcess).toBeCalledWith({
+          type: 'by-file',
+          testFileName: editor.document.fileName,
+          notTestFile: notTestFile,
+        });
+      }
+    );
   });
   describe('refresh test file list upon file system change', () => {
     const getProcessType = () => {

@@ -488,6 +488,7 @@ export class JestExt {
         this.processSession.scheduleProcess({
           type: 'by-file',
           testFileName: name,
+          notTestFile: this.testResultProvider.isTestFile(name) !== 'yes',
         })
       ) {
         this.dirtyFiles.delete(name);
@@ -524,14 +525,15 @@ export class JestExt {
     if (!this.isSupportedDocument(document) || this.extContext.autoRun.isWatch) {
       return;
     }
+    const isTestFile = this.testResultProvider.isTestFile(document.fileName);
     if (
       this.extContext.autoRun.onSave &&
-      (this.extContext.autoRun.onSave === 'test-src-file' ||
-        this.testResultProvider.isTestFile(document.fileName) !== 'no')
+      (this.extContext.autoRun.onSave === 'test-src-file' || isTestFile !== 'no')
     ) {
       this.processSession.scheduleProcess({
         type: 'by-file',
         testFileName: document.fileName,
+        notTestFile: isTestFile !== 'yes',
       });
     } else {
       this.dirtyFiles.add(document.fileName);
