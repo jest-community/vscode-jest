@@ -15,6 +15,7 @@ const addSubscriptions = (context: vscode.ExtensionContext): void => {
     { language: 'javascriptreact' },
     { language: 'typescript' },
     { language: 'typescriptreact' },
+    { language: 'vue' },
   ];
 
   // command function

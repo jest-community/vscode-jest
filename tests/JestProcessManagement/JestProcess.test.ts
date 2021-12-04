@@ -140,7 +140,8 @@ describe('JestProcess', () => {
       ${'all-tests'}            | ${undefined}                                                     | ${[false, false]} | ${true}         | ${undefined}
       ${'watch-tests'}          | ${undefined}                                                     | ${[true, false]}  | ${true}         | ${undefined}
       ${'watch-all-tests'}      | ${undefined}                                                     | ${[true, true]}   | ${true}         | ${undefined}
-      ${'by-file'}              | ${{ testFileName: '"c:\\a\\b.ts"' }}                             | ${[false, false]} | ${true}         | ${{ args: { args: ['--findRelatedTests'] }, testFileNamePattern: '"C:\\a\\b.ts"' }}
+      ${'by-file'}              | ${{ testFileName: '"c:\\a\\b.ts"' }}                             | ${[false, false]} | ${true}         | ${{ args: { args: [] }, testFileNamePattern: '"C:\\a\\b.ts"' }}
+      ${'by-file'}              | ${{ testFileName: '"c:\\a\\b.ts"', notTestFile: true }}          | ${[false, false]} | ${true}         | ${{ args: { args: ['--findRelatedTests'] }, testFileNamePattern: '"C:\\a\\b.ts"' }}
       ${'by-file-test'}         | ${{ testFileName: '"/a/b.js"', testNamePattern: 'a test' }}      | ${[false, false]} | ${true}         | ${{ args: { args: ['--runTestsByPath'] }, testFileNamePattern: '"/a/b.js"', testNamePattern: '"a test"' }}
       ${'by-file-pattern'}      | ${{ testFileNamePattern: '"c:\\a\\b.ts"' }}                      | ${[false, false]} | ${true}         | ${{ args: { args: ['--testPathPattern', '"c:\\\\a\\\\b\\.ts"'] } }}
       ${'by-file-test-pattern'} | ${{ testFileNamePattern: '/a/b.js', testNamePattern: 'a test' }} | ${[false, false]} | ${true}         | ${{ args: { args: ['--testPathPattern', '"/a/b\\.js"'] }, testNamePattern: '"a test"' }}
