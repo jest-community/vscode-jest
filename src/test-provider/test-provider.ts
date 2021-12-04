@@ -65,9 +65,9 @@ export class JestTestProvider {
     );
     try {
       const data = this.context.getData(theItem);
-      if (data) {
+      if (data && data.discoverTest) {
         this.context.appendOutput(`resolving children for ${theItem.id}`, run, true);
-        data.discoverTest?.(run);
+        data.discoverTest(run);
       } else {
         this.context.appendOutput(`no data found for item ${theItem.id}`, run, true, 'red');
       }
