@@ -55,6 +55,7 @@ export type JestProcessRequestBase =
       type: Extract<JestTestProcessType, 'by-file'>;
       testFileName: string;
       updateSnapshot?: boolean;
+      notTestFile?: boolean;
     }
   | {
       type: Extract<JestTestProcessType, 'by-file-test'>;

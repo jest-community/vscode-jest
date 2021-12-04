@@ -308,7 +308,7 @@
       ],
       "editor/context": [
         {
-          "when": "jest:run.interactive && editorLangId =~ /(javascript|javascriptreact|typescript|typescriptreact)/ ",
+          "when": "jest:run.interactive && editorLangId =~ /(javascript|javascriptreact|typescript|typescriptreact|vue)/ ",
           "command": "io.orta.jest.editor.run-all-tests",
           "group": "Jest"
         }
@@ -319,7 +319,7 @@
         "command": "io.orta.jest.editor.run-all-tests",
         "key": "ctrl+alt+t",
         "mac": "ctrl+alt+t",
-        "when": "jest:run.interactive && editorLangId =~ /(javascript|javascriptreact|typescript|typescriptreact)/ "
+        "when": "jest:run.interactive && editorLangId =~ /(javascript|javascriptreact|typescript|typescriptreact|vue)/ "
       }
     ],
     "debuggers": [

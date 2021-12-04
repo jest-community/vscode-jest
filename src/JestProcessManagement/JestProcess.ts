@@ -119,7 +119,10 @@ export class JestProcess implements JestProcessInfo {
         break;
       case 'by-file': {
         options.testFileNamePattern = this.quoteFileName(this.request.testFileName);
-        args.push('--findRelatedTests', '--watchAll=false');
+        args.push('--watchAll=false');
+        if (this.request.notTestFile) {
+          args.push('--findRelatedTests');
+        }
         if (this.request.updateSnapshot) {
           args.push('--updateSnapshot');
         }
