@@ -28,8 +28,6 @@ export class JestTestProvider {
 
     this.context = new JestTestProviderContext(jestContext, this.controller);
     this.workspaceRoot = new WorkspaceRoot(this.context);
-
-    vscode.commands.executeCommand('testing.showMostRecentOutput');
   }
 
   private createController = (
@@ -65,14 +63,14 @@ export class JestTestProvider {
       new vscode.TestRunRequest([theItem]),
       `disoverTest: ${this.controller.id}`
     );
-    const data = this.context.getData(theItem);
-    run.appendOutput(
-      `${
-        data ? `resolving children for ${theItem.id}\r\n` : `no data found for item ${theItem.id}`
-      }`
-    );
     try {
-      data?.discoverTest?.(run);
+      const data = this.context.getData(theItem);
+      if (data) {
+        this.context.appendOutput(`resolving children for ${theItem.id}`, run, true);
+        data.discoverTest?.(run);
+      } else {
+        this.context.appendOutput(`no data found for item ${theItem.id}`, run, true, 'red');
+      }
     } catch (e) {
       this.log('error', `[JestTestProvider]: discoverTest error for "${theItem.id}" : `, e);
       theItem.error = `discoverTest error: ${JSON.stringify(e)}`;

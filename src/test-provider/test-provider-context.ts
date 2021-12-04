@@ -80,5 +80,15 @@ export class JestTestProviderContext {
       text = `${COLORS[color]}${text}${COLORS['end']}`;
     }
     run.appendOutput(`${text}${newLine ? '\r\n' : ''}`);
+    showTestExplorerTerminal();
   };
 }
+
+/** show TestExplorer Terminal on first invocation only */
+let showTerminal = true;
+const showTestExplorerTerminal = () => {
+  if (showTerminal) {
+    showTerminal = false;
+    vscode.commands.executeCommand('testing.showMostRecentOutput');
+  }
+};
