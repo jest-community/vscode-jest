@@ -82,6 +82,16 @@ describe('test-item-data', () => {
       .mockImplementation((uri, p) => ({ fsPath: `${uri.fsPath}/${p}` }));
     vscode.Uri.file = jest.fn().mockImplementation((f) => ({ fsPath: f }));
   });
+  describe('show TestExplorer Terminal', () => {
+    it('show TestExplorer Terminal on first run output only', () => {
+      context.appendOutput('first time should open terminal', runMock);
+      expect(vscode.commands.executeCommand).toBeCalledTimes(1);
+      expect(vscode.commands.executeCommand).toBeCalledWith('testing.showMostRecentOutput');
+
+      context.appendOutput('subsequent calls will not open terminal again', runMock);
+      expect(vscode.commands.executeCommand).toBeCalledTimes(1);
+    });
+  });
   describe('discover children', () => {
     describe('WorkspaceRoot', () => {
       it('create test document tree for testFiles list', () => {
