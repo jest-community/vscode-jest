@@ -28,6 +28,10 @@ describe('ProcessSession', () => {
     context = mockJestProcessContext();
   });
   describe('scheduleProcess', () => {
+    const transform = (rRequest) => {
+      rRequest.schedule.queue = 'blocking-2';
+      return rRequest;
+    };
     it('will fire event for successful schedule', () => {
       const sm = createProcessSession(context);
 
@@ -43,15 +47,16 @@ describe('ProcessSession', () => {
       expect(context.onRunEvent.fire).toBeCalledWith({ type: 'scheduled', process });
     });
     it.each`
-      type                      | inputProperty                                                | expectedSchedule                                                                        | expectedExtraProperty
-      ${'all-tests'}            | ${undefined}                                                 | ${{ queue: 'blocking', dedup: { filterByStatus: ['pending'] } }}                        | ${undefined}
-      ${'watch-tests'}          | ${undefined}                                                 | ${{ queue: 'blocking', dedup: { filterByStatus: ['pending'] } }}                        | ${undefined}
-      ${'watch-all-tests'}      | ${undefined}                                                 | ${{ queue: 'blocking', dedup: { filterByStatus: ['pending'] } }}                        | ${undefined}
-      ${'by-file'}              | ${{ testFileName: 'abc' }}                                   | ${{ queue: 'blocking', dedup: { filterByStatus: ['pending'] } }}                        | ${undefined}
-      ${'by-file-test'}         | ${{ testFileName: 'abc', testNamePattern: 'a test' }}        | ${{ queue: 'blocking', dedup: { filterByStatus: ['pending'], filterByContent: true } }} | ${undefined}
-      ${'by-file-pattern'}      | ${{ testFileNamePattern: 'abc' }}                            | ${{ queue: 'blocking', dedup: { filterByStatus: ['pending'] } }}                        | ${undefined}
-      ${'by-file-test-pattern'} | ${{ testFileNamePattern: 'abc', testNamePattern: 'a test' }} | ${{ queue: 'blocking', dedup: { filterByStatus: ['pending'], filterByContent: true } }} | ${undefined}
-      ${'list-test-files'}      | ${undefined}                                                 | ${{ queue: 'non-blocking', dedup: { filterByStatus: ['pending'] } }}                    | ${{ type: 'not-test', args: ['--listTests', '--json', '--watchAll=false'] }}
+      type                      | inputProperty                                                | expectedSchedule                                                                          | expectedExtraProperty
+      ${'all-tests'}            | ${undefined}                                                 | ${{ queue: 'blocking', dedup: { filterByStatus: ['pending'] } }}                          | ${undefined}
+      ${'all-tests'}            | ${{ transform }}                                             | ${{ queue: 'blocking-2', dedup: { filterByStatus: ['pending'] } }}                        | ${undefined}
+      ${'watch-tests'}          | ${undefined}                                                 | ${{ queue: 'blocking', dedup: { filterByStatus: ['pending'] } }}                          | ${undefined}
+      ${'watch-all-tests'}      | ${undefined}                                                 | ${{ queue: 'blocking', dedup: { filterByStatus: ['pending'] } }}                          | ${undefined}
+      ${'by-file'}              | ${{ testFileName: 'abc' }}                                   | ${{ queue: 'blocking-2', dedup: { filterByStatus: ['pending'] } }}                        | ${undefined}
+      ${'by-file-test'}         | ${{ testFileName: 'abc', testNamePattern: 'a test' }}        | ${{ queue: 'blocking-2', dedup: { filterByStatus: ['pending'], filterByContent: true } }} | ${undefined}
+      ${'by-file-pattern'}      | ${{ testFileNamePattern: 'abc' }}                            | ${{ queue: 'blocking-2', dedup: { filterByStatus: ['pending'] } }}                        | ${undefined}
+      ${'by-file-test-pattern'} | ${{ testFileNamePattern: 'abc', testNamePattern: 'a test' }} | ${{ queue: 'blocking-2', dedup: { filterByStatus: ['pending'], filterByContent: true } }} | ${undefined}
+      ${'list-test-files'}      | ${undefined}                                                 | ${{ queue: 'non-blocking', dedup: { filterByStatus: ['pending'] } }}                      | ${{ type: 'not-test', args: ['--listTests', '--json', '--watchAll=false'] }}
     `(
       "can schedule '$type' request with ProcessManager",
       ({ type, inputProperty, expectedSchedule, expectedExtraProperty }) => {

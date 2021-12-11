@@ -140,8 +140,8 @@ describe('JestProcess', () => {
       ${'all-tests'}            | ${undefined}                                                     | ${[false, false]} | ${true}         | ${undefined}
       ${'watch-tests'}          | ${undefined}                                                     | ${[true, false]}  | ${true}         | ${undefined}
       ${'watch-all-tests'}      | ${undefined}                                                     | ${[true, true]}   | ${true}         | ${undefined}
-      ${'by-file'}              | ${{ testFileName: '"c:\\a\\b.ts"' }}                             | ${[false, false]} | ${true}         | ${{ args: { args: [] }, testFileNamePattern: '"C:\\a\\b.ts"' }}
-      ${'by-file'}              | ${{ testFileName: '"c:\\a\\b.ts"', notTestFile: true }}          | ${[false, false]} | ${true}         | ${{ args: { args: ['--findRelatedTests'] }, testFileNamePattern: '"C:\\a\\b.ts"' }}
+      ${'by-file'}              | ${{ testFileName: '"c:\\a\\b.ts"' }}                             | ${[false, false]} | ${true}         | ${{ args: { args: ['--runTestsByPath'] }, testFileNamePattern: '"C:\\a\\b.ts"' }}
+      ${'by-file'}              | ${{ testFileName: '"c:\\a\\b.ts"', notTestFile: true }}          | ${[false, false]} | ${true}         | ${{ args: { args: ['--findRelatedTests', '"C:\\a\\b.ts"'] } }}
       ${'by-file-test'}         | ${{ testFileName: '"/a/b.js"', testNamePattern: 'a test' }}      | ${[false, false]} | ${true}         | ${{ args: { args: ['--runTestsByPath'] }, testFileNamePattern: '"/a/b.js"', testNamePattern: '"a test"' }}
       ${'by-file-pattern'}      | ${{ testFileNamePattern: '"c:\\a\\b.ts"' }}                      | ${[false, false]} | ${true}         | ${{ args: { args: ['--testPathPattern', '"c:\\\\a\\\\b\\.ts"'] } }}
       ${'by-file-test-pattern'} | ${{ testFileNamePattern: '/a/b.js', testNamePattern: 'a test' }} | ${[false, false]} | ${true}         | ${{ args: { args: ['--testPathPattern', '"/a/b\\.js"'] }, testNamePattern: '"a test"' }}
@@ -232,7 +232,7 @@ describe('JestProcess', () => {
         expect(options.args.args).not.toContain('--updateSnapshot');
       }
     });
-    it('starting on a running process does nothing but returns the same promise', async () => {
+    it('starting on a running process does nothing but returns the same promise', () => {
       expect.hasAssertions();
       const request = mockRequest('all-tests');
       jestProcess = new JestProcess(extContext, request);
@@ -273,6 +273,22 @@ describe('JestProcess', () => {
           const [, options] = RunnerClassMock.mock.calls[0];
           expect(options.testNamePattern).toEqual(expected);
         }
+      );
+    });
+    it('uses different output suffix for blocking-2 queue', () => {
+      expect.hasAssertions();
+      const request = mockRequest('all-tests');
+
+      const jestProcess1 = new JestProcess(extContext, request);
+      jestProcess1.start();
+      expect(extContext.createRunnerWorkspace).toBeCalledWith(undefined);
+
+      const request2 = mockRequest('by-file', { testFileName: 'abc' });
+      request2.schedule.queue = 'blocking-2';
+      const jestProcess2 = new JestProcess(extContext, request2);
+      jestProcess2.start();
+      expect(extContext.createRunnerWorkspace).toBeCalledWith(
+        expect.objectContaining({ outputFileSuffix: expect.anything() })
       );
     });
   });

@@ -6,6 +6,7 @@ import {
   requestString,
   QueueType,
   JestProcessInfo,
+  JestProcessRequestTransform,
 } from '../JestProcessManagement';
 import { JestTestProcessType } from '../Settings';
 import { RunTestListener, ListTestFileListener } from './process-listeners';
@@ -24,6 +25,14 @@ export type InternalRequestBase =
     };
 
 export type JestExtRequestType = JestProcessRequestBase | InternalRequestBase;
+const isJestProcessRequestBase = (request: JestExtRequestType): request is JestProcessRequestBase =>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  typeof (request as any).transform === 'function';
+const getTransform = (request: JestExtRequestType): JestProcessRequestTransform | undefined => {
+  if (isJestProcessRequestBase(request)) {
+    return request.transform;
+  }
+};
 
 const ProcessScheduleStrategy: Record<JestTestProcessType, ScheduleStrategy> = {
   // abort if there is already an pending request
@@ -36,19 +45,19 @@ const ProcessScheduleStrategy: Record<JestTestProcessType, ScheduleStrategy> = {
 
   // abort if there is already identical pending request
   'by-file': {
-    queue: 'blocking',
+    queue: 'blocking-2',
     dedup: { filterByStatus: ['pending'] },
   },
   'by-file-test': {
-    queue: 'blocking',
+    queue: 'blocking-2',
     dedup: { filterByStatus: ['pending'], filterByContent: true },
   },
   'by-file-pattern': {
-    queue: 'blocking',
+    queue: 'blocking-2',
     dedup: { filterByStatus: ['pending'] },
   },
   'by-file-test-pattern': {
-    queue: 'blocking',
+    queue: 'blocking-2',
     dedup: { filterByStatus: ['pending'], filterByContent: true },
   },
   'not-test': {
@@ -130,6 +139,11 @@ export const createProcessSession = (context: JestExtProcessContext): ProcessSes
   };
 
   const createProcessRequest = (request: JestExtRequestType): JestProcessRequest => {
+    const transform = (pRequest: JestProcessRequest): JestProcessRequest => {
+      const t = getTransform(request);
+      return t ? t(pRequest) : pRequest;
+    };
+
     const lSession = listenerSession;
     switch (request.type) {
       case 'all-tests':
@@ -140,11 +154,11 @@ export const createProcessSession = (context: JestExtProcessContext): ProcessSes
       case 'by-file-test':
       case 'by-file-test-pattern': {
         const schedule = ProcessScheduleStrategy[request.type];
-        return {
+        return transform({
           ...request,
           listener: new RunTestListener(lSession),
           schedule,
-        };
+        });
       }
       case 'update-snapshot': {
         const snapshotRequest = createSnapshotRequest(request.baseRequest);
@@ -153,21 +167,21 @@ export const createProcessSession = (context: JestExtProcessContext): ProcessSes
           queue: 'non-blocking' as QueueType,
         };
 
-        return {
+        return transform({
           ...snapshotRequest,
           listener: new RunTestListener(lSession),
           schedule,
-        };
+        });
       }
       case 'list-test-files': {
         const schedule = ProcessScheduleStrategy['not-test'];
-        return {
+        return transform({
           ...request,
           type: 'not-test',
           args: ['--listTests', '--json', '--watchAll=false'],
           listener: new ListTestFileListener(lSession, request.onResult),
           schedule,
-        };
+        });
       }
     }
     throw new Error(`Unexpected process type ${request.type}`);

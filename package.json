@@ -2,10 +2,10 @@
   "name": "vscode-jest",
   "displayName": "Jest",
   "description": "Use Facebook's Jest With Pleasure.",
-  "version": "4.3.0-rc.1",
+  "version": "4.3.0",
   "publisher": "Orta",
   "engines": {
-    "vscode": "^1.59.0"
+    "vscode": "^1.63.0"
   },
   "author": {
     "name": "Orta Therox, ConnectDotz & Sean Poulter",
@@ -443,7 +443,8 @@
     "lint": "eslint \"src/**/*.ts\" \"tests/**/*.ts\" \"*.json\"  \"*.js\" ",
     "test": "jest",
     "watch-test": "yarn test -- --watch",
-    "tsc": "tsc --noEmit"
+    "tsc": "tsc --noEmit",
+    "update-vscode-type": "npx vscode-dts main; mv ./vscode.d.ts ./typings"
   },
   "dependencies": {
     "istanbul-lib-coverage": "^3.0.0",

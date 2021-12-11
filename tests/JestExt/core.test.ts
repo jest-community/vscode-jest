@@ -35,7 +35,6 @@ import * as extHelper from '../..//src/JestExt/helper';
 import { workspaceLogging } from '../../src/logging';
 import { ProjectWorkspace } from 'jest-editor-support';
 import { mockProjectWorkspace, mockWworkspaceLogging } from '../test-helper';
-import { startWizard } from '../../src/setup-wizard';
 import { JestTestProvider } from '../../src/test-provider';
 
 /* eslint jest/expect-expect: ["error", { "assertFunctionNames": ["expect", "expectItTakesNoAction"] }] */
@@ -188,11 +187,16 @@ describe('JestExt', () => {
     });
     it.each`
       desc                      | testIds                                | testIdStringCount | startDebug
-      ${'0 id'}                 | ${[]}                                  | ${0}              | ${false}
+      ${'no id'}                | ${undefined}                           | ${0}              | ${true}
+      ${'empty id'}             | ${[]}                                  | ${0}              | ${true}
       ${'1 string id '}         | ${['test-1']}                          | ${0}              | ${true}
       ${'1 testIdentifier id '} | ${[makeIdentifier('test-1', ['d-1'])]} | ${1}              | ${true}
     `('no selection needed: $desc', async ({ testIds, testIdStringCount, startDebug }) => {
-      await sut.debugTests(document, ...testIds);
+      if (testIds) {
+        await sut.debugTests(document, ...testIds);
+      } else {
+        await sut.debugTests(document);
+      }
       expect(mockShowQuickPick).not.toBeCalled();
       expect(mockHelpers.testIdString).toBeCalledTimes(testIdStringCount);
       if (testIdStringCount >= 1) {
@@ -207,6 +211,17 @@ describe('JestExt', () => {
         const configuration = startDebugging.mock.calls[startDebugging.mock.calls.length - 1][1];
         expect(configuration).toBeDefined();
         expect(configuration.type).toBe('dummyconfig');
+        if (testIds?.length === 1) {
+          expect(sut.debugConfigurationProvider.prepareTestRun).toHaveBeenCalledWith(
+            document.fileName,
+            testIds[0]
+          );
+        } else {
+          expect(sut.debugConfigurationProvider.prepareTestRun).toHaveBeenCalledWith(
+            document.fileName,
+            '.*'
+          );
+        }
         expect(sut.debugConfigurationProvider.prepareTestRun).toHaveBeenCalled();
       } else {
         expect(sut.debugConfigurationProvider.prepareTestRun).not.toHaveBeenCalled();
@@ -267,24 +282,28 @@ describe('JestExt', () => {
           expect(mockShowQuickPick).toHaveBeenCalledTimes(1);
           expect(vscode.debug.startDebugging).not.toHaveBeenCalled();
         });
-        it('if pass zero testId, nothing will be run', async () => {
+        it('if pass zero testId, all tests will be run', async () => {
           await sut.debugTests(document);
           expect(mockShowQuickPick).not.toHaveBeenCalled();
           expect(mockHelpers.testIdString).not.toBeCalled();
-          expect(vscode.debug.startDebugging).not.toHaveBeenCalled();
+          expect(sut.debugConfigurationProvider.prepareTestRun).toBeCalledWith(
+            document.fileName,
+            '.*'
+          );
+          expect(vscode.debug.startDebugging).toHaveBeenCalled();
         });
       });
     });
     it.each`
-      configNames                           | shouldShowWarning | debugMode | v2
-      ${undefined}                          | ${true}           | ${true}   | ${false}
-      ${[]}                                 | ${true}           | ${true}   | ${false}
-      ${['a', 'b']}                         | ${true}           | ${false}  | ${false}
-      ${['a', 'vscode-jest-tests.v2', 'b']} | ${false}          | ${false}  | ${true}
-      ${['a', 'vscode-jest-tests', 'b']}    | ${false}          | ${false}  | ${false}
+      configNames                           | useDefaultConfig | debugMode | v2
+      ${undefined}                          | ${true}          | ${true}   | ${false}
+      ${[]}                                 | ${true}          | ${true}   | ${false}
+      ${['a', 'b']}                         | ${true}          | ${false}  | ${false}
+      ${['a', 'vscode-jest-tests.v2', 'b']} | ${false}         | ${false}  | ${true}
+      ${['a', 'vscode-jest-tests', 'b']}    | ${false}         | ${false}  | ${false}
     `(
-      'provides setup wizard in warning message if no "vscode-jest-tests" in launch.json: $configNames',
-      async ({ configNames, shouldShowWarning, debugMode, v2 }) => {
+      'will find appropriate debug config: $configNames',
+      async ({ configNames, useDefaultConfig, debugMode, v2 }) => {
         expect.hasAssertions();
         const testNamePattern = 'testNamePattern';
         mockConfigurations = configNames ? configNames.map((name) => ({ name })) : undefined;
@@ -295,7 +314,7 @@ describe('JestExt', () => {
         await sut.debugTests(document, testNamePattern);
 
         expect(startDebugging).toBeCalledTimes(1);
-        if (shouldShowWarning) {
+        if (useDefaultConfig) {
           // debug with generated config
           expect(vscode.debug.startDebugging).toHaveBeenLastCalledWith(
             workspaceFolder,
@@ -313,22 +332,7 @@ describe('JestExt', () => {
           testNamePattern
         );
 
-        if (shouldShowWarning) {
-          expect(messaging.systemWarningMessage).toHaveBeenCalled();
-
-          //verify the message button does invoke the setup wizard command
-          const button = (messaging.systemWarningMessage as jest.Mocked<any>).mock.calls[0][1];
-          expect(button.action).not.toBeUndefined();
-          vscode.commands.executeCommand = jest.fn();
-          button.action();
-          expect(startWizard).toBeCalledWith(sut.debugConfigurationProvider, {
-            workspace: workspaceFolder,
-            taskId: 'debugConfig',
-            verbose: debugMode,
-          });
-        } else {
-          expect(messaging.systemWarningMessage).not.toHaveBeenCalled();
-        }
+        expect(messaging.systemWarningMessage).not.toHaveBeenCalled();
       }
     );
   });
@@ -562,15 +566,19 @@ describe('JestExt', () => {
       const settings = { showCoverageOnLoad: true } as any;
       const sut = newJestExt({ settings });
 
-      const { runnerWorkspace } = (createProcessSession as jest.Mocked<any>).mock.calls[0][0];
+      const { createRunnerWorkspace } = (createProcessSession as jest.Mocked<any>).mock.calls[0][0];
+      let runnerWorkspace = createRunnerWorkspace();
       expect(runnerWorkspace.collectCoverage).toBe(true);
 
       sut.coverageOverlay.enabled = false;
       await sut.toggleCoverageOverlay();
 
-      const { runnerWorkspace: runnerWorkspace2 } = (createProcessSession as jest.Mocked<any>).mock
-        .calls[1][0];
-      expect(runnerWorkspace2.collectCoverage).toBe(false);
+      const { createRunnerWorkspace: f2, settings: settings2 } = (
+        createProcessSession as jest.Mocked<any>
+      ).mock.calls[1][0];
+      runnerWorkspace = f2();
+      expect(settings2.showCoverageOnLoad).toBe(false);
+      expect(runnerWorkspace.collectCoverage).toBe(false);
     });
   });
 
@@ -949,11 +957,18 @@ describe('JestExt', () => {
         (sut.testResultProvider.isTestFile as jest.Mocked<any>).mockReturnValueOnce(isTestFile);
 
         sut.runAllTests(editor);
-        expect(mockProcessSession.scheduleProcess).toBeCalledWith({
-          type: 'by-file',
-          testFileName: editor.document.fileName,
-          notTestFile: notTestFile,
-        });
+        if (notTestFile) {
+          expect(mockProcessSession.scheduleProcess).toBeCalledWith({
+            type: 'by-file',
+            testFileName: editor.document.fileName,
+            notTestFile: true,
+          });
+        } else {
+          expect(mockProcessSession.scheduleProcess).toBeCalledWith({
+            type: 'by-file-pattern',
+            testFileNamePattern: editor.document.fileName,
+          });
+        }
       }
     );
   });

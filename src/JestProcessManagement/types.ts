@@ -18,7 +18,7 @@ export interface Task<T> {
   status: TaskStatus;
 }
 
-export type QueueType = 'blocking' | 'non-blocking';
+export type QueueType = 'blocking' | 'blocking-2' | 'non-blocking';
 
 /**
  * predicate to match task
@@ -43,7 +43,8 @@ interface JestProcessRequestCommon {
   schedule: ScheduleStrategy;
   listener: JestProcessListener;
 }
-export type JestProcessRequestBase =
+
+export type JestProcessRequestSimple =
   | {
       type: Extract<JestTestProcessType, 'watch-tests' | 'watch-all-tests'>;
     }
@@ -79,6 +80,11 @@ export type JestProcessRequestBase =
       args: string[];
     };
 
+export type JestProcessRequestTransform = (request: JestProcessRequest) => JestProcessRequest;
+
+export type JestProcessRequestBase = JestProcessRequestSimple & {
+  transform?: JestProcessRequestTransform;
+};
 export type JestProcessRequest = JestProcessRequestBase & JestProcessRequestCommon;
 
 export interface TaskArrayFunctions<T> {

@@ -14,7 +14,7 @@ import {
 import { AutoRunMode } from '../StatusBar';
 import { pathToJest, pathToConfig, toFilePath } from '../helpers';
 import { workspaceLogging } from '../logging';
-import { AutoRunAccessor, JestExtContext } from './types';
+import { AutoRunAccessor, JestExtContext, RunnerWorkspaceOptions } from './types';
 import { CoverageColors } from '../Coverage';
 
 export const isWatchRequest = (request: JestProcessRequest): boolean =>
@@ -83,23 +83,26 @@ export const createJestExtContext = (
   workspaceFolder: vscode.WorkspaceFolder,
   settings: PluginResourceSettings
 ): JestExtContext => {
-  const currentJestVersion = 20;
-  const [jestCommandLine, pathToConfig] = getJestCommandSettings(settings);
-  const runnerWorkspace = new ProjectWorkspace(
-    toFilePath(settings.rootPath),
-    jestCommandLine,
-    pathToConfig,
-    currentJestVersion,
-    workspaceFolder.name,
-    settings.showCoverageOnLoad,
-    settings.debugMode,
-    settings.nodeEnv,
-    settings.shell
-  );
+  const createRunnerWorkspace = (options?: RunnerWorkspaceOptions) => {
+    const ws = workspaceFolder.name;
+    const currentJestVersion = 20;
+    const [jestCommandLine, pathToConfig] = getJestCommandSettings(settings);
+    return new ProjectWorkspace(
+      toFilePath(settings.rootPath),
+      jestCommandLine,
+      pathToConfig,
+      currentJestVersion,
+      options?.outputFileSuffix ? `${ws}_${options.outputFileSuffix}` : ws,
+      options?.collectCoverage ?? settings.showCoverageOnLoad,
+      settings.debugMode,
+      settings.nodeEnv,
+      settings.shell
+    );
+  };
   return {
     workspace: workspaceFolder,
     settings,
-    runnerWorkspace,
+    createRunnerWorkspace,
     loggingFactory: workspaceLogging(workspaceFolder.name, settings.debugMode ?? false),
     autoRun: AutoRun(settings),
   };

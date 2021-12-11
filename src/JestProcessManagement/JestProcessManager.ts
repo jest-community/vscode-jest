@@ -7,19 +7,22 @@ import { JestExtContext } from '../JestExt';
 
 export class JestProcessManager implements TaskArrayFunctions<JestProcess> {
   private extContext: JestExtContext;
-  private blockingQueue: TaskQueue<JestProcess>;
-  private nonBlockingQueue: TaskQueue<JestProcess>;
+  private queues: Map<QueueType, TaskQueue<JestProcess>>;
   private logging: Logging;
 
   constructor(extContext: JestExtContext) {
     this.extContext = extContext;
     this.logging = extContext.loggingFactory.create('JestProcessManager');
-    this.blockingQueue = createTaskQueue('blocking-queue', 1);
-    this.nonBlockingQueue = createTaskQueue('non-blocking-queue', 3);
+    this.queues = new Map([
+      ['blocking', createTaskQueue('blocking-queue', 1)],
+      ['blocking-2', createTaskQueue('blocking-queue-2', 1)],
+      ['non-blocking', createTaskQueue('non-blocking-queue', 3)],
+    ]);
   }
 
   private getQueue(type: QueueType): TaskQueue<JestProcess> {
-    return type === 'blocking' ? this.blockingQueue : this.nonBlockingQueue;
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    return this.queues.get(type)!;
   }
 
   private foundDup(request: JestProcessRequest): boolean {
@@ -83,8 +86,7 @@ export class JestProcessManager implements TaskArrayFunctions<JestProcess> {
   public async stopAll(queueType?: QueueType): Promise<void> {
     let promises: Promise<void>[];
     if (!queueType) {
-      const queueTypes: QueueType[] = ['blocking', 'non-blocking'];
-      promises = queueTypes.map((q: QueueType) => this.stopAll(q));
+      promises = Array.from(this.queues.keys()).map((q) => this.stopAll(q));
     } else {
       const queue = this.getQueue(queueType);
       promises = queue.map((t) => t.data.stop());
@@ -98,14 +100,15 @@ export class JestProcessManager implements TaskArrayFunctions<JestProcess> {
     if (queueType) {
       return this.getQueue(queueType).size();
     }
-    return this.numberOfProcesses('blocking') + this.numberOfProcesses('non-blocking');
+    return Array.from(this.queues.values()).reduce((pCount, q) => {
+      pCount += q.size();
+      return pCount;
+    }, 0);
   }
 
   // task array functions
   private getQueues(queueType?: QueueType): TaskQueue<JestProcess>[] {
-    return queueType
-      ? [this.getQueue(queueType)]
-      : [this.getQueue('blocking'), this.getQueue('non-blocking')];
+    return queueType ? [this.getQueue(queueType)] : Array.from(this.queues.values());
   }
   public map<M>(f: (task: Task<JestProcess>) => M, queueType?: QueueType): M[] {
     const queues = this.getQueues(queueType);

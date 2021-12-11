@@ -150,7 +150,7 @@ export const mockJestExtEvents: any = () => ({
 export const mockJestExtContext = (autoRun?: AutoRunAccessor): any => {
   return {
     workspace: jest.fn(),
-    runnerWorkspace: jest.fn(),
+    createRunnerWorkspace: jest.fn(),
     settings: jest.fn(),
     loggingFactory: { create: jest.fn(() => jest.fn()) },
     autoRun: autoRun ?? jest.fn(),

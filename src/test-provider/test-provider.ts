@@ -24,34 +24,45 @@ export class JestTestProvider {
     this.log = jestContext.loggingFactory.create('JestTestProvider');
     const wsFolder = jestContext.workspace;
 
-    this.controller = this.createController(wsFolder, jestContext);
+    this.controller = this.createController(wsFolder);
 
-    this.context = new JestTestProviderContext(jestContext, this.controller);
+    this.context = new JestTestProviderContext(
+      jestContext,
+      this.controller,
+      this.createProfiles(this.controller)
+    );
     this.workspaceRoot = new WorkspaceRoot(this.context);
   }
 
-  private createController = (
-    wsFolder: vscode.WorkspaceFolder,
-    jestContext: JestExtExplorerContext
-  ): vscode.TestController => {
+  private createController = (wsFolder: vscode.WorkspaceFolder): vscode.TestController => {
     const controller = vscode.tests.createTestController(
       `${extensionId}:TestProvider:${wsFolder.name}`,
       `Jest Test Provider (${wsFolder.name})`
     );
 
     controller.resolveHandler = this.discoverTest;
-    if (!jestContext.autoRun.isWatch) {
-      controller.createRunProfile('run', vscode.TestRunProfileKind.Run, this.runTests, true);
-    }
-    controller.createRunProfile('debug', vscode.TestRunProfileKind.Debug, this.runTests, true);
-    controller.createRunProfile(
-      'run with coverage',
-      vscode.TestRunProfileKind.Coverage,
-      this.runTests,
-      true
-    );
-
     return controller;
+  };
+  private createProfiles = (controller: vscode.TestController): vscode.TestRunProfile[] => {
+    const runTag = new vscode.TestTag('run');
+    const debugTag = new vscode.TestTag('debug');
+    const profiles = [
+      controller.createRunProfile(
+        'run',
+        vscode.TestRunProfileKind.Run,
+        this.runTests,
+        true,
+        runTag
+      ),
+      controller.createRunProfile(
+        'debug',
+        vscode.TestRunProfileKind.Debug,
+        this.runTests,
+        true,
+        debugTag
+      ),
+    ];
+    return profiles;
   };
 
   private discoverTest = (item: vscode.TestItem | undefined): void => {
@@ -95,7 +106,11 @@ export class JestTestProvider {
       try {
         const debugInfo = tData.getDebugInfo();
         this.context.appendOutput(`launching debugger for ${tData.item.id}`, run);
-        await this.context.ext.debugTests(debugInfo.fileName, debugInfo.testNamePattern);
+        if (debugInfo.testNamePattern) {
+          await this.context.ext.debugTests(debugInfo.fileName, debugInfo.testNamePattern);
+        } else {
+          await this.context.ext.debugTests(debugInfo.fileName);
+        }
         return;
       } catch (e) {
         error = `item ${tData.item.id} failed to debug: ${JSON.stringify(e)}`;
@@ -115,18 +130,10 @@ export class JestTestProvider {
       this.log('error', 'not supporting runRequest without profile', request);
       return Promise.reject('cnot supporting runRequest without profile');
     }
-    const profile = request.profile;
-
     const run = this.context.createTestRun(request, this.controller.id);
     const tests = (request.include ?? this.getAllItems()).filter(
       (t) => !request.exclude?.includes(t)
     );
-
-    this.context.appendOutput(
-      `executing profile: "${request.profile.label}" for ${tests.length} tests...`,
-      run
-    );
-    const notRunnable: string[] = [];
 
     const promises: Promise<void>[] = [];
     try {
@@ -136,18 +143,17 @@ export class JestTestProvider {
           run.skipped(test);
           continue;
         }
-        if (!tData.canRun(profile)) {
-          run.skipped(test);
-          notRunnable.push(test.id);
-          continue;
-        }
+        this.context.appendOutput(
+          `executing profile: "${request.profile.label}" for ${test.id}...`,
+          run
+        );
         if (request.profile.kind === vscode.TestRunProfileKind.Debug) {
           await this.debugTest(tData, run);
         } else {
           promises.push(
             new Promise((resolve, reject) => {
               try {
-                tData.scheduleTest(run, resolve, profile);
+                tData.scheduleTest(run, resolve);
               } catch (e) {
                 const msg = `failed to schedule test for ${tData.item.id}: ${JSON.stringify(e)}`;
                 this.log('error', msg, e);
@@ -157,16 +163,6 @@ export class JestTestProvider {
             })
           );
         }
-      }
-
-      // TODO: remove this when testItem can determine its run/debug eligibility, i.e. shows correct UI buttons.
-      // for example: we only support debugging indivisual test, when users try to debug the whole test file or folder, it will be ignored
-      // another example is to run indivisual test/test-file/folder in a watch-mode workspace is not necessary and thus will not be executed
-      if (notRunnable.length > 0) {
-        const msgs = [`the following items do not support "${request.profile.label}":`];
-        notRunnable.forEach((id) => msgs.push(id));
-        this.context.appendOutput(msgs.join('\n'), run);
-        vscode.window.showWarningMessage(msgs.join('\r\n'));
       }
     } catch (e) {
       const msg = `failed to execute profile "${request.profile.label}": ${JSON.stringify(e)}`;
