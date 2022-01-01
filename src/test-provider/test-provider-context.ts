@@ -16,13 +16,14 @@ const COLORS = {
   ['yellow']: '\x1b[0;33m',
   ['end']: '\x1b[0m',
 };
-
+export type TagIdType = 'run' | 'debug';
 export class JestTestProviderContext {
   private testItemData: WeakMap<vscode.TestItem, TestItemData>;
 
   constructor(
     public readonly ext: JestExtExplorerContext,
-    private readonly controller: vscode.TestController
+    private readonly controller: vscode.TestController,
+    private readonly profiles: vscode.TestRunProfile[]
   ) {
     this.testItemData = new WeakMap();
   }
@@ -31,12 +32,19 @@ export class JestTestProviderContext {
     label: string,
     uri: vscode.Uri,
     data: TestItemData,
-    parent?: vscode.TestItem
+    parent?: vscode.TestItem,
+    tagIds: TagIdType[] = ['run', 'debug']
   ): vscode.TestItem => {
     const testItem = this.controller.createTestItem(id, label, uri);
     this.testItemData.set(testItem, data);
     const collection = parent ? parent.children : this.controller.items;
     collection.add(testItem);
+    tagIds?.forEach((tId) => {
+      const tag = this.getTag(tId);
+      if (tag) {
+        testItem.tags = [...testItem.tags, tag];
+      }
+    });
 
     return testItem;
   };
@@ -82,6 +90,10 @@ export class JestTestProviderContext {
     run.appendOutput(`${text}${newLine ? '\r\n' : ''}`);
     showTestExplorerTerminal();
   };
+
+  // tags
+  getTag = (tagId: TagIdType): vscode.TestTag | undefined =>
+    this.profiles.find((p) => p.tag?.id === tagId)?.tag;
 }
 
 /** show TestExplorer Terminal on first invocation only */

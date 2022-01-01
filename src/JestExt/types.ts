@@ -26,12 +26,16 @@ export interface AutoRunAccessor {
   onStartup: OnStartupType | undefined;
   mode: AutoRunMode;
 }
+export interface RunnerWorkspaceOptions {
+  outputFileSuffix?: string;
+  collectCoverage?: boolean;
+}
 export interface JestExtContext {
   settings: PluginResourceSettings;
   workspace: vscode.WorkspaceFolder;
-  runnerWorkspace: ProjectWorkspace;
   loggingFactory: LoggingFactory;
   autoRun: AutoRunAccessor;
+  createRunnerWorkspace: (options?: RunnerWorkspaceOptions) => ProjectWorkspace;
 }
 
 export interface JestExtSessionContext extends JestExtContext {

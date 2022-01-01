@@ -23,13 +23,7 @@ import { resultsWithoutAnsiEscapeSequence } from '../TestResults/TestResult';
 import { CoverageMapData } from 'istanbul-lib-coverage';
 import { Logging } from '../logging';
 import { createProcessSession, ProcessSession } from './process-session';
-import {
-  DebugFunction,
-  JestExtContext,
-  JestSessionEvents,
-  JestExtSessionContext,
-  JestRunEvent,
-} from './types';
+import { JestExtContext, JestSessionEvents, JestExtSessionContext, JestRunEvent } from './types';
 import * as messaging from '../messaging';
 import { SupportedLanguageIds } from '../appGlobals';
 import { createJestExtContext, getExtensionResourceSettings, prefixWorkspace } from './helper';
@@ -310,15 +304,15 @@ export class JestExt {
   public triggerUpdateSettings(newSettings?: PluginResourceSettings): Promise<void> {
     const updatedSettings =
       newSettings ?? getExtensionResourceSettings(this.extContext.workspace.uri);
-    this.extContext = createJestExtContext(this.extContext.workspace, updatedSettings);
 
     // debug
     this.testResultProvider.verbose = updatedSettings.debugMode ?? false;
 
     // coverage
     const showCoverage = this.coverageOverlay.enabled ?? updatedSettings.showCoverageOnLoad;
-    this.coverageOverlay.dispose();
+    updatedSettings.showCoverageOnLoad = showCoverage;
 
+    this.coverageOverlay.dispose();
     this.coverageOverlay = new CoverageOverlay(
       this.vscodeContext,
       this.coverageMapProvider,
@@ -326,8 +320,8 @@ export class JestExt {
       updatedSettings.coverageFormatter,
       updatedSettings.coverageColors
     );
-    this.extContext.runnerWorkspace.collectCoverage = showCoverage;
-    this.coverageOverlay.enabled = showCoverage;
+
+    this.extContext = createJestExtContext(this.extContext.workspace, updatedSettings);
 
     return this.startSession(true);
   }
@@ -415,7 +409,7 @@ export class JestExt {
   }
 
   //**  commands */
-  public debugTests: DebugFunction = async (
+  public debugTests = async (
     document: vscode.TextDocument | string,
     ...ids: DebugTestIdentifier[]
   ): Promise<void> => {
@@ -437,22 +431,23 @@ export class JestExt {
     let testId: DebugTestIdentifier | undefined;
     switch (ids.length) {
       case 0:
-        return;
+        //no testId, will run all tests in the file
+        break;
       case 1:
         testId = ids[0];
         break;
       default:
         testId = await selectTest(ids);
+        // if nothing is selected, abort
+        if (!testId) {
+          return;
+        }
         break;
-    }
-
-    if (!testId) {
-      return;
     }
 
     this.debugConfigurationProvider.prepareTestRun(
       typeof document === 'string' ? document : document.fileName,
-      escapeRegExp(idString('full-name', testId))
+      testId ? escapeRegExp(idString('full-name', testId)) : '.*'
     );
 
     const configs = vscode.workspace
@@ -463,12 +458,9 @@ export class JestExt {
       configs?.find((c) => c.name === 'vscode-jest-tests');
 
     if (!debugConfig) {
-      messaging.systemWarningMessage(
-        prefixWorkspace(
-          this.extContext,
-          'No debug config named "vscode-jest-tests.v2" or "vscode-jest-tests" found in launch.json, will use a default config.\nIf you encountered debugging problems, feel free to try the setup wizard below'
-        ),
-        this.setupWizardAction('debugConfig')
+      this.logging(
+        'debug',
+        'No debug config named "vscode-jest-tests.v2" or "vscode-jest-tests" found in launch.json, will use a default config.'
       );
       debugConfig = this.debugConfigurationProvider.provideDebugConfigurations(
         this.extContext.workspace
@@ -484,13 +476,24 @@ export class JestExt {
       }
     } else {
       const name = editor.document.fileName;
-      if (
-        this.processSession.scheduleProcess({
+      let pInfo;
+      if (this.testResultProvider.isTestFile(name) !== 'yes') {
+        // run related tests from source file
+        pInfo = this.processSession.scheduleProcess({
           type: 'by-file',
           testFileName: name,
-          notTestFile: this.testResultProvider.isTestFile(name) !== 'yes',
-        })
-      ) {
+          notTestFile: true,
+        });
+      } else {
+        // note: use file-pattern instead of file-path to increase compatibility, such as for angular users.
+        // However, we should keep an eye on performance, as matching by pattern could be slower than by explicit path.
+        // If performance ever become an issue, we could consider optimization...
+        pInfo = this.processSession.scheduleProcess({
+          type: 'by-file-pattern',
+          testFileNamePattern: name,
+        });
+      }
+      if (pInfo) {
         this.dirtyFiles.delete(name);
         return;
       }

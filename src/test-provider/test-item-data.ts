@@ -10,10 +10,10 @@ import { Logging } from '../logging';
 import { TestSuitChangeEvent } from '../TestResults/test-result-events';
 import { Debuggable, TestItemData, TestItemRun } from './types';
 import { JestTestProviderContext } from './test-provider-context';
-import { JestProcessInfo } from '../JestProcessManagement';
+import { JestProcessInfo, JestProcessRequest } from '../JestProcessManagement';
 
 interface JestRunable {
-  getJestRunRequest: (profile: vscode.TestRunProfile) => JestExtRequestType;
+  getJestRunRequest: () => JestExtRequestType;
 }
 interface WithUri {
   uri: vscode.Uri;
@@ -41,8 +41,8 @@ abstract class TestItemDataBase implements TestItemData, JestRunable, WithUri {
     return this.item.uri!;
   }
 
-  scheduleTest(run: vscode.TestRun, end: () => void, profile: vscode.TestRunProfile): void {
-    const jestRequest = this.getJestRunRequest(profile);
+  scheduleTest(run: vscode.TestRun, end: () => void): void {
+    const jestRequest = this.getJestRunRequest();
     const itemRun: TestItemRun = { item: this.item, run, end };
     deepItemState(this.item, run.enqueued);
 
@@ -58,23 +58,7 @@ abstract class TestItemDataBase implements TestItemData, JestRunable, WithUri {
     }
   }
 
-  abstract getJestRunRequest(profile: vscode.TestRunProfile): JestExtRequestType;
-
-  isRunnable(): boolean {
-    return !this.context.ext.autoRun.isWatch;
-  }
-  isDebuggable(): boolean {
-    return false;
-  }
-  canRun(profile: vscode.TestRunProfile): boolean {
-    if (profile.kind === vscode.TestRunProfileKind.Run) {
-      return this.isRunnable();
-    }
-    if (profile.kind === vscode.TestRunProfileKind.Debug) {
-      return this.isDebuggable();
-    }
-    return false;
-  }
+  abstract getJestRunRequest(): JestExtRequestType;
 }
 
 /**
@@ -100,7 +84,9 @@ export class WorkspaceRoot extends TestItemDataBase {
       `${extensionId}:${this.context.ext.workspace.name}`,
       this.context.ext.workspace.name,
       this.context.ext.workspace.uri,
-      this
+      this,
+      undefined,
+      ['run']
     );
     item.description = `(${this.context.ext.autoRun.mode})`;
 
@@ -108,8 +94,12 @@ export class WorkspaceRoot extends TestItemDataBase {
     return item;
   }
 
-  getJestRunRequest(_profile: vscode.TestRunProfile): JestExtRequestType {
-    return { type: 'all-tests' };
+  getJestRunRequest(): JestExtRequestType {
+    const transform = (request: JestProcessRequest) => {
+      request.schedule.queue = 'blocking-2';
+      return request;
+    };
+    return { type: 'all-tests', transform };
   }
   discoverTest(run: vscode.TestRun): void {
     const testList = this.context.ext.testResolveProvider.getTestList();
@@ -363,12 +353,12 @@ export class FolderData extends TestItemDataBase {
   }
   private createTestItem(name: string, parent: vscode.TestItem) {
     const uri = FolderData.makeUri(parent, name);
-    const item = this.context.createTestItem(uri.fsPath, name, uri, this, parent);
+    const item = this.context.createTestItem(uri.fsPath, name, uri, this, parent, ['run']);
 
     item.canResolveChildren = false;
     return item;
   }
-  getJestRunRequest(_profile: vscode.TestRunProfile): JestExtRequestType {
+  getJestRunRequest(): JestExtRequestType {
     return {
       type: 'by-file-pattern',
       testFileNamePattern: this.uri.fsPath,
@@ -549,13 +539,16 @@ export class TestDocumentRoot extends TestResultData {
     );
   }
 
-  getJestRunRequest = (_profile: vscode.TestRunProfile): JestExtRequestType => {
+  getJestRunRequest = (): JestExtRequestType => {
     return {
-      type: 'by-file',
-      testFileName: this.item.id,
+      type: 'by-file-pattern',
+      testFileNamePattern: this.uri.fsPath,
     };
   };
 
+  getDebugInfo(): ReturnType<Debuggable['getDebugInfo']> {
+    return { fileName: this.uri.fsPath };
+  }
   public onTestMatched = (): void => {
     this.item.children.forEach((childItem) =>
       this.context.getData<TestData>(childItem)?.onTestMatched()
@@ -588,17 +581,14 @@ export class TestData extends TestResultData implements Debuggable {
     return item;
   }
 
-  getJestRunRequest(_profile: vscode.TestRunProfile): JestExtRequestType {
+  getJestRunRequest(): JestExtRequestType {
     return {
       type: 'by-file-test-pattern',
       testFileNamePattern: this.uri.fsPath,
       testNamePattern: this.node.fullName,
     };
   }
-  isDebuggable(): boolean {
-    return true;
-  }
-  getDebugInfo(): { fileName: string; testNamePattern: string } {
+  getDebugInfo(): ReturnType<Debuggable['getDebugInfo']> {
     return { fileName: this.uri.fsPath, testNamePattern: this.node.fullName };
   }
   private updateItemRange(): void {

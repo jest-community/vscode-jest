@@ -72,7 +72,8 @@ describe('test-item-data', () => {
 
   beforeEach(() => {
     controllerMock = mockController();
-    context = new JestTestProviderContext(mockExtExplorerContext('ws-1'), controllerMock);
+    const profiles: any = [{ tag: { id: 'run' } }, { tag: { id: 'debug' } }];
+    context = new JestTestProviderContext(mockExtExplorerContext('ws-1'), controllerMock, profiles);
     runMock = context.createTestRun();
     profile = { kind: vscode.TestRunProfileKind.Run };
     resolveMock = jest.fn();
@@ -493,17 +494,18 @@ describe('test-item-data', () => {
         context.ext.session.scheduleProcess.mockReturnValue({ id: 'pid' });
       });
       describe('run request', () => {
-        it('WorkspaceRoot runs all tests in the workspace', () => {
+        it('WorkspaceRoot runs all tests in the workspace in blocking-2 queue', () => {
           const wsRoot = new WorkspaceRoot(context);
-          wsRoot.scheduleTest(runMock, resolveMock, profile);
-          expect(context.ext.session.scheduleProcess).toBeCalledWith(
-            expect.objectContaining({ type: 'all-tests' })
-          );
+          wsRoot.scheduleTest(runMock, resolveMock);
+          const r = context.ext.session.scheduleProcess.mock.calls[0][0];
+          expect(r.type).toEqual('all-tests');
+          const transformed = r.transform({ schedule: { queue: 'blocking' } });
+          expect(transformed.schedule.queue).toEqual('blocking-2');
         });
         it('FolderData runs all tests inside the folder', () => {
           const parent: any = controllerMock.createTestItem('ws-1', 'ws-1', { fsPath: '/ws-1' });
           const folderData = new FolderData(context, 'folder', parent);
-          folderData.scheduleTest(runMock, resolveMock, profile);
+          folderData.scheduleTest(runMock, resolveMock);
           expect(context.ext.session.scheduleProcess).toBeCalledWith(
             expect.objectContaining({
               type: 'by-file-pattern',
@@ -518,11 +520,11 @@ describe('test-item-data', () => {
             { fsPath: '/ws-1/a.test.ts' } as any,
             parent
           );
-          docRoot.scheduleTest(runMock, resolveMock, profile);
+          docRoot.scheduleTest(runMock, resolveMock);
           expect(context.ext.session.scheduleProcess).toBeCalledWith(
             expect.objectContaining({
-              type: 'by-file',
-              testFileName: '/ws-1/a.test.ts',
+              type: 'by-file-pattern',
+              testFileNamePattern: '/ws-1/a.test.ts',
             })
           );
         });
@@ -531,7 +533,7 @@ describe('test-item-data', () => {
           const node: any = { fullName: 'a test', attrs: {}, data: {} };
           const parent: any = controllerMock.createTestItem('ws-1', 'ws-1', uri);
           const tData = new TestData(context, uri, node, parent);
-          tData.scheduleTest(runMock, resolveMock, profile);
+          tData.scheduleTest(runMock, resolveMock);
           expect(context.ext.session.scheduleProcess).toBeCalledWith(
             expect.objectContaining({
               type: 'by-file-test-pattern',
@@ -545,14 +547,14 @@ describe('test-item-data', () => {
         context.ext.session.scheduleProcess.mockReturnValue(undefined);
         const parent: any = controllerMock.createTestItem('ws-1', 'ws-1', { fsPath: '/ws-1' });
         const docRoot = new TestDocumentRoot(context, { fsPath: '/ws-1/a.test.ts' } as any, parent);
-        expect(docRoot.scheduleTest(runMock, resolveMock, profile)).toBeUndefined();
+        expect(docRoot.scheduleTest(runMock, resolveMock)).toBeUndefined();
         expect(runMock.errored).toBeCalledWith(docRoot.item, expect.anything());
         expect(resolveMock).toBeCalled();
       });
       it('schedule request will contain itemRun info', () => {
         const parent: any = controllerMock.createTestItem('ws-1', 'ws-1', { fsPath: '/ws-1' });
         const folderData = new FolderData(context, 'folder', parent);
-        folderData.scheduleTest(runMock, resolveMock, profile);
+        folderData.scheduleTest(runMock, resolveMock);
         const request = context.ext.session.scheduleProcess.mock.calls[0][0];
 
         expect(request.itemRun.run).toEqual(runMock);
@@ -910,34 +912,48 @@ describe('test-item-data', () => {
       });
     });
   });
-  describe('canRun', () => {
-    it('watch-mode workspace does not support Run profile', () => {
-      const wsRoot = new WorkspaceRoot(context);
-      const profile: any = { kind: vscode.TestRunProfileKind.Run };
-
-      context.ext.autoRun.isWatch = true;
-      expect(wsRoot.canRun(profile)).toBeFalsy();
-
-      context.ext.autoRun.isWatch = false;
-      expect(wsRoot.canRun(profile)).toBeTruthy();
-    });
-    it('only TestData support Debug profile', () => {
-      const wsRoot = new WorkspaceRoot(context);
-      const profile: any = { kind: vscode.TestRunProfileKind.Debug };
-      expect(wsRoot.canRun(profile)).toBeFalsy();
-
-      const parentItem: any = controllerMock.createTestItem('parent', 'parent', {});
+  describe('tags', () => {
+    let wsRoot, folder, doc, test;
+    beforeEach(() => {
+      wsRoot = new WorkspaceRoot(context);
+      folder = new FolderData(context, 'dir', wsRoot.item);
+      const uri: any = { fsPath: 'whatever' };
+      doc = new TestDocumentRoot(context, uri, folder.item);
       const node: any = { fullName: 'a test', attrs: {}, data: {} };
-
-      const test = new TestData(context, { fsPath: 'whatever' } as any, node, parentItem);
-      expect(test.canRun(profile)).toBeTruthy();
-
-      expect(test.getDebugInfo()).toEqual({ fileName: 'whatever', testNamePattern: node.fullName });
+      test = new TestData(context, uri, node, doc.item);
     });
-    it('any other profile kind is not supported at this point', () => {
-      const wsRoot = new WorkspaceRoot(context);
-      const profile: any = { kind: vscode.TestRunProfileKind.Coverage };
-      expect(wsRoot.canRun(profile)).toBeFalsy();
+    it('all TestItem supports run tag', () => {
+      [wsRoot, folder, doc, test].forEach((itemData) =>
+        expect(itemData.item.tags.find((t) => t.id === 'run')).toBeTruthy()
+      );
+    });
+    it('only TestData and TestDocument supports debug tags', () => {
+      [doc, test].forEach((itemData) =>
+        expect(itemData.item.tags.find((t) => t.id === 'debug')).toBeTruthy()
+      );
+      [wsRoot, folder].forEach((itemData) =>
+        expect(itemData.item.tags.find((t) => t.id === 'debug')).toBeUndefined()
+      );
+    });
+  });
+  describe('getDebugInfo', () => {
+    let doc, test;
+    beforeEach(() => {
+      const uri: any = { fsPath: 'whatever' };
+      const parentItem: any = controllerMock.createTestItem('ws-1', 'ws-1', uri);
+      doc = new TestDocumentRoot(context, uri, parentItem);
+      const node: any = { fullName: 'a test', attrs: {}, data: {} };
+      test = new TestData(context, uri, node, doc.item);
+    });
+    it('TestData returns file and test info', () => {
+      const debugInfo = test.getDebugInfo();
+      expect(debugInfo.fileName).toEqual(test.item.uri.fsPath);
+      expect(debugInfo.testNamePattern).toEqual('a test');
+    });
+    it('TestDocumentRoot returns only file info', () => {
+      const debugInfo = doc.getDebugInfo();
+      expect(debugInfo.fileName).toEqual(doc.item.uri.fsPath);
+      expect(debugInfo.testNamePattern).toBeUndefined();
     });
   });
   describe('WorkspaceRoot listens to jest run events', () => {

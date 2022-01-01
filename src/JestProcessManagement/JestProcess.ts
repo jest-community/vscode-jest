@@ -118,10 +118,13 @@ export class JestProcess implements JestProcessInfo {
         }
         break;
       case 'by-file': {
-        options.testFileNamePattern = this.quoteFileName(this.request.testFileName);
+        const fileName = this.quoteFileName(this.request.testFileName);
         args.push('--watchAll=false');
         if (this.request.notTestFile) {
-          args.push('--findRelatedTests');
+          args.push('--findRelatedTests', fileName);
+        } else {
+          options.testFileNamePattern = fileName;
+          args.push('--runTestsByPath');
         }
         if (this.request.updateSnapshot) {
           args.push('--updateSnapshot');
@@ -167,7 +170,11 @@ export class JestProcess implements JestProcessInfo {
         break;
     }
 
-    const runner = new Runner(this.extContext.runnerWorkspace, options);
+    const runnerWorkspace = this.extContext.createRunnerWorkspace(
+      this.request.schedule.queue === 'blocking-2' ? { outputFileSuffix: '2' } : undefined
+    );
+
+    const runner = new Runner(runnerWorkspace, options);
     this.registerListener(runner);
 
     let taskInfo: Omit<RunnerTask, 'promise'>;
