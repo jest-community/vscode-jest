@@ -610,7 +610,7 @@ describe('JestExt', () => {
     it.each`
       autoRun                                                  | isInteractive
       ${'off'}                                                 | ${true}
-      ${{ watch: true }}                                       | ${false}
+      ${{ watch: true }}                                       | ${true}
       ${{ watch: false }}                                      | ${true}
       ${{ onStartup: ['all-tests'] }}                          | ${true}
       ${{ onSave: 'test-file' }}                               | ${true}

@@ -262,8 +262,8 @@ export class JestExt {
 
   /** update custom editor context used by vscode when clause, such as `jest:run.interactive` in package.json */
   private updateEditorContext(): void {
-    const isInteractive = this.extContext.autoRun.isOff || !this.extContext.autoRun.isWatch;
-    vscode.commands.executeCommand('setContext', 'jest:run.interactive', isInteractive);
+    // since v4.3, all autoRun modes supports interactive-run
+    vscode.commands.executeCommand('setContext', 'jest:run.interactive', true);
   }
   private updateTestFileEditor(editor: vscode.TextEditor): void {
     if (!this.isTestFileEditor(editor)) {
