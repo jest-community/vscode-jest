@@ -4,8 +4,19 @@
 
 ---
 ## Release Notes<!-- omit in toc -->
-### Pre-Release v4.3.0 
+### Pre-Release [v4.3.0](https://github.com/jest-community/vscode-jest/releases/tag/v4.3.0)
 <details>
+
+<summary>interactive run extended to watch mode</summary>
+
+Users in watch mode can now run any test/folder/workspace interactively just like with non-watch mode. 
+
+![image](images/interactive-watch-mode.png)
+
+</details>
+
+<details>
+
 <summary>more control with debug config v2</summary>
 
 This release introduced debug config v2, which changed how we inject jest runtime information, such as test file and name, to the debug config. Replacing the "behind-the-scene-injection"  with a "variable-substitution" model, so no more hidden operations and surprises, the extension will only substitute the jest specific variables present in the config. 
@@ -35,9 +46,9 @@ A default jest debug config in v2 will look like this:
   }
 }
 ```
-Jest like vscode [variables](https://code.visualstudio.com/docs/editor/variables-reference), the `"${jest.testNamePattern}"` and `"${jest.testFile}"` are jest specific variables and, if present, will be substituted by the extension upon debugging. Note the name change as well: `"vscode-jest-tests.v2"`, which signal the extension to use the substitution mode. 
+Jest like vscode [variables](https://code.visualstudio.com/docs/editor/variables-reference), the `"${jest.testNamePattern}"` and `"${jest.testFile}"` are jest specific variables and, if present, will be substituted by the extension upon debugging. Note the config name change: `"vscode-jest-tests.v2"`, which signal the extension to use the substitution mode. 
 
-This change is backward compatible. All existing config (with `"vscode-jest-tests"`) will continue to work as it is. 
+This change is backward compatible. All existing config (with `"vscode-jest-tests"`) will continue to function as before. 
 
 More info see [Debug Config v2](#debug-config-v2)
 
@@ -45,7 +56,21 @@ More info see [Debug Config v2](#debug-config-v2)
 
 </details>
 
-### Latest: v4.2 <!-- omit in toc -->
+<details>
+
+<summary>vue support and more</summary>
+
+Other features: 
+- supports `vue` file testing
+- enhanced test output discovery by automatically opening TestExplorer terminal upon launch. 
+- enhance run/debug tests with quotes in the name. 
+- update documentations and a few bug fixes.
+
+More details see [v4.3.0 release](https://github.com/jest-community/vscode-jest/releases/tag/v4.3.0)
+
+</details>
+
+### Stable: [v4.2.1](https://github.com/jest-community/vscode-jest/releases/tag/v4.2.1) <!-- omit in toc -->
 
 Test menu is now accessible for all tests, regardless of run mode. If cursor jumping when editing tests is a bit annoying, you can now alternatively disable the DebugCodeLens and use "Debug Test" from the test menu:
 
@@ -55,7 +80,7 @@ For users struggled with the jest process environment, this release added 2 new 
   1. modify nodejs process env (`"jest.nodeEnv"`) 
   2. use custom shell when spawning jest process (`"jest.shell"`)
 
-Also fixed inline error pop-up in vscode 1.61, and enhanced snapshot language support. More details see [v4.2 release](https://github.com/jest-community/vscode-jest/releases/tag/v4.2.0).
+Also fixed inline error pop-up in vscode 1.61, and enhanced snapshot language support. 
 
 <details>
 <summary>v4.1 with Test Explorer</summary>
@@ -181,17 +206,20 @@ Feel free to checkout the complete list of available [custom settings](#customiz
 By default, users need not do anything, the extension will automatically trigger related test run when needed by running jest in the watch mode. However, this can be easily changed if more granular control is desired. Below shows the execution models supported and how to use [jest.autoRun](#autorun) to opt into it:
 
 <details>
+
 <summary>fully automated</summary>
 
 No need to manually trigger any test run, all changes will be monitored and related tests will be run accordingly. It is basically running jest with `--watch` or `--watchAll`. This is the default mode prior to v4. Example:
 - `"jest.autoRun": {"watch": true}` => will start the jest with the watch flag and leave all tests at "unknown" state until changes are detected.
 - `"jest.autoRun": {"watch": true, "onStartup": ["all-tests"]}` => will start running all tests upon project launch to update overall project test stats, followed by the jest watch for changes.
+
 </details>
 
 <details>
+
 <summary>interactive mode</summary>
 
-Allow users to control test run completely either through commands/menu manually or use vscode's onSave event to automate related test runs:
+Allow users to control test run completely either through commands/menu/TestExplorer manually or use vscode's onSave event to automate related test runs:
 - fully manual
   - there will be no automatic test run, users will trigger test run by either command or context-menu.
   - Example: `"jest.autoRun": "off"`
@@ -201,6 +229,7 @@ Allow users to control test run completely either through commands/menu manually
 - automatically run tests when either test or source file changed:
   - the extension will trigger test run for the given test or source file upon save.
   - Example: "jest.autoRun": `{"watch": false, "onSave": "test-src-file"}`
+
 </details>
 
 Note: other than the "off" mode, users can specify the "onStartup" option for any "jest.autoRun" config, for example: `{"watch": false, "onSave": "test-file", "onStartup": ["all-tests"]}`
@@ -212,6 +241,7 @@ A test can be debugged via the debug codeLens appeared above the [debuggable](#d
 The simplest use cases should be supported out-of-the-box. If VS Code displays errors about the attribute `program` or `runtimeExecutable` not being available, you can either use [setup wizard](setup-wizard.md) to help or create your own debug configuration within `launch.json`. See more details in [Customization - Debug Config](#debug-config).
 
 <details>
+
 <summary>Illustration</summary>
 
 For parameterized tests, you might see debug codeLens like `Debug (2)`, which indicated there are 2 test candidates can be debugged. In such case, you will be prompted to choose when clicking the debug codeLens. All failed test results will appear in both the hovering message panel and the `PROBLEMS` area.
@@ -219,6 +249,7 @@ For parameterized tests, you might see debug codeLens like `Debug (2)`, which in
 ![debug-screen-shot](images/debug-screen-shot.png)
 
 By default debug codeLens will appear for failed and unknown tests, to change that and others, please see [customization](#customization) for more details.
+
 </details>
 
 ### How to use code coverage?
@@ -460,7 +491,7 @@ There are many information online about how to setup vscode debug config for spe
 
 ### Debug Config v2
 
-v4.3.0 introduces a "variable substitution" based config with test name `"vscode-jest-tests.v2"`. The extension will merely substituted the jest variables in the config, without adding/removing anything else. 
+v4.3.0 introduces a "variable substitution" based config with name `"vscode-jest-tests.v2"`. The extension will merely substitute the jest variables in the config, without adding/removing anything else. 
 
 Currently supported variables:
 - **${jest.testNamePattern}** - will be replaced by the test block's full name (include the surrounding describe block names).
@@ -516,6 +547,7 @@ Currently supported variables:
     "disableOptimisticBPs": true
   }
   ``` 
+  
 </details>
 
 ## Commands
@@ -531,16 +563,16 @@ This extension contributes the following commands and can be accessed via [Comma
 |Jest: Start Runner (Select Workspace)| start or restart the jest runner for the selected workspace|multi-root workspace
 |Jest: Stop Runner (Select Workspace)| stop jest runner for the selected workspace |multi-root workspace
 |Jest: Toggle Coverage (Select Workspace)| toggle coverage mode for the selected workspace|multi-root workspace
-|Jest: Run All Tests| run all tests for all the workspaces|interactive mode
-|Jest: Run All Tests (Select Workspace)| run all tests for the selected workspace|interactive mode and multi-root workspace
-|Jest: Run All Tests in Current Workspace| run all tests for the current workspace based on the active editor| interactive
-|Jest: Toggle Coverage for Current Workspace| toggle coverage mode for the current workspace based on the active editor| interactive
+|Jest: Run All Tests| run all tests for all the workspaces|always
+|Jest: Run All Tests (Select Workspace)| run all tests for the selected workspace|multi-root workspace
+|Jest: Run All Tests in Current Workspace| run all tests for the current workspace based on the active editor| always
+|Jest: Toggle Coverage for Current Workspace| toggle coverage mode for the current workspace based on the active editor| always
 |Jest: Setup Extension| start the setup wizard|always|
 
-One can assign keyboard shortcut to any of these commands, see [vscode Key Bindings](https://code.visualstudio.com/docs/getstarted/keybindings)
+In addition, TestExplorer also exposed many handy commands, see the full list by searching for `testing` in  [vscode keyboard shortcuts editor](https://code.visualstudio.com/docs/getstarted/keybindings#_keyboard-shortcuts-editor). One can assign/change keyboard shortcut to any of these commands, see [vscode Key Bindings](https://code.visualstudio.com/docs/getstarted/keybindings) for more details.
 
 ## Menu
-In interactive mode, user can trigger the following action from the text editor context-menu
+User can trigger the following action from the text editor context-menu
 
 
 |menu|description|keyboard shortcut
