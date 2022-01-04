@@ -70,6 +70,17 @@ More details see [v4.3.0 release](https://github.com/jest-community/vscode-jest/
 
 </details>
 
+#### installation
+To try the pre-release version, see vscode [pre-release](https://code.visualstudio.com/updates/v1_63#_pre-release-extensions) instruction.
+
+<details>
+<summary>or click to view illustration</summary>
+
+![image](images/pre-release.png)
+
+</details>
+---
+
 ### Stable: [v4.2.1](https://github.com/jest-community/vscode-jest/releases/tag/v4.2.1) <!-- omit in toc -->
 
 Test menu is now accessible for all tests, regardless of run mode. If cursor jumping when editing tests is a bit annoying, you can now alternatively disable the DebugCodeLens and use "Debug Test" from the test menu:
@@ -112,9 +123,11 @@ P.S. We find the new version did made the development of this extension a bit ea
 Content
 - [vscode-jest](#vscode-jest)
     - [Pre-Release v4.3.0](#pre-release-v430)
+      - [installation](#installation)
+  - [</details>](#details)
   - [The Aim](#the-aim)
   - [Features](#features)
-  - [Installation](#installation)
+  - [Installation](#installation-1)
   - [How to use the extension?](#how-to-use-the-extension)
     - [How to get it set up?](#how-to-get-it-set-up)
     - [How to trigger the test run?](#how-to-trigger-the-test-run)
@@ -125,7 +138,7 @@ Content
     - [How to use the Test Explorer?](#how-to-use-the-test-explorer)
   - [Customization](#customization)
     - [Settings](#settings)
-      - [Details](#details)
+      - [Details](#details-1)
         - [jestCommandLine](#jestcommandline)
         - [rootPath](#rootpath)
         - [debugCodeLens.showWhenTestStateIn](#debugcodelensshowwhenteststatein)
@@ -375,17 +388,22 @@ Possible status are: `[ "fail", "pass", "skip", "unknown"]`. Please note that th
 ##### coverageFormatter
 
 There are 2 formatters to choose from:
-  1. <details><summary> DefaultFormatter: high light uncovered and partially-covered code inlilne as well as on the right overview ruler. (this is the default)</summary>
+  <details>
+  <summary> DefaultFormatter: high light uncovered and partially-covered code inlilne as well as on the right overview ruler. (this is the default)</summary>
   
         ![coverage-DefaultFormatter.png](./images/coverage-DefaultFormatter.png)
-  </details>
 
-  1. <details><summary>GutterFormatter: render coverage status in the gutter as well as the overview ruler.</summary>
+</details>
+
+ <details>
+ <summary>GutterFormatter: render coverage status in the gutter as well as the overview ruler.</summary>
   
      ![coverage-GutterFormatter.png](./images/coverage-GutterFormatter.png)
-  </details>
 
-  _(Note, there is an known issue in vscode (microsoft/vscode#5923) that gutter decorators could interfere with debug breakpoints visibility. Therefore, you probably want to disable coverage before debugging or switch to DefaultFormatter)_
+</details>
+
+
+_(Note, there is an known issue in vscode (microsoft/vscode#5923) that gutter decorators could interfere with debug breakpoints visibility. Therefore, you probably want to disable coverage before debugging or switch to DefaultFormatter)_
 ##### coverageColors
 
 Besides the formatter, user can also customize the color via `jest.coverageColors` to change color for 3 coverage categories: `"uncovered", "covered", or "partially-covered"`,
