@@ -79,7 +79,6 @@ To try the pre-release version, see vscode [pre-release](https://code.visualstud
 ![image](images/pre-release.png)
 
 </details>
----
 
 ### Stable: [v4.2.1](https://github.com/jest-community/vscode-jest/releases/tag/v4.2.1) <!-- omit in toc -->
 
