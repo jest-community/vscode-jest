@@ -60,7 +60,6 @@ describe('JestExt', () => {
     show: jest.fn(),
     dispose: jest.fn(),
   } as any;
-  const extensionSettings = { debugCodeLens: {}, testExplorer: { enabled: true } } as any;
   const debugCodeLensProvider = {} as any;
   const debugConfigurationProvider = {
     provideDebugConfigurations: jest.fn(),
@@ -80,6 +79,7 @@ describe('JestExt', () => {
     settings?: Partial<PluginResourceSettings>;
     coverageCodeLensProvider?: any;
   }) => {
+    const extensionSettings = { debugCodeLens: {}, testExplorer: { enabled: true } } as any;
     mockGetExtensionResourceSettings.mockReturnValue(
       override?.settings ? { ...extensionSettings, ...override.settings } : extensionSettings
     );
@@ -825,6 +825,16 @@ describe('JestExt', () => {
         expect(mockTestProvider.dispose).toBeCalledTimes(1);
         expect(JestTestProvider).toHaveBeenCalledTimes(2);
       });
+      it.each([[true], [false]])(
+        'only create test provider if TestExplorer(=%s) is enabled.',
+        async (enabled) => {
+          expect.hasAssertions();
+          const sut = createJestExt();
+          sut.extContext.settings.testExplorer.enabled = enabled;
+          await sut.startSession();
+          expect(JestTestProvider).toHaveBeenCalledTimes(enabled ? 1 : 0);
+        }
+      );
       describe('will update test file list', () => {
         it.each`
           fileNames     | error                      | expectedTestFiles
