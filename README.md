@@ -74,7 +74,7 @@ More details see [v4.3.0 release](https://github.com/jest-community/vscode-jest/
 To try the pre-release version, see vscode [pre-release](https://code.visualstudio.com/updates/v1_63#_pre-release-extensions) instruction.
 
 <details>
-<summary>or click to view illustration</summary>
+<summary>screenshot</summary>
 
 ![image](images/pre-release.png)
 
@@ -118,7 +118,6 @@ Feel free to read more about the [features and migration](https://github.com/jes
 P.S. We find the new version did made the development of this extension a bit easier (yes, we do eat our own dog food :dog:), hopefully, it will do the same for your project. Happy coding!
 </details>
 
----
 
 Content
 - [vscode-jest](#vscode-jest)
