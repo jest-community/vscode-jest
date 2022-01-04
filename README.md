@@ -4,12 +4,12 @@
 
 ---
 ## Release Notes<!-- omit in toc -->
-### Pre-Release v4.3 
+### Pre-Release [v4.3.0](https://github.com/jest-community/vscode-jest/releases/tag/v4.3.0)
 <details>
 
 <summary>interactive run extended to watch mode</summary>
 
-The watch mode used to run tests completely behind the scene by jest watchman and can not be invoked directly via command or menu actions, which are accessible by non-watch mode workspaces. With this release, the interactive features will be extended to watch mode users. 
+Users in watch mode can now run any test/folder/workspace interactively just like with non-watch mode. 
 
 ![image](images/interactive-watch-mode.png)
 
@@ -46,9 +46,9 @@ A default jest debug config in v2 will look like this:
   }
 }
 ```
-Jest like vscode [variables](https://code.visualstudio.com/docs/editor/variables-reference), the `"${jest.testNamePattern}"` and `"${jest.testFile}"` are jest specific variables and, if present, will be substituted by the extension upon debugging. Note the name change as well: `"vscode-jest-tests.v2"`, which signal the extension to use the substitution mode. 
+Jest like vscode [variables](https://code.visualstudio.com/docs/editor/variables-reference), the `"${jest.testNamePattern}"` and `"${jest.testFile}"` are jest specific variables and, if present, will be substituted by the extension upon debugging. Note the config name change: `"vscode-jest-tests.v2"`, which signal the extension to use the substitution mode. 
 
-This change is backward compatible. All existing config (with `"vscode-jest-tests"`) will continue to work as it is. 
+This change is backward compatible. All existing config (with `"vscode-jest-tests"`) will continue to function as before. 
 
 More info see [Debug Config v2](#debug-config-v2)
 
@@ -60,11 +60,17 @@ More info see [Debug Config v2](#debug-config-v2)
 
 <summary>vue support and more</summary>
 
-This release also added `vue` file support and enhanced test output discovery by automatically opening TestExplorer terminal upon launch. Detailed list see [v4.3.0 release](https://github.com/jest-community/vscode-jest/releases/tag/v4.3.0)
+Other features: 
+- supports `vue` file testing
+- enhanced test output discovery by automatically opening TestExplorer terminal upon launch. 
+- enhance run/debug tests with quotes in the name. 
+- update documentations and a few bug fixes.
+
+More details see [v4.3.0 release](https://github.com/jest-community/vscode-jest/releases/tag/v4.3.0)
 
 </details>
 
-### Stable: v4.2 <!-- omit in toc -->
+### Stable: [v4.2.1](https://github.com/jest-community/vscode-jest/releases/tag/v4.2.1) <!-- omit in toc -->
 
 Test menu is now accessible for all tests, regardless of run mode. If cursor jumping when editing tests is a bit annoying, you can now alternatively disable the DebugCodeLens and use "Debug Test" from the test menu:
 
@@ -74,7 +80,7 @@ For users struggled with the jest process environment, this release added 2 new 
   1. modify nodejs process env (`"jest.nodeEnv"`) 
   2. use custom shell when spawning jest process (`"jest.shell"`)
 
-Also fixed inline error pop-up in vscode 1.61, and enhanced snapshot language support. More details see [v4.2 release](https://github.com/jest-community/vscode-jest/releases/tag/v4.2.0).
+Also fixed inline error pop-up in vscode 1.61, and enhanced snapshot language support. 
 
 <details>
 <summary>v4.1 with Test Explorer</summary>
@@ -105,7 +111,7 @@ P.S. We find the new version did made the development of this extension a bit ea
 
 Content
 - [vscode-jest](#vscode-jest)
-    - [Pre-Release v4.3](#pre-release-v43)
+    - [Pre-Release v4.3.0](#pre-release-v430)
   - [The Aim](#the-aim)
   - [Features](#features)
   - [Installation](#installation)
@@ -485,7 +491,7 @@ There are many information online about how to setup vscode debug config for spe
 
 ### Debug Config v2
 
-v4.3.0 introduces a "variable substitution" based config with test name `"vscode-jest-tests.v2"`. The extension will merely substituted the jest variables in the config, without adding/removing anything else. 
+v4.3.0 introduces a "variable substitution" based config with name `"vscode-jest-tests.v2"`. The extension will merely substitute the jest variables in the config, without adding/removing anything else. 
 
 Currently supported variables:
 - **${jest.testNamePattern}** - will be replaced by the test block's full name (include the surrounding describe block names).
@@ -541,6 +547,7 @@ Currently supported variables:
     "disableOptimisticBPs": true
   }
   ``` 
+  
 </details>
 
 ## Commands
