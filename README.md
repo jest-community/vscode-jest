@@ -4,7 +4,7 @@
 
 ---
 ## Release Notes<!-- omit in toc -->
-### Pre-Release [v4.3.0](https://github.com/jest-community/vscode-jest/releases/tag/v4.3.0)
+### Pre-Release [v4.3.1](https://github.com/jest-community/vscode-jest/releases/tag/v4.3.1)
 <details>
 
 <summary>interactive run extended to watch mode</summary>
@@ -52,8 +52,6 @@ This change is backward compatible. All existing config (with `"vscode-jest-test
 
 More info see [Debug Config v2](#debug-config-v2)
 
-<!-- Try out pre-release [v4.3.0-rc.1](https://github.com/jest-community/vscode-jest/releases/tag/v4.3.0-rc1) -->
-
 </details>
 
 <details>
@@ -66,7 +64,7 @@ Other features:
 - enhance run/debug tests with quotes in the name. 
 - update documentations and a few bug fixes.
 
-More details see [v4.3.0 release](https://github.com/jest-community/vscode-jest/releases/tag/v4.3.0)
+More details see [v4.3.1 release](https://github.com/jest-community/vscode-jest/releases/tag/v4.3.1)
 
 </details>
 
@@ -121,7 +119,7 @@ P.S. We find the new version did made the development of this extension a bit ea
 
 Content
 - [vscode-jest](#vscode-jest)
-    - [Pre-Release v4.3.0](#pre-release-v430)
+    - [Pre-Release v4.3.1](#pre-release-v431)
       - [installation](#installation)
   - [</details>](#details)
   - [The Aim](#the-aim)
@@ -508,7 +506,7 @@ There are many information online about how to setup vscode debug config for spe
 
 ### Debug Config v2
 
-v4.3.0 introduces a "variable substitution" based config with name `"vscode-jest-tests.v2"`. The extension will merely substitute the jest variables in the config, without adding/removing anything else. 
+v4.3 introduces a "variable substitution" based config with name `"vscode-jest-tests.v2"`. The extension will merely substitute the jest variables in the config, without adding/removing anything else. 
 
 Currently supported variables:
 - **${jest.testNamePattern}** - will be replaced by the test block's full name (include the surrounding describe block names).
