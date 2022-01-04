@@ -4,7 +4,7 @@
 
 ---
 ## Release Notes<!-- omit in toc -->
-### Pre-Release [v4.3.1](https://github.com/jest-community/vscode-jest/releases/tag/v4.3.1)
+### Pre-Release [v4.3.1](https://github.com/jest-community/vscode-jest/releases/tag/v4.3.1) <!-- omit in toc -->
 <details>
 
 <summary>interactive run extended to watch mode</summary>
@@ -68,7 +68,7 @@ More details see [v4.3.1 release](https://github.com/jest-community/vscode-jest/
 
 </details>
 
-#### installation
+#### installation <!-- omit in toc -->
 To try the pre-release version, see vscode [pre-release](https://code.visualstudio.com/updates/v1_63#_pre-release-extensions) instruction.
 
 <details>
@@ -115,15 +115,13 @@ Feel free to read more about the [features and migration](https://github.com/jes
 P.S. We find the new version did made the development of this extension a bit easier (yes, we do eat our own dog food :dog:), hopefully, it will do the same for your project. Happy coding!
 </details>
 
+---
 
 Content
 - [vscode-jest](#vscode-jest)
-    - [Pre-Release v4.3.1](#pre-release-v431)
-      - [installation](#installation)
-  - [</details>](#details)
   - [The Aim](#the-aim)
   - [Features](#features)
-  - [Installation](#installation-1)
+  - [Installation](#installation)
   - [How to use the extension?](#how-to-use-the-extension)
     - [How to get it set up?](#how-to-get-it-set-up)
     - [How to trigger the test run?](#how-to-trigger-the-test-run)
@@ -134,7 +132,7 @@ Content
     - [How to use the Test Explorer?](#how-to-use-the-test-explorer)
   - [Customization](#customization)
     - [Settings](#settings)
-      - [Details](#details-1)
+      - [Details](#details)
         - [jestCommandLine](#jestcommandline)
         - [rootPath](#rootpath)
         - [debugCodeLens.showWhenTestStateIn](#debugcodelensshowwhenteststatein)
