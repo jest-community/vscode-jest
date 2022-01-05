@@ -4,7 +4,7 @@
 
 ---
 ## Release Notes<!-- omit in toc -->
-### Pre-Release [v4.3.0](https://github.com/jest-community/vscode-jest/releases/tag/v4.3.0)
+### Pre-Release [v4.3.1](https://github.com/jest-community/vscode-jest/releases/tag/v4.3.1) <!-- omit in toc -->
 <details>
 
 <summary>interactive run extended to watch mode</summary>
@@ -52,8 +52,6 @@ This change is backward compatible. All existing config (with `"vscode-jest-test
 
 More info see [Debug Config v2](#debug-config-v2)
 
-<!-- Try out pre-release [v4.3.0-rc.1](https://github.com/jest-community/vscode-jest/releases/tag/v4.3.0-rc1) -->
-
 </details>
 
 <details>
@@ -66,20 +64,19 @@ Other features:
 - enhance run/debug tests with quotes in the name. 
 - update documentations and a few bug fixes.
 
-More details see [v4.3.0 release](https://github.com/jest-community/vscode-jest/releases/tag/v4.3.0)
+More details see [v4.3.1 release](https://github.com/jest-community/vscode-jest/releases/tag/v4.3.1)
 
 </details>
 
-#### installation
+#### installation <!-- omit in toc -->
 To try the pre-release version, see vscode [pre-release](https://code.visualstudio.com/updates/v1_63#_pre-release-extensions) instruction.
 
 <details>
-<summary>or click to view illustration</summary>
+<summary>screenshot</summary>
 
 ![image](images/pre-release.png)
 
 </details>
----
 
 ### Stable: [v4.2.1](https://github.com/jest-community/vscode-jest/releases/tag/v4.2.1) <!-- omit in toc -->
 
@@ -122,12 +119,9 @@ P.S. We find the new version did made the development of this extension a bit ea
 
 Content
 - [vscode-jest](#vscode-jest)
-    - [Pre-Release v4.3.0](#pre-release-v430)
-      - [installation](#installation)
-  - [</details>](#details)
   - [The Aim](#the-aim)
   - [Features](#features)
-  - [Installation](#installation-1)
+  - [Installation](#installation)
   - [How to use the extension?](#how-to-use-the-extension)
     - [How to get it set up?](#how-to-get-it-set-up)
     - [How to trigger the test run?](#how-to-trigger-the-test-run)
@@ -138,7 +132,7 @@ Content
     - [How to use the Test Explorer?](#how-to-use-the-test-explorer)
   - [Customization](#customization)
     - [Settings](#settings)
-      - [Details](#details-1)
+      - [Details](#details)
         - [jestCommandLine](#jestcommandline)
         - [rootPath](#rootpath)
         - [debugCodeLens.showWhenTestStateIn](#debugcodelensshowwhenteststatein)
@@ -509,7 +503,7 @@ There are many information online about how to setup vscode debug config for spe
 
 ### Debug Config v2
 
-v4.3.0 introduces a "variable substitution" based config with name `"vscode-jest-tests.v2"`. The extension will merely substitute the jest variables in the config, without adding/removing anything else. 
+v4.3 introduces a "variable substitution" based config with name `"vscode-jest-tests.v2"`. The extension will merely substitute the jest variables in the config, without adding/removing anything else. 
 
 Currently supported variables:
 - **${jest.testNamePattern}** - will be replaced by the test block's full name (include the surrounding describe block names).
