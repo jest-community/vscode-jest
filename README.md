@@ -385,14 +385,14 @@ There are 2 formatters to choose from:
   <details>
   <summary> DefaultFormatter: high light uncovered and partially-covered code inlilne as well as on the right overview ruler. (this is the default)</summary>
   
-        ![coverage-DefaultFormatter.png](./images/coverage-DefaultFormatter.png)
+![coverage-DefaultFormatter.png](images/coverage-DefaultFormatter.png)
 
 </details>
 
  <details>
  <summary>GutterFormatter: render coverage status in the gutter as well as the overview ruler.</summary>
   
-     ![coverage-GutterFormatter.png](./images/coverage-GutterFormatter.png)
+![coverage-GutterFormatter.png](images/coverage-GutterFormatter.png)
 
 </details>
 
