@@ -4,27 +4,27 @@
 
 ---
 ## Release Notes<!-- omit in toc -->
-### Pre-Release [v4.3.1](https://github.com/jest-community/vscode-jest/releases/tag/v4.3.1) <!-- omit in toc -->
-<details>
+### Latest: [v4.4.0](https://github.com/jest-community/vscode-jest/releases/tag/v4.4.0) <!-- omit in toc -->
 
-<summary>interactive run extended to watch mode</summary>
-
-Users in watch mode can now run any test/folder/workspace interactively just like with non-watch mode. 
+Interactive run has been extended to watch mode in v4.4.0. Users in watch mode can now run any test/folder/workspace interactively just like with non-watch mode. 
 
 ![image](images/interactive-watch-mode.png)
 
-</details>
+Other features:
 
-<details>
 
-<summary>more control with debug config v2</summary>
+- debug config v2
 
-This release introduced debug config v2, which changed how we inject jest runtime information, such as test file and name, to the debug config. Replacing the "behind-the-scene-injection"  with a "variable-substitution" model, so no more hidden operations and surprises, the extension will only substitute the jest specific variables present in the config. 
+  <details>
 
-A default jest debug config in v2 will look like this:
+  <summary>expand for detail</summary>
 
-```json
-{
+  This release introduced debug config v2, which changed how we inject jest runtime information, such as test file and name, to the debug config. Replacing the "behind-the-scene-injection"  with a "variable-substitution" model, so no more hidden operations and surprises, the extension will only substitute the jest specific variables present in the config. 
+
+  A default jest debug config in v2 will look like this:
+
+  ```json
+  {
   "type": "node",
   "name": "vscode-jest-tests.v2",
   "request": "launch",
@@ -44,41 +44,30 @@ A default jest debug config in v2 will look like this:
   "windows": {
     "program": "${workspaceFolder}/node_modules/jest/bin/jest"
   }
-}
-```
-Jest like vscode [variables](https://code.visualstudio.com/docs/editor/variables-reference), the `"${jest.testNamePattern}"` and `"${jest.testFile}"` are jest specific variables and, if present, will be substituted by the extension upon debugging. Note the config name change: `"vscode-jest-tests.v2"`, which signal the extension to use the substitution mode. 
+  }
+  ```
+  Jest like vscode [variables](https://code.visualstudio.com/docs/editor/variables-reference), the `"${jest.testNamePattern}"` and `"${jest.testFile}"` are jest specific variables and, if present, will be substituted by the extension upon debugging. Note the config name change: `"vscode-jest-tests.v2"`, which signal the extension to use the substitution mode. 
 
-This change is backward compatible. All existing config (with `"vscode-jest-tests"`) will continue to function as before. 
+  This change is backward compatible. All existing config (with `"vscode-jest-tests"`) will continue to function as before. 
 
-More info see [Debug Config v2](#debug-config-v2)
+  More info see [Debug Config v2](#debug-config-v2)
 
-</details>
+  </details>
 
-<details>
-
-<summary>vue support and more</summary>
-
-Other features: 
 - supports `vue` file testing
 - enhanced test output discovery by automatically opening TestExplorer terminal upon launch. 
 - enhance run/debug tests with quotes in the name. 
 - update documentations and a few bug fixes.
 
-More details see [v4.3.1 release](https://github.com/jest-community/vscode-jest/releases/tag/v4.3.1)
-
 </details>
 
-#### installation <!-- omit in toc -->
-To try the pre-release version, see vscode [pre-release](https://code.visualstudio.com/updates/v1_63#_pre-release-extensions) instruction.
+More details see [v4.4.0 release](https://github.com/jest-community/vscode-jest/releases/tag/v4.4.0)
+
+### Previous Releases <!-- omit in toc -->
 
 <details>
-<summary>screenshot</summary>
 
-![image](images/pre-release.png)
-
-</details>
-
-### Stable: [v4.2.1](https://github.com/jest-community/vscode-jest/releases/tag/v4.2.1) <!-- omit in toc -->
+<summary>v4.2.1</summary>
 
 Test menu is now accessible for all tests, regardless of run mode. If cursor jumping when editing tests is a bit annoying, you can now alternatively disable the DebugCodeLens and use "Debug Test" from the test menu:
 
@@ -89,6 +78,10 @@ For users struggled with the jest process environment, this release added 2 new 
   2. use custom shell when spawning jest process (`"jest.shell"`)
 
 Also fixed inline error pop-up in vscode 1.61, and enhanced snapshot language support. 
+
+more info see [v4.2.1 release](https://github.com/jest-community/vscode-jest/releases/tag/v4.2.1)
+
+</details>
 
 <details>
 <summary>v4.1 with Test Explorer</summary>
