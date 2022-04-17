@@ -32,6 +32,9 @@
   ],
   "activationEvents": [
     "workspaceContains:jest.config.js",
+    "workspaceContains:jest.config.mjs",
+    "workspaceContains:jest.config.cjs",
+    "workspaceContains:jest.config.ts",
     "workspaceContains:jest.json",
     "workspaceContains:node_modules/.bin/jest",
     "workspaceContains:node_modules/react-scripts/node_modules/.bin/jest",
