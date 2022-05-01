@@ -111,6 +111,7 @@ export const createJestExtContext = (
 export const getExtensionResourceSettings = (uri: vscode.Uri): PluginResourceSettings => {
   const config = vscode.workspace.getConfiguration('jest', uri);
   return {
+    showTerminalOnLaunch: config.get<boolean>('showTerminalOnLaunch') ?? true,
     autoEnable: config.get<boolean>('autoEnable'),
     enableSnapshotUpdateMessages: config.get<boolean>('enableSnapshotUpdateMessages'),
     pathToConfig: config.get<string>('pathToConfig'),

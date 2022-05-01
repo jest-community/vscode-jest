@@ -188,6 +188,7 @@ describe('getExtensionResourceSettings()', () => {
       coverageColors: null,
       autoRun: null,
       testExplorer: { enabled: true },
+      showTerminalOnLaunch: true,
     });
   });
   it('can read user settings', () => {

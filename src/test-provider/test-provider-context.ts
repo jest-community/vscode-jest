@@ -1,6 +1,11 @@
 import * as vscode from 'vscode';
 import { JestExtExplorerContext, TestItemData } from './types';
 
+let showTerminal = true;
+export const _resetShowTerminal = (): void => {
+  showTerminal = true;
+};
+
 /**
  * provide context information from JestExt and test provider state:
  * 1. TestData <-> TestItem
@@ -17,6 +22,7 @@ const COLORS = {
   ['end']: '\x1b[0m',
 };
 export type TagIdType = 'run' | 'debug';
+
 export class JestTestProviderContext {
   private testItemData: WeakMap<vscode.TestItem, TestItemData>;
 
@@ -88,19 +94,18 @@ export class JestTestProviderContext {
       text = `${COLORS[color]}${text}${COLORS['end']}`;
     }
     run.appendOutput(`${text}${newLine ? '\r\n' : ''}`);
-    showTestExplorerTerminal();
+    this.showTestExplorerTerminal();
+  };
+
+  /** show TestExplorer Terminal on first invocation only */
+  showTestExplorerTerminal = (): void => {
+    if (showTerminal && this.ext.settings.showTerminalOnLaunch !== false) {
+      showTerminal = false;
+      vscode.commands.executeCommand('testing.showMostRecentOutput');
+    }
   };
 
   // tags
   getTag = (tagId: TagIdType): vscode.TestTag | undefined =>
     this.profiles.find((p) => p.tag?.id === tagId)?.tag;
 }
-
-/** show TestExplorer Terminal on first invocation only */
-let showTerminal = true;
-const showTestExplorerTerminal = () => {
-  if (showTerminal) {
-    showTerminal = false;
-    vscode.commands.executeCommand('testing.showMostRecentOutput');
-  }
-};
