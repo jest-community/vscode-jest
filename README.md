@@ -4,7 +4,17 @@
 
 ---
 ## Release Notes<!-- omit in toc -->
-### Latest: [v4.4.0](https://github.com/jest-community/vscode-jest/releases/tag/v4.4.0) <!-- omit in toc -->
+### Pre-Release: [v4.5.0](https://github.com/jest-community/vscode-jest/releases/tag/v4.5.0) <!-- omit in toc -->
+
+<details>
+
+<summary>features</summary>
+
+- adding a new setting `jest.showTerminalOnLaunch` to control if test explorer terminal should be automatically opened upon launch. Default is true. 
+  
+</details>
+
+### Stable: [v4.4.0](https://github.com/jest-community/vscode-jest/releases/tag/v4.4.0) <!-- omit in toc -->
 
 Interactive run has been extended to watch mode in v4.4.0. Users in watch mode can now run any test/folder/workspace interactively just like with non-watch mode. 
 
@@ -357,6 +367,7 @@ Users can use the following settings to tailor the extension for their environme
 |**Misc**|
 |debugMode|Enable debug mode to diagnose plugin issues. (see developer console)|false|`"jest.debugMode": true`|
 |disabledWorkspaceFolders 💼|Disabled workspace folders names in multiroot environment|[]|`"jest.disabledWorkspaceFolders": ["package-a", "package-b"]`|
+|showTerminalOnLaunch 💼|automatically open test explorer terminal on launch (>= v4.5)|true|`"jest.showTerminalOnLaunch": false`|
 
 #### Details
 ##### jestCommandLine

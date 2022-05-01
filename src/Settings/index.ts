@@ -28,6 +28,7 @@ export type TestExplorerConfig =
   | { enabled: true; showClassicStatus?: boolean; showInlineError?: boolean };
 export type NodeEnv = ProjectWorkspace['nodeEnv'];
 export interface PluginResourceSettings {
+  showTerminalOnLaunch?: boolean;
   autoEnable?: boolean;
   enableSnapshotUpdateMessages?: boolean;
   jestCommandLine?: string;

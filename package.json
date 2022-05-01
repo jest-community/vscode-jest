@@ -70,6 +70,12 @@
       "type": "object",
       "title": "Jest",
       "properties": {
+        "jest.showTerminalOnLaunch": {
+          "description": "Automatically open test explorer's terminal upon launch",
+          "type": "boolean",
+          "default": true,
+          "scope": "window"
+        },
         "jest.autoEnable": {
           "description": "Automatically start Jest for this project",
           "type": "boolean",

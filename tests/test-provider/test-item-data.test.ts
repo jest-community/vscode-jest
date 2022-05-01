@@ -32,7 +32,10 @@ import {
   WorkspaceRoot,
 } from '../../src/test-provider/test-item-data';
 import * as helper from '../test-helper';
-import { JestTestProviderContext } from '../../src/test-provider/test-provider-context';
+import {
+  JestTestProviderContext,
+  _resetShowTerminal,
+} from '../../src/test-provider/test-provider-context';
 import {
   buildAssertionContainer,
   buildSourceContainer,
@@ -82,6 +85,8 @@ describe('test-item-data', () => {
       .fn()
       .mockImplementation((uri, p) => ({ fsPath: `${uri.fsPath}/${p}` }));
     vscode.Uri.file = jest.fn().mockImplementation((f) => ({ fsPath: f }));
+
+    _resetShowTerminal();
   });
   describe('show TestExplorer Terminal', () => {
     it('show TestExplorer Terminal on first run output only', () => {
@@ -92,6 +97,24 @@ describe('test-item-data', () => {
       context.appendOutput('subsequent calls will not open terminal again', runMock);
       expect(vscode.commands.executeCommand).toBeCalledTimes(1);
     });
+    it.each`
+      showTerminalOnLaunch | callTimes
+      ${undefined}         | ${1}
+      ${true}              | ${1}
+      ${false}             | ${0}
+    `(
+      'controlled by showTerminalOnLaunch($showTerminalOnLaunch) => callTimes($callTimes)',
+      ({ showTerminalOnLaunch, callTimes }) => {
+        context.ext.settings.showTerminalOnLaunch = showTerminalOnLaunch;
+        (vscode.commands.executeCommand as jest.Mocked<any>).mockClear();
+
+        context.appendOutput('first time should open terminal', runMock);
+        expect(vscode.commands.executeCommand).toBeCalledTimes(callTimes);
+
+        context.appendOutput('subsequent calls will not open terminal again', runMock);
+        expect(vscode.commands.executeCommand).toBeCalledTimes(callTimes);
+      }
+    );
   });
   describe('discover children', () => {
     describe('WorkspaceRoot', () => {
