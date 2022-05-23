@@ -344,10 +344,10 @@ However, test explorer is new and some features are still work-in-progress or no
 
 ### How to see more debug info (self-diagnosis)?
 
-It is usually helpful to see the actual command and shell environment the extension spawned for your project. You can see them in the developer console (via `Help > Toggle Developer Tools` menu), for example to examine the environment variables passed to jest runner: [examine-env.git](https://github.com/jest-community/vscode-jest/blob/master/images/vscode-jest-env-log.gif)
+It is usually helpful to see the actual command and shell environment the extension spawned for your project. You can see them in the developer console (via `Help > Toggle Developer Tools` menu), for example to examine the PATH environment variables: look for the "spawn" log, expand the "options" object, expand "env" property, all env variables (inherited from vscode process) should be there (view [animation](https://github.com/jest-community/vscode-jest/blob/master/images/vscode-jest-env-log.gif)).
 
 You can also see process output in the following methods:  
-  - If you uses TestExplorer, you can see color coded jest output from the TestExplorer's Output terminal (the square arrow icon on the top of the Explorer View) 
+  - The color coded process output terminal from TestExplorer. If it is not open or not updated, you can manually open it from TestExplore view (the square arrow icon on the top of the Explorer View)  
   - Otherwise you can see the output in "OUTPUT" channel, which is usually named after the workspace folder, such as `Jest (your-workspace-name)`. Or you can click on `Jest` label on status bar to show Jest Output window. This will show you the jest run output and the errors.
 
 You can also turn on the debug mode to see more internal debugging message in the developer console:
