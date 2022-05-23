@@ -3,7 +3,31 @@
 [![Build Status](https://github.com/jest-community/vscode-jest/actions/workflows/node-ci.yml/badge.svg)](https://github.com/jest-community/vscode-jest/actions) [![Coverage Status](https://coveralls.io/repos/github/jest-community/vscode-jest/badge.svg?branch=master)](https://coveralls.io/github/jest-community/vscode-jest?branch=master) [![Visual Studio Marketplace](https://img.shields.io/visual-studio-marketplace/v/Orta.vscode-jest?color=success&label=Visual%20Studio%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=Orta.vscode-jest)
 
 ---
-## Release Notes<!-- omit in toc -->
+## Getting Started 
+
+The extension should work out-of-the-box for most common jest projects. To get started:
+
+1. Setup [jest](https://jestjs.io/docs/getting-started) in your project if you haven't.
+2. [install](#installation) **"Jest"** extension in vscode.
+3. reload or restart vscode 
+
+If the extension can find the [jest command](#how-to-set-up-the-jest-command), by default it will automatically run and monitor all tests in watch mode upon launch, and you should see tests, status, errors, coverage (if enabled) in TestExplorer and editors like this:
+
+![image](images/interactive-watch-mode.png)
+
+If you have a more sophisticated project configuration or prefer to run tests differently, fear not, the extension supports extensive [customization settings](#customization). For example:
+
+- you can use [jest.jestCommandLine](#jestcommandline) to tell the extension to use `yarn test` instead of the default jest command.
+- you can use [jest.autoRun](#autorun) to optimize performance and control when the extension should run your tests. 
+- you can use the extension with monorepo projects, see [monorepo project support](#how-to-use-the-extension-with-monorepo-projects) for details.
+
+You can see the full [features](#features) and learn more details in the [How-To](#how-to) section. If you encounter an unexpected error, feel free to checkout the [Troubleshooting](#troubleshooting) or file an [issue](https://github.com/jest-community/vscode-jest/issues). 
+
+Happy testing!
+
+---
+
+## Release Notes
 ### Pre-Release: [v4.5.0](https://github.com/jest-community/vscode-jest/releases/tag/v4.5.0) <!-- omit in toc -->
 
 <details>
@@ -122,17 +146,19 @@ P.S. We find the new version did made the development of this extension a bit ea
 
 Content
 - [vscode-jest](#vscode-jest)
-  - [The Aim](#the-aim)
+  - [Getting Started](#getting-started)
+  - [Release Notes](#release-notes)
   - [Features](#features)
   - [Installation](#installation)
-  - [How to use the extension?](#how-to-use-the-extension)
-    - [How to get it set up?](#how-to-get-it-set-up)
+  - [How To?](#how-to)
+    - [How to set up the jest command?](#how-to-set-up-the-jest-command)
     - [How to trigger the test run?](#how-to-trigger-the-test-run)
     - [How to debug tests?](#how-to-debug-tests)
     - [How to use code coverage?](#how-to-use-code-coverage)
     - [How to use the extension with monorepo projects?](#how-to-use-the-extension-with-monorepo-projects)
     - [How to read the StatusBar?](#how-to-read-the-statusbar)
     - [How to use the Test Explorer?](#how-to-use-the-test-explorer)
+    - [How to see more debug info (self-diagnosis)?](#how-to-see-more-debug-info-self-diagnosis)
   - [Customization](#customization)
     - [Settings](#settings)
       - [Details](#details)
@@ -148,6 +174,10 @@ Content
   - [Commands](#commands)
   - [Menu](#menu)
   - [Troubleshooting](#troubleshooting)
+    - [Jest failed to run](#jest-failed-to-run)
+    - [I don't see "Jest" in the bottom status bar](#i-dont-see-jest-in-the-bottom-status-bar)
+    - [The extension seems to consume high CPU](#the-extension-seems-to-consume-high-cpu)
+    - [The tests and status do not match or some tests showing question marks unexpectedly?](#the-tests-and-status-do-not-match-or-some-tests-showing-question-marks-unexpectedly)
   - [Want to Contribute?](#want-to-contribute)
   - [License](#license)
 
@@ -155,15 +185,7 @@ Content
 
 
 
-## The Aim
 
-A comprehensive experience when using [Facebook's Jest](https://github.com/facebook/jest) within a project.
-
-* Useful IDE based Feedback
-* Session based test watching
-* File based interactive testing
-
-<img src="https://github.com/jest-community/vscode-jest/raw/master/images/vscode-jest.gif" alt="Screenshot of the tool" width="100%">
 
 ## Features
 
@@ -185,31 +207,20 @@ Alternatively open Visual Studio Code, go to the extension view and search for "
 
 For detailed releases and migration help, please see [releases](https://github.com/jest-community/vscode-jest/releases).
 
-## How to use the extension?
+## How To?
+### How to set up the jest command?
 
-This extension should work out of the box for [common jest environments](#common-jest-env). Users should see test status indicators in test file editors and Jest stats in the StatusBar, for example. However, for more sophisticated projects or people who prefer different look-and-feel/behaviors, customization via [settings](#customization) might be needed.
+The extension starts jest on behave of the user, therefore a valid Jest command is the minimal required info. 
 
-Most features in this extension should be pretty straight forward without much configuration. But in case you want to change the default behavior or encountered some difficulty with the extension, please checkout the following how-to and troubleshooting guides.
+- default jest command
+  <a id="default-jest-command"></a>This extension can automatically start the jest process without any custom configuration if:
 
----
-<a id="common-jest-env">**common jest environments**</a>:
-
-This extension can automatically start the jest process without any custom configuration when
-
-* we find Jest installed in the workspace: `node_modules/.bin/jest`
-* we find the workspace has been bootstrapped with create-react-app:
-  - `node_modules/react-scripts/node_modules/.bin/jest` or
-  - `node_modules/react-native-scripts`
-
----
-
-### How to get it set up?
-
-This extension runs on top of your Jest installation. Upon starting, it has the expectation that the Jest environment is properly set up, i.e. jest can be executed in VS Code's terminal.
-
-Out of the box, this extension should work for most simple/standard jest and react projects (see [common jest environments](#common-jest-env)). However, if you have a more sophisticated project or custom jest command, the extension might not be able to start the jest process automatically.  In such case you can use the [jest.jestCommandLine](#jestCommandLine) to customize the extension. In v4 and on, a [setup wizard](setup-wizard.md) can be used to configure the essential settings for the extension.
-
-Feel free to checkout the complete list of available [custom settings](#customization).
+  - it finds Jest installed in the workspace: `node_modules/.bin/jest`
+  - it finds the workspace has been bootstrapped with create-react-app: `node_modules/react-scripts/node_modules/.bin/jest` or `node_modules/react-native-scripts`
+- custom jest command
+  - if no default jest command is found, the extension will fail unless a custom jest command is configured.
+  - user can set custom jest command with [jest.jestCommandLine](#jestcommandline) setting, for example  `"jest.jestCommandLine": "yarn test"` .  
+  - or to use the [Setup Wizard](setup-wizard.md) via command `"Jest: Setup Extension (Beta)"`.
 
 ### How to trigger the test run?
 
@@ -288,9 +299,11 @@ You can customize coverage start up behavior, style and colors, see [customizati
 
 
 ### How to use the extension with monorepo projects?
-The recommended approach is to setup the monorepo project as a [multi-root workspaces](https://code.visualstudio.com/docs/editor/multi-root-workspaces) in vscode, which each sub package is a "folder". While you can use jest `projects` to run all tests without multi-root workspaces, you won't be able to take advantage a more fine grained control such as toggle coverage for a specific package instead of all packages.
+The recommended approach is to setup the monorepo project as a [multi-root workspaces](https://code.visualstudio.com/docs/editor/multi-root-workspaces) in vscode. This is a simple one time setup that add each sub package as a "folder" in the workspace. 
 
-You can customize how the extension works in multi-root workspaces, see [customization](#customization) for more details.
+You can use `jest.disabledWorkspaceFolders` setting to exclude non-jest folders, if needed.
+
+Note: While you can use jest `projects` to run all tests without multi-root workspaces, you won't be able to take advantage a more fine grained control such as toggle coverage for a specific package instead of all packages.
 
 ### How to read the StatusBar?
 StatusBar shows 2 kinds of information:
@@ -329,6 +342,16 @@ However, test explorer is new and some features are still work-in-progress or no
 - for watch-mode workspaces, the run button is turned off since tests will be automatically executed.
 - debug can only be executed for the test blocks, not on the file or folder level. (Please let us know if you have an use case otherwise)
 
+### How to see more debug info (self-diagnosis)?
+
+It is usually helpful to see the actual command and shell environment the extension spawned for your project. You can see them in the developer console (via `Help > Toggle Developer Tools` menu), for example to examine the environment variables passed to jest runner: [examine-env.git](https://github.com/jest-community/vscode-jest/blob/master/images/vscode-jest-env-log.gif)
+
+You can also see process output in the following methods:  
+  - If you uses TestExplorer, you can see color coded jest output from the TestExplorer's Output terminal (the square arrow icon on the top of the Explorer View) 
+  - Otherwise you can see the output in "OUTPUT" channel, which is usually named after the workspace folder, such as `Jest (your-workspace-name)`. Or you can click on `Jest` label on status bar to show Jest Output window. This will show you the jest run output and the errors.
+
+You can also turn on the debug mode to see more internal debugging message in the developer console:
+  - set `"jest.debugMode": true` in `.vscode/settings.json`
 
 ## Customization
 ### Settings
@@ -599,64 +622,46 @@ Please see [vscode Key Bindings](https://code.visualstudio.com/docs/getstarted/k
 
 
 ## Troubleshooting
-Sorry you are having trouble with the extension. If your issue did not get resolved after checking out the [how-to](#how-to-use-the-extension) section and the tips below (click arrows to expand), feel free to [ask](https://github.com/jest-community/vscode-jest/issues) the community, chances are some one else had a similar experience and could help resolving it.
+Sorry you are having trouble with the extension. If your issue did not get resolved after checking out the [how-to](#how-to) section and the tips below, feel free to [ask](https://github.com/jest-community/vscode-jest/issues) the community, chances are some one else had a similar experience and could help resolving it.
 
-<details>
-<summary>I don't see "Jest" in the bottom status bar</summary>
-  This means the extension is not activated.
-  The extension should be automatically activated as described in [How to start jest](#how-to-start-jest).
-  If it failed because maybe you don't use the root of your project for jest tests, you can use [jest.rootPath](#rootPath) to point to that directory instead.
-</details>
+### Jest failed to run
 
-<details>
-<summary>I got "Jest Process xxx failed unexpectedly..." or "Jest failed too many times..." error message</summary>
+  If you can't run jest in the terminal, please reference [jest configuration](https://jestjs.io/docs/configuration) to setup accordingly.
 
-  This usually means the extension is not able to start jest process for you. First check the TestExplorer Output, Jest OUTPUT channel or developer console to see what is the actual error (see [self-diagnosis](#self-diagnosis)).
+  If you can run jest manually in the terminal but the extension showed error like "xxx ended unexpectedly", following are the most common causes (see [self-diagnosis](#how-to-see-more-debug-info-self-diagnosis) if you need more debug info):
 
-  If it is related to the run time environment, such as
-  ```
-  env: node: No such file or directory
-  ```
+  - <a id="trouble-shell-env"></a>runtime environment issue: such as the shell env is not fully initialized upon vscode start up. A good indicator is messages prefixed with **"env:"**, such as `env: node: No such file or directory` 
+    - Most likely the child_process environment the extension used to run jest is not correctly initialized. There are many possible causes, sometimes restarting vscode from a terminal will fix it, otherwise feel free to check out a more in-depth explanation and suggestions [here](https://github.com/jest-community/vscode-jest/issues/741#issuecomment-921222851). 
+  - <a id="trouble-jest-cmdline"></a>jest command line issue: such as you usually run `yarn test` but the extension uses the default `jest` instead.
+    - Try configuring the [jest.jestCommandLine](#jestcommandline) to mimic how you run jest from the terminal, such as `yarn test` or `npm run test --`. The extension can auto-config common configurations like create react apps but not custom scripts like [CRACO](https://github.com/gsoft-inc/craco).
+    - or you can use the **"Run Setup Wizard"** button in the error panel to resolve the configuration issue, see [Setup Wizard](setup-wizard.md).  
+  - monorepo project issue: you have a monorepo project but not setup as a [multi-root workspace](https://code.visualstudio.com/docs/editor/multi-root-workspaces). 
+    - see [monorepo projects](#how-to-use-the-extension-with-monorepo-projects) on how to set it up correctly.
 
-  Most likely the child_process environment is not correctly initialized. There are many possible causes, sometimes restarting vscode will fix it, otherwise feel free to check out a more in-depth explanation/suggestion [here](https://github.com/jest-community/vscode-jest/issues/741#issuecomment-921222851). 
+There could be other causes, such as jest test root path is different from the project's, which can be fixed by setting [jest.rootPath](#rootPath). Feel free to check out the [customization](#customization) section to manually adjust the extension if needed.
 
-  If you see error about not able to find `jest` or some other jest related runtime error: if you can run jest from terminal then you can use the **"Run Setup Wizard"** button in the error panel to help resolving the configuration issue, see [Setup Wizard](setup-wizard.md). If jest doesn't even run from the terminal, then please reference [jest](https://jestjs.io/docs/configuration) to set up your jest test environment. 
+### I don't see "Jest" in the bottom status bar
+  This means the extension is not activated. 
   
-  There could be other causes, such as jest test root path is different from the project's, which can be fixed by setting [jest.rootPath](#rootPath). Feel free to check out the [customization](#customization) section to manually adjust the extension if needed.
-</details>
+  vscode will automatically activate the extension upon detecting any of the following files from the project root directory:
+  - jest config file (`jest.json`, `jest.config.js`, `jest.config.ts`, `jest.config.mjs`, `jest.config.cjs`)
+  - jest command (`node_modules/.bin/jest`, `node_modules/react-scripts/node_modules/.bin/jest`)
+  - react-native script (`node_modules/react-native-scripts`)
 
-<details>
-<summary>It seems to make my vscode sluggish</summary>
+  If none of the activation criteria is met because
 
-  By default the extension will run all tests when it is launched followed by a jest watch process. If you have many resource extensive tests or source files that can trigger many tests when changed, this could be the reason. Check out [jest.autoRun](#autorun) to see how you can change and control when and what tests should be run.
-</details>
+  - you have a monorepo project:  see [monorepo projects support](#how-to-use-the-extension-with-monorepo-projects). 
+  - your source and tests are not in the project root directory: try [jest.rootPath](#rootPath) to point to that directory instead.
 
-<details>
-<summary>The tests and status do not match or some tests showing question marks unexpectedly</summary>
+  Users can also try to manually activate the extension via command palette: `"Jest: Start All Runners"`
+### The extension seems to consume high CPU 
+  By default the extension will run all tests when it is launched followed by a jest watch process. If you have many resource intensive tests or source files that can trigger many tests when changed, this could be the reason. Check out [jest.autoRun](#autorun) to see how you can change and control when and what tests should be run.
+
+### The tests and status do not match or some tests showing question marks unexpectedly?
 
 If your test file happen to have parameterized tests, i.e. `test.each` variations, please make sure you have jest version >= 26.5.
 
-If the above did not resolve your issue, please see the [self-diagnosis](#self-diagnosis) below that could show more insight of why the test and result could not be matched.
-
-</details>
-
-<details>
-<summary><a id='self-diagnosis'></a>The extension is not behaving as expected, what is going on? (try self diagnosis)</summary>
-
-If you can execute jest tests on command line but vscode-jest was not running as expected, here is what you can do to find out more information:
-  - [Try configuring the `jest.jestCommandLine`](#jestcommandline) with `yarn test` or `npm run test --`. The extension can auto-config common configurations like create react apps but not custom scripts like [CRACO](https://github.com/gsoft-inc/craco).
-  - You can see jest process output with either one of the methods:
-    - If you uses TestExplorer, you can see color coded jest output from the TestExplorer's Output terminal (the square arrow icon on the top of the Explorer View) 
-    - Otherwise you can see the output in "OUTPUT" channel, which is usually named after the workspace folder, such as `Jest (your-workspace-name)`. Or you can click on `Jest` label on status bar to show Jest Output window. This will show you the jest run output and the errors.
-    <img src="https://github.com/jest-community/vscode-jest/raw/master/images/output-channel.png" alt="Screenshot of the tool" width="100%">
-
-  - See additional logging from the developer console (via `Help > Toggle Developer Tools` menu), for example to examine the environment variables passed to jest runner: [examine-env.git](https://github.com/jest-community/vscode-jest/blob/master/images/vscode-jest-env-log.gif)
-  
-  - Turn on the debug mode to see more internal debugging message in the developer console:
-    - set `"jest.debugMode": true` in `.vscode/settings.json`
-
-  Hopefully most issues would be pretty obvious after seeing these extra output, and you can probably fix most yourself by [customizing](#customization) the `jest.jestCommandLine` and others.
-</details>
+If the above did not resolve your issue, please see the [self-diagnosis](#how-to-see-more-debug-info-self-diagnosis) to show more insight of why the test and result could not be matched.
 
 ## Want to Contribute?
 
