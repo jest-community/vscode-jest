@@ -5,7 +5,7 @@
 ---
 ## Getting Started 
 
-The extension should work out-of-the-box for most common jest projects. To get started:
+This extension supports full [jest](https://jestjs.io/) features in vscode environment to make testing more intuitive and fun. It should work out-of-the-box for most common jest projects. To get started:
 
 1. Setup [jest](https://jestjs.io/docs/getting-started) in your project if you haven't.
 2. [install](#installation) **"Jest"** extension in vscode.
@@ -28,17 +28,17 @@ Happy testing!
 ---
 
 ## Release Notes
-### Pre-Release: [v4.5.0](https://github.com/jest-community/vscode-jest/releases/tag/v4.5.0) <!-- omit in toc -->
+### Stable: [v4.6.0](https://github.com/jest-community/vscode-jest/releases/tag/v4.6.0) <!-- omit in toc -->
+
+- added a new setting ["jest.showTerminalOnLaunch"](#showTerminalOnLaunch) to control if test explorer terminal should be automatically opened upon launch. Default is true.  
+- refactor README 
+
+
+### Previous Releases <!-- omit in toc -->
 
 <details>
 
-<summary>features</summary>
-
-- adding a new setting `jest.showTerminalOnLaunch` to control if test explorer terminal should be automatically opened upon launch. Default is true. 
-  
-</details>
-
-### Stable: [v4.4.0](https://github.com/jest-community/vscode-jest/releases/tag/v4.4.0) <!-- omit in toc -->
+<summary>4.4.0</summary> 
 
 Interactive run has been extended to watch mode in v4.4.0. Users in watch mode can now run any test/folder/workspace interactively just like with non-watch mode. 
 
@@ -93,11 +93,10 @@ Other features:
 - enhance run/debug tests with quotes in the name. 
 - update documentations and a few bug fixes.
 
-</details>
-
 More details see [v4.4.0 release](https://github.com/jest-community/vscode-jest/releases/tag/v4.4.0)
 
-### Previous Releases <!-- omit in toc -->
+</details>
+
 
 <details>
 
@@ -390,7 +389,7 @@ Users can use the following settings to tailor the extension for their environme
 |**Misc**|
 |debugMode|Enable debug mode to diagnose plugin issues. (see developer console)|false|`"jest.debugMode": true`|
 |disabledWorkspaceFolders 💼|Disabled workspace folders names in multiroot environment|[]|`"jest.disabledWorkspaceFolders": ["package-a", "package-b"]`|
-|showTerminalOnLaunch 💼|automatically open test explorer terminal on launch (>= v4.5)|true|`"jest.showTerminalOnLaunch": false`|
+|<a id="showTerminalOnLaunch"></a>showTerminalOnLaunch 💼|automatically open test explorer terminal on launch (>= v4.5)|true|`"jest.showTerminalOnLaunch": false`|
 
 #### Details
 ##### jestCommandLine
