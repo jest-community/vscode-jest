@@ -181,11 +181,6 @@ Content
   - [License](#license)
 
 ---
-
-
-
-
-
 ## Features
 
 * Starts Jest automatically when you're in a root folder project with Jest installed.
@@ -279,13 +274,14 @@ Code coverage can be triggered via [Command Palette](https://code.visualstudio.c
 ![status-bar-modes](images/status-bar-watch-coverage.png)
 
 <details>
+
 <summary>How to read coverage scheme and customize it</summary>
 
 In addition to the coverage summary that is shown on the top of the file, each line will be marked by its coverage status according to the coverage formatter configured. There are 3 types of coverage you might see in your source code, distinguished by colors:
 
-- "covered": if the code is covered. Marked as <span style="color:green">"green"</span> by default.
-- "not-covered": if the code is not covered. Marked as <span style="color:red">"red"</span> by default.
-- "partially-covered": Usually this mean the branch (such as if, switch statements) only partially tested. Marked as <span style="color:yellow">"yellow"</span> by default.
+- "covered": if the code is covered. Either not marked or "green" by default, depends on the formatter.
+- "not-covered": if the code is not covered. Marked as "red" by default.
+- "partially-covered": Usually this mean the branch (such as if, switch statements) only partially tested. Marked as "yellow" by default.
   - _Please note, istanbuljs (the library jest used to generate coverage info) reports switch branch coverage with the first "case" statement instead of the "switch" statement._
 
 ![coverage-screen-shot](images/coverage-screen-shot.png)
@@ -295,7 +291,6 @@ You can customize coverage start up behavior, style and colors, see [customizati
 </details>
 
 ⚠️ In rare cases, coverage info might be less than what it actual is in "watch" mode (with `--watch` flag), where only changed files/tests are run (see facebook/jest#1284).
-
 
 ### How to use the extension with monorepo projects?
 The recommended approach is to setup the monorepo project as a [multi-root workspaces](https://code.visualstudio.com/docs/editor/multi-root-workspaces) in vscode. This is a simple one time setup that add each sub package as a "folder" in the workspace. 
