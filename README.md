@@ -5,7 +5,7 @@
 ---
 ## Getting Started 
 
-The extension should work out-of-the-box for most common jest projects. To get started:
+This extension supports full [jest](https://jestjs.io/) features in vscode environment to make testing more intuitive and fun. It should work out-of-the-box for most common jest projects. To get started:
 
 1. Setup [jest](https://jestjs.io/docs/getting-started) in your project if you haven't.
 2. [install](#installation) **"Jest"** extension in vscode.
@@ -28,17 +28,17 @@ Happy testing!
 ---
 
 ## Release Notes
-### Pre-Release: [v4.5.0](https://github.com/jest-community/vscode-jest/releases/tag/v4.5.0) <!-- omit in toc -->
+### Stable: [v4.6.0](https://github.com/jest-community/vscode-jest/releases/tag/v4.6.0) <!-- omit in toc -->
+
+- added a new setting ["jest.showTerminalOnLaunch"](#showTerminalOnLaunch) to control if test explorer terminal should be automatically opened upon launch. Default is true.  
+- refactor README 
+
+
+### Previous Releases <!-- omit in toc -->
 
 <details>
 
-<summary>features</summary>
-
-- adding a new setting `jest.showTerminalOnLaunch` to control if test explorer terminal should be automatically opened upon launch. Default is true. 
-  
-</details>
-
-### Stable: [v4.4.0](https://github.com/jest-community/vscode-jest/releases/tag/v4.4.0) <!-- omit in toc -->
+<summary>4.4.0</summary> 
 
 Interactive run has been extended to watch mode in v4.4.0. Users in watch mode can now run any test/folder/workspace interactively just like with non-watch mode. 
 
@@ -93,11 +93,10 @@ Other features:
 - enhance run/debug tests with quotes in the name. 
 - update documentations and a few bug fixes.
 
-</details>
-
 More details see [v4.4.0 release](https://github.com/jest-community/vscode-jest/releases/tag/v4.4.0)
 
-### Previous Releases <!-- omit in toc -->
+</details>
+
 
 <details>
 
@@ -182,11 +181,6 @@ Content
   - [License](#license)
 
 ---
-
-
-
-
-
 ## Features
 
 * Starts Jest automatically when you're in a root folder project with Jest installed.
@@ -280,13 +274,14 @@ Code coverage can be triggered via [Command Palette](https://code.visualstudio.c
 ![status-bar-modes](images/status-bar-watch-coverage.png)
 
 <details>
+
 <summary>How to read coverage scheme and customize it</summary>
 
 In addition to the coverage summary that is shown on the top of the file, each line will be marked by its coverage status according to the coverage formatter configured. There are 3 types of coverage you might see in your source code, distinguished by colors:
 
-- "covered": if the code is covered. Marked as <span style="color:green">"green"</span> by default.
-- "not-covered": if the code is not covered. Marked as <span style="color:red">"red"</span> by default.
-- "partially-covered": Usually this mean the branch (such as if, switch statements) only partially tested. Marked as <span style="color:yellow">"yellow"</span> by default.
+- "covered": if the code is covered. Either not marked or "green" by default, depends on the formatter.
+- "not-covered": if the code is not covered. Marked as "red" by default.
+- "partially-covered": Usually this mean the branch (such as if, switch statements) only partially tested. Marked as "yellow" by default.
   - _Please note, istanbuljs (the library jest used to generate coverage info) reports switch branch coverage with the first "case" statement instead of the "switch" statement._
 
 ![coverage-screen-shot](images/coverage-screen-shot.png)
@@ -296,7 +291,6 @@ You can customize coverage start up behavior, style and colors, see [customizati
 </details>
 
 ⚠️ In rare cases, coverage info might be less than what it actual is in "watch" mode (with `--watch` flag), where only changed files/tests are run (see facebook/jest#1284).
-
 
 ### How to use the extension with monorepo projects?
 The recommended approach is to setup the monorepo project as a [multi-root workspaces](https://code.visualstudio.com/docs/editor/multi-root-workspaces) in vscode. This is a simple one time setup that add each sub package as a "folder" in the workspace. 
@@ -390,7 +384,7 @@ Users can use the following settings to tailor the extension for their environme
 |**Misc**|
 |debugMode|Enable debug mode to diagnose plugin issues. (see developer console)|false|`"jest.debugMode": true`|
 |disabledWorkspaceFolders 💼|Disabled workspace folders names in multiroot environment|[]|`"jest.disabledWorkspaceFolders": ["package-a", "package-b"]`|
-|showTerminalOnLaunch 💼|automatically open test explorer terminal on launch (>= v4.5)|true|`"jest.showTerminalOnLaunch": false`|
+|<a id="showTerminalOnLaunch"></a>showTerminalOnLaunch 💼|automatically open test explorer terminal on launch (>= v4.5)|true|`"jest.showTerminalOnLaunch": false`|
 
 #### Details
 ##### jestCommandLine
