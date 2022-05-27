@@ -2,7 +2,7 @@
   "name": "vscode-jest",
   "displayName": "Jest",
   "description": "Use Facebook's Jest With Pleasure.",
-  "version": "4.5.0",
+  "version": "4.7.0",
   "publisher": "Orta",
   "engines": {
     "vscode": "^1.63.0"
@@ -118,9 +118,10 @@
           "scope": "resource"
         },
         "jest.shell": {
-          "markdownDescription": "The shell path to override jest runner process default shell (see Node [child_process.spawn()](https://nodejs.org/api/child_process.html#child_process_child_process_spawn_command_args_options)) for more detail)",
+          "markdownDescription": "The shell path or a login-shell to override jest runner process default shell (see Node [child_process.spawn()](https://nodejs.org/api/child_process.html#child_process_child_process_spawn_command_args_options)) for more detail)",
           "type": [
             "string",
+            "object",
             "null"
           ],
           "default": null,
