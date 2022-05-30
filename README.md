@@ -28,6 +28,10 @@ Happy testing!
 ---
 
 ## Release Notes
+
+### Pre-Release: [v4.7.0](https://github.com/jest-community/vscode-jest/releases/tag/v4.6.0) <!-- omit in toc -->
+- expand the ["jest.shell"](#shell) setting to support LoginShell config. This can resolve the  runtime environment issues due to vscode incomplete initialization, which often showed `env: node: No such file or directory` or `env: yarn: No such file or directory`.  
+- Enhance troubleshooting for [resolve runtime environment issues]().
 ### Stable: [v4.6.0](https://github.com/jest-community/vscode-jest/releases/tag/v4.6.0) <!-- omit in toc -->
 
 - added a new setting ["jest.showTerminalOnLaunch"](#showTerminalOnLaunch) to control if test explorer terminal should be automatically opened upon launch. Default is true.  
@@ -168,6 +172,7 @@ Content
         - [coverageColors](#coveragecolors)
         - [autoRun](#autorun)
         - [testExplorer](#testexplorer)
+        - [shell](#shell)
     - [Debug Config](#debug-config)
     - [Debug Config v2](#debug-config-v2)
   - [Commands](#commands)
@@ -361,7 +366,7 @@ Users can use the following settings to tailor the extension for their environme
 |autoEnable :x:|Automatically start Jest for this project|true|Please use `autoRun` instead|
 |[jestCommandLine](#jestCommandLine)|The command line to start jest tests|undefined|`"jest.jestCommandLine": "npm test -"` or `"jest.jestCommandLine": "yarn test"` or `"jest.jestCommandLine": "node_modules/.bin/jest --config custom-config.js"`|
 |nodeEnv|Add additional env variables to spawned jest process|null|`"jest.nodeEnv": {"PORT": "9800", "BAR":"true"}` |
-|shell|Custom shell (path) for jest process|null|`"jest.shell": "/bin/bash"` or `"jest.shell": "powershell"` |
+|shell|Custom shell (path or LoginShell) for executing jest|null|`"jest.shell": "/bin/bash"` or `"jest.shell": "powershell"` or `"jest.shell": {"path": "/bin/bash"; args: ["--login"]}`  |
 |[autoRun](#autorun)|Controls when and what tests should be run|undefined|`"jest.autoRun": "off"` or `"jest.autoRun": {"watch": true, "onStartup": ["all-tests"]}` or `"jest.autoRun": false, onSave:"test-only"}`|
 |pathToJest :x:|The path to the Jest binary, or an npm/yarn command to run tests|undefined|Please use `jestCommandLine` instead|
 |pathToConfig :x:|The path to your Jest configuration file"|""|Please use `jestCommandLine` instead|
@@ -507,7 +512,21 @@ for example:
   - `showInlineError`: (optional) show vscode style inline error and error message viewer. Default is false.
 
   4.1 default is `"jest.testExplorer": {"enabled": true}`
->
+
+
+##### shell
+```ts
+shell = string | LoginShell;
+
+interface LoginShell 
+{
+  path: string;
+  args: string[];
+}
+```
+By default, jest command is executed in default shell ('cmd' for windows, '/bin/sh' for non-windows). Users can use the `"jest.shell"` setting to either pass the path of another shell (e.g. "/bin/zsh") or a LoginShell config, basically a shell path and login arguments (e.g. `{"path": "/bin/bash", "args": ["--login"]}`)
+
+Note the LoginShell is only applicable for non-windows platform and could cause a bit more overhead.
 ### Debug Config
 
 This extension looks for jest specific debug config (`"vscode-jest-tests"` or `"vscode-jest-tests.v2"`) in the workspace `.vscode/launch.json`. If not found, it will attempt to generate a default config that should work for most standard jest or projects bootstrapped by `create-react-app`.
@@ -624,12 +643,18 @@ Sorry you are having trouble with the extension. If your issue did not get resol
 
   If you can run jest manually in the terminal but the extension showed error like "xxx ended unexpectedly", following are the most common causes (see [self-diagnosis](#how-to-see-more-debug-info-self-diagnosis) if you need more debug info):
 
-  - <a id="trouble-shell-env"></a>runtime environment issue: such as the shell env is not fully initialized upon vscode start up. A good indicator is messages prefixed with **"env:"**, such as `env: node: No such file or directory` 
-    - Most likely the child_process environment the extension used to run jest is not correctly initialized. There are many possible causes, sometimes restarting vscode from a terminal will fix it, otherwise feel free to check out a more in-depth explanation and suggestions [here](https://github.com/jest-community/vscode-jest/issues/741#issuecomment-921222851). 
-  - <a id="trouble-jest-cmdline"></a>jest command line issue: such as you usually run `yarn test` but the extension uses the default `jest` instead.
+  - <a id="trouble-shell-env"></a>**runtime environment issue**: such as the shell env is not fully initialized upon vscode start up. A good indicator is messages prefixed with **"env:"**, or node/yarn/npm command not found, such as `env: node: No such file or directory` 
+    - This should only happened in Linux or MacOS and is caused by vscode not able to fully initialize the shell env when it starts up (more details [here](https://code.visualstudio.com/docs/supporting/faq#_resolving-shell-environment-fails)).
+    - The extension usually spawns the jest process with a non-login/not-interactive shell, which inherits the vscode env. If vscode env is not complete, the jest process could fail for example the `PATH` env variable is not correct. (more details [here](https://github.com/jest-community/vscode-jest/issues/741#issuecomment-921222851))
+    - There are many ways to workaround such issues:
+      - simply restart vscode sometimes can fix it
+      - start vscode from a terminal 
+      - add `PATH` directly to `jest.nodeEnv` settings, if that is the only problem.
+      - force the jest command to be executed in a login shell by setting ["jest.shell"](#shell) to a LoginShell. Note this might have some slight performance overhead. 
+  - <a id="trouble-jest-cmdline"></a>***jest command line issue**: such as you usually run `yarn test` but the extension uses the default `jest` instead.
     - Try configuring the [jest.jestCommandLine](#jestcommandline) to mimic how you run jest from the terminal, such as `yarn test` or `npm run test --`. The extension can auto-config common configurations like create react apps but not custom scripts like [CRACO](https://github.com/gsoft-inc/craco).
     - or you can use the **"Run Setup Wizard"** button in the error panel to resolve the configuration issue, see [Setup Wizard](setup-wizard.md).  
-  - monorepo project issue: you have a monorepo project but not setup as a [multi-root workspace](https://code.visualstudio.com/docs/editor/multi-root-workspaces). 
+  - **monorepo project issue**: you have a monorepo project but not setup as a [multi-root workspace](https://code.visualstudio.com/docs/editor/multi-root-workspaces). 
     - see [monorepo projects](#how-to-use-the-extension-with-monorepo-projects) on how to set it up correctly.
 
 There could be other causes, such as jest test root path is different from the project's, which can be fixed by setting [jest.rootPath](#rootPath). Feel free to check out the [customization](#customization) section to manually adjust the extension if needed.
