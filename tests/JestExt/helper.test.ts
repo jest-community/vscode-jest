@@ -1,5 +1,9 @@
 jest.unmock('../../src/JestExt/helper');
 jest.unmock('../test-helper');
+
+const mockPlatform = jest.fn();
+jest.mock('os', () => ({ platform: mockPlatform }));
+
 import * as vscode from 'vscode';
 import { readFileSync } from 'fs';
 import {
@@ -13,6 +17,8 @@ import { pathToJest, pathToConfig } from '../../src/helpers';
 import { mockProjectWorkspace } from '../test-helper';
 import { toFilePath } from '../../src/helpers';
 import { RunnerWorkspaceOptions } from '../../src/JestExt/types';
+
+jest.mock('jest-editor-support', () => ({ isLoginShell: jest.fn(), ProjectWorkspace: jest.fn() }));
 
 describe('createJestExtContext', () => {
   const workspaceFolder: any = { name: 'workspace' };
@@ -191,17 +197,50 @@ describe('getExtensionResourceSettings()', () => {
       showTerminalOnLaunch: true,
     });
   });
-  it('can read user settings', () => {
-    userSettings = {
-      testExplorer: { enable: false },
-      nodeEnv: { whatever: '1' },
-      shell: '/bin/bash',
-    };
-    const uri: any = { fsPath: 'workspaceFolder1' };
-    expect(getExtensionResourceSettings(uri)).toEqual(
-      expect.objectContaining({
-        ...userSettings,
-      })
+  describe('can read user settings', () => {
+    it('with nodeEnv and shell path', () => {
+      userSettings = {
+        testExplorer: { enable: false },
+        nodeEnv: { whatever: '1' },
+        shell: '/bin/bash',
+      };
+      const uri: any = { fsPath: 'workspaceFolder1' };
+      expect(getExtensionResourceSettings(uri)).toEqual(
+        expect.objectContaining({
+          ...userSettings,
+        })
+      );
+    });
+    it.each`
+      platform    | args      | supported
+      ${'win32'}  | ${[]}     | ${false}
+      ${'linux'}  | ${['-l']} | ${true}
+      ${'darwin'} | ${['-l']} | ${true}
+      ${'darwin'} | ${[]}     | ${false}
+    `(
+      'supports loginShell with $args in $platform => $supported',
+      ({ platform, supported, args }) => {
+        mockPlatform.mockReturnValue(platform);
+
+        userSettings = {
+          shell: { path: '/bin/zsh', args },
+        };
+        const uri: any = { fsPath: 'workspaceFolder1' };
+
+        if (supported) {
+          expect(getExtensionResourceSettings(uri)).toEqual(
+            expect.objectContaining({
+              ...userSettings,
+            })
+          );
+        } else {
+          expect(getExtensionResourceSettings(uri)).not.toEqual(
+            expect.objectContaining({
+              ...userSettings,
+            })
+          );
+        }
+      }
     );
   });
 });

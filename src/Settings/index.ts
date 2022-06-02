@@ -1,6 +1,6 @@
 import { TestState } from '../DebugCodeLens';
 import { CoverageColors } from '../Coverage/CoverageOverlay';
-import { ProjectWorkspace } from 'jest-editor-support';
+import { LoginShell, ProjectWorkspace } from 'jest-editor-support';
 
 export type JestTestProcessType =
   | 'all-tests'
@@ -44,7 +44,7 @@ export interface PluginResourceSettings {
   autoRun?: JestExtAutoRunConfig;
   testExplorer: TestExplorerConfig;
   nodeEnv?: NodeEnv;
-  shell?: string;
+  shell?: string | LoginShell;
 }
 
 export interface PluginWindowSettings {

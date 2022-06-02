@@ -3,7 +3,7 @@
  */
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { ProjectWorkspace } from 'jest-editor-support';
+import { ProjectWorkspace, LoginShell } from 'jest-editor-support';
 import { JestProcessRequest } from '../JestProcessManagement';
 import {
   PluginResourceSettings,
@@ -16,6 +16,7 @@ import { pathToJest, pathToConfig, toFilePath } from '../helpers';
 import { workspaceLogging } from '../logging';
 import { AutoRunAccessor, JestExtContext, RunnerWorkspaceOptions } from './types';
 import { CoverageColors } from '../Coverage';
+import { platform } from 'os';
 
 export const isWatchRequest = (request: JestProcessRequest): boolean =>
   request.type === 'watch-tests' || request.type === 'watch-all-tests';
@@ -108,8 +109,40 @@ export const createJestExtContext = (
   };
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const isLoginShell = (arg: any): arg is LoginShell =>
+  arg && typeof arg.path === 'string' && Array.isArray(arg.args);
+
+const getShell = (config: vscode.WorkspaceConfiguration): string | LoginShell | undefined => {
+  console.log('inside getShell');
+
+  const shell = config.get<string | LoginShell>('shell');
+
+  console.log('shell=', shell);
+  if (!shell || typeof shell === 'string') {
+    return shell;
+  }
+
+  console.log('before calling isLoginShell shell=', shell);
+  if (isLoginShell(shell)) {
+    if (platform() === 'win32') {
+      console.error(`LoginShell is not supported for windows currently.`);
+      return;
+    }
+    if (shell.args.length <= 0) {
+      console.error(
+        'Invalid login-shell arguments. Expect arguments like "--login" or "-l", but got:',
+        shell.args.length
+      );
+      return;
+    }
+    return shell;
+  }
+};
+
 export const getExtensionResourceSettings = (uri: vscode.Uri): PluginResourceSettings => {
   const config = vscode.workspace.getConfiguration('jest', uri);
+
   return {
     showTerminalOnLaunch: config.get<boolean>('showTerminalOnLaunch') ?? true,
     autoEnable: config.get<boolean>('autoEnable'),
@@ -130,7 +163,7 @@ export const getExtensionResourceSettings = (uri: vscode.Uri): PluginResourceSet
     autoRun: config.get<JestExtAutoRunConfig>('autoRun'),
     testExplorer: config.get<TestExplorerConfig>('testExplorer') ?? { enabled: true },
     nodeEnv: config.get<NodeEnv | null>('nodeEnv') ?? undefined,
-    shell: config.get<string | null>('shell') ?? undefined,
+    shell: getShell(config) ?? undefined,
   };
 };
 

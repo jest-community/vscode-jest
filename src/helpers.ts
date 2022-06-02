@@ -6,6 +6,7 @@ import { ExtensionContext } from 'vscode';
 import { PluginResourceSettings, hasUserSetPathToJest } from './Settings';
 import { TestIdentifier } from './TestResults';
 import { TestStats } from './types';
+import { LoginShell } from 'jest-editor-support';
 
 /**
  * Known binary names of `react-scripts` forks
@@ -212,6 +213,15 @@ export const emptyTestStats = (): TestStats => {
   return { success: 0, fail: 0, unknown: 0 };
 };
 
+const getShellPath = (shell?: string | LoginShell): string | undefined => {
+  if (!shell) {
+    return;
+  }
+  if (typeof shell === 'string') {
+    return shell;
+  }
+  return shell.path;
+};
 /**
  * quoting a given string for it to be used as shell command arguments.
  *
@@ -221,8 +231,8 @@ export const emptyTestStats = (): TestStats => {
  *
  **/
 
-export const shellQuote = (str: string, shell?: string): string => {
-  const targetShell = shell && shell.trim().toLowerCase();
+export const shellQuote = (str: string, shell?: string | LoginShell): string => {
+  const targetShell = getShellPath(shell)?.trim().toLowerCase();
 
   // try to determine the shell type
   let shellType: 'powershell' | 'cmd' | 'sh';
