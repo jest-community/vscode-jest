@@ -32,6 +32,7 @@ import { startWizard, WizardTaskId } from '../setup-wizard';
 import { JestExtExplorerContext } from '../test-provider/types';
 import { JestTestProvider } from '../test-provider';
 import { JestProcessInfo } from '../JestProcessManagement';
+import { addFolderToDisabledWorkspaceFolders } from '../extensionManager';
 
 interface RunTestPickItem extends vscode.QuickPickItem {
   id: DebugTestIdentifier;
@@ -144,6 +145,14 @@ export class JestExt {
     };
   }
 
+  private setupIgnoreAction(folder: string): messaging.MessageAction {
+    return {
+      title: 'Ignore Folder',
+      action: (): void => {
+        addFolderToDisabledWorkspaceFolders(folder);
+      },
+    };
+  }
   private setupRunEvents(events: JestSessionEvents): void {
     events.onRunEvent.event((event: JestRunEvent) => {
       switch (event.type) {
@@ -176,7 +185,8 @@ export class JestExt {
             messaging.systemErrorMessage(
               event.error,
               messaging.showTroubleshootingAction,
-              this.setupWizardAction('cmdLine')
+              this.setupWizardAction('cmdLine'),
+              this.setupIgnoreAction(event.workspaceFolder)
             );
           } else {
             this.updateStatusBar({ state: 'done' });
@@ -391,7 +401,7 @@ export class JestExt {
     if (
       vscode.window.activeTextEditor?.document.uri &&
       vscode.workspace.getWorkspaceFolder(vscode.window.activeTextEditor.document.uri) ===
-        this.extContext.workspace
+      this.extContext.workspace
     ) {
       this.onDidChangeActiveTextEditor(vscode.window.activeTextEditor);
     }

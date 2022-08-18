@@ -90,10 +90,19 @@ export class AbstractProcessListener {
     // see shell error code: https://www.linuxjournal.com/article/10844
     if (code && code > 1) {
       const error = `${process.request.type} onProcessExit: process exit with code=${code}, signal=${signal}`;
-      this.session.context.onRunEvent.fire({ type: 'exit', process, error });
+      this.session.context.onRunEvent.fire({
+        type: 'exit',
+        process,
+        error,
+        workspaceFolder: this.session.context.workspace.name,
+      });
       this.logging('debug', `${error} :`, process.toString());
     } else {
-      this.session.context.onRunEvent.fire({ type: 'exit', process });
+      this.session.context.onRunEvent.fire({
+        type: 'exit',
+        process,
+        workspaceFolder: this.session.context.workspace.name,
+      });
     }
   }
 }
@@ -272,6 +281,11 @@ export class RunTestListener extends AbstractProcessListener {
   protected onProcessClose(process: JestProcess): void {
     super.onProcessClose(process);
     const error = this.handleWatchProcessCrash(process);
-    this.onRunEvent.fire({ type: 'exit', process, error });
+    this.onRunEvent.fire({
+      type: 'exit',
+      process,
+      error,
+      workspaceFolder: this.session.context.workspace.name,
+    });
   }
 }
