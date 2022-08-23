@@ -50,7 +50,7 @@ export type JestRunEvent = RunEventBase &
     | { type: 'data'; text: string; raw?: string; newLine?: boolean; isError?: boolean }
     | { type: 'start' }
     | { type: 'end' }
-    | { type: 'exit'; error?: string; workspaceFolder: string }
+    | { type: 'exit'; error?: string }
   );
 export interface JestSessionEvents {
   onRunEvent: vscode.EventEmitter<JestRunEvent>;

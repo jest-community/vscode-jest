@@ -145,11 +145,11 @@ export class JestExt {
     };
   }
 
-  private setupIgnoreAction(folder: string): messaging.MessageAction {
+  private setupIgnoreAction(): messaging.MessageAction {
     return {
       title: 'Ignore Folder',
       action: (): void => {
-        addFolderToDisabledWorkspaceFolders(folder);
+        addFolderToDisabledWorkspaceFolders(this.extContext.workspace.name);
       },
     };
   }
@@ -186,7 +186,7 @@ export class JestExt {
               event.error,
               messaging.showTroubleshootingAction,
               this.setupWizardAction('cmdLine'),
-              this.setupIgnoreAction(event.workspaceFolder)
+              this.setupIgnoreAction()
             );
           } else {
             this.updateStatusBar({ state: 'done' });

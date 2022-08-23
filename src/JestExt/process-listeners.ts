@@ -94,14 +94,12 @@ export class AbstractProcessListener {
         type: 'exit',
         process,
         error,
-        workspaceFolder: this.session.context.workspace.name,
       });
       this.logging('debug', `${error} :`, process.toString());
     } else {
       this.session.context.onRunEvent.fire({
         type: 'exit',
         process,
-        workspaceFolder: this.session.context.workspace.name,
       });
     }
   }
@@ -285,7 +283,6 @@ export class RunTestListener extends AbstractProcessListener {
       type: 'exit',
       process,
       error,
-      workspaceFolder: this.session.context.workspace.name,
     });
   }
 }
