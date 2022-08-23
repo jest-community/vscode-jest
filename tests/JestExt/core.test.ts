@@ -7,7 +7,10 @@ jest.unmock('../test-helper');
 jest.mock('../../src/DebugCodeLens', () => ({
   DebugCodeLensProvider: class MockCodeLensProvider {},
 }));
-jest.mock('os');
+const mockPlatform = jest.fn();
+const mockRelease = jest.fn();
+mockRelease.mockReturnValue('');
+jest.mock('os', () => ({ platform: mockPlatform, release: mockRelease }));
 jest.mock('../../src/decorations/test-status', () => ({
   TestStatus: jest.fn(),
 }));
