@@ -100,7 +100,7 @@ Check out [here](#note-4) if you are having problem running vscode-jest debug co
   
 - <a id="note-3">**How is platform specific properties handled in DebugConfig generation?**</a>
   
-  Currently the wizard does not generate platform specific properties. Users will need to manually maintain them in `lauch.json` file. 
+  Currently the wizard does not generate platform specific properties. Users will need to manually maintain them in `launch.json` file. 
 
   For example, for a different jest command under windows, add the `windows.program` section in `launch.json`:
 
