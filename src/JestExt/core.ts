@@ -401,7 +401,7 @@ export class JestExt {
     if (
       vscode.window.activeTextEditor?.document.uri &&
       vscode.workspace.getWorkspaceFolder(vscode.window.activeTextEditor.document.uri) ===
-      this.extContext.workspace
+        this.extContext.workspace
     ) {
       this.onDidChangeActiveTextEditor(vscode.window.activeTextEditor);
     }

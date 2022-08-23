@@ -25,7 +25,7 @@ export function getExtensionWindowSettings(): PluginWindowSettings {
   };
 }
 
-export function addFolderToDisabledWorkspaceFolders(folder: string) {
+export function addFolderToDisabledWorkspaceFolders(folder: string): void {
   const config = vscode.workspace.getConfiguration('jest');
   const disabledWorkspaceFolders = new Set(config.get<string[]>('disabledWorkspaceFolders') ?? []);
   disabledWorkspaceFolders.add(folder);
@@ -34,23 +34,23 @@ export function addFolderToDisabledWorkspaceFolders(folder: string) {
 
 export type RegisterCommand =
   | {
-    type: 'all-workspaces';
-    name: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    callback: (extension: JestExt, ...args: any[]) => any;
-  }
+      type: 'all-workspaces';
+      name: string;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      callback: (extension: JestExt, ...args: any[]) => any;
+    }
   | {
-    type: 'select-workspace';
-    name: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    callback: (extension: JestExt, ...args: any[]) => any;
-  }
+      type: 'select-workspace';
+      name: string;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      callback: (extension: JestExt, ...args: any[]) => any;
+    }
   | {
-    type: 'active-text-editor' | 'active-text-editor-workspace';
-    name: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    callback: (extension: JestExt, textEditor: vscode.TextEditor, ...args: any[]) => any;
-  };
+      type: 'active-text-editor' | 'active-text-editor-workspace';
+      name: string;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      callback: (extension: JestExt, textEditor: vscode.TextEditor, ...args: any[]) => any;
+    };
 type CommandType = RegisterCommand['type'];
 const CommandPrefix: Record<CommandType, string> = {
   'all-workspaces': `${extensionName}`,
