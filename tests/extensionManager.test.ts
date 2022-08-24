@@ -2,7 +2,11 @@ jest.unmock('../src/extensionManager');
 jest.unmock('../src/appGlobals');
 
 import * as vscode from 'vscode';
-import { ExtensionManager, getExtensionWindowSettings } from '../src/extensionManager';
+import {
+  addFolderToDisabledWorkspaceFolders,
+  ExtensionManager,
+  getExtensionWindowSettings,
+} from '../src/extensionManager';
 import { DebugCodeLensProvider, TestState } from '../src/DebugCodeLens';
 import { readFileSync } from 'fs';
 import { PluginWindowSettings } from '../src/Settings';
@@ -10,6 +14,8 @@ import { extensionName } from '../src/appGlobals';
 import { JestExt } from '../src/JestExt';
 import { DebugConfigurationProvider } from '../src/DebugConfigurationProvider';
 import { CoverageCodeLensProvider } from '../src/Coverage';
+
+const updateConfigurationMock = jest.fn();
 
 vscode.workspace.getConfiguration = jest.fn().mockImplementation((section) => {
   const data = readFileSync('./package.json');
@@ -24,6 +30,7 @@ vscode.workspace.getConfiguration = jest.fn().mockImplementation((section) => {
 
   return {
     get: jest.fn().mockImplementation((key) => defaults[`${section}.${key}`]),
+    update: updateConfigurationMock,
   };
 });
 
@@ -520,6 +527,16 @@ describe('ExtensionManager', () => {
       });
     });
   });
+
+  describe('addFolderToDisabledWorkspaceFolders()', () => {
+    it('should add the folder to the disabledWorkspaceFolders in the configuration', async () => {
+      addFolderToDisabledWorkspaceFolders('some-workspace-folder');
+      expect(updateConfigurationMock).toHaveBeenCalledWith('disabledWorkspaceFolders', [
+        'some-workspace-folder',
+      ]);
+    });
+  });
+
   describe.each`
     files                       | ext1Call | ext2Call
     ${['ws-3']}                 | ${0}     | ${0}
