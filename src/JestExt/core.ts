@@ -32,6 +32,8 @@ import { startWizard, WizardTaskId } from '../setup-wizard';
 import { JestExtExplorerContext } from '../test-provider/types';
 import { JestTestProvider } from '../test-provider';
 import { JestProcessInfo } from '../JestProcessManagement';
+import { addFolderToDisabledWorkspaceFolders } from '../extensionManager';
+import { MessageAction } from '../messaging';
 
 interface RunTestPickItem extends vscode.QuickPickItem {
   id: DebugTestIdentifier;
@@ -144,6 +146,14 @@ export class JestExt {
     };
   }
 
+  private setupIgnoreAction(): messaging.MessageAction {
+    return {
+      title: 'Ignore Folder',
+      action: (): void => {
+        addFolderToDisabledWorkspaceFolders(this.extContext.workspace.name);
+      },
+    };
+  }
   private setupRunEvents(events: JestSessionEvents): void {
     events.onRunEvent.event((event: JestRunEvent) => {
       switch (event.type) {
@@ -173,11 +183,15 @@ export class JestExt {
             const msg = `${event.error}\n see troubleshooting: ${messaging.TROUBLESHOOTING_URL}`;
             this.channel.appendLine(msg);
             this.channel.show();
-            messaging.systemErrorMessage(
-              event.error,
+
+            const messageActions: Array<MessageAction> = [
               messaging.showTroubleshootingAction,
-              this.setupWizardAction('cmdLine')
-            );
+              this.setupWizardAction('cmdLine'),
+            ];
+            if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 1) {
+              messageActions.push(this.setupIgnoreAction());
+            }
+            messaging.systemErrorMessage(event.error, ...messageActions);
           } else {
             this.updateStatusBar({ state: 'done' });
           }

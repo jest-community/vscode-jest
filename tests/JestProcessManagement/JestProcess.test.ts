@@ -4,7 +4,9 @@ jest.unmock('../../src/JestProcessManagement/helper');
 jest.unmock('../../src/helpers');
 
 const mockPlatform = jest.fn();
-jest.mock('os', () => ({ platform: mockPlatform }));
+const mockRelease = jest.fn();
+mockRelease.mockReturnValue('');
+jest.mock('os', () => ({ platform: mockPlatform, release: mockRelease }));
 
 import { Runner } from 'jest-editor-support';
 import { JestProcess, RunnerEvents } from '../../src/JestProcessManagement/JestProcess';

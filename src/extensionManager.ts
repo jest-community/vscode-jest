@@ -25,6 +25,13 @@ export function getExtensionWindowSettings(): PluginWindowSettings {
   };
 }
 
+export function addFolderToDisabledWorkspaceFolders(folder: string): void {
+  const config = vscode.workspace.getConfiguration('jest');
+  const disabledWorkspaceFolders = new Set(config.get<string[]>('disabledWorkspaceFolders') ?? []);
+  disabledWorkspaceFolders.add(folder);
+  config.update('disabledWorkspaceFolders', [...disabledWorkspaceFolders]);
+}
+
 export type RegisterCommand =
   | {
       type: 'all-workspaces';

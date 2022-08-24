@@ -7,7 +7,10 @@ jest.unmock('../test-helper');
 jest.mock('../../src/DebugCodeLens', () => ({
   DebugCodeLensProvider: class MockCodeLensProvider {},
 }));
-jest.mock('os');
+const mockPlatform = jest.fn();
+const mockRelease = jest.fn();
+mockRelease.mockReturnValue('');
+jest.mock('os', () => ({ platform: mockPlatform, release: mockRelease }));
 jest.mock('../../src/decorations/test-status', () => ({
   TestStatus: jest.fn(),
 }));
@@ -36,6 +39,8 @@ import { workspaceLogging } from '../../src/logging';
 import { ProjectWorkspace } from 'jest-editor-support';
 import { mockProjectWorkspace, mockWworkspaceLogging } from '../test-helper';
 import { JestTestProvider } from '../../src/test-provider';
+import { MessageAction } from '../../src/messaging';
+import { addFolderToDisabledWorkspaceFolders } from '../../src/extensionManager';
 
 /* eslint jest/expect-expect: ["error", { "assertFunctionNames": ["expect", "expectItTakesNoAction"] }] */
 const mockHelpers = helper as jest.Mocked<any>;
@@ -1158,7 +1163,30 @@ describe('JestExt', () => {
         it('if error: status bar stopped and show error', () => {
           onRunEvent({ type: 'exit', error: 'something is wrong', process });
           expect(sbUpdateMock).toBeCalledWith({ state: 'stopped' });
-          expect(messaging.systemErrorMessage).toHaveBeenCalled();
+          expect(messaging.systemErrorMessage).toHaveBeenCalledWith(
+            'something is wrong',
+            { action: expect.any(Function), title: 'Help' },
+            { action: expect.any(Function), title: 'Run Setup Wizard' }
+          );
+        });
+        it('if error: status bar stopped and show error with ignore folder button', () => {
+          (vscode.workspace.workspaceFolders as any) = ['testfolder1', 'testfolder2'];
+
+          onRunEvent({ type: 'exit', error: 'something is wrong', process });
+          expect(sbUpdateMock).toBeCalledWith({ state: 'stopped' });
+          expect(messaging.systemErrorMessage).toHaveBeenCalledWith(
+            'something is wrong',
+            { action: expect.any(Function), title: 'Help' },
+            { action: expect.any(Function), title: 'Run Setup Wizard' },
+            { action: expect.any(Function), title: 'Ignore Folder' }
+          );
+
+          const ignoreAction: MessageAction = (messaging.systemErrorMessage as jest.Mocked<any>)
+            .mock.calls[0][3];
+
+          ignoreAction.action();
+
+          expect(addFolderToDisabledWorkspaceFolders).toHaveBeenCalledWith('test-folder');
         });
       });
     });
