@@ -39,6 +39,8 @@ interface RunTestPickItem extends vscode.QuickPickItem {
   id: DebugTestIdentifier;
 }
 
+type MessageActionType = 'help' | 'wizard' | 'disable-folder';
+
 /** extract lines starts and end with [] */
 export class JestExt {
   coverageMapProvider: CoverageMapProvider;
@@ -184,14 +186,10 @@ export class JestExt {
             this.channel.appendLine(msg);
             this.channel.show();
 
-            const messageActions: Array<MessageAction> = [
-              messaging.showTroubleshootingAction,
-              this.setupWizardAction('cmdLine'),
-            ];
-            if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 1) {
-              messageActions.push(this.setupIgnoreAction());
-            }
-            messaging.systemErrorMessage(event.error, ...messageActions);
+            messaging.systemErrorMessage(
+              prefixWorkspace(this.extContext, event.error),
+              ...this.buildMessageActions(['help', 'wizard', 'disable-folder'])
+            );
           } else {
             this.updateStatusBar({ state: 'done' });
           }
@@ -200,6 +198,28 @@ export class JestExt {
     });
   }
 
+  private buildMessageActions = (types: MessageActionType[]): MessageAction[] => {
+    const actions: MessageAction[] = [];
+    for (const t of types) {
+      switch (t) {
+        case 'help':
+          actions.push(messaging.showTroubleshootingAction);
+          break;
+        case 'wizard':
+          actions.push(this.setupWizardAction('cmdLine'));
+          break;
+        case 'disable-folder':
+          if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 1) {
+            actions.push(this.setupIgnoreAction());
+          }
+          break;
+        default:
+          console.error(`invalid message action type: ${t}`);
+          break;
+      }
+    }
+    return actions;
+  };
   private createProcessSession(): ProcessSession {
     return createProcessSession({
       ...this.extContext,
@@ -248,8 +268,7 @@ export class JestExt {
       this.channel.appendLine('Failed to start jest session');
       messaging.systemErrorMessage(
         `${msg}...`,
-        messaging.showTroubleshootingAction,
-        this.setupWizardAction('cmdLine')
+        ...this.buildMessageActions(['help', 'wizard', 'disable-folder'])
       );
     }
   }
@@ -270,7 +289,7 @@ export class JestExt {
       const msg = prefixWorkspace(this.extContext, 'Failed to stop jest session');
       this.logging('error', `${msg}:`, e);
       this.channel.appendLine('Failed to stop jest session');
-      messaging.systemErrorMessage('${msg}...', messaging.showTroubleshootingAction);
+      messaging.systemErrorMessage('${msg}...', ...this.buildMessageActions(['help']));
     }
   }
 

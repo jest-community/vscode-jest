@@ -1170,12 +1170,12 @@ describe('JestExt', () => {
           );
         });
         it('if error: status bar stopped and show error with ignore folder button', () => {
-          (vscode.workspace.workspaceFolders as any) = ['testfolder1', 'testfolder2'];
+          (vscode.workspace.workspaceFolders as any) = ['testfolder1', 'testfolder'];
 
           onRunEvent({ type: 'exit', error: 'something is wrong', process });
           expect(sbUpdateMock).toBeCalledWith({ state: 'stopped' });
           expect(messaging.systemErrorMessage).toHaveBeenCalledWith(
-            'something is wrong',
+            '(test-folder) something is wrong',
             { action: expect.any(Function), title: 'Help' },
             { action: expect.any(Function), title: 'Run Setup Wizard' },
             { action: expect.any(Function), title: 'Ignore Folder' }

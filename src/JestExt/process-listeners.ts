@@ -3,7 +3,7 @@ import { JestTotalResults } from 'jest-editor-support';
 import { cleanAnsi } from '../helpers';
 import { JestProcess, JestProcessEvent } from '../JestProcessManagement';
 import { ListenerSession, ListTestFilesCallback } from './process-session';
-import { isWatchRequest, prefixWorkspace } from './helper';
+import { isWatchRequest } from './helper';
 import { Logging } from '../logging';
 import { JestRunEvent } from './types';
 
@@ -219,10 +219,7 @@ export class RunTestListener extends AbstractProcessListener {
       (process.request.type === 'watch-tests' || process.request.type === 'watch-all-tests') &&
       process.stopReason !== 'on-demand'
     ) {
-      const msg = prefixWorkspace(
-        this.session.context,
-        `Jest process "${process.request.type}" ended unexpectedly`
-      );
+      const msg = `Jest process "${process.request.type}" ended unexpectedly`;
       this.logging('warn', msg);
 
       return msg;

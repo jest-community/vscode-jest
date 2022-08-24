@@ -335,32 +335,6 @@ describe('jest process listeners', () => {
             })
           );
         });
-        it('in single-root env, folder name will not be shown in the message', () => {
-          expect.hasAssertions();
-
-          (vscode.workspace.workspaceFolders as any) = ['workspace-xyz'];
-
-          const listener = new RunTestListener(mockSession);
-
-          listener.onEvent(mockProcess, 'processClose', 1);
-          expect(mockSession.context.onRunEvent.fire).toBeCalled();
-
-          const event = mockSession.context.onRunEvent.fire.mock.calls[0][0];
-          expect(event.error).not.toContain('workspace-xyz');
-        });
-        it('in multi-root env, folder name will be shown in the message', () => {
-          expect.hasAssertions();
-
-          (vscode.workspace.workspaceFolders as any) = ['workspace-xyz', 'workspace-abc'];
-
-          const listener = new RunTestListener(mockSession);
-
-          listener.onEvent(mockProcess, 'processClose', 1);
-          expect(mockSession.context.onRunEvent.fire).toBeCalled();
-
-          const event = mockSession.context.onRunEvent.fire.mock.calls[0][0];
-          expect(event.error).toContain('workspace-xyz');
-        });
       });
     });
   });
