@@ -213,9 +213,6 @@ export class JestExt {
             actions.push(this.setupIgnoreAction());
           }
           break;
-        default:
-          console.error(`invalid message action type: ${t}`);
-          break;
       }
     }
     return actions;
@@ -640,11 +637,11 @@ export class JestExt {
             'Failed to obtain test file list, something might not be setup right?'
           );
           this.logging('error', msg, error);
-          messaging.systemWarningMessage(
-            msg,
-            messaging.showTroubleshootingAction,
-            this.setupWizardAction('cmdLine')
-          );
+          //fire this warning message could risk reporting error multiple times for the given workspace folder
+          //therefore garding the warning message with the debugMode
+          if (this.extContext.settings.debugMode) {
+            messaging.systemWarningMessage(msg, ...this.buildMessageActions(['help', 'wizard']));
+          }
         }
       },
     });

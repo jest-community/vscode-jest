@@ -646,7 +646,7 @@ describe('JestExt', () => {
       expect(updateDecoratorsSpy).toBeCalledWith(EmptySortedResult, editor);
       expect(updateCurrentDiagnostics).toBeCalledWith(EmptySortedResult.fail, undefined, editor);
     });
-    describe('can skip test-file related updates', () => {
+    describe('can skip non test-file related updates', () => {
       let sut;
       let updateDecoratorsSpy;
       beforeEach(() => {
@@ -1195,4 +1195,30 @@ describe('JestExt', () => {
       expect(sut.events.onRunEvent.dispose).toBeCalled();
     });
   });
+  it.each`
+    debugMode
+    ${true}
+    ${false}
+  `(
+    'updateTestFileList failure warning visibility: debugMode=$debugMode => visible?$debugMode)',
+    async ({ debugMode }) => {
+      expect.hasAssertions();
+      const sut = newJestExt({ settings: { debugMode } });
+
+      await sut.startSession();
+
+      expect(mockProcessSession.scheduleProcess).toBeCalledTimes(1);
+      const { type, onResult } = mockProcessSession.scheduleProcess.mock.calls[0][0];
+      expect(type).toEqual('list-test-files');
+      expect(onResult).not.toBeUndefined();
+
+      // when process failed
+      onResult(undefined, 'process error');
+      if (debugMode) {
+        expect(messaging.systemWarningMessage).toHaveBeenCalled();
+      } else {
+        expect(messaging.systemWarningMessage).not.toHaveBeenCalled();
+      }
+    }
+  );
 });

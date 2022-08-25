@@ -78,8 +78,13 @@ describe('jest process listeners', () => {
       const listener = new ListTestFileListener(mockSession, onResult);
 
       output.forEach((m) => listener.onEvent(mockProcess, 'executableOutput', Buffer.from(m)));
+      listener.onEvent(mockProcess, 'processExit');
       listener.onEvent(mockProcess, 'processClose');
 
+      // should not fire exit event
+      expect(mockSession.context.onRunEvent.fire).not.toBeCalled();
+
+      // onResult should be called to report results
       expect(onResult).toBeCalledTimes(1);
 
       const [fileNames, error] = onResult.mock.calls[0];
@@ -93,6 +98,47 @@ describe('jest process listeners', () => {
         expect(error.toString()).toContain(expectedFiles);
       }
     });
+    it.each`
+      exitCode | isError
+      ${0}     | ${false}
+      ${1}     | ${false}
+      ${999}   | ${true}
+    `(
+      'can handle process error via onResult: exitCode:$exitCode => isError?$isError',
+      ({ exitCode, isError }) => {
+        expect.hasAssertions();
+
+        (vscode.Uri.file as jest.Mocked<any>) = jest.fn((f) => ({ fsPath: f }));
+        const onResult = jest.fn();
+        const listener = new ListTestFileListener(mockSession, onResult);
+
+        listener.onEvent(mockProcess, 'executableOutput', Buffer.from('["a", "b"]'));
+        listener.onEvent(mockProcess, 'processExit', exitCode);
+        listener.onEvent(mockProcess, 'processClose');
+
+        // should not fire exit event
+        expect(mockSession.context.onRunEvent.fire).not.toBeCalled();
+
+        // onResult should be called to report results or error
+        expect(onResult).toBeCalledTimes(1);
+
+        const [fileNames, error] = onResult.mock.calls[0];
+        const warnLog = ['warn', expect.stringMatching(`${exitCode}`), expect.anything()];
+        // const warnLog = ['warn'];
+        if (!isError) {
+          expect(mockLogging).not.toBeCalledWith(...warnLog);
+          const expectedFiles = ['a', 'b'];
+          expect(vscode.Uri.file).toBeCalledTimes(expectedFiles.length);
+          expect(fileNames).toEqual(expectedFiles);
+          expect(error).toBeUndefined();
+        } else {
+          expect(mockLogging).toBeCalledWith(...warnLog);
+          expect(fileNames).toBeUndefined();
+          expect(error).not.toBeUndefined();
+          expect(error.toString()).toContain(`${exitCode}`);
+        }
+      }
+    );
   });
   describe('RunTestListener', () => {
     /* eslint-disable jest/no-conditional-expect */
