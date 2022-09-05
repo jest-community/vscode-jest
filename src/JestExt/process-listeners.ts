@@ -3,7 +3,7 @@ import { JestTotalResults } from 'jest-editor-support';
 import { cleanAnsi } from '../helpers';
 import { JestProcess, JestProcessEvent } from '../JestProcessManagement';
 import { ListenerSession, ListTestFilesCallback } from './process-session';
-import { isWatchRequest, prefixWorkspace } from './helper';
+import { isWatchRequest } from './helper';
 import { Logging } from '../logging';
 import { JestRunEvent } from './types';
 
@@ -85,16 +85,17 @@ export class AbstractProcessListener {
     // no default behavior...
   }
   protected onProcessExit(process: JestProcess, code?: number, signal?: string): void {
+    // default behavior: logging error
+    if (this.isProcessError(code)) {
+      const error = `${process.request.type} onProcessExit: process exit with code=${code}, signal=${signal}`;
+      this.logging('warn', `${error} :`, process.toString());
+    }
+  }
+  protected isProcessError(code?: number): boolean {
     // code = 1 is general error, usually mean the command emit error, which should already handled by other event processing, for example when jest has failed tests.
     // However, error beyond 1, usually means some error outside of the command it is trying to execute, so reporting here for debugging purpose
     // see shell error code: https://www.linuxjournal.com/article/10844
-    if (code && code > 1) {
-      const error = `${process.request.type} onProcessExit: process exit with code=${code}, signal=${signal}`;
-      this.session.context.onRunEvent.fire({ type: 'exit', process, error });
-      this.logging('debug', `${error} :`, process.toString());
-    } else {
-      this.session.context.onRunEvent.fire({ type: 'exit', process });
-    }
+    return code != null && code > 1;
   }
 }
 
@@ -104,6 +105,7 @@ export class ListTestFileListener extends AbstractProcessListener {
     return 'ListTestFileListener';
   }
   private buffer = '';
+  private error: string | undefined;
   private onResult: ListTestFilesCallback;
 
   constructor(session: ListenerSession, onResult: ListTestFilesCallback) {
@@ -114,8 +116,20 @@ export class ListTestFileListener extends AbstractProcessListener {
   protected onExecutableOutput(_process: JestProcess, data: string): void {
     this.buffer += data;
   }
+  protected onProcessExit(process: JestProcess, code?: number, signal?: string): void {
+    // Note: will not fire 'exit' event, as the output is reported via the onResult() callback
+    super.onProcessExit(process, code, signal);
+    if (super.isProcessError(code)) {
+      this.error = `${process.request.type} onProcessExit: process exit with code=${code}, signal=${signal}`;
+    }
+  }
+
   protected onProcessClose(process: JestProcess): void {
     super.onProcessClose(process);
+    if (this.error) {
+      return this.onResult(undefined, this.error);
+    }
+
     try {
       const json = this.buffer.match(JsonArrayRegexp);
       if (!json || json.length === 0) {
@@ -133,7 +147,7 @@ export class ListTestFileListener extends AbstractProcessListener {
       return this.onResult(uriFiles);
     } catch (e) {
       this.logging('warn', 'failed to parse result:', this.buffer, 'error=', e);
-      return this.onResult(undefined, e);
+      this.onResult(undefined, e);
     }
   }
 }
@@ -219,10 +233,7 @@ export class RunTestListener extends AbstractProcessListener {
       (process.request.type === 'watch-tests' || process.request.type === 'watch-all-tests') &&
       process.stopReason !== 'on-demand'
     ) {
-      const msg = prefixWorkspace(
-        this.session.context,
-        `Jest process "${process.request.type}" ended unexpectedly`
-      );
+      const msg = `Jest process "${process.request.type}" ended unexpectedly`;
       this.logging('warn', msg);
 
       return msg;
