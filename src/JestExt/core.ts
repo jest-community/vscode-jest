@@ -39,7 +39,7 @@ interface RunTestPickItem extends vscode.QuickPickItem {
   id: DebugTestIdentifier;
 }
 
-type MessageActionType = 'help' | 'wizard' | 'disable-folder';
+type MessageActionType = 'help' | 'wizard' | 'disable-folder' | 'help-long-run';
 
 /** extract lines starts and end with [] */
 export class JestExt {
@@ -156,6 +156,16 @@ export class JestExt {
       },
     };
   }
+  private longRunMessage(event: Extract<JestRunEvent, { type: 'long-run' }>): string {
+    const messages = [`Long Running Tests Warning: Jest process "${event.process.request.type}"`];
+    if (event.numTotalTestSuites != null) {
+      messages.push(`for ${event.numTotalTestSuites} suites`);
+    }
+    messages.push(`has exceeded ${event.threshold}ms.`);
+
+    return messages.join(' ');
+  }
+
   private setupRunEvents(events: JestSessionEvents): void {
     events.onRunEvent.event((event: JestRunEvent) => {
       switch (event.type) {
@@ -194,6 +204,12 @@ export class JestExt {
             this.updateStatusBar({ state: 'done' });
           }
           break;
+        case 'long-run': {
+          const msg = prefixWorkspace(this.extContext, this.longRunMessage(event));
+          messaging.systemWarningMessage(msg, ...this.buildMessageActions(['help-long-run']));
+          this.logging('warn', msg);
+          break;
+        }
       }
     });
   }
@@ -212,6 +228,9 @@ export class JestExt {
           if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 1) {
             actions.push(this.setupIgnoreAction());
           }
+          break;
+        case 'help-long-run':
+          actions.push(messaging.showLongRunTroubleshootingAction);
           break;
       }
     }

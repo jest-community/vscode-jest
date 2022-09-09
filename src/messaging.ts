@@ -6,6 +6,8 @@ import * as vscode from 'vscode';
 
 export const TROUBLESHOOTING_URL =
   'https://github.com/jest-community/vscode-jest/blob/master/README.md#troubleshooting';
+export const LONG_RUN_TROUBLESHOOTING_URL =
+  'https://github.com/jest-community/vscode-jest/blob/master/README.md#what-to-do-with-long-running-tests-warning';
 
 //
 // internal methods
@@ -57,4 +59,9 @@ export const showTroubleshootingAction: MessageAction = {
   title: 'Help',
   action: () =>
     vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(TROUBLESHOOTING_URL)),
+};
+export const showLongRunTroubleshootingAction: MessageAction = {
+  title: 'Help',
+  action: () =>
+    vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(LONG_RUN_TROUBLESHOOTING_URL)),
 };

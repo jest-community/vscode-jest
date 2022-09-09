@@ -27,6 +27,7 @@ export type TestExplorerConfig =
   | { enabled: false }
   | { enabled: true; showClassicStatus?: boolean; showInlineError?: boolean };
 export type NodeEnv = ProjectWorkspace['nodeEnv'];
+export type MonitorLongRun = 'off' | number;
 export interface PluginResourceSettings {
   showTerminalOnLaunch?: boolean;
   autoEnable?: boolean;
@@ -45,6 +46,7 @@ export interface PluginResourceSettings {
   testExplorer: TestExplorerConfig;
   nodeEnv?: NodeEnv;
   shell?: string | LoginShell;
+  monitorLongRun?: MonitorLongRun;
 }
 
 export interface PluginWindowSettings {

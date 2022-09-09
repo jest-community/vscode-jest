@@ -169,7 +169,6 @@ describe('getExtensionResourceSettings()', () => {
           defaults[key] = config[key].default;
         }
       }
-
       return {
         get: jest
           .fn()
@@ -195,6 +194,7 @@ describe('getExtensionResourceSettings()', () => {
       autoRun: null,
       testExplorer: { enabled: true },
       showTerminalOnLaunch: true,
+      monitorLongRun: 60000,
     });
   });
   describe('can read user settings', () => {

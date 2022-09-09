@@ -58,6 +58,11 @@ describe('test system messaging', () => {
     expect(mockExecCommands.mock.calls.length).toBe(1);
     expect(mockUriParse.mock.calls[0][0]).toBe(messaging.TROUBLESHOOTING_URL);
   });
+  it('can open longRunTroubleshooting url via action', () => {
+    messaging.showLongRunTroubleshootingAction.action();
+    expect(mockExecCommands.mock.calls.length).toBe(1);
+    expect(mockUriParse.mock.calls[0][0]).toBe(messaging.LONG_RUN_TROUBLESHOOTING_URL);
+  });
   it('can handle user actions', () => {
     let a = messaging._handleMessageActions();
     expect(a).not.toBeNull();

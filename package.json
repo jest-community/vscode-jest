@@ -228,6 +228,15 @@
             "enabled": true
           },
           "scope": "resource"
+        },
+        "jest.monitorLongRun": {
+          "markdownDescription": "Enable monitoring for long running test process. See valid [monitorLongRun](https://github.com/jest-community/vscode-jest/blob/master/README.md#monitorLongRun) for details",
+          "type": [
+            "string",
+            "integer"
+          ],
+          "default": 60000,
+          "scope": "resource"
         }
       }
     },

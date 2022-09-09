@@ -7,6 +7,7 @@ import {
   ListTestFileListener,
   RunTestListener,
   AbstractProcessListener,
+  DEFAULT_LONG_RUN_THRESHOLD,
 } from '../../src/JestExt/process-listeners';
 import { cleanAnsi } from '../../src/helpers';
 import * as messaging from '../../src/messaging';
@@ -18,6 +19,11 @@ describe('jest process listeners', () => {
 
   beforeEach(() => {
     jest.resetAllMocks();
+
+    jest.useFakeTimers('legacy');
+    jest.spyOn(global, 'setTimeout');
+    jest.spyOn(global, 'clearTimeout');
+
     mockSession = {
       scheduleProcess: jest.fn(),
       context: {
@@ -33,6 +39,9 @@ describe('jest process listeners', () => {
     };
     mockProcess = { request: { type: 'watch' } };
     (cleanAnsi as jest.Mocked<any>).mockImplementation((s) => s);
+  });
+  afterEach(() => {
+    jest.clearAllTimers();
   });
   describe('listener base class: AbstractProcessListener', () => {
     it.each`
@@ -254,6 +263,90 @@ describe('jest process listeners', () => {
         expect(mockSession.context.onRunEvent.fire).toBeCalledWith(
           expect.objectContaining({ type: 'end' })
         );
+      });
+    });
+    describe('MonitorLongRun', () => {
+      it.each`
+        setting      | threshold
+        ${undefined} | ${DEFAULT_LONG_RUN_THRESHOLD}
+        ${'off'}     | ${-1}
+        ${0}         | ${-1}
+        ${-1000}     | ${-1}
+        ${10000}     | ${10000}
+      `('with monitorLongRun=$setting, actual threshold=$threshold', ({ setting, threshold }) => {
+        mockSession.context.settings.monitorLongRun = setting;
+        const listener = new RunTestListener(mockSession);
+
+        expect(setTimeout).not.toBeCalled();
+
+        listener.onEvent(mockProcess, 'executableOutput', 'onRunStart: numTotalTestSuites: 100');
+
+        expect(clearTimeout).not.toBeCalled();
+        if (threshold > 0) {
+          expect(setTimeout).toBeCalledWith(expect.anything(), threshold);
+        } else {
+          expect(setTimeout).not.toBeCalled();
+        }
+
+        jest.runAllTimers();
+        if (threshold > 0) {
+          expect(mockSession.context.onRunEvent.fire).toBeCalledWith(
+            expect.objectContaining({
+              type: 'long-run',
+              numTotalTestSuites: 100,
+              threshold,
+            })
+          );
+        } else {
+          expect(mockSession.context.onRunEvent.fire).not.toBeCalledWith(
+            expect.objectContaining({ type: 'long-run' })
+          );
+        }
+      });
+      it.each`
+        eventType             | args
+        ${'processExit'}      | ${[]}
+        ${'executableOutput'} | ${['onRunComplete']}
+      `(
+        'should not trigger timeout after process/run ended with $eventType',
+        ({ eventType, args }) => {
+          mockSession.context.settings.monitorLongRun = undefined;
+          const listener = new RunTestListener(mockSession);
+
+          listener.onEvent(mockProcess, 'executableOutput', 'onRunStart: numTotalTestSuites: 100');
+          expect(setTimeout).toBeCalledTimes(1);
+          expect(clearTimeout).not.toBeCalled();
+
+          listener.onEvent(mockProcess, eventType, ...args);
+          expect(clearTimeout).toBeCalledTimes(1);
+
+          jest.runAllTimers();
+          expect(mockSession.context.onRunEvent.fire).not.toBeCalledWith(
+            expect.objectContaining({ type: 'long-run' })
+          );
+        }
+      );
+      it('each run will start its own monitor', () => {
+        mockSession.context.settings.monitorLongRun = undefined;
+        const listener = new RunTestListener(mockSession);
+
+        listener.onEvent(mockProcess, 'executableOutput', 'onRunStart: numTotalTestSuites: 100');
+        listener.onEvent(mockProcess, 'executableOutput', 'onRunComplete: execError: whatever');
+        expect(setTimeout).toBeCalledTimes(1);
+        expect(clearTimeout).toBeCalledTimes(1);
+
+        listener.onEvent(mockProcess, 'executableOutput', 'onRunStart: numTotalTestSuites: 70');
+        expect(setTimeout).toBeCalledTimes(2);
+        expect(clearTimeout).toBeCalledTimes(1);
+      });
+      it('will restart timer even if previous timer did not get closed properly', () => {
+        mockSession.context.settings.monitorLongRun = undefined;
+        const listener = new RunTestListener(mockSession);
+
+        listener.onEvent(mockProcess, 'executableOutput', 'onRunStart: numTotalTestSuites: 100');
+        listener.onEvent(mockProcess, 'executableOutput', 'onRunStart: numTotalTestSuites: 70');
+        expect(setTimeout).toBeCalledTimes(2);
+        expect(clearTimeout).toBeCalledTimes(1);
       });
     });
     describe('when snapshot test failed', () => {
