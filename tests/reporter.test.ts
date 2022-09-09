@@ -7,32 +7,11 @@ describe('VSCodeJest Reporter', () => {
     console.log = jest.fn();
   });
   it('reports on RunStart and RunComplete via console.log', () => {
-    const reporter = new VSCodeJestReporter({});
-    reporter.onRunStart();
-    expect(console.log).toBeCalledWith('onRunStart');
+    const reporter = new VSCodeJestReporter();
+    reporter.onRunStart({} as any);
+    expect(console.log).toBeCalledWith(expect.stringContaining('onRunStart'));
     reporter.onRunComplete(new Set(), {} as any);
     expect(console.log).toBeCalledWith('onRunComplete');
-  });
-  it('reports ElapsedTime with minimal reporting interval', () => {
-    const reporter = new VSCodeJestReporter({}, { reportingInterval: 20000 });
-    const mockNow = jest.fn();
-    Date.now = mockNow;
-
-    mockNow.mockReturnValueOnce(1000);
-    reporter.onRunStart();
-    expect(console.log).toBeCalledWith('onRunStart');
-
-    // nothing should be logged
-    mockNow.mockReturnValueOnce(15000);
-    reporter.onTestFileStart();
-    expect(console.log).toBeCalledTimes(1);
-    expect(console.log).not.toBeCalledWith('ElapsedTime: 14s');
-
-    // when exceed reporting interval, it should output elapsed time
-    mockNow.mockReturnValueOnce(23000);
-    reporter.onTestFileStart();
-    expect(console.log).toBeCalledTimes(2);
-    expect(console.log).toBeCalledWith('ElapsedTime: 22s');
   });
   it.each`
     numTotalTests | numTotalTestSuites | hasError
@@ -42,16 +21,21 @@ describe('VSCodeJest Reporter', () => {
   `(
     'report runtime exec error in RunComplete',
     ({ numTotalTests, numTotalTestSuites, hasError }) => {
-      const reporter = new VSCodeJestReporter({});
-      reporter.onRunStart();
-      expect(console.log).toBeCalledWith('onRunStart');
+      const reporter = new VSCodeJestReporter();
+      const args: any = { numTotalTestSuites };
+      reporter.onRunStart(args);
+      expect(console.log).toBeCalledWith(`onRunStart: numTotalTestSuites: ${numTotalTestSuites}`);
       const result: any = { numTotalTests, numTotalTestSuites };
       reporter.onRunComplete(new Set(), result);
       if (hasError) {
-        expect(console.log).toBeCalledWith('onRunComplete: with execError');
+        expect(console.log).toBeCalledWith(expect.stringContaining('onRunComplete: execError'));
       } else {
         expect(console.log).toBeCalledWith('onRunComplete');
       }
     }
   );
+  it('getLastError never returns error', () => {
+    const reporter = new VSCodeJestReporter();
+    expect(reporter.getLastError()).toBeUndefined();
+  });
 });

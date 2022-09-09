@@ -6,6 +6,7 @@ import { ListenerSession, ListTestFilesCallback } from './process-session';
 import { isWatchRequest } from './helper';
 import { Logging } from '../logging';
 import { JestRunEvent } from './types';
+import { MonitorLongRun } from '../Settings';
 
 export class AbstractProcessListener {
   protected session: ListenerSession;
@@ -157,8 +158,84 @@ const IS_OUTSIDE_REPOSITORY_REGEXP =
   /Test suite failed to run[\s\S]*fatal:[\s\S]*is outside repository/im;
 const WATCH_IS_NOT_SUPPORTED_REGEXP =
   /^s*--watch is not supported without git\/hg, please use --watchAlls*/im;
+const RUN_EXEC_ERROR = /onRunComplete: execError: (.*)/im;
+const RUN_START_TEST_SUITES_REGEX = /onRunStart: numTotalTestSuites: ((\d)+)/im;
 
+/**
+ * monitor for long test run, default is 1 minute
+ */
+export const DEFAULT_LONG_RUN_THRESHOLD = 60000;
+export class LongRunMonitor {
+  private timer: NodeJS.Timer | undefined;
+  public readonly thresholdMs: number;
+  constructor(private callback: () => void, private logging: Logging, option?: MonitorLongRun) {
+    if (option == null) {
+      this.thresholdMs = DEFAULT_LONG_RUN_THRESHOLD;
+    } else if (typeof option === 'number' && option > 0) {
+      this.thresholdMs = option;
+    } else {
+      this.thresholdMs = -1;
+    }
+    this.timer = undefined;
+  }
+  start(): void {
+    if (this.thresholdMs <= 0) {
+      return;
+    }
+    if (this.timer) {
+      this.logging('warn', `LongRunMonitor is already runninng`);
+      this.cancel();
+    }
+    this.timer = setTimeout(() => {
+      this.callback();
+      this.timer = undefined;
+    }, this.thresholdMs);
+  }
+
+  cancel(): void {
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = undefined;
+    }
+  }
+}
+interface RunInfo {
+  process: JestProcess;
+  numTotalTestSuites?: number;
+}
 export class RunTestListener extends AbstractProcessListener {
+  // fire long-run warning once per run
+  private longRunMonitor: LongRunMonitor;
+  private runInfo: RunInfo | undefined;
+
+  constructor(session: ListenerSession) {
+    super(session);
+    this.longRunMonitor = new LongRunMonitor(
+      this.onLongRun.bind(this),
+      this.logging,
+      session.context.settings.monitorLongRun
+    );
+    this.runInfo = undefined;
+  }
+
+  private onLongRun(): void {
+    if (this.runInfo) {
+      this.onRunEvent.fire({
+        type: 'long-run',
+        threshold: this.longRunMonitor.thresholdMs,
+        ...this.runInfo,
+      });
+    }
+  }
+  private runEnded(): void {
+    this.longRunMonitor.cancel();
+    this.runInfo = undefined;
+  }
+  private runStarted(info: RunInfo): void {
+    this.runInfo = info;
+    this.longRunMonitor.start();
+  }
+
   protected get name(): string {
     return 'RunTestListener';
   }
@@ -257,13 +334,37 @@ export class RunTestListener extends AbstractProcessListener {
     this.handleWatchNotSupportedError(process, message);
   }
 
+  private getNumTotalTestSuites(text: string): number | undefined {
+    const matched = text.match(RUN_START_TEST_SUITES_REGEX);
+    if (matched) {
+      const n = Number(matched[1]);
+      if (Number.isInteger(n)) {
+        return n;
+      }
+    }
+  }
   protected onExecutableOutput(process: JestProcess, output: string, raw: string): void {
     if (output.includes('onRunStart')) {
+      this.runStarted({ process, numTotalTestSuites: this.getNumTotalTestSuites(output) });
+
       if (isWatchRequest(process.request)) {
         this.onRunEvent.fire({ type: 'start', process });
       }
     }
     if (output.includes('onRunComplete')) {
+      this.runEnded();
+
+      // possible no output will be generated
+      const matched = output.match(RUN_EXEC_ERROR);
+      if (matched) {
+        this.onRunEvent.fire({
+          type: 'data',
+          process,
+          text: matched[1],
+          newLine: true,
+          isError: true,
+        });
+      }
       if (isWatchRequest(process.request)) {
         this.onRunEvent.fire({ type: 'end', process });
       }
@@ -277,9 +378,11 @@ export class RunTestListener extends AbstractProcessListener {
   protected onTerminalError(process: JestProcess, data: string, raw: string): void {
     this.onRunEvent.fire({ type: 'data', process, text: data, raw, newLine: true, isError: true });
   }
-  protected onProcessExit(_process: JestProcess): void {
-    //override parent method so we will fire run event only when process closed
+  protected onProcessExit(process: JestProcess, code?: number, signal?: string): void {
+    this.runEnded();
+    super.onProcessExit(process, code, signal);
   }
+
   protected onProcessClose(process: JestProcess): void {
     super.onProcessClose(process);
     const error = this.handleWatchProcessCrash(process);

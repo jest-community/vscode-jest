@@ -10,6 +10,7 @@ import {
   JestExtAutoRunConfig,
   TestExplorerConfig,
   NodeEnv,
+  MonitorLongRun,
 } from '../Settings';
 import { AutoRunMode } from '../StatusBar';
 import { pathToJest, pathToConfig, toFilePath } from '../helpers';
@@ -114,16 +115,12 @@ const isLoginShell = (arg: any): arg is LoginShell =>
   arg && typeof arg.path === 'string' && Array.isArray(arg.args);
 
 const getShell = (config: vscode.WorkspaceConfiguration): string | LoginShell | undefined => {
-  console.log('inside getShell');
-
   const shell = config.get<string | LoginShell>('shell');
 
-  console.log('shell=', shell);
   if (!shell || typeof shell === 'string') {
     return shell;
   }
 
-  console.log('before calling isLoginShell shell=', shell);
   if (isLoginShell(shell)) {
     if (platform() === 'win32') {
       console.error(`LoginShell is not supported for windows currently.`);
@@ -164,6 +161,7 @@ export const getExtensionResourceSettings = (uri: vscode.Uri): PluginResourceSet
     testExplorer: config.get<TestExplorerConfig>('testExplorer') ?? { enabled: true },
     nodeEnv: config.get<NodeEnv | null>('nodeEnv') ?? undefined,
     shell: getShell(config) ?? undefined,
+    monitorLongRun: config.get<MonitorLongRun>('monitorLongRun') ?? undefined,
   };
 };
 

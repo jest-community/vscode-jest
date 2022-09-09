@@ -1189,6 +1189,25 @@ describe('JestExt', () => {
           expect(addFolderToDisabledWorkspaceFolders).toHaveBeenCalledWith('test-folder');
         });
       });
+      it.each`
+        numTotalTestSuites
+        ${undefined}
+        ${17}
+      `(
+        'long-run event with $numTotalTestSuites numTotalTestSuites triggers system warning',
+        ({ numTotalTestSuites }) => {
+          process = { ...process, request: { type: 'all-tests' } };
+          onRunEvent({ type: 'long-run', numTotalTestSuites, threshold: 60000, process });
+          expect(messaging.systemWarningMessage).toBeCalledTimes(1);
+          const msg = (messaging.systemWarningMessage as jest.Mocked<any>).mock.calls[0][0];
+          expect(msg).toContain('all-tests');
+          if (numTotalTestSuites) {
+            expect(msg).toContain(`${numTotalTestSuites} suites`);
+          } else {
+            expect(msg).not.toContain(`${numTotalTestSuites} suites`);
+          }
+        }
+      );
     });
     it('events are disposed when extensioin deactivated', () => {
       sut.deactivate();

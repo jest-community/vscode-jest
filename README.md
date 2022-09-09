@@ -175,11 +175,13 @@ Content
         - [shell](#shell)
     - [Debug Config](#debug-config)
     - [Debug Config v2](#debug-config-v2)
+    - [monitorLongRun](#monitorlongrun)
   - [Commands](#commands)
   - [Menu](#menu)
   - [Troubleshooting](#troubleshooting)
     - [Jest failed to run](#jest-failed-to-run)
     - [I don't see "Jest" in the bottom status bar](#i-dont-see-jest-in-the-bottom-status-bar)
+    - [What to do with "Long Running Tests Warning"](#what-to-do-with-long-running-tests-warning)
     - [The extension seems to consume high CPU](#the-extension-seems-to-consume-high-cpu)
     - [The tests and status do not match or some tests showing question marks unexpectedly?](#the-tests-and-status-do-not-match-or-some-tests-showing-question-marks-unexpectedly)
   - [Want to Contribute?](#want-to-contribute)
@@ -368,9 +370,10 @@ Users can use the following settings to tailor the extension for their environme
 |nodeEnv|Add additional env variables to spawned jest process|null|`"jest.nodeEnv": {"PORT": "9800", "BAR":"true"}` |
 |shell|Custom shell (path or LoginShell) for executing jest|null|`"jest.shell": "/bin/bash"` or `"jest.shell": "powershell"` or `"jest.shell": {"path": "/bin/bash"; args: ["--login"]}`  |
 |[autoRun](#autorun)|Controls when and what tests should be run|undefined|`"jest.autoRun": "off"` or `"jest.autoRun": {"watch": true, "onStartup": ["all-tests"]}` or `"jest.autoRun": false, onSave:"test-only"}`|
+|[rootPath](#rootPath)|The path to your frontend src folder|""|`"jest.rootPath":"packages/app"` or `"jest.rootPath":"/apps/my-app"`|
+|[monitorLongRun](#monitorlongrun)| monitor long running tests based on given threshold in ms|60000|`"jest.monitorLongRun": 120000`|
 |pathToJest :x:|The path to the Jest binary, or an npm/yarn command to run tests|undefined|Please use `jestCommandLine` instead|
 |pathToConfig :x:|The path to your Jest configuration file"|""|Please use `jestCommandLine` instead|
-|[rootPath](#rootPath)|The path to your frontend src folder|""|`"jest.rootPath":"packages/app"` or `"jest.rootPath":"/apps/my-app"`|
 |runAllTestsFirst :x:| Run all tests before starting Jest in watch mode|true|Please use `autoRun` instead|
 |**Editor**|
 |<strike>enableInlineErrorMessages</strike> :x:| Whether errors should be reported inline on a file|--|This is now deprecated in favor of `jest.testExplorer` |
@@ -601,7 +604,15 @@ Currently supported variables:
   ``` 
   
 </details>
+### monitorLongRun
+```ts
+monitorLongRun = number | 'off'
+```
 
+- specify a number (milliseconds) means any run exceeds this threshold will trigger a warning. The number has to be > 0. 
+- specify "off" to disable long-run process monitoring
+
+Default is `"jest.monitorLongRun":60000` (1 minute)
 ## Commands
 
 This extension contributes the following commands and can be accessed via [Command Palette](https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette):
@@ -673,6 +684,16 @@ There could be other causes, such as jest test root path is different from the p
   - your source and tests are not in the project root directory: try [jest.rootPath](#rootPath) to point to that directory instead.
 
   Users can also try to manually activate the extension via command palette: `"Jest: Start All Runners"`
+### What to do with "Long Running Tests Warning"
+The extension monitor excessive test run with ["jest.monitorLongRun"](#monitorlongrun) setting. By default if any runs exceed 60 seconds, a warning message will be shown. 
+- If running the tests with the extension seems to be longer than running it from a terminal, chances are you can use ["jest.autoRun"](#autorun) to optimize it, for example:
+  - for process type "all-tests", you can turn off the all-tests from autoRun.
+  - for process type "watch-tests" or "watch-all-tests", you can maybe turn off watch mode and use "onSave" instead. 
+  
+- If the tests are slow even from the terminal, i.e. without the extension, you will need to optimize your tests, feel free to check out [jest troubleshooting](https://jestjs.io/docs/troubleshooting) or other online articles.
+- If the run appeared to hang, i.e. the TestExplorer or statusBar showed test running when it is not. It might be related to this [jest issue](https://github.com/facebook/jest/issues/13187), which should be fixed after release `29.0.2`. If you believe your issue is different, please [file a new issue](https://github.com/jest-community/vscode-jest/issues) so we can take a look.
+
+You can also turn off the monitor or change the threshold with ["jest.monitorLongRun"](#monitorlongrun) to meet your needs. 
 ### The extension seems to consume high CPU 
   By default the extension will run all tests when it is launched followed by a jest watch process. If you have many resource intensive tests or source files that can trigger many tests when changed, this could be the reason. Check out [jest.autoRun](#autorun) to see how you can change and control when and what tests should be run.
 
