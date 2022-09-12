@@ -7,10 +7,12 @@ import { ProjectWorkspace, LoginShell } from 'jest-editor-support';
 import { JestProcessRequest } from '../JestProcessManagement';
 import {
   PluginResourceSettings,
-  JestExtAutoRunConfig,
+  JestExtAutoRunSetting,
   TestExplorerConfig,
   NodeEnv,
   MonitorLongRun,
+  JestExtAutoRunConfig,
+  JestExtAutoRunShortHand,
 } from '../Settings';
 import { AutoRunMode } from '../StatusBar';
 import { pathToJest, pathToConfig, toFilePath } from '../helpers';
@@ -23,7 +25,7 @@ export const isWatchRequest = (request: JestProcessRequest): boolean =>
   request.type === 'watch-tests' || request.type === 'watch-all-tests';
 
 const autoRunMode = (autoRun: JestExtAutoRunConfig): AutoRunMode => {
-  if (autoRun === 'off') {
+  if (autoRun.watch === false && !autoRun.onSave && !autoRun.onStartup) {
     return 'auto-run-off';
   }
   if (autoRun.watch === true) {
@@ -37,32 +39,34 @@ const autoRunMode = (autoRun: JestExtAutoRunConfig): AutoRunMode => {
   }
   return 'auto-run-off';
 };
-/**
- * create a backward compatible runMode from the the legacy settings
- */
-const getAutoRun = (pluginSettings: PluginResourceSettings): JestExtAutoRunConfig => {
-  if (pluginSettings.autoRun) {
-    return pluginSettings.autoRun;
-  }
 
-  if (!pluginSettings.autoEnable) {
-    return 'off';
+export const toAutoRun = (shortHand: JestExtAutoRunShortHand): JestExtAutoRunConfig => {
+  switch (shortHand) {
+    case 'legacy':
+      return { watch: true, onStartup: ['all-tests'] };
+    case 'default':
+    case 'watch':
+      return { watch: true };
+    case 'off':
+      return { watch: false };
+    case 'on-save':
+      return { watch: false, onSave: 'test-src-file' };
+    default: {
+      const message = `invalid autoRun setting "${shortHand}". Will use default setting instead`;
+      console.error(message);
+      vscode.window.showErrorMessage(message);
+      return toAutoRun('default');
+    }
   }
-  if (pluginSettings.runAllTestsFirst) {
-    return { watch: true, onStartup: ['all-tests'] };
-  }
-
-  return { watch: true };
 };
-
 export const AutoRun = (pluginSettings: PluginResourceSettings): AutoRunAccessor => {
-  const config = getAutoRun(pluginSettings);
+  const config = pluginSettings.autoRun;
   return {
     config,
-    isOff: config === 'off',
-    isWatch: config !== 'off' && config.watch,
-    onSave: config !== 'off' && config.watch === false ? config.onSave : undefined,
-    onStartup: config !== 'off' ? config.onStartup : undefined,
+    isOff: config.watch === false && config.onSave == null && config.onStartup == null,
+    isWatch: config.watch === true,
+    onSave: config.watch === false ? config.onSave : undefined,
+    onStartup: config.onStartup,
     mode: autoRunMode(config),
   };
 };
@@ -137,12 +141,45 @@ const getShell = (config: vscode.WorkspaceConfiguration): string | LoginShell | 
   }
 };
 
+/**
+ * create a backward compatible runMode from the the legacy settings
+ */
+const autoRunFromLegacySettings = (
+  autoEnable?: boolean,
+  runAllTestsFirst?: boolean
+): JestExtAutoRunConfig | undefined => {
+  if (autoEnable === false) {
+    return toAutoRun('off');
+  }
+  if (runAllTestsFirst === true) {
+    return toAutoRun('legacy');
+  }
+};
+
+const getAutoRunSetting = (
+  config: vscode.WorkspaceConfiguration,
+  autoEnable?: boolean,
+  runAllTestsFirst?: boolean
+): JestExtAutoRunConfig => {
+  const setting = config.get<JestExtAutoRunSetting | null>('autoRun');
+
+  if (!setting) {
+    return autoRunFromLegacySettings(autoEnable, runAllTestsFirst) ?? toAutoRun('default');
+  }
+  if (typeof setting === 'string') {
+    return toAutoRun(setting);
+  }
+  return setting;
+};
 export const getExtensionResourceSettings = (uri: vscode.Uri): PluginResourceSettings => {
   const config = vscode.workspace.getConfiguration('jest', uri);
 
+  const autoEnable = config.get<boolean>('autoEnable');
+  const runAllTestsFirst = config.get<boolean>('runAllTestsFirst') ?? undefined;
+
   return {
     showTerminalOnLaunch: config.get<boolean>('showTerminalOnLaunch') ?? true,
-    autoEnable: config.get<boolean>('autoEnable'),
+    autoEnable,
     enableSnapshotUpdateMessages: config.get<boolean>('enableSnapshotUpdateMessages'),
     pathToConfig: config.get<string>('pathToConfig'),
     jestCommandLine: config.get<string>('jestCommandLine'),
@@ -150,18 +187,18 @@ export const getExtensionResourceSettings = (uri: vscode.Uri): PluginResourceSet
     restartJestOnSnapshotUpdate: config.get<boolean>('restartJestOnSnapshotUpdate'),
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     rootPath: path.join(uri.fsPath, config.get<string>('rootPath')!),
-    runAllTestsFirst: config.get<boolean>('runAllTestsFirst'),
+    runAllTestsFirst,
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     showCoverageOnLoad: config.get<boolean>('showCoverageOnLoad')!,
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     coverageFormatter: config.get<string>('coverageFormatter')!,
     debugMode: config.get<boolean>('debugMode'),
     coverageColors: config.get<CoverageColors>('coverageColors'),
-    autoRun: config.get<JestExtAutoRunConfig>('autoRun'),
     testExplorer: config.get<TestExplorerConfig>('testExplorer') ?? { enabled: true },
     nodeEnv: config.get<NodeEnv | null>('nodeEnv') ?? undefined,
     shell: getShell(config) ?? undefined,
     monitorLongRun: config.get<MonitorLongRun>('monitorLongRun') ?? undefined,
+    autoRun: getAutoRunSetting(config, autoEnable, runAllTestsFirst),
   };
 };
 

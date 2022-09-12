@@ -182,7 +182,6 @@ Content
     - [Jest failed to run](#jest-failed-to-run)
     - [I don't see "Jest" in the bottom status bar](#i-dont-see-jest-in-the-bottom-status-bar)
     - [What to do with "Long Running Tests Warning"](#what-to-do-with-long-running-tests-warning)
-    - [The extension seems to consume high CPU](#the-extension-seems-to-consume-high-cpu)
     - [The tests and status do not match or some tests showing question marks unexpectedly?](#the-tests-and-status-do-not-match-or-some-tests-showing-question-marks-unexpectedly)
   - [Want to Contribute?](#want-to-contribute)
   - [License](#license)
@@ -232,8 +231,8 @@ By default, users need not do anything, the extension will automatically trigger
 <summary>fully automated</summary>
 
 No need to manually trigger any test run, all changes will be monitored and related tests will be run accordingly. It is basically running jest with `--watch` or `--watchAll`. This is the default mode prior to v4. Example:
-- `"jest.autoRun": {"watch": true}` => will start the jest with the watch flag and leave all tests at "unknown" state until changes are detected.
-- `"jest.autoRun": {"watch": true, "onStartup": ["all-tests"]}` => will start running all tests upon project launch to update overall project test stats, followed by the jest watch for changes.
+- `"jest.autoRun": "watch"` => will start the jest with the watch flag and leave all tests at "unknown" state until changes are detected. This is also the default after v4.7.
+- `"jest.autoRun": "legacy"` => will start running all tests upon project launch to update overall project test stats, followed by the jest watch for changes. This was the default prior to v4.7.
 
 </details>
 
@@ -245,17 +244,13 @@ Allow users to control test run completely either through commands/menu/TestExpl
 - fully manual
   - there will be no automatic test run, users will trigger test run by either command or context-menu.
   - Example: `"jest.autoRun": "off"`
-- automatically run tests when test file changed
-  - the extension will trigger test run for the given test file upon save.
-  - Example: "jest.autoRun": `{"watch": false, "onSave": "test-file"}`
-- automatically run tests when either test or source file changed:
+- automatically run tests when test or source file changed
   - the extension will trigger test run for the given test or source file upon save.
-  - Example: "jest.autoRun": `{"watch": false, "onSave": "test-src-file"}`
-
+  - Example: `"jest.autoRun": "on-save"`
+  
 </details>
 
-Note: other than the "off" mode, users can specify the "onStartup" option for any "jest.autoRun" config, for example: `{"watch": false, "onSave": "test-file", "onStartup": ["all-tests"]}`
-
+Note: see [jest.autoRun](#autorun) for full control options.
 ### How to debug tests?
 
 A test can be debugged via the debug codeLens appeared above the [debuggable](#debugcodelensshowwhenteststatein) tests. Simply clicking on the codeLens will launch vscode debugger for the specific test. The extension also supports parameterized tests and allows users to pick the specific parameter set to debug.
@@ -369,12 +364,12 @@ Users can use the following settings to tailor the extension for their environme
 |[jestCommandLine](#jestCommandLine)|The command line to start jest tests|undefined|`"jest.jestCommandLine": "npm test -"` or `"jest.jestCommandLine": "yarn test"` or `"jest.jestCommandLine": "node_modules/.bin/jest --config custom-config.js"`|
 |nodeEnv|Add additional env variables to spawned jest process|null|`"jest.nodeEnv": {"PORT": "9800", "BAR":"true"}` |
 |shell|Custom shell (path or LoginShell) for executing jest|null|`"jest.shell": "/bin/bash"` or `"jest.shell": "powershell"` or `"jest.shell": {"path": "/bin/bash"; args: ["--login"]}`  |
-|[autoRun](#autorun)|Controls when and what tests should be run|undefined|`"jest.autoRun": "off"` or `"jest.autoRun": {"watch": true, "onStartup": ["all-tests"]}` or `"jest.autoRun": false, onSave:"test-only"}`|
+|[autoRun](#autorun)|Controls when and what tests should be run|undefined|`"jest.autoRun": "off"` or `"jest.autoRun": "watch"` or `"jest.autoRun": {watch: false, onSave:"test-only"}`|
 |[rootPath](#rootPath)|The path to your frontend src folder|""|`"jest.rootPath":"packages/app"` or `"jest.rootPath":"/apps/my-app"`|
 |[monitorLongRun](#monitorlongrun)| monitor long running tests based on given threshold in ms|60000|`"jest.monitorLongRun": 120000`|
 |pathToJest :x:|The path to the Jest binary, or an npm/yarn command to run tests|undefined|Please use `jestCommandLine` instead|
 |pathToConfig :x:|The path to your Jest configuration file"|""|Please use `jestCommandLine` instead|
-|runAllTestsFirst :x:| Run all tests before starting Jest in watch mode|true|Please use `autoRun` instead|
+|runAllTestsFirst :x:| Run all tests before starting Jest in watch mode|undefined|Please use `autoRun` instead|
 |**Editor**|
 |<strike>enableInlineErrorMessages</strike> :x:| Whether errors should be reported inline on a file|--|This is now deprecated in favor of `jest.testExplorer` |
 |[testExplorer](#testexplorer) |Configure jest test explorer|`{"enabled": true}`| `{"enabled": false}`, `{"enabled": true, showClassicStatus: true, showInlineError: true}`|
@@ -453,14 +448,22 @@ for example:
 ##### autoRun
   ```ts
   AutoRun =
-    | 'off'
+    | "watch" | "off" | "legacy" | "on-save"
     | { watch: true, onStartup?: ["all-tests"] }
     | {
         watch: false,
         onStartup?: ["all-tests"],
-        onSave?: 'test-file' | 'test-src-file',
+        onSave?: "test-file" | "test-src-file",
       }
   ```
+
+  The string type are short-hand of the most common configurations. User can also pass the actual config in the .settings file for custom config. Following are the mapping of short-hand type to the actual config:
+
+  - "watch" => {watch: true}
+  - "off" => {watch: false}
+  - "legacy" => {watch: true, onStartup: ["all-tests"]}
+  - "on-save" => {watch: false, onSave: "test-src-file"}
+
   <details>
   <summary>example</summary>
 
@@ -470,12 +473,15 @@ for example:
     ```
   - Run all the tests in the workspace upon extension startup, followed by jest watch run for subsequent test/src file changes.
     ```json
+    "jest.autoRun": "legacy"
+    ```
+    or
+    ```json
     "jest.autoRun": {
       "watch": true,
       "onStartup": ["all-tests"]
     }
     ```
-
 
   - Only run tests in the test file when the test file itself changes. It will neither run all tests for the workspace upon startup nor trigger any test run when the source file changes. 
     ``` json
@@ -485,6 +491,7 @@ for example:
     }
     ```
   - Like the one above but does run all tests upon extension start up
+    
     ``` json
     "jest.autoRun": {
       "watch": false,
@@ -492,17 +499,22 @@ for example:
       "onStartup": ["all-tests"]
     }
     ```
-  - migration rule from settings prior to v4:
-    -  if `"jest.autoEnabled" = false` => manual mode: `"jest.autoRun": "off"`
-    -  if `"jest.runAllTestsFirst" = false` => `"jest.autoRun": {"watch": true }`
-    -  if no customization of the 2 settings and no `"jest.autoRun"` found =>
-         ``` json
-         "jest.autoRun": {
-            "watch": true,
-            "onStartup": ["all-tests"]
-         }
-         ```
+
 </details>
+
+Note: migration rule from settings prior to v4:
+
+  - if `"jest.autoEnabled" = false` => manual mode: `"jest.autoRun": "off"`
+  - if `"jest.runAllTestsFirst" = false` => `"jest.autoRun": {"watch": true }`
+  - if no customization of the 2 settings and no `"jest.autoRun"` found =>
+    after v4.7:
+       ``` json
+       "jest.autoRun": "watch"
+       ```
+    prior to v4.7
+       ``` json
+       "jest.autoRun": "legacy"
+       ```
 
 ##### testExplorer
   ```ts
@@ -694,8 +706,6 @@ The extension monitor excessive test run with ["jest.monitorLongRun"](#monitorlo
 - If the run appeared to hang, i.e. the TestExplorer or statusBar showed test running when it is not. It might be related to this [jest issue](https://github.com/facebook/jest/issues/13187), which should be fixed after release `29.0.2`. If you believe your issue is different, please [file a new issue](https://github.com/jest-community/vscode-jest/issues) so we can take a look.
 
 You can also turn off the monitor or change the threshold with ["jest.monitorLongRun"](#monitorlongrun) to meet your needs. 
-### The extension seems to consume high CPU 
-  By default the extension will run all tests when it is launched followed by a jest watch process. If you have many resource intensive tests or source files that can trigger many tests when changed, this could be the reason. Check out [jest.autoRun](#autorun) to see how you can change and control when and what tests should be run.
 
 ### The tests and status do not match or some tests showing question marks unexpectedly?
 

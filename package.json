@@ -136,7 +136,7 @@
         "jest.runAllTestsFirst": {
           "description": "Run all tests before starting Jest in watch mode",
           "type": "boolean",
-          "default": true,
+          "default": null,
           "scope": "resource",
           "markdownDeprecationMessage": "**Deprecated**: in favor of `#jest.autoRun#`"
         },

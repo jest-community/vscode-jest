@@ -3,7 +3,7 @@ import { JestTotalResults, ProjectWorkspace } from 'jest-editor-support';
 import * as vscode from 'vscode';
 import { LoggingFactory } from '../logging';
 import {
-  JestExtAutoRunConfig,
+  JestExtAutoRunSetting,
   OnSaveFileType,
   OnStartupType,
   PluginResourceSettings,
@@ -19,7 +19,7 @@ export enum WatchMode {
   WatchAll = 'watchAll',
 }
 export interface AutoRunAccessor {
-  config: JestExtAutoRunConfig;
+  config: JestExtAutoRunSetting;
   isOff: boolean;
   isWatch: boolean;
   onSave: OnSaveFileType | undefined;
