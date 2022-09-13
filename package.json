@@ -110,10 +110,7 @@
         },
         "jest.nodeEnv": {
           "markdownDescription": "The env passed to runner process in addtion to `process.env`",
-          "type": [
-            "object",
-            "null"
-          ],
+          "type": "object",
           "default": null,
           "scope": "resource"
         },
@@ -121,8 +118,7 @@
           "markdownDescription": "The shell path or a login-shell to override jest runner process default shell (see Node [child_process.spawn()](https://nodejs.org/api/child_process.html#child_process_child_process_spawn_command_args_options)) for more detail)",
           "type": [
             "string",
-            "object",
-            "null"
+            "object"
           ],
           "default": null,
           "scope": "resource"
@@ -215,8 +211,7 @@
           "markdownDescription": "Control when jest should run (changed) tests. It supports multiple models, such as fully automated, fully manual and onSave... See [AutoRun](https://github.com/jest-community/vscode-jest/blob/master/README.md#how-to-trigger-the-test-run) for details and examples",
           "type": [
             "object",
-            "string",
-            "null"
+            "string"
           ],
           "default": null,
           "scope": "resource"
