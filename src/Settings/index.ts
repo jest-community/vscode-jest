@@ -14,14 +14,16 @@ export type JestTestProcessType =
 
 export type OnStartupType = Extract<JestTestProcessType, 'all-tests'>[];
 export type OnSaveFileType = 'test-file' | 'test-src-file';
+export type JestExtAutoRunShortHand = 'default' | 'watch' | 'on-save' | 'legacy' | 'off';
+
 export type JestExtAutoRunConfig =
-  | 'off'
   | { watch: true; onStartup?: OnStartupType }
   | {
       watch: false;
       onStartup?: OnStartupType;
       onSave?: OnSaveFileType;
     };
+export type JestExtAutoRunSetting = JestExtAutoRunShortHand | JestExtAutoRunConfig;
 
 export type TestExplorerConfig =
   | { enabled: false }
@@ -42,7 +44,7 @@ export interface PluginResourceSettings {
   coverageFormatter: string;
   debugMode?: boolean;
   coverageColors?: CoverageColors;
-  autoRun?: JestExtAutoRunConfig;
+  autoRun: JestExtAutoRunConfig;
   testExplorer: TestExplorerConfig;
   nodeEnv?: NodeEnv;
   shell?: string | LoginShell;

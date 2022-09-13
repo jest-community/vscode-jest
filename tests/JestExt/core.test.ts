@@ -84,7 +84,11 @@ describe('JestExt', () => {
     settings?: Partial<PluginResourceSettings>;
     coverageCodeLensProvider?: any;
   }) => {
-    const extensionSettings = { debugCodeLens: {}, testExplorer: { enabled: true } } as any;
+    const extensionSettings = {
+      debugCodeLens: {},
+      testExplorer: { enabled: true },
+      autoRun: { watch: true },
+    } as any;
     mockGetExtensionResourceSettings.mockReturnValue(
       override?.settings ? { ...extensionSettings, ...override.settings } : extensionSettings
     );
@@ -1018,12 +1022,11 @@ describe('JestExt', () => {
       expect(createProcessSession).toBeCalledTimes(1);
       const settings: any = {
         debugMode: true,
+        autoRun: { watch: true },
       };
       await jestExt.triggerUpdateSettings(settings);
       expect(createProcessSession).toBeCalledTimes(2);
-      expect(createProcessSession).toHaveBeenLastCalledWith(
-        expect.objectContaining({ settings: { debugMode: true } })
-      );
+      expect(createProcessSession).toHaveBeenLastCalledWith(expect.objectContaining({ settings }));
     });
   });
   describe('can handle test run results', () => {
