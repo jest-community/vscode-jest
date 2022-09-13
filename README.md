@@ -679,19 +679,16 @@ Sorry you are having trouble with the extension. If your issue did not get resol
 There could be other causes, such as jest test root path is different from the project's, which can be fixed by setting [jest.rootPath](#rootPath). Feel free to check out the [customization](#customization) section to manually adjust the extension if needed.
 
 ### I don't see "Jest" in the bottom status bar
-  This means the extension is not activated. 
+This means the extension is not activated. 
   
-  vscode will automatically activate the extension upon detecting any of the following files from the project root directory:
-  - jest config file (`jest.json`, `jest.config.js`, `jest.config.ts`, `jest.config.mjs`, `jest.config.cjs`)
-  - jest command (`node_modules/.bin/jest`, `node_modules/react-scripts/node_modules/.bin/jest`)
-  - react-native script (`node_modules/react-native-scripts`)
+vscode will automatically activate the extension upon detecting any of the following patterns:
+  - jest config file (`jest.json`, `jest.config.js`, `jest.config.ts`, `jest.config.mjs`, `jest.config.cjs`) any where under the project root.
+  - jest command (`node_modules/.bin/jest`, `node_modules/react-scripts/node_modules/.bin/jest`) or react-native script (`node_modules/react-native-scripts`) **under the project root**.
 
-  If none of the activation criteria is met because
+If none of the auto activation criteria is met, you can do the following to manually activate the extension:
+- create an empty `.vscode-jest` file at your actual project root.
+- start jest run via command palette: `"Jest: Start All Runners"` will also activate the extension for the current vscode process.
 
-  - you have a monorepo project:  see [monorepo projects support](#how-to-use-the-extension-with-monorepo-projects). 
-  - your source and tests are not in the project root directory: try [jest.rootPath](#rootPath) to point to that directory instead.
-
-  Users can also try to manually activate the extension via command palette: `"Jest: Start All Runners"`
 ### What to do with "Long Running Tests Warning"
 The extension monitor excessive test run with ["jest.monitorLongRun"](#monitorlongrun) setting. By default if any runs exceed 60 seconds, a warning message will be shown. 
 - If running the tests with the extension seems to be longer than running it from a terminal, chances are you can use ["jest.autoRun"](#autorun) to optimize it, for example:
