@@ -31,15 +31,16 @@
     "multi-root ready"
   ],
   "activationEvents": [
-    "workspaceContains:jest.config.js",
-    "workspaceContains:jest.config.mjs",
-    "workspaceContains:jest.config.cjs",
-    "workspaceContains:jest.config.ts",
-    "workspaceContains:jest.json",
+    "workspaceContains:**/jest.config.js",
+    "workspaceContains:**/jest.config.mjs",
+    "workspaceContains:**/jest.config.cjs",
+    "workspaceContains:**/jest.config.ts",
+    "workspaceContains:**/jest.json",
     "workspaceContains:node_modules/.bin/jest",
     "workspaceContains:node_modules/react-scripts/node_modules/.bin/jest",
     "workspaceContains:node_modules/react-native-scripts",
-    "onCommand:io.orta.jest.start"
+    "onCommand:io.orta.jest.start",
+    "workspaceContains:**/.vscode-jest"
   ],
   "main": "./out/extension",
   "icon": "images/vscode-jest.png",
