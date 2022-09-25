@@ -13,7 +13,11 @@ import { RunTestListener, ListTestFileListener } from './process-listeners';
 import { JestExtProcessContext } from './types';
 
 type InternalProcessType = 'list-test-files' | 'update-snapshot';
-export type ListTestFilesCallback = (fileNames?: string[], error?: any) => void;
+export type ListTestFilesCallback = (
+  fileNames?: string[],
+  error?: string,
+  exitCode?: number
+) => void;
 export type InternalRequestBase =
   | {
       type: Extract<InternalProcessType, 'list-test-files'>;
@@ -106,7 +110,13 @@ export const createProcessSession = (context: JestExtProcessContext): ProcessSes
 
       return process;
     } catch (e) {
-      logging('warn', '[scheduleProcess] failed to create/schedule process for ', request);
+      logging(
+        'warn',
+        '[scheduleProcess] failed to create/schedule process for ',
+        request,
+        'error:',
+        e
+      );
       return;
     }
   };

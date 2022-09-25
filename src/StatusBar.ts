@@ -101,7 +101,7 @@ export class StatusBar {
         if (this.activeFolder) {
           const ext = getExtension(this.activeFolder);
           if (ext) {
-            ext.channel.show();
+            ext.showOutput();
           }
         }
       }),

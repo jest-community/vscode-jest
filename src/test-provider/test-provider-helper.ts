@@ -1,10 +1,6 @@
 import * as vscode from 'vscode';
+import { JestExtOutput, JestOutputTerminal, OutputOptions } from '../JestExt/output-terminal';
 import { JestExtExplorerContext, TestItemData } from './types';
-
-let showTerminal = true;
-export const _resetShowTerminal = (): void => {
-  showTerminal = true;
-};
 
 /**
  * provide context information from JestExt and test provider state:
@@ -13,14 +9,6 @@ export const _resetShowTerminal = (): void => {
  * as well as factory functions to create TestItem and TestRun that could impact the state
  */
 
-// output color support
-export type OUTPUT_COLOR = 'red' | 'green' | 'yellow';
-const COLORS = {
-  ['red']: '\x1b[0;31m',
-  ['green']: '\x1b[0;32m',
-  ['yellow']: '\x1b[0;33m',
-  ['end']: '\x1b[0m',
-};
 export type TagIdType = 'run' | 'debug';
 
 export class JestTestProviderContext {
@@ -33,6 +21,10 @@ export class JestTestProviderContext {
   ) {
     this.testItemData = new WeakMap();
   }
+  get output(): JestOutputTerminal {
+    return this.ext.output;
+  }
+
   createTestItem = (
     id: string,
     label: string,
@@ -83,29 +75,49 @@ export class JestTestProviderContext {
     return this.testItemData.get(item) as T | undefined;
   };
 
-  createTestRun = (request: vscode.TestRunRequest, name: string): vscode.TestRun => {
-    return this.controller.createTestRun(request, name);
-  };
-
-  appendOutput = (msg: string, run: vscode.TestRun, newLine = true, color?: OUTPUT_COLOR): void => {
-    const converted = msg.replace(/\n/g, '\r\n');
-    let text = newLine ? `[${this.ext.workspace.name}]: ${converted}` : converted;
-    if (color) {
-      text = `${COLORS[color]}${text}${COLORS['end']}`;
-    }
-    run.appendOutput(`${text}${newLine ? '\r\n' : ''}`);
-    this.showTestExplorerTerminal();
-  };
-
-  /** show TestExplorer Terminal on first invocation only */
-  showTestExplorerTerminal = (): void => {
-    if (showTerminal && this.ext.settings.showTerminalOnLaunch !== false) {
-      showTerminal = false;
-      vscode.commands.executeCommand('testing.showMostRecentOutput');
-    }
+  createTestRun = (request: vscode.TestRunRequest, options?: JestTestRunOptions): JestTestRun => {
+    const vscodeRun = this.controller.createTestRun(request, options?.name ?? 'unknown');
+    return new JestTestRun(this, vscodeRun, options);
   };
 
   // tags
   getTag = (tagId: TagIdType): vscode.TestTag | undefined =>
     this.profiles.find((p) => p.tag?.id === tagId)?.tag;
+}
+
+export interface JestTestRunOptions {
+  name?: string;
+  item?: vscode.TestItem;
+  // in addition to the regular end() method
+  onEnd?: () => void;
+  // if true, when the run ends, we will not end the vscodeRun, this is used when multiple test items
+  // in a single request, that the run should be closed when all items are done.
+  disableVscodeRunEnd?: boolean;
+}
+
+export class JestTestRun implements JestExtOutput {
+  private output: JestOutputTerminal;
+  public item?: vscode.TestItem;
+
+  constructor(
+    context: JestTestProviderContext,
+    public vscodeRun: vscode.TestRun,
+    private options?: JestTestRunOptions
+  ) {
+    this.output = context.output;
+    this.item = options?.item;
+  }
+
+  end(): void {
+    if (this.options?.disableVscodeRunEnd !== true) {
+      this.vscodeRun.end();
+    }
+    this.options?.onEnd?.();
+  }
+
+  write(msg: string, opt?: OutputOptions): string {
+    const text = this.output.write(msg, opt);
+    this.vscodeRun.appendOutput(text);
+    return text;
+  }
 }

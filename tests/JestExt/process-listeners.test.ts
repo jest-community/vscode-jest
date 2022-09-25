@@ -9,7 +9,7 @@ import {
   AbstractProcessListener,
   DEFAULT_LONG_RUN_THRESHOLD,
 } from '../../src/JestExt/process-listeners';
-import { cleanAnsi } from '../../src/helpers';
+import { cleanAnsi, toErrorString } from '../../src/helpers';
 import * as messaging from '../../src/messaging';
 
 describe('jest process listeners', () => {
@@ -85,9 +85,10 @@ describe('jest process listeners', () => {
       (vscode.Uri.file as jest.Mocked<any>) = jest.fn((f) => ({ fsPath: f }));
       const onResult = jest.fn();
       const listener = new ListTestFileListener(mockSession, onResult);
+      (toErrorString as jest.Mocked<any>).mockReturnValue(expectedFiles);
 
       output.forEach((m) => listener.onEvent(mockProcess, 'executableOutput', Buffer.from(m)));
-      listener.onEvent(mockProcess, 'processExit');
+      listener.onEvent(mockProcess, 'processExit', 0);
       listener.onEvent(mockProcess, 'processClose');
 
       // should not fire exit event
@@ -103,14 +104,13 @@ describe('jest process listeners', () => {
         expect(error).toBeUndefined();
       } else {
         expect(fileNames).toBeUndefined();
-        expect(error).not.toBeUndefined();
-        expect(error.toString()).toContain(expectedFiles);
+        expect(error).toContain(expectedFiles);
       }
     });
     it.each`
       exitCode | isError
       ${0}     | ${false}
-      ${1}     | ${false}
+      ${1}     | ${true}
       ${999}   | ${true}
     `(
       'can handle process error via onResult: exitCode:$exitCode => isError?$isError',
@@ -120,7 +120,9 @@ describe('jest process listeners', () => {
         (vscode.Uri.file as jest.Mocked<any>) = jest.fn((f) => ({ fsPath: f }));
         const onResult = jest.fn();
         const listener = new ListTestFileListener(mockSession, onResult);
+        (toErrorString as jest.Mocked<any>).mockReturnValue('some error');
 
+        listener.onEvent(mockProcess, 'executableStdErr', Buffer.from('some error'));
         listener.onEvent(mockProcess, 'executableOutput', Buffer.from('["a", "b"]'));
         listener.onEvent(mockProcess, 'processExit', exitCode);
         listener.onEvent(mockProcess, 'processClose');
@@ -131,20 +133,18 @@ describe('jest process listeners', () => {
         // onResult should be called to report results or error
         expect(onResult).toBeCalledTimes(1);
 
-        const [fileNames, error] = onResult.mock.calls[0];
-        const warnLog = ['warn', expect.stringMatching(`${exitCode}`), expect.anything()];
+        const [fileNames, error, code] = onResult.mock.calls[0];
+
         // const warnLog = ['warn'];
         if (!isError) {
-          expect(mockLogging).not.toBeCalledWith(...warnLog);
           const expectedFiles = ['a', 'b'];
           expect(vscode.Uri.file).toBeCalledTimes(expectedFiles.length);
           expect(fileNames).toEqual(expectedFiles);
           expect(error).toBeUndefined();
         } else {
-          expect(mockLogging).toBeCalledWith(...warnLog);
+          expect(code).toEqual(exitCode);
           expect(fileNames).toBeUndefined();
-          expect(error).not.toBeUndefined();
-          expect(error.toString()).toContain(`${exitCode}`);
+          expect(error).toEqual('some error');
         }
       }
     );
@@ -179,8 +179,8 @@ describe('jest process listeners', () => {
     describe.each`
       output             | stdout       | stderr       | error
       ${'whatever'}      | ${'data'}    | ${'data'}    | ${'data'}
-      ${'onRunStart'}    | ${'start'}   | ${undefined} | ${'data'}
-      ${'onRunComplete'} | ${'end'}     | ${undefined} | ${'data'}
+      ${'onRunStart'}    | ${'data'}    | ${'start'}   | ${'data'}
+      ${'onRunComplete'} | ${'data'}    | ${'end'}     | ${'data'}
       ${'Watch Usage'}   | ${undefined} | ${undefined} | ${'data'}
     `('propagate run events: $output', ({ output, stdout, stderr, error }) => {
       it('from stdout: eventType=$stdout', () => {
@@ -237,7 +237,7 @@ describe('jest process listeners', () => {
         listener.onEvent(mockProcess, 'processStarting');
         expect(mockSession.context.onRunEvent.fire).toBeCalledTimes(1);
         expect(mockSession.context.onRunEvent.fire).toBeCalledWith(
-          expect.objectContaining({ type: 'start' })
+          expect.objectContaining({ type: 'process-start' })
         );
 
         mockSession.context.onRunEvent.fire.mockClear();
@@ -249,19 +249,40 @@ describe('jest process listeners', () => {
           expect.objectContaining({ type: 'exit' })
         );
       });
-      it('when reporters reports start/end', () => {
-        expect.hasAssertions();
-        const listener = new RunTestListener(mockSession);
+      describe('when reporters reports start/end', () => {
+        it.each(['watch', 'all-tests'])(
+          'will notify start/end regardless request types',
+          (requestType) => {
+            expect.hasAssertions();
+            const listener = new RunTestListener(mockSession);
+            mockProcess.request.type = requestType;
 
-        // stdout
-        listener.onEvent(mockProcess, 'executableOutput', 'onRunStart');
-        expect(mockSession.context.onRunEvent.fire).toBeCalledWith(
-          expect.objectContaining({ type: 'start' })
+            // stderr
+            listener.onEvent(mockProcess, 'executableStdErr', 'onRunStart');
+            expect(mockSession.context.onRunEvent.fire).toBeCalledWith(
+              expect.objectContaining({ type: 'start' })
+            );
+
+            listener.onEvent(mockProcess, 'executableStdErr', 'onRunComplete');
+            expect(mockSession.context.onRunEvent.fire).toBeCalledWith(
+              expect.objectContaining({ type: 'end' })
+            );
+          }
         );
-
-        listener.onEvent(mockProcess, 'executableOutput', 'onRunComplete');
-        expect(mockSession.context.onRunEvent.fire).toBeCalledWith(
-          expect.objectContaining({ type: 'end' })
+        it.each`
+          message                                                   | raw
+          ${'the data before\r\nonRunStart: xxx\r\ndata after 1'}   | ${'the data before\r\ndata after 1'}
+          ${'the data before\r\nonRunComplete\r\ndata after 2\r\n'} | ${'the data before\r\ndata after 2\r\n'}
+        `(
+          'will still report message: "$message" excluding the reporter output',
+          ({ message, raw }) => {
+            const listener = new RunTestListener(mockSession);
+            // stderr
+            listener.onEvent(mockProcess, 'executableStdErr', message, message);
+            expect(mockSession.context.onRunEvent.fire).toBeCalledWith(
+              expect.objectContaining({ type: 'data', raw })
+            );
+          }
         );
       });
     });
@@ -279,7 +300,7 @@ describe('jest process listeners', () => {
 
         expect(setTimeout).not.toBeCalled();
 
-        listener.onEvent(mockProcess, 'executableOutput', 'onRunStart: numTotalTestSuites: 100');
+        listener.onEvent(mockProcess, 'executableStdErr', 'onRunStart: numTotalTestSuites: 100');
 
         expect(clearTimeout).not.toBeCalled();
         if (threshold > 0) {
@@ -306,14 +327,14 @@ describe('jest process listeners', () => {
       it.each`
         eventType             | args
         ${'processExit'}      | ${[]}
-        ${'executableOutput'} | ${['onRunComplete']}
+        ${'executableStdErr'} | ${['onRunComplete']}
       `(
         'should not trigger timeout after process/run ended with $eventType',
         ({ eventType, args }) => {
           mockSession.context.settings.monitorLongRun = undefined;
           const listener = new RunTestListener(mockSession);
 
-          listener.onEvent(mockProcess, 'executableOutput', 'onRunStart: numTotalTestSuites: 100');
+          listener.onEvent(mockProcess, 'executableStdErr', 'onRunStart: numTotalTestSuites: 100');
           expect(setTimeout).toBeCalledTimes(1);
           expect(clearTimeout).not.toBeCalled();
 
@@ -330,12 +351,12 @@ describe('jest process listeners', () => {
         mockSession.context.settings.monitorLongRun = undefined;
         const listener = new RunTestListener(mockSession);
 
-        listener.onEvent(mockProcess, 'executableOutput', 'onRunStart: numTotalTestSuites: 100');
-        listener.onEvent(mockProcess, 'executableOutput', 'onRunComplete: execError: whatever');
+        listener.onEvent(mockProcess, 'executableStdErr', 'onRunStart: numTotalTestSuites: 100');
+        listener.onEvent(mockProcess, 'executableStdErr', 'onRunComplete: execError: whatever');
         expect(setTimeout).toBeCalledTimes(1);
         expect(clearTimeout).toBeCalledTimes(1);
 
-        listener.onEvent(mockProcess, 'executableOutput', 'onRunStart: numTotalTestSuites: 70');
+        listener.onEvent(mockProcess, 'executableStdErr', 'onRunStart: numTotalTestSuites: 70');
         expect(setTimeout).toBeCalledTimes(2);
         expect(clearTimeout).toBeCalledTimes(1);
       });
@@ -343,8 +364,8 @@ describe('jest process listeners', () => {
         mockSession.context.settings.monitorLongRun = undefined;
         const listener = new RunTestListener(mockSession);
 
-        listener.onEvent(mockProcess, 'executableOutput', 'onRunStart: numTotalTestSuites: 100');
-        listener.onEvent(mockProcess, 'executableOutput', 'onRunStart: numTotalTestSuites: 70');
+        listener.onEvent(mockProcess, 'executableStdErr', 'onRunStart: numTotalTestSuites: 100');
+        listener.onEvent(mockProcess, 'executableStdErr', 'onRunStart: numTotalTestSuites: 70');
         expect(setTimeout).toBeCalledTimes(2);
         expect(clearTimeout).toBeCalledTimes(1);
       });
@@ -396,6 +417,38 @@ describe('jest process listeners', () => {
           Buffer.from('Snapshot test failed')
         );
         expect(vscode.window.showInformationMessage).toBeCalledTimes(1);
+        expect(mockSession.scheduleProcess).not.toBeCalled();
+      });
+      it('auto update snapsot only apply for runs not already updating snapshots', async () => {
+        expect.hasAssertions();
+        mockSession.context.settings.enableSnapshotUpdateMessages = true;
+        (vscode.window.showInformationMessage as jest.Mocked<any>).mockReturnValue(
+          Promise.resolve('something')
+        );
+
+        const listener = new RunTestListener(mockSession);
+
+        await listener.onEvent(
+          mockProcess,
+          'executableStdErr',
+          Buffer.from('Snapshot test failed')
+        );
+        expect(vscode.window.showInformationMessage).toBeCalledTimes(1);
+        expect(mockSession.scheduleProcess).toBeCalledWith({
+          type: 'update-snapshot',
+          baseRequest: mockProcess.request,
+        });
+
+        // for a process already with updateSnapshot flag: do nothing
+        (vscode.window.showInformationMessage as jest.Mocked<any>).mockClear();
+        mockSession.scheduleProcess.mockClear();
+        mockProcess.request.updateSnapshot = true;
+        await listener.onEvent(
+          mockProcess,
+          'executableStdErr',
+          Buffer.from('Snapshot test failed')
+        );
+        expect(vscode.window.showInformationMessage).not.toBeCalled();
         expect(mockSession.scheduleProcess).not.toBeCalled();
       });
     });

@@ -1,10 +1,11 @@
 jest.unmock('../../src/test-provider/test-item-data');
-jest.unmock('../../src/test-provider/test-provider-context');
+jest.unmock('../../src/test-provider/test-provider-helper');
 jest.unmock('../../src/appGlobals');
 jest.unmock('../../src/TestResults/match-node');
 jest.unmock('../../src/TestResults/match-by-context');
 jest.unmock('../test-helper');
 jest.unmock('./test-helper');
+jest.unmock('../../src/errors');
 
 jest.mock('path', () => {
   let sep = '/';
@@ -32,16 +33,14 @@ import {
   WorkspaceRoot,
 } from '../../src/test-provider/test-item-data';
 import * as helper from '../test-helper';
-import {
-  JestTestProviderContext,
-  _resetShowTerminal,
-} from '../../src/test-provider/test-provider-context';
+import { JestTestProviderContext } from '../../src/test-provider/test-provider-helper';
 import {
   buildAssertionContainer,
   buildSourceContainer,
 } from '../../src/TestResults/match-by-context';
 import * as path from 'path';
 import { mockController, mockExtExplorerContext } from './test-helper';
+import * as errors from '../../src/errors';
 
 const mockPathSep = (newSep: string) => {
   (path as jest.Mocked<any>).setSep(newSep);
@@ -68,53 +67,22 @@ const mockScheduleProcess = (context) => {
 };
 describe('test-item-data', () => {
   let context;
-  let profile;
-  let runMock;
+  let jestRun;
+  let runEndSpy;
   let controllerMock;
-  let resolveMock;
 
   beforeEach(() => {
     controllerMock = mockController();
     const profiles: any = [{ tag: { id: 'run' } }, { tag: { id: 'debug' } }];
     context = new JestTestProviderContext(mockExtExplorerContext('ws-1'), controllerMock, profiles);
-    runMock = context.createTestRun();
-    profile = { kind: vscode.TestRunProfileKind.Run };
-    resolveMock = jest.fn();
+    context.output.write = jest.fn((t) => t);
+    jestRun = context.createTestRun({}, { disableVscodeRunEnd: true });
+    runEndSpy = jest.spyOn(jestRun, 'end');
 
     vscode.Uri.joinPath = jest
       .fn()
       .mockImplementation((uri, p) => ({ fsPath: `${uri.fsPath}/${p}` }));
     vscode.Uri.file = jest.fn().mockImplementation((f) => ({ fsPath: f }));
-
-    _resetShowTerminal();
-  });
-  describe('show TestExplorer Terminal', () => {
-    it('show TestExplorer Terminal on first run output only', () => {
-      context.appendOutput('first time should open terminal', runMock);
-      expect(vscode.commands.executeCommand).toBeCalledTimes(1);
-      expect(vscode.commands.executeCommand).toBeCalledWith('testing.showMostRecentOutput');
-
-      context.appendOutput('subsequent calls will not open terminal again', runMock);
-      expect(vscode.commands.executeCommand).toBeCalledTimes(1);
-    });
-    it.each`
-      showTerminalOnLaunch | callTimes
-      ${undefined}         | ${1}
-      ${true}              | ${1}
-      ${false}             | ${0}
-    `(
-      'controlled by showTerminalOnLaunch($showTerminalOnLaunch) => callTimes($callTimes)',
-      ({ showTerminalOnLaunch, callTimes }) => {
-        context.ext.settings.showTerminalOnLaunch = showTerminalOnLaunch;
-        (vscode.commands.executeCommand as jest.Mocked<any>).mockClear();
-
-        context.appendOutput('first time should open terminal', runMock);
-        expect(vscode.commands.executeCommand).toBeCalledTimes(callTimes);
-
-        context.appendOutput('subsequent calls will not open terminal again', runMock);
-        expect(vscode.commands.executeCommand).toBeCalledTimes(callTimes);
-      }
-    );
   });
   describe('discover children', () => {
     describe('WorkspaceRoot', () => {
@@ -126,7 +94,7 @@ describe('test-item-data', () => {
         ];
         context.ext.testResolveProvider.getTestList.mockReturnValue(testFiles);
         const wsRoot = new WorkspaceRoot(context);
-        wsRoot.discoverTest(runMock);
+        wsRoot.discoverTest(jestRun);
 
         // verify tree structure
         expect(wsRoot.item.children.size).toEqual(1);
@@ -159,26 +127,26 @@ describe('test-item-data', () => {
         it('if no testFiles yet, will still turn off canResolveChildren and close the run', () => {
           context.ext.testResolveProvider.getTestList.mockReturnValue([]);
           const wsRoot = new WorkspaceRoot(context);
-          wsRoot.discoverTest(runMock);
+          wsRoot.discoverTest(jestRun);
           expect(wsRoot.item.children.size).toEqual(0);
           expect(wsRoot.item.canResolveChildren).toBe(false);
-          expect(runMock.end).toBeCalledTimes(1);
+          expect(runEndSpy).toBeCalledTimes(1);
         });
         it('will not wipe out existing test items', () => {
           // first time discover 1 file
           context.ext.testResolveProvider.getTestList.mockReturnValue(['/ws-1/a.test.ts']);
           const wsRoot = new WorkspaceRoot(context);
-          wsRoot.discoverTest(runMock);
+          wsRoot.discoverTest(jestRun);
           expect(wsRoot.item.children.size).toEqual(1);
           expect(wsRoot.item.canResolveChildren).toBe(false);
-          expect(runMock.end).toBeCalledTimes(1);
+          expect(runEndSpy).toBeCalledTimes(1);
 
           // 2nd time if no test-file: testItems will not change
           context.ext.testResolveProvider.getTestList.mockReturnValue([]);
-          wsRoot.discoverTest(runMock);
+          wsRoot.discoverTest(jestRun);
           expect(wsRoot.item.children.size).toEqual(1);
           expect(wsRoot.item.canResolveChildren).toBe(false);
-          expect(runMock.end).toBeCalledTimes(2);
+          expect(runEndSpy).toBeCalledTimes(2);
         });
       });
       it('will only discover up to the test file level', () => {
@@ -191,7 +159,7 @@ describe('test-item-data', () => {
           assertionContainer,
         });
         const wsRoot = new WorkspaceRoot(context);
-        wsRoot.discoverTest(runMock);
+        wsRoot.discoverTest(jestRun);
         const docItem = wsRoot.item.children.get(testFiles[0]);
         expect(docItem.children.size).toEqual(0);
         expect(context.ext.testResolveProvider.getTestSuiteResult).toBeCalled();
@@ -208,7 +176,7 @@ describe('test-item-data', () => {
         const wsRoot = new WorkspaceRoot(context);
 
         // first discover all test files and build the tree
-        wsRoot.discoverTest(runMock);
+        wsRoot.discoverTest(jestRun);
         expect(wsRoot.item.children.size).toEqual(2);
         let folderItem = wsRoot.item.children.get('/ws-1/tests1');
         let docItem = folderItem.children.get(testFiles[0]);
@@ -219,7 +187,7 @@ describe('test-item-data', () => {
 
         // now remove '/ws-1/tests2/b.test.ts' and rediscover
         testFiles.length = 1;
-        wsRoot.discoverTest(runMock);
+        wsRoot.discoverTest(jestRun);
         expect(wsRoot.item.children.size).toEqual(1);
         folderItem = wsRoot.item.children.get('/ws-1/tests2');
         expect(folderItem).toBeUndefined();
@@ -261,7 +229,7 @@ describe('test-item-data', () => {
           it('testListUpdated event will be fired', () => {
             const wsRoot = new WorkspaceRoot(context);
             context.ext.testResolveProvider.getTestList.mockReturnValueOnce([]);
-            wsRoot.discoverTest(runMock);
+            wsRoot.discoverTest(jestRun);
             expect(wsRoot.item.children.size).toBe(0);
 
             // invoke testListUpdated event listener
@@ -270,7 +238,7 @@ describe('test-item-data', () => {
             ]);
             // should have created a new run
             const runMock2 = controllerMock.lastRunMock();
-            expect(runMock2).not.toBe(runMock);
+            expect(runMock2).not.toBe(jestRun.vscodeRun);
 
             expect(wsRoot.item.children.size).toBe(1);
             const docItem = getChildItem(wsRoot.item, 'a.test.ts');
@@ -284,7 +252,7 @@ describe('test-item-data', () => {
             context.ext.settings = { testExplorer: { enabled: true, showInlineError: true } };
 
             const wsRoot = new WorkspaceRoot(context);
-            wsRoot.discoverTest(runMock);
+            wsRoot.discoverTest(jestRun);
 
             expect(wsRoot.item.children.size).toBe(0);
 
@@ -336,7 +304,7 @@ describe('test-item-data', () => {
             });
 
             const wsRoot = new WorkspaceRoot(context);
-            wsRoot.discoverTest(runMock);
+            wsRoot.discoverTest(jestRun);
             expect(context.ext.testResolveProvider.getTestSuiteResult).toHaveBeenCalledTimes(1);
 
             expect(wsRoot.item.children.size).toBe(1);
@@ -411,7 +379,7 @@ describe('test-item-data', () => {
             const testContainer = buildSourceContainer(sourceRoot);
 
             const wsRoot = new WorkspaceRoot(context);
-            wsRoot.discoverTest(runMock);
+            wsRoot.discoverTest(jestRun);
             expect(context.ext.testResolveProvider.getTestSuiteResult).toHaveBeenCalledTimes(1);
 
             expect(wsRoot.item.children.size).toBe(1);
@@ -458,7 +426,7 @@ describe('test-item-data', () => {
           '/ws-1/a.test.ts',
           '/ws-1/b.test.ts',
         ]);
-        wsRoot.discoverTest(runMock);
+        wsRoot.discoverTest(jestRun);
         expect(wsRoot.item.children.size).toBe(2);
         // a.test.ts should still have 2 children
         docItem = getChildItem(wsRoot.item, 'a.test.ts');
@@ -480,18 +448,18 @@ describe('test-item-data', () => {
         });
         const parentItem: any = controllerMock.createTestItem('ws-1', 'ws-1', uri);
         const docRoot = new TestDocumentRoot(context, uri, parentItem);
-        docRoot.discoverTest(runMock);
+        docRoot.discoverTest(jestRun);
         expect(docRoot.item.children.size).toEqual(1);
         const tData = context.getData(getChildItem(docRoot.item, 'test-1'));
         expect(tData instanceof TestData).toBeTruthy();
-        expect(runMock.passed).toBeCalledWith(tData.item);
+        expect(jestRun.vscodeRun.passed).toBeCalledWith(tData.item);
       });
       it('if no test suite result yet, children list is empty', () => {
         context.ext.testResolveProvider.getTestSuiteResult.mockReturnValue(undefined);
         const uri: any = { fsPath: '/ws-1/a.test.ts' };
         const parentItem: any = controllerMock.createTestItem('ws-1', 'ws-1', uri);
         const docRoot = new TestDocumentRoot(context, uri, parentItem);
-        docRoot.discoverTest(runMock);
+        docRoot.discoverTest(jestRun);
         expect(docRoot.item.children.size).toEqual(0);
       });
     });
@@ -519,7 +487,7 @@ describe('test-item-data', () => {
       describe('run request', () => {
         it('WorkspaceRoot runs all tests in the workspace in blocking-2 queue', () => {
           const wsRoot = new WorkspaceRoot(context);
-          wsRoot.scheduleTest(runMock, resolveMock);
+          wsRoot.scheduleTest(jestRun);
           const r = context.ext.session.scheduleProcess.mock.calls[0][0];
           expect(r.type).toEqual('all-tests');
           const transformed = r.transform({ schedule: { queue: 'blocking' } });
@@ -528,7 +496,7 @@ describe('test-item-data', () => {
         it('FolderData runs all tests inside the folder', () => {
           const parent: any = controllerMock.createTestItem('ws-1', 'ws-1', { fsPath: '/ws-1' });
           const folderData = new FolderData(context, 'folder', parent);
-          folderData.scheduleTest(runMock, resolveMock);
+          folderData.scheduleTest(jestRun);
           expect(context.ext.session.scheduleProcess).toBeCalledWith(
             expect.objectContaining({
               type: 'by-file-pattern',
@@ -543,7 +511,7 @@ describe('test-item-data', () => {
             { fsPath: '/ws-1/a.test.ts' } as any,
             parent
           );
-          docRoot.scheduleTest(runMock, resolveMock);
+          docRoot.scheduleTest(jestRun);
           expect(context.ext.session.scheduleProcess).toBeCalledWith(
             expect.objectContaining({
               type: 'by-file-pattern',
@@ -556,7 +524,7 @@ describe('test-item-data', () => {
           const node: any = { fullName: 'a test', attrs: {}, data: {} };
           const parent: any = controllerMock.createTestItem('ws-1', 'ws-1', uri);
           const tData = new TestData(context, uri, node, parent);
-          tData.scheduleTest(runMock, resolveMock);
+          tData.scheduleTest(jestRun);
           expect(context.ext.session.scheduleProcess).toBeCalledWith(
             expect.objectContaining({
               type: 'by-file-test-pattern',
@@ -570,18 +538,18 @@ describe('test-item-data', () => {
         context.ext.session.scheduleProcess.mockReturnValue(undefined);
         const parent: any = controllerMock.createTestItem('ws-1', 'ws-1', { fsPath: '/ws-1' });
         const docRoot = new TestDocumentRoot(context, { fsPath: '/ws-1/a.test.ts' } as any, parent);
-        expect(docRoot.scheduleTest(runMock, resolveMock)).toBeUndefined();
-        expect(runMock.errored).toBeCalledWith(docRoot.item, expect.anything());
-        expect(resolveMock).toBeCalled();
+        expect(docRoot.scheduleTest(jestRun)).toBeUndefined();
+        expect(jestRun.vscodeRun.errored).toBeCalledWith(docRoot.item, expect.anything());
+        expect(runEndSpy).toBeCalled();
       });
       it('schedule request will contain itemRun info', () => {
         const parent: any = controllerMock.createTestItem('ws-1', 'ws-1', { fsPath: '/ws-1' });
         const folderData = new FolderData(context, 'folder', parent);
-        folderData.scheduleTest(runMock, resolveMock);
+        folderData.scheduleTest(jestRun);
         const request = context.ext.session.scheduleProcess.mock.calls[0][0];
 
-        expect(request.itemRun.run).toEqual(runMock);
-        expect(request.itemRun.item).toEqual(folderData.item);
+        expect(request.run).toBe(jestRun);
+        expect(request.run.item).toBe(folderData.item);
       });
     });
 
@@ -632,11 +600,11 @@ describe('test-item-data', () => {
           // simulate an internal run has been scheduled
           const process = mockScheduleProcess(context);
 
-          const runMock = context.createTestRun();
-          const resolve = jest.fn();
+          const jestRun = context.createTestRun({}, { disableVscodeRunEnd: true });
+          const runEndSpy = jest.spyOn(jestRun, 'end');
           controllerMock.createTestRun.mockClear();
 
-          wsRoot.scheduleTest(runMock, resolve, {});
+          wsRoot.scheduleTest(jestRun);
 
           expect(controllerMock.createTestRun).not.toHaveBeenCalled();
 
@@ -657,9 +625,9 @@ describe('test-item-data', () => {
           const dItem = getChildItem(wsRoot.item, 'a.test.ts');
           expect(dItem.children.size).toBe(2);
           const tItem = getChildItem(dItem, 'test-a');
-          expect(runMock.passed).toBeCalledWith(tItem);
-          expect(runMock.end).not.toBeCalled();
-          expect(resolve).toBeCalled();
+          expect(jestRun.vscodeRun.passed).toBeCalledWith(tItem);
+          expect(jestRun.vscodeRun.end).not.toBeCalled();
+          expect(runEndSpy).toBeCalled();
         });
         it.each`
           config                                       | hasLocation
@@ -675,7 +643,7 @@ describe('test-item-data', () => {
 
             controllerMock.createTestRun.mockClear();
 
-            wsRoot.scheduleTest(runMock, resolveMock, {});
+            wsRoot.scheduleTest(jestRun);
 
             // triggers testSuiteChanged event listener
             context.ext.testResolveProvider.events.testSuiteChanged.event.mock.calls[0][0]({
@@ -689,7 +657,7 @@ describe('test-item-data', () => {
 
             const dItem = getChildItem(wsRoot.item, 'a.test.ts');
             const tItem = getChildItem(dItem, 'test-b');
-            expect(runMock.failed).toBeCalledWith(tItem, expect.anything());
+            expect(jestRun.vscodeRun.failed).toBeCalledWith(tItem, expect.anything());
             if (hasLocation) {
               expect(vscode.TestMessage).toBeCalled();
             } else {
@@ -722,7 +690,7 @@ describe('test-item-data', () => {
         ];
         context.ext.testResolveProvider.getTestList.mockReturnValue(testFiles);
         const wsRoot = new WorkspaceRoot(context);
-        wsRoot.discoverTest(runMock);
+        wsRoot.discoverTest(jestRun);
 
         // verify tree structure
         expect(wsRoot.item.children.size).toEqual(1);
@@ -757,7 +725,7 @@ describe('test-item-data', () => {
         testFiles = ['/ws-1/src/a.test.ts', '/ws-1/src/b.test.ts', '/ws-1/src/app/app.test.ts'];
         context.ext.testResolveProvider.getTestList.mockReturnValue(testFiles);
         wsRoot = new WorkspaceRoot(context);
-        wsRoot.discoverTest(runMock);
+        wsRoot.discoverTest(jestRun);
       });
       it('add', () => {
         // add 2 new files
@@ -831,7 +799,7 @@ describe('test-item-data', () => {
         assertionContainer,
       });
       docRoot = new TestDocumentRoot(context, { fsPath: '/ws-1/a.test.ts' } as any, parent);
-      docRoot.discoverTest(runMock);
+      docRoot.discoverTest(jestRun);
     });
     it('add', () => {
       // add test-2 under existing desc-1 and a new desc-2/test-3
@@ -843,29 +811,29 @@ describe('test-item-data', () => {
         status: 'KnownFail',
         assertionContainer,
       });
-      docRoot.discoverTest(runMock);
+      docRoot.discoverTest(jestRun);
       expect(docRoot.item.children.size).toEqual(2);
-      expect(runMock.failed).toBeCalledWith(docRoot.item, expect.anything());
+      expect(jestRun.vscodeRun.failed).toBeCalledWith(docRoot.item, expect.anything());
 
       const desc1 = getChildItem(docRoot.item, 'desc-1');
       expect(desc1.children.size).toEqual(2);
 
       const t1 = getChildItem(desc1, 'desc-1 test-1');
       expect(t1).not.toBeUndefined();
-      expect(runMock.passed).toBeCalledWith(t1);
+      expect(jestRun.vscodeRun.passed).toBeCalledWith(t1);
 
       const t2 = getChildItem(desc1, 'desc-1 test-2');
       expect(t2).not.toBeUndefined();
-      expect(runMock.failed).toBeCalledWith(t2, expect.anything());
+      expect(jestRun.vscodeRun.failed).toBeCalledWith(t2, expect.anything());
 
       const desc2 = getChildItem(docRoot.item, 'desc-2');
       const t3 = getChildItem(desc2, 'desc-2 test-3');
       expect(t3).not.toBeUndefined();
-      expect(runMock.passed).toBeCalledWith(t3);
+      expect(jestRun.vscodeRun.passed).toBeCalledWith(t3);
 
       const t4 = getChildItem(desc2, 'desc-2 test-4');
       expect(t4).not.toBeUndefined();
-      expect(runMock.skipped).toBeCalledWith(t4);
+      expect(jestRun.vscodeRun.skipped).toBeCalledWith(t4);
     });
     it('delete', () => {
       // delete the only test -1
@@ -874,7 +842,7 @@ describe('test-item-data', () => {
         status: 'Unknown',
         assertionContainer,
       });
-      docRoot.discoverTest(runMock);
+      docRoot.discoverTest(jestRun);
       expect(docRoot.item.children.size).toEqual(0);
     });
     it('rename', () => {
@@ -885,17 +853,17 @@ describe('test-item-data', () => {
         assertionContainer,
       });
 
-      docRoot.discoverTest(runMock);
+      docRoot.discoverTest(jestRun);
       expect(docRoot.item.children.size).toEqual(1);
-      expect(runMock.failed).toBeCalledWith(docRoot.item, expect.anything());
+      expect(jestRun.vscodeRun.failed).toBeCalledWith(docRoot.item, expect.anything());
       const t2 = getChildItem(docRoot.item, 'test-2');
       expect(t2).not.toBeUndefined();
-      expect(runMock.failed).toBeCalledWith(t2, expect.anything());
+      expect(jestRun.vscodeRun.failed).toBeCalledWith(t2, expect.anything());
     });
     describe('duplicate test names', () => {
       const setup = (assertions) => {
-        runMock.passed.mockClear();
-        runMock.failed.mockClear();
+        jestRun.vscodeRun.passed.mockClear();
+        jestRun.vscodeRun.failed.mockClear();
 
         const assertionContainer = buildAssertionContainer(assertions);
         context.ext.testResolveProvider.getTestSuiteResult.mockReturnValue({
@@ -907,31 +875,31 @@ describe('test-item-data', () => {
         const a2 = helper.makeAssertion('test-1', 'KnownFail', [], [1, 0]);
         const a3 = helper.makeAssertion('test-1', 'KnownSuccess', [], [1, 0]);
         setup([a2, a3]);
-        docRoot.discoverTest(runMock);
+        docRoot.discoverTest(jestRun);
         expect(docRoot.item.children.size).toEqual(2);
-        expect(runMock.failed).toBeCalledWith(docRoot.item, expect.anything());
+        expect(jestRun.vscodeRun.failed).toBeCalledWith(docRoot.item, expect.anything());
         const items = [];
         docRoot.item.children.forEach((item) => items.push(item));
         expect(items[0].id).not.toEqual(items[1].id);
         items.forEach((item) => expect(item.id).toEqual(expect.stringContaining('test-1')));
 
-        expect(runMock.failed).toBeCalledTimes(2);
-        expect(runMock.passed).toBeCalledTimes(1);
+        expect(jestRun.vscodeRun.failed).toBeCalledTimes(2);
+        expect(jestRun.vscodeRun.passed).toBeCalledTimes(1);
       });
       it('can still sync with test results', () => {
         const a2 = helper.makeAssertion('test-1', 'KnownFail', [], [1, 0]);
         const a3 = helper.makeAssertion('test-1', 'KnownSuccess', [], [1, 0]);
         setup([a2, a3]);
-        docRoot.discoverTest(runMock);
-        expect(runMock.failed).toBeCalledTimes(2);
-        expect(runMock.passed).toBeCalledTimes(1);
+        docRoot.discoverTest(jestRun);
+        expect(jestRun.vscodeRun.failed).toBeCalledTimes(2);
+        expect(jestRun.vscodeRun.passed).toBeCalledTimes(1);
 
         //update a2 status
         a2.status = 'KnownSuccess';
         setup([a2, a3]);
-        docRoot.discoverTest(runMock);
-        expect(runMock.failed).toBeCalledTimes(1);
-        expect(runMock.passed).toBeCalledTimes(2);
+        docRoot.discoverTest(jestRun);
+        expect(jestRun.vscodeRun.failed).toBeCalledTimes(1);
+        expect(jestRun.vscodeRun.passed).toBeCalledTimes(2);
       });
     });
   });
@@ -989,9 +957,8 @@ describe('test-item-data', () => {
     });
     it('can adapt raw output to terminal output', () => {
       const coloredText = '[2K[1G[1myarn run v1.22.5[22m\n';
-      const converted = '[2K[1G[1myarn run v1.22.5[22m\r\n';
-      context.appendOutput(coloredText, runMock);
-      expect(runMock.appendOutput).toBeCalledWith(expect.stringContaining(converted));
+      jestRun.write(coloredText);
+      expect(jestRun.vscodeRun.appendOutput).toBeCalledWith(expect.stringContaining(coloredText));
     });
     describe('handle run event to set item status and show output', () => {
       const file = '/ws-1/tests/a.test.ts';
@@ -1040,7 +1007,7 @@ describe('test-item-data', () => {
           };
           const item = getItem();
           const data = context.getData(item);
-          data.scheduleTest(runMock, resolveMock, profile);
+          data.scheduleTest(jestRun);
           controllerMock.createTestRun.mockClear();
 
           return item;
@@ -1058,63 +1025,60 @@ describe('test-item-data', () => {
         `('will use run passed from explorer throughout for $targetItem item', ({ itemType }) => {
           it('item will be enqueued after schedule', () => {
             const item = setup(itemType);
-            expect(process.request.itemRun.run.enqueued).toBeCalledWith(item);
+            expect(process.request.run.vscodeRun.enqueued).toBeCalledWith(item);
           });
           it('item will show started when jest run started', () => {
             const item = setup(itemType);
 
-            process.request.itemRun.run.enqueued.mockClear();
+            process.request.run.vscodeRun.enqueued.mockClear();
 
             // scheduled event has no effect
             onRunEvent({ type: 'scheduled', process });
-            expect(process.request.itemRun.run.enqueued).not.toBeCalled();
+            expect(process.request.run.vscodeRun.enqueued).not.toBeCalled();
 
             // starting the process
             onRunEvent({ type: 'start', process });
-            expect(process.request.itemRun.item).toBe(item);
-            expect(process.request.itemRun.run.started).toBeCalledWith(item);
+            expect(process.request.run.item).toBe(item);
+            expect(process.request.run.vscodeRun.started).toBeCalledWith(item);
 
             //will not create new run
             expect(controllerMock.createTestRun).not.toBeCalled();
           });
           it.each`
-            text      | raw          | newLine      | isError      | outputText | outputNewLine | outputColor
-            ${'text'} | ${'raw'}     | ${true}      | ${false}     | ${'raw'}   | ${true}       | ${undefined}
-            ${'text'} | ${'raw'}     | ${false}     | ${undefined} | ${'raw'}   | ${false}      | ${undefined}
-            ${'text'} | ${'raw'}     | ${undefined} | ${undefined} | ${'raw'}   | ${false}      | ${undefined}
-            ${'text'} | ${'raw'}     | ${true}      | ${true}      | ${'raw'}   | ${true}       | ${'red'}
-            ${'text'} | ${undefined} | ${true}      | ${true}      | ${'text'}  | ${true}       | ${'red'}
+            case | text      | raw          | newLine      | isError      | outputText | outputOptions
+            ${1} | ${'text'} | ${'raw'}     | ${true}      | ${false}     | ${'raw'}   | ${'new-line'}
+            ${2} | ${'text'} | ${'raw'}     | ${false}     | ${undefined} | ${'raw'}   | ${undefined}
+            ${3} | ${'text'} | ${'raw'}     | ${undefined} | ${undefined} | ${'raw'}   | ${undefined}
+            ${4} | ${'text'} | ${'raw'}     | ${true}      | ${true}      | ${'raw'}   | ${'error'}
+            ${5} | ${'text'} | ${undefined} | ${true}      | ${true}      | ${'text'}  | ${'error'}
           `(
-            'can output process data: $text, $raw, $newLine, $isError',
-            ({ text, raw, newLine, isError, outputText, outputNewLine, outputColor }) => {
+            'can output process data: case $case',
+            ({ text, raw, newLine, isError, outputText, outputOptions }) => {
               setup(itemType);
-              const appendOutput = jest.spyOn(context, 'appendOutput');
 
               onRunEvent({ type: 'start', process });
               onRunEvent({ type: 'data', process, text, raw, newLine, isError });
 
               expect(controllerMock.createTestRun).not.toBeCalled();
-              expect(appendOutput).toBeCalledWith(
-                outputText,
-                process.request.itemRun.run,
-                outputNewLine,
-                outputColor
-              );
+              expect(context.output.write).toBeCalledWith(outputText, outputOptions);
             }
           );
-          it.each([['end'], ['exit']])(
-            "will only resolve the promise and not close the run for event '%s'",
-            (eventType) => {
-              setup(itemType);
-              onRunEvent({ type: 'start', process });
-              expect(controllerMock.createTestRun).not.toBeCalled();
-              expect(process.request.itemRun.run.started).toBeCalled();
+          it.each([
+            { type: 'end' },
+            { type: 'exit', error: 'something is wrong' },
+            { type: 'exit', error: 'something is wrong', code: 127 },
+            { type: 'exit', error: 'something is wrong', code: 1 },
+          ])("will only resolve the promise and not close the run for event '%s'", (event) => {
+            setup(itemType);
+            onRunEvent({ type: 'start', process });
+            expect(controllerMock.createTestRun).not.toBeCalled();
+            expect(process.request.run.vscodeRun.started).toBeCalled();
 
-              onRunEvent({ type: eventType, process });
-              expect(process.request.itemRun.run.end).not.toBeCalled();
-              expect(resolveMock).toBeCalled();
-            }
-          );
+            onRunEvent({ ...event, process });
+            expect(process.request.run.vscodeRun.end).not.toBeCalled();
+
+            expect(runEndSpy).toBeCalled();
+          });
           it('can report exit error even if run is ended', () => {
             setup(itemType);
 
@@ -1122,15 +1086,15 @@ describe('test-item-data', () => {
             onRunEvent({ type: 'end', process });
 
             expect(controllerMock.createTestRun).not.toBeCalled();
-            expect(process.request.itemRun.run.end).not.toBeCalled();
-            expect(resolveMock).toBeCalled();
+            expect(process.request.run.vscodeRun.end).not.toBeCalled();
+            expect(runEndSpy).toBeCalled();
 
             const error = 'something is wrong';
             onRunEvent({ type: 'exit', error, process });
 
             // no new run need to be created
             expect(controllerMock.createTestRun).not.toBeCalled();
-            expect(process.request.itemRun.run.appendOutput).toBeCalledWith(
+            expect(process.request.run.vscodeRun.appendOutput).toBeCalledWith(
               expect.stringContaining(error)
             );
           });
@@ -1184,25 +1148,22 @@ describe('test-item-data', () => {
             expect(controllerMock.createTestRun).toBeCalledTimes(1);
           });
           it.each`
-            text      | raw          | newLine      | isError      | outputText | outputNewLine | outputColor
-            ${'text'} | ${'raw'}     | ${true}      | ${false}     | ${'raw'}   | ${true}       | ${undefined}
-            ${'text'} | ${'raw'}     | ${false}     | ${undefined} | ${'raw'}   | ${false}      | ${undefined}
-            ${'text'} | ${'raw'}     | ${undefined} | ${undefined} | ${'raw'}   | ${false}      | ${undefined}
-            ${'text'} | ${'raw'}     | ${true}      | ${true}      | ${'raw'}   | ${true}       | ${'red'}
-            ${'text'} | ${undefined} | ${true}      | ${true}      | ${'text'}  | ${true}       | ${'red'}
+            case | text      | raw          | newLine      | isError      | outputText | outputOptions
+            ${1} | ${'text'} | ${'raw'}     | ${true}      | ${false}     | ${'raw'}   | ${'new-line'}
+            ${2} | ${'text'} | ${'raw'}     | ${false}     | ${undefined} | ${'raw'}   | ${undefined}
+            ${3} | ${'text'} | ${'raw'}     | ${undefined} | ${undefined} | ${'raw'}   | ${undefined}
+            ${4} | ${'text'} | ${'raw'}     | ${true}      | ${true}      | ${'raw'}   | ${'error'}
+            ${5} | ${'text'} | ${undefined} | ${true}      | ${true}      | ${'text'}  | ${'error'}
           `(
-            'can output process data: ($text, $raw, $newLine, $isError)',
-            ({ text, raw, newLine, isError, outputText, outputNewLine, outputColor }) => {
+            'can output process data: case $case',
+            ({ text, raw, newLine, isError, outputText, outputOptions }) => {
               const process = { id: 'whatever', request };
-              const appendOutput = jest.spyOn(context, 'appendOutput');
 
               onRunEvent({ type: 'start', process });
               onRunEvent({ type: 'data', process, text, raw, newLine, isError });
 
               expect(controllerMock.createTestRun).toBeCalledTimes(1);
-              const runMock = controllerMock.lastRunMock();
-
-              expect(appendOutput).toBeCalledWith(outputText, runMock, outputNewLine, outputColor);
+              expect(context.output.write).toBeCalledWith(outputText, outputOptions);
             }
           );
           it.each([['end'], ['exit']])("close the run on event '%s'", (eventType) => {
@@ -1217,7 +1178,6 @@ describe('test-item-data', () => {
             expect(runMock.end).toBeCalled();
           });
           it('can report exit error even if run is ended', () => {
-            const appendOutput = jest.spyOn(context, 'appendOutput');
             const process = { id: 'whatever', request: { type: 'all-tests' } };
             onRunEvent({ type: 'start', process });
             onRunEvent({ type: 'end', process });
@@ -1232,12 +1192,7 @@ describe('test-item-data', () => {
             expect(controllerMock.createTestRun).toBeCalledTimes(2);
             const runMock2 = controllerMock.lastRunMock();
 
-            expect(appendOutput).toBeCalledWith(
-              error,
-              runMock2,
-              expect.anything(),
-              expect.anything()
-            );
+            expect(context.output.write).toBeCalledWith(error, expect.anything());
             expect(runMock2.errored).toBeCalled();
             expect(runMock2.end).toBeCalled();
           });
@@ -1275,13 +1230,23 @@ describe('test-item-data', () => {
         const process = mockScheduleProcess(context);
         const testFileData = context.getData(testFile);
 
-        testFileData.scheduleTest(runMock, resolveMock, profile);
-        expect(runMock.enqueued).toBeCalledTimes(2);
-        [testFile, testBlock].forEach((t) => expect(runMock.enqueued).toBeCalledWith(t));
+        testFileData.scheduleTest(jestRun);
+        expect(jestRun.vscodeRun.enqueued).toBeCalledTimes(2);
+        [testFile, testBlock].forEach((t) => expect(jestRun.vscodeRun.enqueued).toBeCalledWith(t));
 
         onRunEvent({ type: 'start', process });
-        expect(runMock.started).toBeCalledTimes(2);
-        [testFile, testBlock].forEach((t) => expect(runMock.started).toBeCalledWith(t));
+        expect(jestRun.vscodeRun.started).toBeCalledTimes(2);
+        [testFile, testBlock].forEach((t) => expect(jestRun.vscodeRun.started).toBeCalledWith(t));
+      });
+      it('log long-run event', () => {
+        const process = mockScheduleProcess(context);
+
+        onRunEvent({ type: 'long-run', threshold: 60000, process });
+        expect(context.output.write).toBeCalledTimes(1);
+        expect(context.output.write).toBeCalledWith(
+          expect.stringContaining('60000'),
+          errors.LONG_RUNNING_TESTS
+        );
       });
     });
   });

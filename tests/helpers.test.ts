@@ -36,6 +36,7 @@ import {
   toLowerCaseDriveLetter,
   toUpperCaseDriveLetter,
   shellQuote,
+  toErrorString,
 } from '../src/helpers';
 
 // Manually (forcefully) set the executable's file extension to test its addition independendly of the operating system.
@@ -327,4 +328,13 @@ describe('shellQuote', () => {
     mockPlatform.mockReturnValueOnce(platform);
     expect(shellQuote(str, shell)).toEqual(expected);
   });
+});
+it.each`
+  name                  | e
+  ${'undefined'}        | ${undefined}
+  ${'string'}           | ${'regular error'}
+  ${'an Error object'}  | ${new Error('test error')}
+  ${'arbitrary object'} | ${{ text: 'anything', value: 1 }}
+`('toErrorString: $name', ({ e }) => {
+  expect(toErrorString(e)).toMatchSnapshot();
 });

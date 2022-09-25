@@ -1,23 +1,18 @@
 import * as vscode from 'vscode';
 import { JestTotalResults } from 'jest-editor-support';
 
-import { TestStatus } from '../decorations/test-status';
 import { statusBar, StatusBar, Mode, StatusBarUpdate, SBTestStats } from '../StatusBar';
 import {
-  TestReconciliationState,
   TestResultProvider,
-  TestResult,
   resultsWithLowerCaseWindowsDriveLetters,
   SortedTestResults,
-  TestResultStatusInfo,
-  TestReconciliationStateType,
 } from '../TestResults';
 import { testIdString, IdStringType, escapeRegExp, emptyTestStats } from '../helpers';
 import { CoverageMapProvider, CoverageCodeLensProvider } from '../Coverage';
 import { updateDiagnostics, updateCurrentDiagnostics, resetDiagnostics } from '../diagnostics';
 import { DebugCodeLensProvider, DebugTestIdentifier } from '../DebugCodeLens';
 import { DebugConfigurationProvider } from '../DebugConfigurationProvider';
-import { DecorationOptions, TestStats } from '../types';
+import { TestStats } from '../types';
 import { CoverageOverlay } from '../Coverage/CoverageOverlay';
 import { resultsWithoutAnsiEscapeSequence } from '../TestResults/TestResult';
 import { CoverageMapData } from 'istanbul-lib-coverage';
@@ -34,6 +29,7 @@ import { JestTestProvider } from '../test-provider';
 import { JestProcessInfo } from '../JestProcessManagement';
 import { addFolderToDisabledWorkspaceFolders } from '../extensionManager';
 import { MessageAction } from '../messaging';
+import { getExitErrorDef } from '../errors';
 
 interface RunTestPickItem extends vscode.QuickPickItem {
   id: DebugTestIdentifier;
@@ -50,11 +46,6 @@ export class JestExt {
   debugCodeLensProvider: DebugCodeLensProvider;
   debugConfigurationProvider: DebugConfigurationProvider;
   coverageCodeLensProvider: CoverageCodeLensProvider;
-
-  // So you can read what's going on
-  channel: vscode.OutputChannel;
-
-  private decorations: TestStatus;
 
   // The ability to show fails in the problems section
   private failDiagnostics: vscode.DiagnosticCollection;
@@ -84,7 +75,6 @@ export class JestExt {
     this.extContext = createJestExtContext(workspaceFolder, pluginSettings);
     this.logging = this.extContext.loggingFactory.create('JestExt');
 
-    this.channel = vscode.window.createOutputChannel(`Jest (${workspaceFolder.name})`);
     this.failDiagnostics = vscode.languages.createDiagnosticCollection(
       `Jest (${workspaceFolder.name})`
     );
@@ -117,14 +107,16 @@ export class JestExt {
 
     this.status = statusBar.bind(workspaceFolder.name);
 
-    // The theme stuff
-    this.decorations = new TestStatus(vscodeContext);
     // reset the jest diagnostics
     resetDiagnostics(this.failDiagnostics);
 
     this.processSession = this.createProcessSession();
 
     this.setupStatusBar();
+  }
+
+  public showOutput(): void {
+    this.extContext.output.show();
   }
 
   private getExtExplorerContext(): JestExtExplorerContext {
@@ -168,23 +160,16 @@ export class JestExt {
 
   private setupRunEvents(events: JestSessionEvents): void {
     events.onRunEvent.event((event: JestRunEvent) => {
+      // only process the test running event
+      if (event.process.request.type === 'not-test') {
+        return;
+      }
+      // console.log(
+      //   `[core.onRunEvent] "${this.extContext.workspace.name}" event:${event.type} process:${event.process.id}`
+      // );
       switch (event.type) {
-        case 'scheduled':
-          this.channel.appendLine(`${event.process.id} is scheduled`);
-          break;
-        case 'data':
-          if (event.newLine) {
-            this.channel.appendLine(event.text);
-          } else {
-            this.channel.append(event.text);
-          }
-          if (event.isError) {
-            this.channel.show();
-          }
-          break;
         case 'start':
           this.updateStatusBar({ state: 'running' });
-          this.channel.clear();
           break;
         case 'end':
           this.updateStatusBar({ state: 'done' });
@@ -192,10 +177,6 @@ export class JestExt {
         case 'exit':
           if (event.error) {
             this.updateStatusBar({ state: 'stopped' });
-            const msg = `${event.error}\n see troubleshooting: ${messaging.TROUBLESHOOTING_URL}`;
-            this.channel.appendLine(msg);
-            this.channel.show();
-
             messaging.systemErrorMessage(
               prefixWorkspace(this.extContext, event.error),
               ...this.buildMessageActions(['help', 'wizard', 'disable-folder'])
@@ -262,26 +243,20 @@ export class JestExt {
       if (newSession) {
         await this.processSession.stop();
         this.processSession = this.createProcessSession();
-        this.channel.appendLine('Starting a new Jest Process Session');
-      } else {
-        this.channel.appendLine('Starting Jest Session');
       }
 
       this.testProvider?.dispose();
-      if (this.extContext.settings.testExplorer.enabled) {
-        this.testProvider = new JestTestProvider(this.getExtExplorerContext());
-      }
+      this.testProvider = new JestTestProvider(this.getExtExplorerContext());
 
       await this.processSession.start();
 
       this.events.onTestSessionStarted.fire({ ...this.extContext, session: this.processSession });
 
       this.updateTestFileList();
-      this.channel.appendLine('Jest Session Started');
     } catch (e) {
       const msg = prefixWorkspace(this.extContext, 'Failed to start jest session');
       this.logging('error', `${msg}:`, e);
-      this.channel.appendLine('Failed to start jest session');
+      this.extContext.output.write('Failed to start jest session', 'error');
       messaging.systemErrorMessage(
         `${msg}...`,
         ...this.buildMessageActions(['help', 'wizard', 'disable-folder'])
@@ -291,7 +266,6 @@ export class JestExt {
 
   public async stopSession(): Promise<void> {
     try {
-      this.channel.appendLine('Stopping Jest Session');
       await this.processSession.stop();
 
       this.testProvider?.dispose();
@@ -299,12 +273,11 @@ export class JestExt {
 
       this.events.onTestSessionStopped.fire();
 
-      this.channel.appendLine('Jest Session Stopped');
       this.updateStatusBar({ state: 'stopped' });
     } catch (e) {
       const msg = prefixWorkspace(this.extContext, 'Failed to stop jest session');
       this.logging('error', `${msg}:`, e);
-      this.channel.appendLine('Failed to stop jest session');
+      this.extContext.output.write('Failed to stop jest session', 'error');
       messaging.systemErrorMessage('${msg}...', ...this.buildMessageActions(['help']));
     }
   }
@@ -324,7 +297,7 @@ export class JestExt {
     try {
       sortedResults = this.testResultProvider.getSortedResults(filePath);
     } catch (e) {
-      this.channel.appendLine(`${filePath}: failed to parse test results: ${e}`);
+      this.extContext.output.write(`${filePath}: failed to parse test results: ${e}`, 'error');
       // assign an empty result so we can clear the outdated decorators/diagnostics etc
       sortedResults = {
         fail: [],
@@ -338,7 +311,7 @@ export class JestExt {
       return;
     }
 
-    this.updateDecorators(sortedResults, editor);
+    this.updateDecorators();
     updateCurrentDiagnostics(sortedResults.fail, this.failDiagnostics, editor);
   }
 
@@ -375,41 +348,7 @@ export class JestExt {
     return this.startSession(true);
   }
 
-  updateDecorators(testResults: SortedTestResults, editor: vscode.TextEditor): void {
-    if (
-      this.extContext.settings.testExplorer.enabled === false ||
-      this.extContext.settings.testExplorer.showClassicStatus
-    ) {
-      // Status indicators (gutter icons)
-      const styleMap = [
-        {
-          data: testResults.success,
-          decorationType: this.decorations.passing,
-          state: TestReconciliationState.KnownSuccess,
-        },
-        {
-          data: testResults.fail,
-          decorationType: this.decorations.failing,
-          state: TestReconciliationState.KnownFail,
-        },
-        {
-          data: testResults.skip,
-          decorationType: this.decorations.skip,
-          state: TestReconciliationState.KnownSkip,
-        },
-        {
-          data: testResults.unknown,
-          decorationType: this.decorations.unknown,
-          state: TestReconciliationState.Unknown,
-        },
-      ];
-
-      styleMap.forEach((style) => {
-        const decorators = this.generateDotsForItBlocks(style.data, style.state);
-        editor.setDecorations(style.decorationType, decorators);
-      });
-    }
-
+  updateDecorators(): void {
     // Debug CodeLens
     this.debugCodeLensProvider.didChange();
   }
@@ -447,7 +386,7 @@ export class JestExt {
   }
   public deactivate(): void {
     this.stopSession();
-    this.channel.dispose();
+    this.extContext.output.dispose();
 
     this.testResultProvider.dispose();
     this.testProvider?.dispose();
@@ -647,20 +586,16 @@ export class JestExt {
   private updateTestFileList(): void {
     this.processSession.scheduleProcess({
       type: 'list-test-files',
-      onResult: (files, error) => {
+      onResult: (files, error, exitCode) => {
         this.setTestFiles(files);
         this.logging('debug', `found ${files?.length} testFiles`);
         if (error) {
-          const msg = prefixWorkspace(
-            this.extContext,
-            'Failed to obtain test file list, something might not be setup right?'
-          );
+          const msg =
+            'failed to retrieve test file list. TestExplorer might show incomplete test items';
+          this.extContext.output.write(error, 'new-line');
+          const errorType = getExitErrorDef(exitCode) ?? 'error';
+          this.extContext.output.write(msg, errorType);
           this.logging('error', msg, error);
-          //fire this warning message could risk reporting error multiple times for the given workspace folder
-          //therefore garding the warning message with the debugMode
-          if (this.extContext.settings.debugMode) {
-            messaging.systemWarningMessage(msg, ...this.buildMessageActions(['help', 'wizard']));
-          }
         }
       },
     });
@@ -716,16 +651,5 @@ export class JestExt {
     updateDiagnostics(statusList, this.failDiagnostics);
 
     this.refreshDocumentChange();
-  }
-
-  private generateDotsForItBlocks(
-    blocks: TestResult[],
-    state: TestReconciliationStateType
-  ): DecorationOptions[] {
-    return blocks.map((it) => ({
-      range: new vscode.Range(it.start.line, it.start.column, it.start.line, it.start.column + 1),
-      hoverMessage: TestResultStatusInfo[state].desc,
-      identifier: it.name,
-    }));
   }
 }
