@@ -330,11 +330,15 @@ describe('shellQuote', () => {
   });
 });
 it.each`
-  name                  | e
-  ${'undefined'}        | ${undefined}
-  ${'string'}           | ${'regular error'}
-  ${'an Error object'}  | ${new Error('test error')}
-  ${'arbitrary object'} | ${{ text: 'anything', value: 1 }}
-`('toErrorString: $name', ({ e }) => {
-  expect(toErrorString(e)).toMatchSnapshot();
+  name                  | e                                 | matchString
+  ${'undefined'}        | ${undefined}                      | ${undefined}
+  ${'string'}           | ${'regular error'}                | ${undefined}
+  ${'an Error object'}  | ${new Error('test error')}        | ${'Error: test error'}
+  ${'arbitrary object'} | ${{ text: 'anything', value: 1 }} | ${undefined}
+`('toErrorString: $name', ({ e, matchString }) => {
+  if (matchString) {
+    expect(toErrorString(e)).toEqual(expect.stringContaining(matchString));
+  } else {
+    expect(toErrorString(e)).toMatchSnapshot();
+  }
 });
