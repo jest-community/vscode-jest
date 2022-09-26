@@ -5,7 +5,7 @@ import { DebugConfigurationProvider } from './DebugConfigurationProvider';
 import { PluginWindowSettings } from './Settings';
 import { statusBar } from './StatusBar';
 import { CoverageCodeLensProvider } from './Coverage';
-import { extensionName } from './appGlobals';
+import { extensionId, extensionName } from './appGlobals';
 
 export type GetJestExtByURI = (uri: vscode.Uri) => JestExt | undefined;
 
@@ -274,7 +274,36 @@ export class ExtensionManager {
     this.onFilesChange(files, (ext) => ext.onDidRenameFiles(event));
   }
 
+  private showReleaseMessage(): void {
+    const version = vscode.extensions.getExtension(extensionId)?.packageJSON.version;
+    if (typeof version !== 'string' || !version.startsWith('5.')) {
+      return;
+    }
+    const key = `${extensionId}-${version}-launch`;
+    const didLaunch = this.context.globalState.get<boolean>(key, false);
+    if (!didLaunch) {
+      vscode.window
+        .showInformationMessage(
+          `vscode-jest has been upgraded to ${version}.`,
+          'See What Is Changed'
+        )
+        .then((value) => {
+          if (value === 'See What Is Changed') {
+            vscode.commands.executeCommand(
+              'vscode.open',
+              vscode.Uri.parse(
+                // 'https://github.com/jest-community/vscode-jest/blob/master/release-notes/release-note-v5.md'
+                'https://github.com/jest-community/vscode-jest/blob/master/README.md'
+              )
+            );
+          }
+        });
+      this.context.globalState.update(key, true);
+    }
+  }
+
   activate(): void {
+    this.showReleaseMessage();
     if (vscode.window.activeTextEditor?.document.uri) {
       const ext = this.getByDocUri(vscode.window.activeTextEditor.document.uri);
       if (ext) {
