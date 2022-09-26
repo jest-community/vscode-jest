@@ -1,9 +1,10 @@
 import * as vscode from 'vscode';
-import { JestTestProviderContext } from './test-provider-context';
+import { JestTestProviderContext, JestTestRun } from './test-provider-helper';
 import { WorkspaceRoot } from './test-item-data';
 import { Debuggable, JestExtExplorerContext, TestItemData } from './types';
 import { extensionId } from '../appGlobals';
 import { Logging } from '../logging';
+import { toErrorString } from '../helpers';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const isDebuggable = (arg: any): arg is Debuggable => arg && typeof arg.getDebugInfo === 'function';
@@ -70,17 +71,15 @@ export class JestTestProvider {
     if (!theItem.canResolveChildren) {
       return;
     }
-    const run = this.context.createTestRun(
-      new vscode.TestRunRequest([theItem]),
-      `disoverTest: ${this.controller.id}`
-    );
+    const run = this.context.createTestRun(new vscode.TestRunRequest([theItem]), {
+      name: `disoverTest: ${this.controller.id}`,
+    });
     try {
       const data = this.context.getData(theItem);
       if (data && data.discoverTest) {
-        this.context.appendOutput(`resolving children for ${theItem.id}`, run, true);
         data.discoverTest(run);
       } else {
-        this.context.appendOutput(`no data found for item ${theItem.id}`, run, true, 'red');
+        run.write(`no data found for item ${theItem.id}`, 'error');
       }
     } catch (e) {
       this.log('error', `[JestTestProvider]: discoverTest error for "${theItem.id}" : `, e);
@@ -100,12 +99,11 @@ export class JestTestProvider {
    * invoke JestExt debug function for the given data, handle unexpected exception and set item state accordingly.
    * should never throw or reject.
    */
-  debugTest = async (tData: TestItemData, run: vscode.TestRun): Promise<void> => {
+  debugTest = async (tData: TestItemData, run: JestTestRun): Promise<void> => {
     let error;
     if (isDebuggable(tData)) {
       try {
         const debugInfo = tData.getDebugInfo();
-        this.context.appendOutput(`launching debugger for ${tData.item.id}`, run);
         if (debugInfo.testNamePattern) {
           await this.context.ext.debugTests(debugInfo.fileName, debugInfo.testNamePattern);
         } else {
@@ -117,8 +115,8 @@ export class JestTestProvider {
       }
     }
     error = error ?? `item ${tData.item.id} is not debuggable`;
-    run.errored(tData.item, new vscode.TestMessage(error));
-    this.context.appendOutput(`${error}`, run, true, 'red');
+    run.vscodeRun.errored(tData.item, new vscode.TestMessage(error));
+    run.write(error, 'error');
     return Promise.resolve();
   };
 
@@ -130,7 +128,7 @@ export class JestTestProvider {
       this.log('error', 'not supporting runRequest without profile', request);
       return Promise.reject('cnot supporting runRequest without profile');
     }
-    const run = this.context.createTestRun(request, this.controller.id);
+    const run = this.context.createTestRun(request, { name: this.controller.id });
     const tests = (request.include ?? this.getAllItems()).filter(
       (t) => !request.exclude?.includes(t)
     );
@@ -140,24 +138,26 @@ export class JestTestProvider {
       for (const test of tests) {
         const tData = this.context.getData(test);
         if (!tData || cancelToken.isCancellationRequested) {
-          run.skipped(test);
+          run.vscodeRun.skipped(test);
           continue;
         }
-        this.context.appendOutput(
-          `executing profile: "${request.profile.label}" for ${test.id}...`,
-          run
-        );
+        this.log('debug', `executing profile: "${request.profile.label}" for ${test.id}...`);
         if (request.profile.kind === vscode.TestRunProfileKind.Debug) {
           await this.debugTest(tData, run);
         } else {
           promises.push(
             new Promise((resolve, reject) => {
               try {
-                tData.scheduleTest(run, resolve);
+                const itemRun = new JestTestRun(this.context, run.vscodeRun, {
+                  item: test,
+                  onEnd: resolve,
+                  disableVscodeRunEnd: true,
+                });
+                tData.scheduleTest(itemRun);
               } catch (e) {
-                const msg = `failed to schedule test for ${tData.item.id}: ${JSON.stringify(e)}`;
+                const msg = `failed to schedule test for ${tData.item.id}: ${toErrorString(e)}`;
                 this.log('error', msg, e);
-                run.errored(test, new vscode.TestMessage(msg));
+                run.vscodeRun.errored(test, new vscode.TestMessage(msg));
                 reject(msg);
               }
             })
@@ -166,7 +166,7 @@ export class JestTestProvider {
       }
     } catch (e) {
       const msg = `failed to execute profile "${request.profile.label}": ${JSON.stringify(e)}`;
-      this.context.appendOutput(msg, run, true, 'red');
+      run.write(msg, 'error');
     }
 
     await Promise.allSettled(promises);

@@ -42,6 +42,7 @@ export const mockExtExplorerContext = (wsName = 'ws-1', override: any = {}): any
     debugTests: jest.fn(),
     sessionEvents: mockJestExtEvents(),
     settings: { testExplorer: { enabled: true } },
+    output: { write: jest.fn(), dispose: jest.fn() },
     ...override,
   };
 };

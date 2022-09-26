@@ -12,6 +12,7 @@ import { AutoRunMode } from '../StatusBar';
 import { ProcessSession } from './process-session';
 import { DebugTestIdentifier } from '../DebugCodeLens';
 import { JestProcessInfo } from '../JestProcessManagement';
+import { JestOutputTerminal } from './output-terminal';
 
 export enum WatchMode {
   None = 'none',
@@ -36,6 +37,7 @@ export interface JestExtContext {
   loggingFactory: LoggingFactory;
   autoRun: AutoRunAccessor;
   createRunnerWorkspace: (options?: RunnerWorkspaceOptions) => ProjectWorkspace;
+  output: JestOutputTerminal;
 }
 
 export interface JestExtSessionContext extends JestExtContext {
@@ -48,9 +50,10 @@ export type JestRunEvent = RunEventBase &
   (
     | { type: 'scheduled' }
     | { type: 'data'; text: string; raw?: string; newLine?: boolean; isError?: boolean }
+    | { type: 'process-start' }
     | { type: 'start' }
     | { type: 'end' }
-    | { type: 'exit'; error?: string }
+    | { type: 'exit'; error?: string; code?: number }
     | { type: 'long-run'; threshold: number; numTotalTestSuites?: number }
   );
 export interface JestSessionEvents {

@@ -25,13 +25,17 @@ export type JestExtAutoRunConfig =
     };
 export type JestExtAutoRunSetting = JestExtAutoRunShortHand | JestExtAutoRunConfig;
 
-export type TestExplorerConfig =
+export type TestExplorerConfigLegacy =
   | { enabled: false }
   | { enabled: true; showClassicStatus?: boolean; showInlineError?: boolean };
+
+export interface TestExplorerConfig {
+  showInlineError?: boolean;
+}
+
 export type NodeEnv = ProjectWorkspace['nodeEnv'];
 export type MonitorLongRun = 'off' | number;
 export interface PluginResourceSettings {
-  showTerminalOnLaunch?: boolean;
   autoEnable?: boolean;
   enableSnapshotUpdateMessages?: boolean;
   jestCommandLine?: string;

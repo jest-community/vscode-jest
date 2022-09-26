@@ -1,9 +1,8 @@
 import * as vscode from 'vscode';
 import { JestTotalResults } from 'jest-editor-support';
-import { cleanAnsi } from '../helpers';
+import { cleanAnsi, toErrorString } from '../helpers';
 import { JestProcess, JestProcessEvent } from '../JestProcessManagement';
 import { ListenerSession, ListTestFilesCallback } from './process-session';
-import { isWatchRequest } from './helper';
 import { Logging } from '../logging';
 import { JestRunEvent } from './types';
 import { MonitorLongRun } from '../Settings';
@@ -67,7 +66,7 @@ export class AbstractProcessListener {
   }
 
   protected onProcessStarting(process: JestProcess): void {
-    this.session.context.onRunEvent.fire({ type: 'start', process });
+    this.session.context.onRunEvent.fire({ type: 'process-start', process });
     this.logging('debug', `${process.request.type} onProcessStarting`);
   }
   protected onExecutableStdErr(process: JestProcess, data: string, _raw: string): void {
@@ -106,7 +105,8 @@ export class ListTestFileListener extends AbstractProcessListener {
     return 'ListTestFileListener';
   }
   private buffer = '';
-  private error: string | undefined;
+  private stderrOutput = '';
+  private exitCode?: number;
   private onResult: ListTestFilesCallback;
 
   constructor(session: ListenerSession, onResult: ListTestFilesCallback) {
@@ -117,18 +117,21 @@ export class ListTestFileListener extends AbstractProcessListener {
   protected onExecutableOutput(_process: JestProcess, data: string): void {
     this.buffer += data;
   }
+  protected onExecutableStdErr(process: JestProcess, message: string, raw: string): void {
+    super.onExecutableStdErr(process, message, raw);
+    this.stderrOutput += raw;
+  }
+
   protected onProcessExit(process: JestProcess, code?: number, signal?: string): void {
     // Note: will not fire 'exit' event, as the output is reported via the onResult() callback
     super.onProcessExit(process, code, signal);
-    if (super.isProcessError(code)) {
-      this.error = `${process.request.type} onProcessExit: process exit with code=${code}, signal=${signal}`;
-    }
+    this.exitCode = code;
   }
 
   protected onProcessClose(process: JestProcess): void {
     super.onProcessClose(process);
-    if (this.error) {
-      return this.onResult(undefined, this.error);
+    if (this.exitCode !== 0) {
+      return this.onResult(undefined, this.stderrOutput, this.exitCode);
     }
 
     try {
@@ -148,7 +151,7 @@ export class ListTestFileListener extends AbstractProcessListener {
       return this.onResult(uriFiles);
     } catch (e) {
       this.logging('warn', 'failed to parse result:', this.buffer, 'error=', e);
-      this.onResult(undefined, e);
+      this.onResult(undefined, toErrorString(e), this.exitCode);
     }
   }
 }
@@ -160,6 +163,7 @@ const WATCH_IS_NOT_SUPPORTED_REGEXP =
   /^s*--watch is not supported without git\/hg, please use --watchAlls*/im;
 const RUN_EXEC_ERROR = /onRunComplete: execError: (.*)/im;
 const RUN_START_TEST_SUITES_REGEX = /onRunStart: numTotalTestSuites: ((\d)+)/im;
+const CONTROL_MESSAGES = /^(onRunStart|onRunComplete|Test results written to)[^\n]+\n/gim;
 
 /**
  * monitor for long test run, default is 1 minute
@@ -207,6 +211,7 @@ export class RunTestListener extends AbstractProcessListener {
   // fire long-run warning once per run
   private longRunMonitor: LongRunMonitor;
   private runInfo: RunInfo | undefined;
+  private exitCode?: number;
 
   constructor(session: ListenerSession) {
     super(session);
@@ -242,12 +247,10 @@ export class RunTestListener extends AbstractProcessListener {
   //=== private methods ===
   private shouldIgnoreOutput(text: string): boolean {
     // this fails when snapshots change - to be revised - returning always false for now
-    return (
-      text.length <= 0 ||
-      text.includes('Watch Usage') ||
-      text.includes('onRunComplete') ||
-      text.includes('onRunStart')
-    );
+    return text.length <= 0 || text.includes('Watch Usage');
+  }
+  private cleanupOutput(text: string): string {
+    return text.replace(CONTROL_MESSAGES, '');
   }
 
   // if snapshot error, offer update snapshot option and execute if user confirms
@@ -262,14 +265,17 @@ export class RunTestListener extends AbstractProcessListener {
       this.session.context.settings.enableSnapshotUpdateMessages &&
       SnapshotFailRegex.test(data)
     ) {
-      const scope =
-        process.request.type === 'by-file'
-          ? `for file "${process.request.testFileName}"`
-          : `for all files in "${this.session.context.workspace.name}"`;
+      const msg =
+        process.request.type === 'watch-all-tests' || process.request.type === 'watch-tests'
+          ? 'all files'
+          : 'files in this run';
       vscode.window
-        .showInformationMessage(`Would you like to update snapshots ${scope}?`, {
-          title: 'Replace them',
-        })
+        .showInformationMessage(
+          `[${this.session.context.workspace.name}] Would you like to update snapshots for ${msg}?`,
+          {
+            title: 'Replace them',
+          }
+        )
         .then((response) => {
           // No response == cancel
           if (response) {
@@ -327,7 +333,12 @@ export class RunTestListener extends AbstractProcessListener {
       return;
     }
 
-    this.onRunEvent.fire({ type: 'data', process, text: message, raw });
+    const cleaned = this.cleanupOutput(raw);
+    this.handleRunStart(process, message);
+
+    this.onRunEvent.fire({ type: 'data', process, text: message, raw: cleaned });
+
+    this.handleRunComplete(process, message);
 
     this.handleSnapshotTestFailuer(process, message);
 
@@ -343,14 +354,14 @@ export class RunTestListener extends AbstractProcessListener {
       }
     }
   }
-  protected onExecutableOutput(process: JestProcess, output: string, raw: string): void {
+  protected handleRunStart(process: JestProcess, output: string): void {
     if (output.includes('onRunStart')) {
       this.runStarted({ process, numTotalTestSuites: this.getNumTotalTestSuites(output) });
 
-      if (isWatchRequest(process.request)) {
-        this.onRunEvent.fire({ type: 'start', process });
-      }
+      this.onRunEvent.fire({ type: 'start', process });
     }
+  }
+  protected handleRunComplete(process: JestProcess, output: string): void {
     if (output.includes('onRunComplete')) {
       this.runEnded();
 
@@ -365,11 +376,10 @@ export class RunTestListener extends AbstractProcessListener {
           isError: true,
         });
       }
-      if (isWatchRequest(process.request)) {
-        this.onRunEvent.fire({ type: 'end', process });
-      }
+      this.onRunEvent.fire({ type: 'end', process });
     }
-
+  }
+  protected onExecutableOutput(process: JestProcess, output: string, raw: string): void {
     if (!this.shouldIgnoreOutput(output)) {
       this.onRunEvent.fire({ type: 'data', process, text: output, raw });
     }
@@ -381,11 +391,12 @@ export class RunTestListener extends AbstractProcessListener {
   protected onProcessExit(process: JestProcess, code?: number, signal?: string): void {
     this.runEnded();
     super.onProcessExit(process, code, signal);
+    this.exitCode = code;
   }
 
   protected onProcessClose(process: JestProcess): void {
     super.onProcessClose(process);
     const error = this.handleWatchProcessCrash(process);
-    this.onRunEvent.fire({ type: 'exit', process, error });
+    this.onRunEvent.fire({ type: 'exit', process, error, code: this.exitCode });
   }
 }
