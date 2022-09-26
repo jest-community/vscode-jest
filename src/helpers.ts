@@ -270,3 +270,17 @@ export const shellQuote = (str: string, shell?: string | LoginShell): string => 
     }
   }
 };
+
+export const toErrorString = (e: unknown): string => {
+  if (e == null) {
+    return '';
+  }
+  if (typeof e === 'string') {
+    return e;
+  }
+  if (e instanceof Error) {
+    // return `${e.toString()}\r\n${e.stack}`;
+    return e.stack ?? e.toString();
+  }
+  return JSON.stringify(e);
+};

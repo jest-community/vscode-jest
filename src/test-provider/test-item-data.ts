@@ -8,9 +8,10 @@ import { ItBlock, TestAssertionStatus } from 'jest-editor-support';
 import { ContainerNode, DataNode, NodeType, ROOT_NODE_NAME } from '../TestResults/match-node';
 import { Logging } from '../logging';
 import { TestSuitChangeEvent } from '../TestResults/test-result-events';
-import { Debuggable, TestItemData, TestItemRun } from './types';
-import { JestTestProviderContext } from './test-provider-context';
+import { Debuggable, TestItemData } from './types';
+import { JestTestProviderContext, JestTestRun, JestTestRunOptions } from './test-provider-helper';
 import { JestProcessInfo, JestProcessRequest } from '../JestProcessManagement';
+import { GENERIC_ERROR, getExitErrorDef, LONG_RUNNING_TESTS } from '../errors';
 
 interface JestRunable {
   getJestRunRequest: () => JestExtRequestType;
@@ -19,16 +20,12 @@ interface WithUri {
   uri: vscode.Uri;
 }
 
-type TestItemRunRequest = JestExtRequestType & { itemRun: TestItemRun };
+type JestTestRunRequest = JestExtRequestType & { run: JestTestRun };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const isTestItemRunRequest = (arg: any): arg is TestItemRunRequest =>
-  arg.itemRun?.item && arg.itemRun?.run && arg.itemRun?.end;
+const isJestTestRunRequest = (arg: any): arg is JestTestRunRequest =>
+  arg.run instanceof JestTestRun;
 
-const deepItemState = (item: vscode.TestItem, setState: (item: vscode.TestItem) => void): void => {
-  setState(item);
-  item.children.forEach((child) => deepItemState(child, setState));
-};
 abstract class TestItemDataBase implements TestItemData, JestRunable, WithUri {
   item!: vscode.TestItem;
   log: Logging;
@@ -41,20 +38,33 @@ abstract class TestItemDataBase implements TestItemData, JestRunable, WithUri {
     return this.item.uri!;
   }
 
-  scheduleTest(run: vscode.TestRun, end: () => void): void {
+  deepItemState(
+    item: vscode.TestItem | undefined,
+    setState: (item: vscode.TestItem) => void
+  ): void {
+    if (!item) {
+      this.log('warn', '<deepItemState>: no item to set state');
+      return;
+    }
+    setState(item);
+    item.children.forEach((child) => this.deepItemState(child, setState));
+  }
+
+  scheduleTest(run: JestTestRun): void {
     const jestRequest = this.getJestRunRequest();
-    const itemRun: TestItemRun = { item: this.item, run, end };
-    deepItemState(this.item, run.enqueued);
+    run.item = this.item;
+
+    this.deepItemState(this.item, run.vscodeRun.enqueued);
 
     const process = this.context.ext.session.scheduleProcess({
       ...jestRequest,
-      itemRun,
+      run,
     });
     if (!process) {
       const msg = `failed to schedule test for ${this.item.id}`;
-      run.errored(this.item, new vscode.TestMessage(msg));
-      this.context.appendOutput(msg, run, true, 'red');
-      end();
+      run.vscodeRun.errored(this.item, new vscode.TestMessage(msg));
+      run.write(msg, 'error');
+      run.end();
     }
   }
 
@@ -68,7 +78,7 @@ abstract class TestItemDataBase implements TestItemData, JestRunable, WithUri {
 export class WorkspaceRoot extends TestItemDataBase {
   private testDocuments: Map<string, TestDocumentRoot>;
   private listeners: vscode.Disposable[];
-  private cachedRun: Map<string, TestItemRun>;
+  private cachedRun: Map<string, JestTestRun>;
 
   constructor(context: JestTestProviderContext) {
     super(context, 'WorkspaceRoot');
@@ -101,7 +111,7 @@ export class WorkspaceRoot extends TestItemDataBase {
     };
     return { type: 'all-tests', transform };
   }
-  discoverTest(run: vscode.TestRun): void {
+  discoverTest(run: JestTestRun): void {
     const testList = this.context.ext.testResolveProvider.getTestList();
     // only trigger update when testList is not empty because it's possible test-list is not available yet,
     // in such case we should just wait for the testListUpdated event to trigger the update
@@ -126,9 +136,13 @@ export class WorkspaceRoot extends TestItemDataBase {
     this.listeners.length = 0;
   };
 
-  private createRun = (name?: string, item?: vscode.TestItem): vscode.TestRun => {
-    const target = item ?? this.item;
-    return this.context.createTestRun(new vscode.TestRunRequest([target]), name ?? target.id);
+  private createRun = (options?: JestTestRunOptions): JestTestRun => {
+    const target = options?.item ?? this.item;
+    return this.context.createTestRun(new vscode.TestRunRequest([target]), {
+      ...options,
+      name: options?.name ?? target.id,
+      item: target,
+    });
   };
 
   private addFolder = (parent: FolderData | undefined, folderName: string): FolderData => {
@@ -181,27 +195,22 @@ export class WorkspaceRoot extends TestItemDataBase {
    */
   private onTestListUpdated = (
     absoluteFileNames: string[] | undefined,
-    run?: vscode.TestRun
+    run?: JestTestRun
   ): void => {
     this.item.children.replace([]);
     const testRoots: TestDocumentRoot[] = [];
 
     const aRun = run ?? this.createRun();
-    try {
-      absoluteFileNames?.forEach((f) =>
-        this.addTestFile(f, (testRoot) => {
-          testRoot.updateResultState(aRun);
-          testRoots.push(testRoot);
-        })
-      );
-      //sync testDocuments
-      this.testDocuments.clear();
-      testRoots.forEach((t) => this.testDocuments.set(t.item.id, t));
-    } catch (e) {
-      this.log('error', `[WorkspaceRoot] "${this.item.id}" onTestListUpdated failed:`, e);
-    } finally {
-      aRun.end();
-    }
+    absoluteFileNames?.forEach((f) =>
+      this.addTestFile(f, (testRoot) => {
+        testRoot.updateResultState(aRun);
+        testRoots.push(testRoot);
+      })
+    );
+    //sync testDocuments
+    this.testDocuments.clear();
+    testRoots.forEach((t) => this.testDocuments.set(t.item.id, t));
+    aRun.end();
     this.item.canResolveChildren = false;
   };
 
@@ -215,20 +224,14 @@ export class WorkspaceRoot extends TestItemDataBase {
   private onTestSuiteChanged = (event: TestSuitChangeEvent): void => {
     switch (event.type) {
       case 'assertions-updated': {
-        const itemRun = this.getItemRun(event.process);
-        const run = itemRun?.run ?? this.createRun(event.process.id);
+        const run = this.getJestRun(event.process) ?? this.createRun({ name: event.process.id });
 
-        this.context.appendOutput(
-          `update status from run "${event.process.id}": ${event.files.length} files`,
-          run
+        this.log(
+          'debug',
+          `update status from run "${event.process.id}": ${event.files.length} files`
         );
-        try {
-          event.files.forEach((f) => this.addTestFile(f, (testRoot) => testRoot.discoverTest(run)));
-        } catch (e) {
-          this.log('error', `"${this.item.id}" onTestSuiteChanged: assertions-updated failed:`, e);
-        } finally {
-          (itemRun ?? run).end();
-        }
+        event.files.forEach((f) => this.addTestFile(f, (testRoot) => testRoot.discoverTest(run)));
+        run.end();
         break;
       }
       case 'result-matched': {
@@ -264,71 +267,89 @@ export class WorkspaceRoot extends TestItemDataBase {
     return this.testDocuments.get(fileName)?.item;
   };
 
-  private createTestItemRun = (event: JestRunEvent): TestItemRun => {
+  private createJestTestRun = (event: JestRunEvent): JestTestRun => {
     const item = this.getItemFromProcess(event.process) ?? this.item;
-    const run = this.createRun(`${event.type}:${event.process.id}`, item);
-    const end = () => {
-      this.cachedRun.delete(event.process.id);
-      run.end();
-    };
-    const itemRun: TestItemRun = { item, run, end };
-    this.cachedRun.set(event.process.id, itemRun);
-    return itemRun;
-  };
-  private getItemRun = (process: JestProcessInfo): TestItemRun | undefined =>
-    isTestItemRunRequest(process.request)
-      ? process.request.itemRun
-      : this.cachedRun.get(process.id);
+    const run = this.createRun({
+      name: `${event.type}:${event.process.id}`,
+      item,
+      onEnd: () => this.cachedRun.delete(event.process.id),
+    });
 
+    this.cachedRun.set(event.process.id, run);
+    return run;
+  };
+  private getJestRun = (process: JestProcessInfo): JestTestRun | undefined =>
+    isJestTestRunRequest(process.request) ? process.request.run : this.cachedRun.get(process.id);
+
+  private runLog(type: string): void {
+    const d = new Date();
+    this.context.output.write(`> Test run ${type} at ${d.toLocaleString()} <\r\n`, [
+      'bold',
+      'new-line',
+    ]);
+  }
   private onRunEvent = (event: JestRunEvent) => {
     if (event.process.request.type === 'not-test') {
       return;
     }
 
-    let itemRun = this.getItemRun(event.process);
+    let run = this.getJestRun(event.process);
 
     try {
       switch (event.type) {
         case 'scheduled': {
-          if (!itemRun) {
-            itemRun = this.createTestItemRun(event);
-            const text = `Scheduled test run "${event.process.id}" for "${itemRun.item.id}"`;
-            this.context.appendOutput(text, itemRun.run);
-            deepItemState(itemRun.item, itemRun.run.enqueued);
+          if (!run) {
+            run = this.createJestTestRun(event);
+            this.deepItemState(run.item, run.vscodeRun.enqueued);
           }
 
           break;
         }
         case 'data': {
-          itemRun = itemRun ?? this.createTestItemRun(event);
+          run = run ?? this.createJestTestRun(event);
           const text = event.raw ?? event.text;
-          const color = event.isError ? 'red' : undefined;
-          this.context.appendOutput(text, itemRun.run, event.newLine ?? false, color);
+          const opt = event.isError ? 'error' : event.newLine ? 'new-line' : undefined;
+          run.write(text, opt);
           break;
         }
         case 'start': {
-          itemRun = itemRun ?? this.createTestItemRun(event);
-          deepItemState(itemRun.item, itemRun.run.started);
+          run = run ?? this.createJestTestRun(event);
+          this.deepItemState(run.item, run.vscodeRun.started);
+          this.runLog('started');
           break;
         }
         case 'end': {
-          itemRun?.end();
+          this.runLog('finished');
+          run?.end();
           break;
         }
         case 'exit': {
           if (event.error) {
-            if (!itemRun || itemRun.run.token.isCancellationRequested) {
-              itemRun = this.createTestItemRun(event);
+            if (!run || run.vscodeRun.token.isCancellationRequested) {
+              run = this.createJestTestRun(event);
             }
-            this.context.appendOutput(event.error, itemRun.run, true, 'red');
-            itemRun.run.errored(itemRun.item, new vscode.TestMessage(event.error));
+            const type = getExitErrorDef(event.code) ?? GENERIC_ERROR;
+            run.write(event.error, type);
+            if (run.item) {
+              run.vscodeRun.errored(run.item, new vscode.TestMessage(event.error));
+            }
           }
-          itemRun?.end();
+          this.runLog('exited');
+          run?.end();
+          break;
+        }
+        case 'long-run': {
+          const output = run ?? this.context.output;
+          output.write(
+            `Long Running Tests Warning: Tests exceeds ${event.threshold}ms threshold. Please reference Troubleshooting if this is not expected`,
+            LONG_RUNNING_TESTS
+          );
           break;
         }
       }
     } catch (err) {
       this.log('error', `<onRunEvent> ${event.type} failed:`, err);
+      this.context.output.write(`<onRunEvent> ${event.type} failed: ${err}`, 'error');
     }
   };
 
@@ -383,7 +404,7 @@ abstract class TestResultData extends TestItemDataBase {
   }
 
   updateItemState(
-    run: vscode.TestRun,
+    run: JestTestRun,
     result?: TestSuiteResult | TestAssertionStatus,
     errorLocation?: vscode.Location
   ): void {
@@ -393,25 +414,22 @@ abstract class TestResultData extends TestItemDataBase {
     const status = result.status;
     switch (status) {
       case 'KnownSuccess':
-        run.passed(this.item);
+        run.vscodeRun.passed(this.item);
         break;
       case 'KnownSkip':
       case 'KnownTodo':
-        run.skipped(this.item);
+        run.vscodeRun.skipped(this.item);
         break;
       case 'KnownFail': {
-        if (
-          this.context.ext.settings.testExplorer.enabled &&
-          this.context.ext.settings.testExplorer.showInlineError
-        ) {
+        if (this.context.ext.settings.testExplorer.showInlineError) {
           const message = new vscode.TestMessage(result.message);
           if (errorLocation) {
             message.location = errorLocation;
           }
 
-          run.failed(this.item, message);
+          run.vscodeRun.failed(this.item, message);
         } else {
-          run.failed(this.item, []);
+          run.vscodeRun.failed(this.item, []);
         }
         break;
       }
@@ -506,7 +524,7 @@ export class TestDocumentRoot extends TestResultData {
     return item;
   }
 
-  discoverTest = (run?: vscode.TestRun, parsedRoot?: ContainerNode<ItBlock>): void => {
+  discoverTest = (run?: JestTestRun, parsedRoot?: ContainerNode<ItBlock>): void => {
     this.createChildItems(parsedRoot);
     if (run) {
       this.updateResultState(run);
@@ -514,23 +532,19 @@ export class TestDocumentRoot extends TestResultData {
   };
 
   private createChildItems = (parsedRoot?: ContainerNode<ItBlock>): void => {
-    try {
-      const container =
-        parsedRoot ??
-        this.context.ext.testResolveProvider.getTestSuiteResult(this.item.id)?.assertionContainer;
-      if (!container) {
-        this.item.children.replace([]);
-      } else {
-        this.syncChildNodes(container);
-      }
-    } catch (e) {
-      this.log('error', `[TestDocumentRoot] "${this.item.id}" createChildItems failed:`, e);
-    } finally {
-      this.item.canResolveChildren = false;
+    const container =
+      parsedRoot ??
+      this.context.ext.testResolveProvider.getTestSuiteResult(this.item.id)?.assertionContainer;
+    if (!container) {
+      this.item.children.replace([]);
+    } else {
+      this.syncChildNodes(container);
     }
+
+    this.item.canResolveChildren = false;
   };
 
-  public updateResultState(run: vscode.TestRun): void {
+  public updateResultState(run: JestTestRun): void {
     const suiteResult = this.context.ext.testResolveProvider.getTestSuiteResult(this.item.id);
     this.updateItemState(run, suiteResult);
 
@@ -621,7 +635,7 @@ export class TestData extends TestResultData implements Debuggable {
     );
   }
 
-  public updateResultState(run: vscode.TestRun): void {
+  public updateResultState(run: JestTestRun): void {
     if (this.node && isAssertDataNode(this.node)) {
       const assertion = this.node.data;
       const errorLine =

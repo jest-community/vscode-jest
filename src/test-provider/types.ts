@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { DebugFunction, JestSessionEvents, JestExtSessionContext } from '../JestExt';
 import { TestResultProvider } from '../TestResults';
 import { WorkspaceRoot, FolderData, TestData, TestDocumentRoot } from './test-item-data';
-import { JestTestProviderContext } from './test-provider-context';
+import { JestTestProviderContext, JestTestRun } from './test-provider-helper';
 
 export type TestItemDataType = WorkspaceRoot | FolderData | TestDocumentRoot | TestData;
 
@@ -13,19 +13,12 @@ export interface JestExtExplorerContext extends JestExtSessionContext {
   debugTests: DebugFunction;
 }
 
-export interface TestItemRun {
-  item: vscode.TestItem;
-  run: vscode.TestRun;
-  end: () => void;
-}
-
-export type RunType = vscode.TestRun | TestItemRun;
 export interface TestItemData {
   readonly item: vscode.TestItem;
   readonly uri: vscode.Uri;
   context: JestTestProviderContext;
-  discoverTest?: (run: vscode.TestRun) => void;
-  scheduleTest: (run: vscode.TestRun, end: () => void) => void;
+  discoverTest?: (run: JestTestRun) => void;
+  scheduleTest: (run: JestTestRun) => void;
 }
 
 export interface Debuggable {

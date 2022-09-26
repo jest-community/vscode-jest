@@ -46,9 +46,10 @@ export const isDup = (task: Task<JestProcess>, request: JestProcessRequest): boo
   return true;
 };
 
+const skipAttrs = ['listener', 'run'];
 export const requestString = (request: JestProcessRequest): string => {
   const replacer = (key: string, value: unknown) => {
-    if (key === 'listener') {
+    if (skipAttrs.includes(key)) {
       return typeof value;
     }
     return value;

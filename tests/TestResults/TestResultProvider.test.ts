@@ -150,6 +150,7 @@ describe('TestResultProvider', () => {
   beforeEach(() => {
     jest.resetAllMocks();
     jest.restoreAllMocks();
+    console.warn = jest.fn();
     mockTestReconciler.mockReturnValue(mockReconciler);
     (vscode.EventEmitter as jest.Mocked<any>) = jest.fn().mockImplementation(helper.mockEvent);
   });

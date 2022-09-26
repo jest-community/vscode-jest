@@ -21,6 +21,9 @@ import { RunnerWorkspaceOptions } from '../../src/JestExt/types';
 jest.mock('jest-editor-support', () => ({ isLoginShell: jest.fn(), ProjectWorkspace: jest.fn() }));
 
 describe('createJestExtContext', () => {
+  beforeAll(() => {
+    console.error = jest.fn();
+  });
   const baseSettings = { autoRun: { watch: true } };
   const workspaceFolder: any = { name: 'workspace' };
   describe('autoRun', () => {
@@ -190,8 +193,7 @@ describe('getExtensionResourceSettings()', () => {
       debugMode: false,
       coverageColors: null,
       autoRun: { watch: true },
-      testExplorer: { enabled: true },
-      showTerminalOnLaunch: true,
+      testExplorer: {},
       monitorLongRun: 60000,
     });
   });
@@ -199,15 +201,42 @@ describe('getExtensionResourceSettings()', () => {
   describe('can read user settings', () => {
     it('with nodeEnv and shell path', () => {
       userSettings = {
-        testExplorer: { enable: false },
         nodeEnv: { whatever: '1' },
         shell: '/bin/bash',
       };
       const uri: any = { fsPath: 'workspaceFolder1' };
-      expect(getExtensionResourceSettings(uri)).toEqual(
+      const settings = getExtensionResourceSettings(uri);
+      expect(settings).toEqual(
         expect.objectContaining({
           ...userSettings,
         })
+      );
+    });
+    describe('testExplorer', () => {
+      it.each`
+        testExplorer                                                         | showWarning | converted
+        ${{ enabled: true }}                                                 | ${false}    | ${{}}
+        ${{ enabled: false }}                                                | ${true}     | ${{}}
+        ${{ enabled: true, showClassicStatus: true }}                        | ${true}     | ${{}}
+        ${{ enabled: true, showClassicStatus: true, showInlineError: true }} | ${true}     | ${{}}
+        ${{ showInlineError: true }}                                         | ${false}    | ${{ showInlineError: true }}
+        ${{}}                                                                | ${false}    | ${{}}
+        ${null}                                                              | ${false}    | ${{}}
+      `(
+        'testExplorer: $testExplorer => show legacy warning? $showWarning',
+        ({ testExplorer, showWarning, converted }) => {
+          userSettings = { testExplorer };
+          const uri: any = { fsPath: 'workspaceFolder1' };
+          const settings = getExtensionResourceSettings(uri);
+          expect(settings).toEqual(
+            expect.objectContaining({
+              testExplorer: converted,
+            })
+          );
+          if (showWarning) {
+            expect(vscode.window.showWarningMessage).toBeCalled();
+          }
+        }
       );
     });
     it.each`

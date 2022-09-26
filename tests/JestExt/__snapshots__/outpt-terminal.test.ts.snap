@@ -1,0 +1,29 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`JestOutputTerminal can write output with options can write with option: case 1 1`] = `"regular text"`;
+
+exports[`JestOutputTerminal can write output with options can write with option: case 2 1`] = `
+"text with newline
+
+"
+`;
+
+exports[`JestOutputTerminal can write output with options can write with option: case 3 1`] = `
+"
+[0;31m[error] error text[0m
+"
+`;
+
+exports[`JestOutputTerminal can write output with options can write with option: case 4 1`] = `
+"
+[0;33m[warn] warning text[0m
+"
+`;
+
+exports[`JestOutputTerminal can write output with options can write with option: case 5 1`] = `"[1mbold text[0m"`;
+
+exports[`JestOutputTerminal can write output with options can write with option: case 6 1`] = `
+"
+[1mbold text with newLine[0m
+"
+`;

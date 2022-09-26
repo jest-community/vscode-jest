@@ -13,6 +13,7 @@ import {
   MonitorLongRun,
   JestExtAutoRunConfig,
   JestExtAutoRunShortHand,
+  TestExplorerConfigLegacy,
 } from '../Settings';
 import { AutoRunMode } from '../StatusBar';
 import { pathToJest, pathToConfig, toFilePath } from '../helpers';
@@ -20,6 +21,7 @@ import { workspaceLogging } from '../logging';
 import { AutoRunAccessor, JestExtContext, RunnerWorkspaceOptions } from './types';
 import { CoverageColors } from '../Coverage';
 import { platform } from 'os';
+import { JestOutputTerminal } from './output-terminal';
 
 export const isWatchRequest = (request: JestProcessRequest): boolean =>
   request.type === 'watch-tests' || request.type === 'watch-all-tests';
@@ -105,12 +107,14 @@ export const createJestExtContext = (
       settings.shell
     );
   };
+  const output = new JestOutputTerminal(workspaceFolder.name);
   return {
     workspace: workspaceFolder,
     settings,
     createRunnerWorkspace,
     loggingFactory: workspaceLogging(workspaceFolder.name, settings.debugMode ?? false),
     autoRun: AutoRun(settings),
+    output,
   };
 };
 
@@ -171,6 +175,30 @@ const getAutoRunSetting = (
   }
   return setting;
 };
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const isTestExplorerConfigLegacy = (arg: any): arg is TestExplorerConfigLegacy =>
+  typeof arg.enabled === 'boolean';
+
+const DefaultTestExplorerSetting: TestExplorerConfig = {};
+const getTestExplorer = (config: vscode.WorkspaceConfiguration): TestExplorerConfig => {
+  const setting = config.get<TestExplorerConfig | TestExplorerConfigLegacy>('testExplorer');
+  if (!setting) {
+    return DefaultTestExplorerSetting;
+  }
+
+  if (isTestExplorerConfigLegacy(setting)) {
+    if (setting.enabled === false || setting.showClassicStatus === true) {
+      const message = `Invalid TestExplorer setting: please check README to upgrade. Will use the default setting instead`;
+      console.error(message);
+      vscode.window.showWarningMessage(message);
+      return DefaultTestExplorerSetting;
+    }
+    return { showInlineError: setting.showInlineError };
+  }
+
+  return setting;
+};
 export const getExtensionResourceSettings = (uri: vscode.Uri): PluginResourceSettings => {
   const config = vscode.workspace.getConfiguration('jest', uri);
 
@@ -178,7 +206,6 @@ export const getExtensionResourceSettings = (uri: vscode.Uri): PluginResourceSet
   const runAllTestsFirst = config.get<boolean>('runAllTestsFirst') ?? undefined;
 
   return {
-    showTerminalOnLaunch: config.get<boolean>('showTerminalOnLaunch') ?? true,
     autoEnable,
     enableSnapshotUpdateMessages: config.get<boolean>('enableSnapshotUpdateMessages'),
     pathToConfig: config.get<string>('pathToConfig'),
@@ -194,7 +221,7 @@ export const getExtensionResourceSettings = (uri: vscode.Uri): PluginResourceSet
     coverageFormatter: config.get<string>('coverageFormatter')!,
     debugMode: config.get<boolean>('debugMode'),
     coverageColors: config.get<CoverageColors>('coverageColors'),
-    testExplorer: config.get<TestExplorerConfig>('testExplorer') ?? { enabled: true },
+    testExplorer: getTestExplorer(config),
     nodeEnv: config.get<NodeEnv | null>('nodeEnv') ?? undefined,
     shell: getShell(config) ?? undefined,
     monitorLongRun: config.get<MonitorLongRun>('monitorLongRun') ?? undefined,
