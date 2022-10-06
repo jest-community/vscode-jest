@@ -19,9 +19,10 @@ import {
   createSaveConfig,
   showActionMessage,
   validateCommandLine,
+  selectWorkspace,
 } from '../../src/setup-wizard/wizard-helper';
 import { ActionMessageType, WizardStatus } from '../../src/setup-wizard/types';
-import { throwError } from './test-helper';
+import { throwError, workspaceFolder } from './test-helper';
 
 describe('QuickInput Proxy', () => {
   const mockOnDidTriggerButton = jest.fn();
@@ -811,11 +812,7 @@ describe('createSaveConfig', () => {
     await saveConfig(entry);
 
     expect(mockUpdate).toBeCalledTimes(1);
-    expect(mockUpdate).toBeCalledWith(
-      entry.name,
-      entry.value,
-      vscode.ConfigurationTarget.WorkspaceFolder
-    );
+    expect(mockUpdate).toBeCalledWith(entry.name, entry.value);
   });
   it('can save multiple entries', async () => {
     expect.hasAssertions();
@@ -826,18 +823,8 @@ describe('createSaveConfig', () => {
     await saveConfig(entry1, entry2);
 
     expect(mockUpdate).toBeCalledTimes(2);
-    expect(mockUpdate).toHaveBeenNthCalledWith(
-      1,
-      entry1.name,
-      entry1.value,
-      vscode.ConfigurationTarget.WorkspaceFolder
-    );
-    expect(mockUpdate).toHaveBeenNthCalledWith(
-      2,
-      entry2.name,
-      entry2.value,
-      vscode.ConfigurationTarget.WorkspaceFolder
-    );
+    expect(mockUpdate).toHaveBeenNthCalledWith(1, entry1.name, entry1.value);
+    expect(mockUpdate).toHaveBeenNthCalledWith(2, entry2.name, entry2.value);
   });
   it('when save failed, throws error', async () => {
     expect.hasAssertions();
@@ -852,5 +839,18 @@ describe('createSaveConfig', () => {
     await expect(saveConfig(entry1, entry2, entry3)).rejects.toEqual('failed');
 
     expect(mockUpdate).toBeCalledTimes(3);
+  });
+});
+
+describe('selectWorkspace', () => {
+  it.each`
+    desc                    | workspaceFolders                                      | callCount
+    ${'single-workspace'}   | ${[workspaceFolder('single-root')]}                   | ${0}
+    ${'multiple-workspace'} | ${[workspaceFolder('ws-1'), workspaceFolder('ws-2')]} | ${1}
+  `('will only prompt to picker if multi-root: $desc', async ({ workspaceFolders, callCount }) => {
+    expect.hasAssertions();
+    (vscode.workspace as any).workspaceFolders = workspaceFolders;
+    await selectWorkspace();
+    expect(vscode.window.showWorkspaceFolderPick).toBeCalledTimes(callCount);
   });
 });

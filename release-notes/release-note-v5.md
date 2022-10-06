@@ -19,8 +19,6 @@ After more than an year with the vscode TestExplorer, it has been proven stable 
 
 This release also aim to address some common pain points, such as slow and resource-intensive start-up (especially for large projects), shell env issue (cmd not found), shallow activation and "greedy" monorepo runs. 
 
-Please file issues for bugs; and for anything else, please join the [v5 discussion]() thread.
-
 ### Features 
 
 #### Output Terminals 

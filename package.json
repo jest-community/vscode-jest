@@ -31,10 +31,7 @@
     "multi-root ready"
   ],
   "activationEvents": [
-    "workspaceContains:**/jest.config.js",
-    "workspaceContains:**/jest.config.mjs",
-    "workspaceContains:**/jest.config.cjs",
-    "workspaceContains:**/jest.config.ts",
+    "workspaceContains:**/jest.config.{js,ts,mjs,cjs,json}",
     "workspaceContains:**/jest.json",
     "workspaceContains:node_modules/.bin/jest",
     "workspaceContains:node_modules/react-scripts/node_modules/.bin/jest",
@@ -281,7 +278,7 @@
       },
       {
         "command": "io.orta.jest.setup-extension",
-        "title": "Jest: Setup Extension (Beta)"
+        "title": "Jest: Setup Extension"
       }
     ],
     "menus": {

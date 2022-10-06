@@ -13,7 +13,6 @@ import {
   JestSettings,
   ConfigEntry,
   ActionableMessageItem,
-  WizardContext,
   ActionMessageType,
   ActionInputBoxOptions,
   ActionInputResult,
@@ -21,6 +20,7 @@ import {
   ActionMenuInput,
   ActionInput,
   isActionableButton,
+  WizardContext,
 } from './types';
 
 export const jsonOut = (json: unknown): string => JSON.stringify(json, undefined, 4);
@@ -349,11 +349,11 @@ export const createSaveConfig =
   (context: WizardContext) =>
   (...entries: ConfigEntry[]): Promise<void> => {
     const { workspace, message } = context;
-    const config = vscode.workspace.getConfiguration(undefined, workspace.uri);
+    const config = vscode.workspace.getConfiguration(undefined, workspace?.uri);
 
     const promises = entries.map((e) => {
       message(`Updating "${e.name}" in vscode`);
-      return config.update(e.name, e.value, vscode.ConfigurationTarget.WorkspaceFolder);
+      return config.update(e.name, e.value);
     });
     return Promise.all(promises)
       .then(() => {
@@ -364,3 +364,12 @@ export const createSaveConfig =
         throw e;
       });
   };
+
+export const selectWorkspace = async (): Promise<vscode.WorkspaceFolder | undefined> => {
+  if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length <= 0) {
+    return Promise.resolve(undefined);
+  }
+  return vscode.workspace.workspaceFolders.length == 1
+    ? Promise.resolve(vscode.workspace.workspaceFolders[0])
+    : await vscode.window.showWorkspaceFolderPick();
+};

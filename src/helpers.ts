@@ -44,12 +44,20 @@ function getLocalPathForExecutable(rootPath: string, executable: string): string
  */
 export function getTestCommand(rootPath: string): string | undefined | null {
   try {
-    const packagePath = join(rootPath, 'package.json');
-    const packageJSON = JSON.parse(readFileSync(packagePath, 'utf8'));
+    const packageJSON = getPackageJson(rootPath);
     if (packageJSON && packageJSON.scripts && packageJSON.scripts.test) {
       return packageJSON.scripts.test;
     }
     return null;
+  } catch {
+    return undefined;
+  }
+}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function getPackageJson(rootPath: string): any | undefined {
+  try {
+    const packagePath = join(rootPath, 'package.json');
+    return JSON.parse(readFileSync(packagePath, 'utf8'));
   } catch {
     return undefined;
   }

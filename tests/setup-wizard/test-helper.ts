@@ -1,6 +1,6 @@
 import { ActionMessageType } from '../../src/setup-wizard/types';
 
-export const mockWizardHelper = (mockHelper: jest.Mocked<any>) => {
+export const mockWizardHelper = (mockHelper: jest.Mocked<any>): any => {
   const mockShowActionMenu = (...ids: number[]) => {
     ids.forEach((id) => {
       mockHelper.showActionMenu.mockImplementationOnce((items) =>
@@ -25,18 +25,22 @@ export const mockWizardHelper = (mockHelper: jest.Mocked<any>) => {
       action,
     }));
   };
+  const mockSelectWorkspace = (ws?: string) => {
+    mockHelper.selectWorkspace.mockImplementation(() => Promise.resolve(ws));
+  };
   return {
     mockShowActionMenu,
     mockShowActionMessage,
     mockHelperSetup,
+    mockSelectWorkspace,
   };
 };
 
-export const throwError = (msg: string) => {
+export const throwError = (msg: string): void => {
   throw new Error(msg);
 };
 
 export const workspaceFolder = (name: string): any => ({
   name,
-  uri: { fsPath: '/workspace' },
+  uri: { fsPath: name },
 });

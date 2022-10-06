@@ -9,7 +9,8 @@ import { mockWizardHelper, throwError, workspaceFolder } from './test-helper';
 import * as helper from '../../src/setup-wizard/wizard-helper';
 
 const mockTasks = tasks as jest.Mocked<any>;
-const { mockShowActionMenu, mockHelperSetup } = mockWizardHelper(helper as jest.Mocked<any>);
+const mockHelper = helper as jest.Mocked<any>;
+const { mockShowActionMenu, mockHelperSetup } = mockWizardHelper(mockHelper);
 
 describe('startWizard', () => {
   const mockDebugConfigProvider: any = {};
@@ -27,30 +28,20 @@ describe('startWizard', () => {
     mockTasks.setupJestCmdLine = jest.fn(() => Promise.resolve('success'));
     mockTasks.setupJestDebug = jest.fn(() => Promise.resolve('success'));
   });
-  it.each`
-    desc                    | workspaceFolders                                      | callCount
-    ${'single-workspace'}   | ${[workspaceFolder('single-root')]}                   | ${0}
-    ${'multiple-workspace'} | ${[workspaceFolder('ws-1'), workspaceFolder('ws-2')]} | ${1}
-  `('select workspace: $desc', async ({ workspaceFolders, callCount }) => {
-    expect.hasAssertions();
-    mockShowActionMenu(StartWizardActionId.exit);
-    (vscode.workspace as any).workspaceFolders = workspaceFolders;
-    await startWizard(mockDebugConfigProvider);
-    expect(vscode.window.showWorkspaceFolderPick).toBeCalledTimes(callCount);
-  });
   describe.each`
     taskId           | menuId
     ${'cmdLine'}     | ${StartWizardActionId.cmdLine}
     ${'debugConfig'} | ${StartWizardActionId.debugConfig}
+    ${'monorepo'}    | ${StartWizardActionId.monorepo}
   `('setup task: $taskId', ({ taskId, menuId }) => {
     it.each`
-      taskResult                          | menuCallCount | wizardResult
-      ${'success'}                        | ${2}          | ${'success'}
-      ${'abort'}                          | ${2}          | ${'success'}
-      ${'error'}                          | ${1}          | ${'error'}
-      ${() => throwError('forced error')} | ${1}          | ${'error'}
+      case | taskResult                          | menuCallCount | wizardResult
+      ${1} | ${'success'}                        | ${2}          | ${'success'}
+      ${2} | ${'abort'}                          | ${2}          | ${'success'}
+      ${3} | ${'error'}                          | ${1}          | ${'error'}
+      ${4} | ${() => throwError('forced error')} | ${1}          | ${'error'}
     `(
-      `from menu ${menuId}: $taskResult => $wizardResult`,
+      `case $case: from menu ${menuId}: $taskResult => $wizardResult`,
       async ({ taskResult, menuCallCount, wizardResult }) => {
         expect.hasAssertions();
         console.error = jest.fn();
@@ -95,6 +86,13 @@ describe('startWizard', () => {
 
       expect(task).toBeCalledTimes(1);
     });
+  });
+  it('can handle unexpected exception', async () => {
+    expect.hasAssertions();
+    mockHelper.showActionMenu.mockImplementation(() => {
+      throw 'whatever';
+    });
+    await expect(startWizard(mockDebugConfigProvider)).resolves.toEqual('error');
   });
   it('has a verbose mode', async () => {
     expect.hasAssertions();

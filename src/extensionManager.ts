@@ -75,7 +75,7 @@ export class ExtensionManager {
     this.debugConfigurationProvider = new DebugConfigurationProvider();
     this.debugCodeLensProvider = new DebugCodeLensProvider(this.getByDocUri);
     this.coverageCodeLensProvider = new CoverageCodeLensProvider(this.getByDocUri);
-    this.applySettings(getExtensionWindowSettings());
+    this.applySettings(this.commonPluginSettings);
   }
   applySettings(settings: PluginWindowSettings): void {
     this.commonPluginSettings = settings;
@@ -276,7 +276,8 @@ export class ExtensionManager {
 
   private showReleaseMessage(): void {
     const version = vscode.extensions.getExtension(extensionId)?.packageJSON.version;
-    if (typeof version !== 'string' || !version.startsWith('5.')) {
+    const releaseNote = ReleaseNotes[version];
+    if (!releaseNote) {
       return;
     }
     const key = `${extensionId}-${version}-launch`;
@@ -289,13 +290,7 @@ export class ExtensionManager {
         )
         .then((value) => {
           if (value === 'See What Is Changed') {
-            vscode.commands.executeCommand(
-              'vscode.open',
-              vscode.Uri.parse(
-                // 'https://github.com/jest-community/vscode-jest/blob/master/release-notes/release-note-v5.md'
-                'https://github.com/jest-community/vscode-jest/blob/master/README.md'
-              )
-            );
+            vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(releaseNote));
           }
         });
       this.context.globalState.update(key, true);
@@ -312,3 +307,8 @@ export class ExtensionManager {
     }
   }
 }
+
+const ReleaseNoteBase = 'https://github.com/jest-community/vscode-jest/blob/master/release-notes';
+const ReleaseNotes: Record<string, string> = {
+  '5.0.0': `${ReleaseNoteBase}/release-note-v5.md#v500-pre-release`,
+};

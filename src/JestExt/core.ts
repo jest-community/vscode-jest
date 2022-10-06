@@ -128,7 +128,7 @@ export class JestExt {
       debugTests: this.debugTests,
     };
   }
-  private setupWizardAction(taskId: WizardTaskId): messaging.MessageAction {
+  private setupWizardAction(taskId?: WizardTaskId): messaging.MessageAction {
     return {
       title: 'Run Setup Wizard',
       action: (): unknown =>
@@ -203,7 +203,7 @@ export class JestExt {
           actions.push(messaging.showTroubleshootingAction);
           break;
         case 'wizard':
-          actions.push(this.setupWizardAction('cmdLine'));
+          actions.push(this.setupWizardAction());
           break;
         case 'disable-folder':
           if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 1) {

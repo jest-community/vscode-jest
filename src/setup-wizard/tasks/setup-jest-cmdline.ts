@@ -10,8 +10,10 @@ import {
   getWizardSettings,
   createSaveConfig,
   validateCommandLine,
+  selectWorkspace,
 } from '../wizard-helper';
-import { WizardStatus, ActionableMenuItem, WizardContext, SetupTask } from '../types';
+import { WizardStatus, ActionableMenuItem, SetupTask, WizardContext } from '../types';
+import { ansiEsc } from '../../JestExt/output-terminal';
 
 export const CLSetupActionId = {
   acceptExisting: 0,
@@ -25,7 +27,13 @@ export const CLSetupActionId = {
 export const setupJestCmdLine: SetupTask = async (
   context: WizardContext
 ): Promise<WizardStatus> => {
-  const { workspace, message } = context;
+  const { workspace: _ws, message } = context;
+  const workspace = _ws ?? (await selectWorkspace());
+  if (!workspace) {
+    return 'abort';
+  }
+  context.workspace = workspace;
+
   const saveConfig = createSaveConfig(context);
   const settings = getWizardSettings(workspace);
 
@@ -133,7 +141,11 @@ export const setupJestCmdLine: SetupTask = async (
       const value = `${settings['pathToJest']}${configArg}`;
       placeholder = `upgrade deprecated ${settingName} to jestCommandLine`;
       message(
-        `!!! "jestToPath" and "pathToConfig" are deprecated, it is replaced by "jest.jestCommandLine".`
+        ansiEsc(
+          'warn',
+          '!!! "jestToPath" and "pathToConfig" are deprecated, it is replaced by "jest.jestCommandLine"'
+        ),
+        'new-line'
       );
       menuItems.push(
         actionItem(
@@ -166,19 +178,14 @@ export const setupJestCmdLine: SetupTask = async (
     if (!canRun) {
       // abort the wizard
       const msg =
-        'Looks like you are not able to run jest tests from terminal...\n\nPlease note a working jest test env is a prerequisite for vscode-jest. Feel free to relaunch the wizard when you are ready.\n\nWill exit setup now';
-      message(msg);
-      return showActionMessage('warning', `${msg}`, {
-        id: CLSetupActionId.info,
-        title: 'Ok',
-        isCloseAffordance: true,
-        action: () => Promise.resolve('error'),
-      });
+        'Looks like you are not able to run jest tests from terminal...\r\n\r\n' +
+        'Please note a working jest test env is a prerequisite for vscode-jest. Feel free to relaunch the setup-tool when you are ready';
+      message(msg, 'error');
+      return 'abort';
     }
     return edit();
   };
 
-  message(`Setup jest command line for workspace "${workspace.name}"`, 'setupJestCmdLine');
   return settings.jestCommandLine || settings.pathToJest
     ? withExistingSettings()
     : withoutExistingSettings();
