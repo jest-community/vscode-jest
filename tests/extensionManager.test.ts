@@ -603,20 +603,24 @@ describe('ExtensionManager', () => {
     });
   });
   describe('activate', () => {
-    let ext1, ext2;
+    let ext1, ext2, mockExtension;
     beforeEach(() => {
       const map = new Map<string, boolean>();
-      const workspaceState = {
+      const globalState = {
         get: jest.fn((key) => map.get(key)),
         update: jest.fn((key: string, value: boolean) => map.set(key, value)),
       };
 
-      extensionManager = createExtensionManager(['ws-1', 'ws-2'], { workspaceState });
+      extensionManager = createExtensionManager(['ws-1', 'ws-2'], { globalState });
       ext1 = extensionManager.getByName('ws-1');
       ext2 = extensionManager.getByName('ws-2');
       (vscode.window.showInformationMessage as jest.Mocked<any>).mockReturnValue(
         Promise.resolve('')
       );
+      mockExtension = { packageJSON: { version: '5.0.0' } };
+      (vscode.extensions as any) = {
+        getExtension: () => mockExtension,
+      };
     });
     it('with active editor => can trigger active extension to render it', () => {
       const document: any = { document: { uri: 'ws-2' } };
@@ -638,5 +642,49 @@ describe('ExtensionManager', () => {
       expect(ext1.onDidChangeActiveTextEditor).not.toBeCalled();
       expect(ext2.onDidChangeActiveTextEditor).not.toBeCalled();
     });
+    it.each`
+      case | version    | showChoice | choice                   | showRN
+      ${1} | ${'4.6'}   | ${false}   | ${undefined}             | ${false}
+      ${2} | ${'5.0.0'} | ${true}    | ${undefined}             | ${false}
+      ${3} | ${'5.0.0'} | ${true}    | ${'See What Is Changed'} | ${true}
+      ${4} | ${'5.0.1'} | ${false}   | ${undefined}             | ${false}
+      ${5} | ${'6.0.0'} | ${false}   | ${undefined}             | ${false}
+    `(
+      'show release note once for specific version: case $case',
+      async ({ version, showChoice, choice, showRN }) => {
+        expect.hasAssertions();
+
+        // we can't pass a "done" function in ts each, so use this dummy async to give us a chance
+        // to test the showInformationMessage async action
+        const dummyAsync = () => new Promise<void>((r) => r());
+
+        mockExtension.packageJSON.version = version;
+        (vscode.window.showInformationMessage as jest.Mocked<any>).mockReturnValue(
+          Promise.resolve(choice)
+        );
+        (vscode.Uri.parse as jest.Mocked<any>).mockReturnValue('');
+
+        extensionManager.activate();
+        await dummyAsync();
+
+        if (showChoice) {
+          expect(vscode.window.showInformationMessage).toBeCalled();
+
+          if (showRN) {
+            expect(vscode.commands.executeCommand).toBeCalledWith('vscode.open', expect.anything());
+          } else {
+            expect(vscode.commands.executeCommand).not.toBeCalled();
+          }
+        } else {
+          expect(vscode.window.showInformationMessage).not.toBeCalled();
+        }
+
+        // calling activate again should not show release note again
+        (vscode.window.showInformationMessage as jest.Mocked<any>).mockClear();
+        extensionManager.activate();
+        await dummyAsync();
+        expect(vscode.window.showInformationMessage).not.toBeCalled();
+      }
+    );
   });
 });

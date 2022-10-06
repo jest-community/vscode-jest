@@ -5,7 +5,7 @@ import { DebugConfigurationProvider } from './DebugConfigurationProvider';
 import { PluginWindowSettings } from './Settings';
 import { statusBar } from './StatusBar';
 import { CoverageCodeLensProvider } from './Coverage';
-import { extensionName } from './appGlobals';
+import { extensionId, extensionName } from './appGlobals';
 
 export type GetJestExtByURI = (uri: vscode.Uri) => JestExt | undefined;
 
@@ -75,7 +75,7 @@ export class ExtensionManager {
     this.debugConfigurationProvider = new DebugConfigurationProvider();
     this.debugCodeLensProvider = new DebugCodeLensProvider(this.getByDocUri);
     this.coverageCodeLensProvider = new CoverageCodeLensProvider(this.getByDocUri);
-    this.applySettings(getExtensionWindowSettings());
+    this.applySettings(this.commonPluginSettings);
   }
   applySettings(settings: PluginWindowSettings): void {
     this.commonPluginSettings = settings;
@@ -274,7 +274,31 @@ export class ExtensionManager {
     this.onFilesChange(files, (ext) => ext.onDidRenameFiles(event));
   }
 
+  private showReleaseMessage(): void {
+    const version = vscode.extensions.getExtension(extensionId)?.packageJSON.version;
+    const releaseNote = ReleaseNotes[version];
+    if (!releaseNote) {
+      return;
+    }
+    const key = `${extensionId}-${version}-launch`;
+    const didLaunch = this.context.globalState.get<boolean>(key, false);
+    if (!didLaunch) {
+      vscode.window
+        .showInformationMessage(
+          `vscode-jest has been updated to ${version}.`,
+          'See What Is Changed'
+        )
+        .then((value) => {
+          if (value === 'See What Is Changed') {
+            vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(releaseNote));
+          }
+        });
+      this.context.globalState.update(key, true);
+    }
+  }
+
   activate(): void {
+    this.showReleaseMessage();
     if (vscode.window.activeTextEditor?.document.uri) {
       const ext = this.getByDocUri(vscode.window.activeTextEditor.document.uri);
       if (ext) {
@@ -283,3 +307,8 @@ export class ExtensionManager {
     }
   }
 }
+
+const ReleaseNoteBase = 'https://github.com/jest-community/vscode-jest/blob/master/release-notes';
+const ReleaseNotes: Record<string, string> = {
+  '5.0.0': `${ReleaseNoteBase}/release-note-v5.md#v500-pre-release`,
+};
