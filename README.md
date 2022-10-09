@@ -561,7 +561,7 @@ There could be other causes, such as jest test root path is different from the p
 This means the extension is not activated. 
   
 vscode will automatically activate the extension upon detecting any of the following patterns:
-  - jest config file (`jest.json`, `jest.config.js`, `jest.config.ts`, `jest.config.mjs`, `jest.config.cjs`) any where under the project root.
+  - jest config file (`jest.json`, `jest.config.js`, `jest.config.ts`, `jest.config.mjs`, `jest.config.cjs`, `jest.config.json`) any where under the project root.
   - jest command (`node_modules/.bin/jest`, `node_modules/react-scripts/node_modules/.bin/jest`) or react-native script (`node_modules/react-native-scripts`) **under the project root**.
 
 If none of the auto activation criteria is met, you can do the following to manually activate the extension:

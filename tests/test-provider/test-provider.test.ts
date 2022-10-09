@@ -135,9 +135,7 @@ describe('JestTestProvider', () => {
         controllerMock.resolveHandler();
         expect(controllerMock.createTestRun).toBeCalled();
         expect(workspaceRootMock.discoverTest).toBeCalledTimes(1);
-        expect(workspaceRootMock.discoverTest).toBeCalledWith(
-          expect.objectContaining({ vscodeRun: controllerMock.lastRunMock() })
-        );
+
         // run will be created with the controller's id
         expect(controllerMock.lastRunMock().name).toEqual(
           expect.stringContaining(controllerMock.id)
@@ -153,9 +151,7 @@ describe('JestTestProvider', () => {
         data.item.canResolveChildren = true;
         controllerMock.resolveHandler(data.item);
         expect(controllerMock.createTestRun).toBeCalled();
-        expect(data.discoverTest).toBeCalledWith(
-          expect.objectContaining({ vscodeRun: controllerMock.lastRunMock() })
-        );
+
         // run will be created with the controller's id
         expect(controllerMock.lastRunMock().name).toEqual(
           expect.stringContaining(controllerMock.id)
@@ -269,7 +265,8 @@ describe('JestTestProvider', () => {
           if (hasError) {
             expect(controllerMock.lastRunMock().errored).toBeCalledWith(
               itemDataList[0].item,
-              expect.anything()
+              expect.anything(),
+              undefined
             );
             expect(vscode.TestMessage).toBeCalledTimes(1);
           } else {
@@ -369,8 +366,8 @@ describe('JestTestProvider', () => {
 
         expect(extExplorerContextMock.debugTests).toBeCalledTimes(3);
         expect(runMock.errored).toBeCalledTimes(2);
-        expect(runMock.errored).toBeCalledWith(request.include[1], expect.anything());
-        expect(runMock.errored).toBeCalledWith(request.include[2], expect.anything());
+        expect(runMock.errored).toBeCalledWith(request.include[1], expect.anything(), undefined);
+        expect(runMock.errored).toBeCalledWith(request.include[2], expect.anything(), undefined);
         expect(runMock.end).toBeCalled();
       });
     });
@@ -414,7 +411,7 @@ describe('JestTestProvider', () => {
 
           switch (state) {
             case 'errored':
-              expect(runMock.errored).toBeCalledWith(tData.item, expect.anything());
+              expect(runMock.errored).toBeCalledWith(tData.item, expect.anything(), undefined);
               expect(vscode.TestMessage).toBeCalledTimes(1);
               break;
             case 'skipped':
@@ -524,9 +521,9 @@ describe('JestTestProvider', () => {
 
           /* eslint-disable jest/no-conditional-expect */
           if (idx === 1) {
-            expect(run.vscodeRun.errored).toBeCalledWith(d.item, expect.anything());
+            expect(run.vscodeRun.errored).toBeCalledWith(d.item, expect.anything(), undefined);
           } else {
-            expect(run.vscodeRun.errored).not.toBeCalledWith(d.item, expect.anything());
+            expect(run.vscodeRun.errored).not.toBeCalledWith(d.item, expect.anything(), undefined);
             // close the schedule
             run.end();
           }

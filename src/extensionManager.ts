@@ -285,7 +285,7 @@ export class ExtensionManager {
     if (!didLaunch) {
       vscode.window
         .showInformationMessage(
-          `vscode-jest has been upgraded to ${version}.`,
+          `vscode-jest has been updated to ${version}.`,
           'See What Is Changed'
         )
         .then((value) => {

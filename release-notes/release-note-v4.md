@@ -91,7 +91,7 @@ more info see [v4.2.1 release](https://github.com/jest-community/vscode-jest/rel
 Test explorer is one of the highly requested feature for this extension. Last year vscode announced the plan for the official test explorer and we have been trying out the new proposed API since. Now the vscode test explorer is live (2021 July release - v1.59), we are excited to release `v4.1` and our users can finally tap into this great new UI experience 🎉
 
 
-![test-explorer.png](images/test-explorer.png)
+![test-explorer.png](../images/test-explorer.png)
 
 Please note, the test explorer is new and some of the features might be missing or imperfect (see [How to use test explorer](../README.md#how-to-use-the-test-explorer) for more details), nevertheless, we will continue to improve it. Please do not hesitate to ask questions or file issues, thanks and have fun!
 
