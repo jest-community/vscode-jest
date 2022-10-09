@@ -115,7 +115,7 @@ export class JestTestProvider {
       }
     }
     error = error ?? `item ${tData.item.id} is not debuggable`;
-    run.vscodeRun.errored(tData.item, new vscode.TestMessage(error));
+    run.errored(tData.item, new vscode.TestMessage(error));
     run.write(error, 'error');
     return Promise.resolve();
   };
@@ -138,7 +138,7 @@ export class JestTestProvider {
       for (const test of tests) {
         const tData = this.context.getData(test);
         if (!tData || cancelToken.isCancellationRequested) {
-          run.vscodeRun.skipped(test);
+          run.skipped(test);
           continue;
         }
         this.log('debug', `executing profile: "${request.profile.label}" for ${test.id}...`);
@@ -148,16 +148,15 @@ export class JestTestProvider {
           promises.push(
             new Promise((resolve, reject) => {
               try {
-                const itemRun = new JestTestRun(this.context, run.vscodeRun, {
+                const itemRun = new JestTestRun(this.context, run, {
                   item: test,
-                  onEnd: resolve,
-                  disableVscodeRunEnd: true,
+                  end: resolve,
                 });
                 tData.scheduleTest(itemRun);
               } catch (e) {
                 const msg = `failed to schedule test for ${tData.item.id}: ${toErrorString(e)}`;
                 this.log('error', msg, e);
-                run.vscodeRun.errored(test, new vscode.TestMessage(msg));
+                run.errored(test, new vscode.TestMessage(msg));
                 reject(msg);
               }
             })
