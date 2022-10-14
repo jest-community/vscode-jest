@@ -346,7 +346,7 @@ for example:
   The string type are short-hand for the most common configurations:
 
   | Short Hand | description | actual config | note |
-  |:-:|---|---|---|---|
+  |:-:|---|---|---|
   |**"watch"** |run jest in watch mode| {"watch": true} | the default mode|
   |**"off"**|turn off jest autoRun| {"watch": false} | this is the manual mode | 
   |**"legacy"**|starting a full test-run followed by jest watch| {"watch": true, "onStartup": ["all-tests"]} | he default mode prior to v4.7 | 
