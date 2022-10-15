@@ -123,14 +123,14 @@ describe('text format utility function', () => {
     expect(t).toMatchSnapshot();
   });
   it.each`
-    escSeq
-    ${AnsiSeq.error}
-    ${AnsiSeq.success}
-    ${AnsiSeq.warn}
-    ${AnsiSeq.info}
-    ${AnsiSeq.bold}
-    ${AnsiSeq.lf}
-  `('ansiEsc: format by ANSI escape sequence: $escSeq', ({ escSeq }) => {
+    desc         | escSeq
+    ${'error'}   | ${AnsiSeq.error}
+    ${'success'} | ${AnsiSeq.success}
+    ${'warn'}    | ${AnsiSeq.warn}
+    ${'info'}    | ${AnsiSeq.info}
+    ${'bold'}    | ${AnsiSeq.bold}
+    ${'lf'}      | ${AnsiSeq.lf}
+  `('ansiEsc: format by ANSI escape sequence: $desc', ({ escSeq }) => {
     expect(ansiEsc(escSeq, 'whatever')).toMatchSnapshot();
   });
 });

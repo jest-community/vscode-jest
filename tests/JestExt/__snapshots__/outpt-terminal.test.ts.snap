@@ -28,80 +28,17 @@ exports[`JestOutputTerminal can write output with options can write with option:
 "
 `;
 
-exports[`text format utility function ansiEsc: format by ANSI escape sequence: 
- 1`] = `"undefinedwhatever[0m"`;
+exports[`text format utility function ansiEsc: format by ANSI escape sequence: bold 1`] = `"undefinedwhatever[0m"`;
 
-exports[`text format utility function ansiEsc: format by ANSI escape sequence: 
- 1`] = `"undefinedwhatever[0m"`;
+exports[`text format utility function ansiEsc: format by ANSI escape sequence: error 1`] = `"undefinedwhatever[0m"`;
 
-exports[`text format utility function ansiEsc: format by ANSI escape sequence: [0;31m 1`] = `"undefinedwhatever[0m"`;
+exports[`text format utility function ansiEsc: format by ANSI escape sequence: info 1`] = `"undefinedwhatever[0m"`;
 
-exports[`text format utility function ansiEsc: format by ANSI escape sequence: [0;32m 1`] = `"undefinedwhatever[0m"`;
+exports[`text format utility function ansiEsc: format by ANSI escape sequence: lf 1`] = `"undefinedwhatever[0m"`;
 
-exports[`text format utility function ansiEsc: format by ANSI escape sequence: [0;33m 1`] = `"undefinedwhatever[0m"`;
+exports[`text format utility function ansiEsc: format by ANSI escape sequence: success 1`] = `"undefinedwhatever[0m"`;
 
-exports[`text format utility function ansiEsc: format by ANSI escape sequence: [0;34m 1`] = `"undefinedwhatever[0m"`;
-
-exports[`text format utility function ansiEsc: format by ANSI escape sequence: [1m 1`] = `"undefinedwhatever[0m"`;
-
-exports[`text format utility function by ANSI escape sequence: 
- 1`] = `"undefinedwhatever[0m"`;
-
-exports[`text format utility function by ANSI escape sequence: [0;31m 1`] = `"undefinedwhatever[0m"`;
-
-exports[`text format utility function by ANSI escape sequence: [0;32m 1`] = `"undefinedwhatever[0m"`;
-
-exports[`text format utility function by ANSI escape sequence: [0;33m 1`] = `"undefinedwhatever[0m"`;
-
-exports[`text format utility function by ANSI escape sequence: [0;34m 1`] = `"undefinedwhatever[0m"`;
-
-exports[`text format utility function by ANSI escape sequence: [1m 1`] = `"undefinedwhatever[0m"`;
-
-exports[`text format utility function by output options: ["bold", "new-line"] 1`] = `
-"
-[1ma message[0m
-"
-`;
-
-exports[`text format utility function by output options: ["error", "lite"] 1`] = `
-"[0;31ma message[0m
-
-"
-`;
-
-exports[`text format utility function by output options: bold 1`] = `"[1ma message[0m"`;
-
-exports[`text format utility function by output options: error 1`] = `
-"
-[0;31m[error] a message[0m
-"
-`;
-
-exports[`text format utility function by output options: info 1`] = `
-"
-[0;34m[info] a message[0m
-"
-`;
-
-exports[`text format utility function by output options: lite 1`] = `"a message"`;
-
-exports[`text format utility function by output options: new-line 1`] = `
-"
-a message
-"
-`;
-
-exports[`text format utility function by output options: success 1`] = `
-"
-[0;32m[success] a message[0m
-"
-`;
-
-exports[`text format utility function by output options: warn 1`] = `
-"
-[0;33m[warn] a message[0m
-"
-`;
+exports[`text format utility function ansiEsc: format by ANSI escape sequence: warn 1`] = `"undefinedwhatever[0m"`;
 
 exports[`text format utility function toAnsi: format by output options: ["bold", "new-line"] 1`] = `
 "
