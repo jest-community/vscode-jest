@@ -37,6 +37,8 @@ import {
   toUpperCaseDriveLetter,
   shellQuote,
   toErrorString,
+  getPackageJson,
+  getTestCommand,
 } from '../src/helpers';
 
 // Manually (forcefully) set the executable's file extension to test its addition independendly of the operating system.
@@ -341,4 +343,47 @@ it.each`
   } else {
     expect(toErrorString(e)).toMatchSnapshot();
   }
+});
+describe('get info from Package.json', () => {
+  const packageWithTest = {
+    scripts: {
+      test: 'react-scripts test',
+    },
+  };
+  beforeEach(() => {
+    mockJoin.mockImplementation((...parts) => parts);
+  });
+  describe('getPackageJson', () => {
+    it('can read package.json from file system', () => {
+      mockReadFileSync.mockReturnValueOnce(JSON.stringify(packageWithTest));
+      expect(getPackageJson('root')).toEqual(packageWithTest);
+      expect(mockReadFileSync).toBeCalledWith(
+        expect.arrayContaining(['root', 'package.json']),
+        expect.anything()
+      );
+    });
+    it('if package.json does not exist, return undefined', () => {
+      mockReadFileSync.mockImplementation(() => {
+        throw new Error('does not exist');
+      });
+      expect(getPackageJson('root')).toBeUndefined();
+    });
+  });
+  describe('getTestCommand', () => {
+    it('can get test script from package.json', () => {
+      mockReadFileSync.mockReturnValueOnce(JSON.stringify(packageWithTest));
+      expect(getTestCommand('root')).toEqual(packageWithTest.scripts.test);
+    });
+    it.each`
+      case                      | impl
+      ${'no package.json'} | ${() => {
+  throw new Error('does not exist');
+}}
+      ${'no scripts'}           | ${() => ({})}
+      ${'invalid package.json'} | ${() => 'invalid package.json'}
+    `('if error, returns undefined: $case', ({ impl }) => {
+      mockReadFileSync.mockImplementation(impl);
+      expect(getTestCommand('root')).toBeUndefined();
+    });
+  });
 });

@@ -2,7 +2,7 @@ jest.unmock('../../src/JestExt/output-terminal');
 jest.unmock('../../src/errors');
 
 import * as vscode from 'vscode';
-import { JestOutputTerminal } from '../../src/JestExt/output-terminal';
+import { ansiEsc, AnsiSeq, JestOutputTerminal, toAnsi } from '../../src/JestExt/output-terminal';
 import * as errors from '../../src/errors';
 
 describe('JestOutputTerminal', () => {
@@ -104,5 +104,33 @@ describe('JestOutputTerminal', () => {
       const t = output.write(text, options);
       expect(t).toMatchSnapshot();
     });
+  });
+});
+describe('text format utility function', () => {
+  it.each`
+    options
+    ${'error'}
+    ${'warn'}
+    ${'new-line'}
+    ${'bold'}
+    ${'info'}
+    ${'success'}
+    ${'lite'}
+    ${['error', 'lite']}
+    ${['bold', 'new-line']}
+  `('toAnsi: format by output options: $options', ({ options }) => {
+    const t = toAnsi('a message', options);
+    expect(t).toMatchSnapshot();
+  });
+  it.each`
+    escSeq
+    ${AnsiSeq.error}
+    ${AnsiSeq.success}
+    ${AnsiSeq.warn}
+    ${AnsiSeq.info}
+    ${AnsiSeq.bold}
+    ${AnsiSeq.lf}
+  `('ansiEsc: format by ANSI escape sequence: $escSeq', ({ escSeq }) => {
+    expect(ansiEsc(escSeq, 'whatever')).toMatchSnapshot();
   });
 });

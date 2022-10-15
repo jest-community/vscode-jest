@@ -39,18 +39,12 @@ function getLocalPathForExecutable(rootPath: string, executable: string): string
  * Tries to read the test command from the scripts section within `package.json`
  *
  * Returns the test command in case of success,
- * `undefined` if there was an exception while reading and parsing `package.json`
- * `null` if there is no test script
+ * `undefined` otherwise
  */
-export function getTestCommand(rootPath: string): string | undefined | null {
-  try {
-    const packageJSON = getPackageJson(rootPath);
-    if (packageJSON && packageJSON.scripts && packageJSON.scripts.test) {
-      return packageJSON.scripts.test;
-    }
-    return null;
-  } catch {
-    return undefined;
+export function getTestCommand(rootPath: string): string | undefined {
+  const packageJSON = getPackageJson(rootPath);
+  if (packageJSON && packageJSON.scripts && packageJSON.scripts.test) {
+    return packageJSON.scripts.test;
   }
 }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -78,14 +72,11 @@ export function isCreateReactAppTestCommand(testCommand?: string | null): boolea
  */
 function isBootstrappedWithCreateReactApp(rootPath: string): boolean {
   const testCommand = getTestCommand(rootPath);
-  if (testCommand === undefined) {
-    // In case parsing `package.json` failed or was unconclusive,
-    // fallback to checking for the presence of the binaries in `./node_modules/.bin`
-    return createReactAppBinaryNames.some(
-      (binary) => getLocalPathForExecutable(rootPath, binary) !== undefined
-    );
-  }
-  return isCreateReactAppTestCommand(testCommand);
+  return testCommand
+    ? isCreateReactAppTestCommand(testCommand)
+    : createReactAppBinaryNames.some(
+        (binary) => getLocalPathForExecutable(rootPath, binary) !== undefined
+      );
 }
 
 /**
