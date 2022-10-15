@@ -13,6 +13,13 @@ import { toErrorString } from '../helpers';
 
 // wizard tasks - right now only 2, could easily add more
 export type WizardTaskId = 'cmdLine' | 'debugConfig' | 'monorepo';
+
+export const PendingSetupTaskKey = 'jest.PendingSetupTask';
+export interface PendingSetupTask {
+  workspace: string;
+  taskId: WizardTaskId;
+}
+
 export const StartWizardActionId: Record<WizardTaskId | 'exit', number> = {
   cmdLine: 0,
   debugConfig: 1,
@@ -33,6 +40,7 @@ export interface StartWizardOptions {
 }
 export const startWizard = (
   debugConfigProvider: vscode.DebugConfigurationProvider,
+  vscodeContext: vscode.ExtensionContext,
   options: StartWizardOptions = {}
 ): Promise<WizardStatus> => {
   const { workspace, taskId, verbose } = options;
@@ -77,7 +85,7 @@ export const startWizard = (
       ),
       actionItem(
         StartWizardActionId.monorepo,
-        '$(folder-library) Setup monorepo project',
+        '$(folder-library) Setup Monorepo Project',
         'setup and validate workspaces for monorepo project',
         () => runTask(context, 'monorepo')
       ),
@@ -108,6 +116,7 @@ export const startWizard = (
 
     const context: WizardContext = {
       debugConfigProvider,
+      vscodeContext,
       workspace,
       message,
       verbose,
@@ -125,5 +134,6 @@ export const startWizard = (
     }
   };
 
+  vscodeContext.globalState.update(PendingSetupTaskKey, undefined);
   return launch();
 };

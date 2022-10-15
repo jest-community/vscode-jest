@@ -16,7 +16,7 @@ describe('workspaceFolder', () => {
   beforeEach(() => {
     jest.resetAllMocks();
     (vscode as any).RelativePattern = jest.fn((_ws, p) => p);
-    (vscode.Uri as any).file = jest.fn((f) => ({ fsPath: f }));
+    (vscode.Uri as any).file = jest.fn((f) => ({ fsPath: f, path: f }));
     mockFindFiles = jest.fn();
     (vscode.workspace as any).findFiles = mockFindFiles;
   });
@@ -37,12 +37,12 @@ describe('workspaceFolder', () => {
 
       (getPackageJson as jest.Mocked<any>).mockReturnValue({ workspaces: ['folder-1'] });
 
-      mockFindFiles.mockReturnValue(Promise.resolve([{ fsPath: 'folder-1' }]));
+      mockFindFiles.mockReturnValue(Promise.resolve([{ fsPath: 'folder-1/package.json' }]));
       const wsManager = new WorkspaceManager();
       const uris = await wsManager.getFoldersFromFilesystem();
 
       expect(vscode.workspace.findFiles).toBeCalledTimes(1);
-      expect(vscode.RelativePattern).toBeCalledWith(expect.anything(), 'folder-1');
+      expect(vscode.RelativePattern).toBeCalledWith(expect.anything(), 'folder-1/package.json');
       expect(uris).toHaveLength(1);
       expect(uris.map((uri) => uri.fsPath)).toEqual(['folder-1']);
     });
@@ -86,7 +86,7 @@ describe('workspaceFolder', () => {
       (vscode.workspace.getWorkspaceFolder as jest.Mocked<any>).mockImplementation((u) => {
         const ws = u.fsPath.split(path.sep)[0];
         if (['root', 'folder-1', 'folder-2'].includes(ws)) {
-          return { uri: { fsPath: ws }, name: ws };
+          return { uri: toUri(ws), name: ws };
         }
       });
       (vscode as any).RelativePattern = jest.fn((ws, p) => [ws, p]);

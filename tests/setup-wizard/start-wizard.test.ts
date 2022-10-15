@@ -2,7 +2,12 @@ jest.unmock('../../src/setup-wizard/start-wizard');
 jest.unmock('./test-helper');
 import * as vscode from 'vscode';
 
-import { startWizard, StartWizardActionId, WizardTasks } from '../../src/setup-wizard/start-wizard';
+import {
+  PendingSetupTaskKey,
+  startWizard,
+  StartWizardActionId,
+  WizardTasks,
+} from '../../src/setup-wizard/start-wizard';
 import { showActionMenu } from '../../src/setup-wizard/wizard-helper';
 import * as tasks from '../../src/setup-wizard/tasks';
 import { mockWizardHelper, throwError, workspaceFolder } from './test-helper';
@@ -14,6 +19,12 @@ const { mockShowActionMenu, mockHelperSetup } = mockWizardHelper(mockHelper);
 
 describe('startWizard', () => {
   const mockDebugConfigProvider: any = {};
+  const vscodeContext: any = {
+    globalState: {
+      get: jest.fn(),
+      update: jest.fn(),
+    },
+  };
   beforeEach(() => {
     jest.resetAllMocks();
 
@@ -27,6 +38,14 @@ describe('startWizard', () => {
 
     mockTasks.setupJestCmdLine = jest.fn(() => Promise.resolve('success'));
     mockTasks.setupJestDebug = jest.fn(() => Promise.resolve('success'));
+  });
+  it('upon start up, will clear any pending task', async () => {
+    expect.hasAssertions();
+    mockHelper.showActionMenu.mockImplementation(() => {
+      return 'exit';
+    });
+    await startWizard(mockDebugConfigProvider, vscodeContext);
+    expect(vscodeContext.globalState.update).toBeCalledWith(PendingSetupTaskKey, undefined);
   });
   describe.each`
     taskId           | menuId
@@ -55,7 +74,9 @@ describe('startWizard', () => {
           return Promise.resolve(taskResult);
         });
 
-        await expect(startWizard(mockDebugConfigProvider)).resolves.toEqual(wizardResult);
+        await expect(startWizard(mockDebugConfigProvider, vscodeContext)).resolves.toEqual(
+          wizardResult
+        );
         expect(task).toBeCalledTimes(1);
         expect(showActionMenu).toBeCalledTimes(menuCallCount);
       }
@@ -80,9 +101,9 @@ describe('startWizard', () => {
 
       // exit the wizard via menu
       mockShowActionMenu(menuId, StartWizardActionId.exit);
-      await expect(startWizard(mockDebugConfigProvider, { workspace, taskId })).resolves.toEqual(
-        wizardResult
-      );
+      await expect(
+        startWizard(mockDebugConfigProvider, vscodeContext, { workspace, taskId })
+      ).resolves.toEqual(wizardResult);
 
       expect(task).toBeCalledTimes(1);
     });
@@ -92,7 +113,7 @@ describe('startWizard', () => {
     mockHelper.showActionMenu.mockImplementation(() => {
       throw 'whatever';
     });
-    await expect(startWizard(mockDebugConfigProvider)).resolves.toEqual('error');
+    await expect(startWizard(mockDebugConfigProvider, vscodeContext)).resolves.toEqual('error');
   });
   it('has a verbose mode', async () => {
     expect.hasAssertions();
@@ -102,16 +123,16 @@ describe('startWizard', () => {
 
     // exit the wizard via menu
     mockShowActionMenu(StartWizardActionId.exit);
-    await expect(startWizard(mockDebugConfigProvider, { verbose: true })).resolves.toEqual(
-      'success'
-    );
+    await expect(
+      startWizard(mockDebugConfigProvider, vscodeContext, { verbose: true })
+    ).resolves.toEqual('success');
     expect(console.log).toHaveBeenCalled();
 
     mockLog.mockClear();
     mockShowActionMenu(StartWizardActionId.exit);
-    await expect(startWizard(mockDebugConfigProvider, { verbose: false })).resolves.toEqual(
-      'success'
-    );
+    await expect(
+      startWizard(mockDebugConfigProvider, vscodeContext, { verbose: false })
+    ).resolves.toEqual('success');
     expect(console.log).not.toHaveBeenCalled();
   });
 });

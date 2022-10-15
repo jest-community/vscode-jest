@@ -25,6 +25,11 @@ interface ValidatePatternType {
   file: string[];
   binary: string[];
 }
+
+export const isSameWorkspace = (
+  ws1: vscode.WorkspaceFolder,
+  ws2: vscode.WorkspaceFolder
+): boolean => ws1.uri.path === ws2.uri.path;
 export class WorkspaceManager {
   /**
    * validate each workspace folder for jest run eligibility.
@@ -38,12 +43,12 @@ export class WorkspaceManager {
 
     const wsList: WorkspaceInfo[] = [];
     for (const ws of vscode.workspace.workspaceFolders) {
-      if (wsList.find((info) => info.workspace.name === ws.name)) {
+      if (wsList.find((info) => isSameWorkspace(info.workspace, ws))) {
         continue;
       }
       const list = await this.validateWorkspace(ws);
       list.forEach((info) => {
-        if (!wsList.find((i) => i.workspace.name === info.workspace.name)) {
+        if (!wsList.find((i) => isSameWorkspace(i.workspace, info.workspace))) {
           wsList.push(info);
         }
       });
@@ -111,7 +116,7 @@ export class WorkspaceManager {
       .map((uri) => this.toWorkspaceInfo(uri))
       .filter((wsInfo) => wsInfo != null) as WorkspaceInfo[];
 
-    if (wsInfo.length > 0 && wsInfo.find((info) => info.workspace.name === workspace.name)) {
+    if (wsInfo.length > 0 && wsInfo.find((info) => isSameWorkspace(info.workspace, workspace))) {
       return wsInfo;
     }
 
@@ -161,14 +166,15 @@ export class WorkspaceManager {
 
     throw new Error('failed to get monorepo workspaces info from file system');
   }
-  private async getFoldersByPackageFile(): Promise<vscode.Uri[]> {
+  private toDirUri = (uri: vscode.Uri): vscode.Uri => {
+    const dir = path.dirname(uri.fsPath);
+    return vscode.Uri.file(dir);
+  };
+  private getFoldersByPackageFile = async (): Promise<vscode.Uri[]> => {
     const results = await vscode.workspace.findFiles('**/package.json', '**/node_modules/**');
-    return results.map((uri) => {
-      const dir = path.dirname(uri.fsPath);
-      return vscode.Uri.file(dir);
-    });
-  }
-  private async getFoldersByPackageWorkspaces(): Promise<vscode.Uri[]> {
+    return results.map((uri) => this.toDirUri(uri));
+  };
+  private getFoldersByPackageWorkspaces = async (): Promise<vscode.Uri[]> => {
     if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length <= 0) {
       throw new Error('no workspace folder is open yet');
     }
@@ -179,10 +185,16 @@ export class WorkspaceManager {
     }
 
     const promises = workspaces.flatMap((ws) =>
-      vscode.workspace.findFiles(new vscode.RelativePattern(root, ws), '**/node_modules/**', 100)
+      vscode.workspace.findFiles(
+        new vscode.RelativePattern(root, `${ws}/package.json`),
+        '**/node_modules/**',
+        100
+      )
     );
 
-    const results = await Promise.all(promises);
-    return results.flatMap((list) => list);
-  }
+    const results = await Promise.allSettled(promises);
+    return results.flatMap((result) =>
+      result.status === 'fulfilled' ? result.value.map((uri) => this.toDirUri(uri)) : []
+    );
+  };
 }

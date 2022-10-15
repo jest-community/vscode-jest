@@ -32,10 +32,14 @@ describe('JestOutputTerminal', () => {
     const a = { name: 'Jest (a)', dispose: jest.fn() };
     const b = { name: 'Jest (b)', dispose: jest.fn() };
     (vscode.window.terminals as any) = [a, b];
-    new JestOutputTerminal('a');
+    const t = new JestOutputTerminal('a');
+    expect(vscode.window.createTerminal).not.toBeCalled();
+    expect(a.dispose).not.toBeCalled();
+
+    t.write('something');
+    expect(vscode.window.createTerminal).toBeCalled();
     expect(a.dispose).toBeCalled();
     expect(b.dispose).not.toBeCalled();
-    expect(vscode.window.createTerminal).not.toBeCalled();
   });
   it('can buffer output until open', () => {
     const output = new JestOutputTerminal('a');

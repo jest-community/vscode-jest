@@ -69,6 +69,7 @@ Content
     - [I don't see "Jest" in the bottom status bar](#i-dont-see-jest-in-the-bottom-status-bar)
     - [What to do with "Long Running Tests Warning"](#what-to-do-with-long-running-tests-warning)
     - [The tests and status do not match or some tests showing question marks unexpectedly?](#the-tests-and-status-do-not-match-or-some-tests-showing-question-marks-unexpectedly)
+    - [Why doesn't vscode debugger use my `jest.jestCommandLine`?](#why-doesnt-vscode-debugger-use-my-jestjestcommandline)
   - [Want to Contribute?](#want-to-contribute)
   - [License](#license)
 
@@ -106,7 +107,7 @@ The extension starts jest on behave of the user, therefore a valid Jest command 
 - custom jest command
   - if no default jest command is found, the extension will fail unless a custom jest command is configured.
   - user can set custom jest command with [jest.jestCommandLine](#jestcommandline) setting, for example  `"jest.jestCommandLine": "yarn test"` .  
-  - or to use the [Setup Wizard](setup-wizard.md) via command `"Jest: Setup Extension (Beta)"`.
+  - or to use the [Extension Setup Tool](setup-wizard.md) via command `"Jest: Setup Extension"`.
 
 ### How to trigger the test run?
 
@@ -141,7 +142,7 @@ Note: see [jest.autoRun](#autorun) for full control options.
 
 A test can be debugged via the debug codeLens appeared above the [debuggable](#debugcodelensshowwhenteststatein) tests. Simply clicking on the codeLens will launch vscode debugger for the specific test. The extension also supports parameterized tests and allows users to pick the specific parameter set to debug.
 
-The simplest use cases should be supported out-of-the-box. If VS Code displays errors about the attribute `program` or `runtimeExecutable` not being available, you can either use [setup wizard](setup-wizard.md) to help or create your own debug configuration within `launch.json`. See more details in [Customization - Debug Config](#debug-config).
+The simplest use cases should be supported out-of-the-box. If VS Code displays errors about the attribute `program` or `runtimeExecutable` not being available, you can either use [setup tool](setup-wizard.md) to help or create your own debug configuration within `launch.json`. See more details in [Customization - Debug Config](#debug-config).
 
 <details>
 
@@ -181,12 +182,16 @@ You can customize coverage start up behavior, style and colors, see [customizati
 ⚠️ In rare cases, coverage info might be less than what it actual is in "watch" mode (with `--watch` flag), where only changed files/tests are run (see facebook/jest#1284).
 
 ### How to use the extension with monorepo projects?
-The recommended approach is to setup the monorepo project as a [multi-root workspaces](https://code.visualstudio.com/docs/editor/multi-root-workspaces) in vscode. This is a simple one time setup that add each sub package as a "folder" in the workspace. 
 
-You can use `jest.disabledWorkspaceFolders` setting to exclude non-jest folders, if needed.
+The extension supports monorepo projects in the following configurations:
 
-Note: While you can use jest `projects` to run all tests without multi-root workspaces, you won't be able to take advantage a more fine grained control such as toggle coverage for a specific package instead of all packages.
+1. Single-root workspace: If all tests from monorepo packages can be run from a centralized location, such as project root, then a single-root workspace with proper ["jest.jestCommandLine"](#jestcommandline) and ["jest.rootPath"](#rootpath) setting should work. 
+2. Multi-root workspace: If each monorepo package has its own local jest root and configuration, a [multi-root workspaces](https://code.visualstudio.com/docs/editor/multi-root-workspaces) is required. Users can use `"jest.disabledWorkspaceFolders"` to exclude the packages from jest run. 
 
+Users might find it easier to setup monorepo project via a [Setup Tool](setup-wizard.md).
+
+Please note, a working jest environment is a prerequisite for this extension. If you are having problem running the tests from a terminal, please follow [jest](https://jestjs.io/docs/configuration) instruction to set it up first.
+   
 ### How to read the StatusBar?
 StatusBar shows 2 kinds of information:
 `Jest` shows the mode and state of the "active" workspace folder.
@@ -346,7 +351,7 @@ for example:
   The string type are short-hand for the most common configurations:
 
   | Short Hand | description | actual config | note |
-  |:-:|---|---|---|---|
+  |:-:|---|---|---|
   |**"watch"** |run jest in watch mode| {"watch": true} | the default mode|
   |**"off"**|turn off jest autoRun| {"watch": false} | this is the manual mode | 
   |**"legacy"**|starting a full test-run followed by jest watch| {"watch": true, "onStartup": ["all-tests"]} | he default mode prior to v4.7 | 
@@ -421,7 +426,7 @@ Note the LoginShell is only applicable for non-windows platform and could cause 
 
 This extension looks for jest specific debug config (`"vscode-jest-tests"` or `"vscode-jest-tests.v2"`) in the workspace `.vscode/launch.json`. If not found, it will attempt to generate a default config that should work for most standard jest or projects bootstrapped by `create-react-app`.
 
-If the default config is not working for your project, you can either use the [setup wizard](setup-wizard.md), probably the easier approach (available in v4), or edit the `launch.json` file manually.
+If the default config is not working for your project, you can either use the [setup tool](setup-wizard.md), probably the easier approach (available in v4), or edit the `launch.json` file manually.
 
 If you choose to edit the `launch.json` manually, you can use the jest templates, such as "Jest: Default jest configuration" or "Jest: create-react-app", as a starting point. See more detail on how to add debug config in vscode [Debugging](https://code.visualstudio.com/docs/editor/debugging#_launch-configurations).
 
@@ -517,7 +522,7 @@ This extension contributes the following commands and can be accessed via [Comma
 |Jest: Run All Tests (Select Workspace)| run all tests for the selected workspace|multi-root workspace
 |Jest: Run All Tests in Current Workspace| run all tests for the current workspace based on the active editor| always
 |Jest: Toggle Coverage for Current Workspace| toggle coverage mode for the current workspace based on the active editor| always
-|Jest: Setup Extension| start the setup wizard|always|
+|Jest: Setup Extension| start the setup tool|always|
 
 In addition, TestExplorer also exposed many handy commands, see the full list by searching for `testing` in  [vscode keyboard shortcuts editor](https://code.visualstudio.com/docs/getstarted/keybindings#_keyboard-shortcuts-editor). One can assign/change keyboard shortcut to any of these commands, see [vscode Key Bindings](https://code.visualstudio.com/docs/getstarted/keybindings) for more details.
 
@@ -549,11 +554,11 @@ Sorry you are having trouble with the extension. If your issue did not get resol
       - start vscode from a terminal 
       - add `PATH` directly to `jest.nodeEnv` settings, if that is the only problem.
       - force the jest command to be executed in a login shell by setting ["jest.shell"](#shell) to a LoginShell. Note this might have some slight performance overhead. 
-  - <a id="trouble-jest-cmdline"></a>***jest command line issue**: such as you usually run `yarn test` but the extension uses the default `jest` instead.
+  - <a id="trouble-jest-cmdline"></a>**jest command line issue**: such as you usually run `yarn test` but the extension uses the default `jest` instead.
     - Try configuring the [jest.jestCommandLine](#jestcommandline) to mimic how you run jest from the terminal, such as `yarn test` or `npm run test --`. The extension can auto-config common configurations like create react apps but not custom scripts like [CRACO](https://github.com/gsoft-inc/craco).
-    - or you can use the **"Run Setup Wizard"** button in the error panel to resolve the configuration issue, see [Setup Wizard](setup-wizard.md).  
-  - **monorepo project issue**: you have a monorepo project but not setup as a [multi-root workspace](https://code.visualstudio.com/docs/editor/multi-root-workspaces). 
-    - see [monorepo projects](#how-to-use-the-extension-with-monorepo-projects) on how to set it up correctly.
+    - or you can use the **"Run Setup Tool"** button in the error panel to resolve the configuration issue, see [Setup Tool](setup-wizard.md).  
+  - **monorepo project issue**: you have a monorepo project but might not have been set up properly. 
+    - see more in [monorepo projects](#how-to-use-the-extension-with-monorepo-projects) on how to set it up.
 
 There could be other causes, such as jest test root path is different from the project's, which can be fixed by setting [jest.rootPath](#rootPath). Feel free to check out the [customization](#customization) section to manually adjust the extension if needed.
 
@@ -584,6 +589,10 @@ You can also turn off the monitor or change the threshold with ["jest.monitorLon
 If your test file happen to have parameterized tests, i.e. `test.each` variations, please make sure you have jest version >= 26.5.
 
 If the above did not resolve your issue, please see the [self-diagnosis](#how-to-see-more-debug-info-self-diagnosis) to show more insight of why the test and result could not be matched.
+
+### Why doesn't vscode debugger use my `jest.jestCommandLine`?
+
+vscode debug scheme is through the debug config in `launch.json`, which is different from the regular jest test runs that we control the jest process command (via `jest.jestCommandLine`). Therefore, we are experimenting with a [setup tool](setup-wizard.m) to bridge the gap: take the user's `jest.jestCommandLine` and generate a `launch.json` entry accordingly. But given the wide variety of user environments, it might not cover all cases, thus always encourage users to experiment and fix what is not working, and feel free to let us know so we can improve the wizard for future usage.
 
 ## Want to Contribute?
 

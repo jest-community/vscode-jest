@@ -812,7 +812,11 @@ describe('createSaveConfig', () => {
     await saveConfig(entry);
 
     expect(mockUpdate).toBeCalledTimes(1);
-    expect(mockUpdate).toBeCalledWith(entry.name, entry.value);
+    expect(mockUpdate).toBeCalledWith(
+      entry.name,
+      entry.value,
+      vscode.ConfigurationTarget.WorkspaceFolder
+    );
   });
   it('can save multiple entries', async () => {
     expect.hasAssertions();
@@ -823,8 +827,33 @@ describe('createSaveConfig', () => {
     await saveConfig(entry1, entry2);
 
     expect(mockUpdate).toBeCalledTimes(2);
-    expect(mockUpdate).toHaveBeenNthCalledWith(1, entry1.name, entry1.value);
-    expect(mockUpdate).toHaveBeenNthCalledWith(2, entry2.name, entry2.value);
+    expect(mockUpdate).toHaveBeenNthCalledWith(
+      1,
+      entry1.name,
+      entry1.value,
+      vscode.ConfigurationTarget.WorkspaceFolder
+    );
+    expect(mockUpdate).toHaveBeenNthCalledWith(
+      2,
+      entry2.name,
+      entry2.value,
+      vscode.ConfigurationTarget.WorkspaceFolder
+    );
+  });
+  it('will save to workspace target if no workspace is given', async () => {
+    expect.hasAssertions();
+    mockUpdate.mockReturnValue(Promise.resolve());
+    context.workspace = undefined;
+    const saveConfig = createSaveConfig(context);
+    const entry = { name: 'jest.disabledWorkspaceFolders', value: '[]' };
+    await saveConfig(entry);
+
+    expect(mockUpdate).toBeCalledTimes(1);
+    expect(mockUpdate).toBeCalledWith(
+      entry.name,
+      entry.value,
+      vscode.ConfigurationTarget.Workspace
+    );
   });
   it('when save failed, throws error', async () => {
     expect.hasAssertions();

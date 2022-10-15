@@ -42,5 +42,5 @@ export const throwError = (msg: string): void => {
 
 export const workspaceFolder = (name: string): any => ({
   name,
-  uri: { fsPath: name },
+  uri: { fsPath: name, path: name },
 });

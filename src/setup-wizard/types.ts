@@ -3,6 +3,7 @@ import { JestExtOutput } from '../JestExt/output-terminal';
 
 export interface WizardContext {
   debugConfigProvider: vscode.DebugConfigurationProvider;
+  vscodeContext: vscode.ExtensionContext;
   workspace?: vscode.WorkspaceFolder;
   message: JestExtOutput['write'];
   verbose?: boolean;

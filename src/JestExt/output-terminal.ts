@@ -31,11 +31,6 @@ export class ExtOutputTerminal implements JestExtOutput {
   };
   private _terminal?: vscode.Terminal;
   constructor(private name: string) {
-    vscode.window.terminals.forEach((t) => {
-      if (t.name === this.name) {
-        t.dispose();
-      }
-    });
     this.ptyIsOpen = false;
     this.pendingMessages = [];
   }
@@ -45,6 +40,11 @@ export class ExtOutputTerminal implements JestExtOutput {
     if (this._terminal) {
       return;
     }
+    vscode.window.terminals.forEach((t) => {
+      if (t.name === this.name) {
+        t.dispose();
+      }
+    });
     this._terminal = vscode.window.createTerminal({
       name: this.name,
       iconPath: new vscode.ThemeIcon('beaker'),

@@ -4,6 +4,12 @@ import * as path from 'path';
 
 export const createWizardContext = (debugConfigProvider: any, wsName?: string): any => ({
   debugConfigProvider,
+  vscodeContext: {
+    globalState: {
+      get: jest.fn(),
+      update: jest.fn(),
+    },
+  },
   workspace: wsName ? workspaceFolder(wsName) : undefined,
   message: jest.fn(),
 });
@@ -31,4 +37,7 @@ export const validateTaskConfigUpdate = <T>(
   }
 };
 
-export const toUri = (...pathParts: string[]): any => ({ fsPath: path.join(...pathParts) });
+export const toUri = (...pathParts: string[]): any => ({
+  fsPath: path.join(...pathParts),
+  path: pathParts.join('/'),
+});

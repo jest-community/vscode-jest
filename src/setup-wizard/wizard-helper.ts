@@ -352,8 +352,18 @@ export const createSaveConfig =
     const config = vscode.workspace.getConfiguration(undefined, workspace?.uri);
 
     const promises = entries.map((e) => {
-      message(`Updating "${e.name}" in vscode`);
-      return config.update(e.name, e.value);
+      message(
+        `Updating setting "${e.name}" in vscode workspace ${
+          workspace ? `folder ${workspace.name}` : ''
+        }`
+      );
+      return config.update(
+        e.name,
+        e.value,
+        workspace
+          ? vscode.ConfigurationTarget.WorkspaceFolder
+          : vscode.ConfigurationTarget.Workspace
+      );
     });
     return Promise.all(promises)
       .then(() => {

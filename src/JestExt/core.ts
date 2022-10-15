@@ -20,10 +20,10 @@ import { Logging } from '../logging';
 import { createProcessSession, ProcessSession } from './process-session';
 import { JestExtContext, JestSessionEvents, JestExtSessionContext, JestRunEvent } from './types';
 import * as messaging from '../messaging';
-import { SupportedLanguageIds } from '../appGlobals';
+import { extensionName, SupportedLanguageIds } from '../appGlobals';
 import { createJestExtContext, getExtensionResourceSettings, prefixWorkspace } from './helper';
 import { PluginResourceSettings } from '../Settings';
-import { startWizard, WizardTaskId } from '../setup-wizard';
+import { WizardTaskId } from '../setup-wizard';
 import { JestExtExplorerContext } from '../test-provider/types';
 import { JestTestProvider } from '../test-provider';
 import { JestProcessInfo } from '../JestProcessManagement';
@@ -129,10 +129,11 @@ export class JestExt {
     };
   }
   private setupWizardAction(taskId?: WizardTaskId): messaging.MessageAction {
+    const command = `${extensionName}.setup-extension`;
     return {
-      title: 'Run Setup Wizard',
+      title: 'Run Setup Tool',
       action: (): unknown =>
-        startWizard(this.debugConfigurationProvider, {
+        vscode.commands.executeCommand(command, {
           workspace: this.extContext.workspace,
           taskId,
           verbose: this.extContext.settings.debugMode,
