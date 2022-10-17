@@ -56,7 +56,7 @@ describe('ProcessSession', () => {
       ${'by-file-test'}         | ${{ testFileName: 'abc', testNamePattern: 'a test' }}        | ${{ queue: 'blocking-2', dedup: { filterByStatus: ['pending'], filterByContent: true } }} | ${undefined}
       ${'by-file-pattern'}      | ${{ testFileNamePattern: 'abc' }}                            | ${{ queue: 'blocking-2', dedup: { filterByStatus: ['pending'] } }}                        | ${undefined}
       ${'by-file-test-pattern'} | ${{ testFileNamePattern: 'abc', testNamePattern: 'a test' }} | ${{ queue: 'blocking-2', dedup: { filterByStatus: ['pending'], filterByContent: true } }} | ${undefined}
-      ${'list-test-files'}      | ${undefined}                                                 | ${{ queue: 'non-blocking', dedup: { filterByStatus: ['pending'] } }}                      | ${{ type: 'not-test', args: ['--listTests', '--json', '--watchAll=false'] }}
+      ${'list-test-files'}      | ${undefined}                                                 | ${{ queue: 'non-blocking', dedup: { filterByStatus: ['pending'] } }}                      | ${{ type: 'not-test', args: ['--list-tests', '--json', '--watch-all=false'] }}
     `(
       "can schedule '$type' request with ProcessManager",
       ({ type, inputProperty, expectedSchedule, expectedExtraProperty }) => {

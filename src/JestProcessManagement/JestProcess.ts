@@ -112,30 +112,30 @@ export class JestProcess implements JestProcessInfo {
 
     switch (this.request.type) {
       case 'all-tests':
-        args.push('--watchAll=false');
+        args.push('--watch-all=false');
         if (this.request.updateSnapshot) {
-          args.push('--updateSnapshot');
+          args.push('--update-snapshot');
         }
         break;
       case 'by-file': {
         const fileName = this.quoteFileName(this.request.testFileName);
-        args.push('--watchAll=false');
+        args.push('--watch-all=false');
         if (this.request.notTestFile) {
-          args.push('--findRelatedTests', fileName);
+          args.push('--find-related-tests', fileName);
         } else {
           options.testFileNamePattern = fileName;
-          args.push('--runTestsByPath');
+          args.push('--run-tests-by-path');
         }
         if (this.request.updateSnapshot) {
-          args.push('--updateSnapshot');
+          args.push('--update-snapshot');
         }
         break;
       }
       case 'by-file-pattern': {
         const regex = this.quoteFilePattern(escapeRegExp(this.request.testFileNamePattern));
-        args.push('--watchAll=false', '--testPathPattern', regex);
+        args.push('--watch-all=false', '--test-path-pattern', regex);
         if (this.request.updateSnapshot) {
-          args.push('--updateSnapshot');
+          args.push('--update-snapshot');
         }
         break;
       }
@@ -146,9 +146,9 @@ export class JestProcess implements JestProcessInfo {
           escapeRegExp(this.request.testNamePattern),
           this.extContext.settings.shell
         );
-        args.push('--runTestsByPath', '--watchAll=false');
+        args.push('--run-tests-by-path', '--watch-all=false');
         if (this.request.updateSnapshot) {
-          args.push('--updateSnapshot');
+          args.push('--update-snapshot');
         }
         break;
       }
@@ -158,9 +158,9 @@ export class JestProcess implements JestProcessInfo {
           escapeRegExp(this.request.testNamePattern),
           this.extContext.settings.shell
         );
-        args.push('--watchAll=false', '--testPathPattern', regex);
+        args.push('--watch-all=false', '--test-path-pattern', regex);
         if (this.request.updateSnapshot) {
-          args.push('--updateSnapshot');
+          args.push('--update-snapshot');
         }
         break;
       }

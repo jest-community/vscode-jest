@@ -142,12 +142,12 @@ describe('JestProcess', () => {
       ${'all-tests'}            | ${undefined}                                                     | ${[false, false]} | ${true}         | ${undefined}
       ${'watch-tests'}          | ${undefined}                                                     | ${[true, false]}  | ${true}         | ${undefined}
       ${'watch-all-tests'}      | ${undefined}                                                     | ${[true, true]}   | ${true}         | ${undefined}
-      ${'by-file'}              | ${{ testFileName: '"c:\\a\\b.ts"' }}                             | ${[false, false]} | ${true}         | ${{ args: { args: ['--runTestsByPath'] }, testFileNamePattern: '"C:\\a\\b.ts"' }}
-      ${'by-file'}              | ${{ testFileName: '"c:\\a\\b.ts"', notTestFile: true }}          | ${[false, false]} | ${true}         | ${{ args: { args: ['--findRelatedTests', '"C:\\a\\b.ts"'] } }}
-      ${'by-file-test'}         | ${{ testFileName: '"/a/b.js"', testNamePattern: 'a test' }}      | ${[false, false]} | ${true}         | ${{ args: { args: ['--runTestsByPath'] }, testFileNamePattern: '"/a/b.js"', testNamePattern: '"a test"' }}
-      ${'by-file-pattern'}      | ${{ testFileNamePattern: '"c:\\a\\b.ts"' }}                      | ${[false, false]} | ${true}         | ${{ args: { args: ['--testPathPattern', '"c:\\\\a\\\\b\\.ts"'] } }}
-      ${'by-file-test-pattern'} | ${{ testFileNamePattern: '/a/b.js', testNamePattern: 'a test' }} | ${[false, false]} | ${true}         | ${{ args: { args: ['--testPathPattern', '"/a/b\\.js"'] }, testNamePattern: '"a test"' }}
-      ${'not-test'}             | ${{ args: ['--listTests', '--watchAll=false'] }}                 | ${[false, false]} | ${false}        | ${{ args: { args: ['--listTests'], replace: true } }}
+      ${'by-file'}              | ${{ testFileName: '"c:\\a\\b.ts"' }}                             | ${[false, false]} | ${true}         | ${{ args: { args: ['--run-tests-by-path'] }, testFileNamePattern: '"C:\\a\\b.ts"' }}
+      ${'by-file'}              | ${{ testFileName: '"c:\\a\\b.ts"', notTestFile: true }}          | ${[false, false]} | ${true}         | ${{ args: { args: ['--find-related-tests', '"C:\\a\\b.ts"'] } }}
+      ${'by-file-test'}         | ${{ testFileName: '"/a/b.js"', testNamePattern: 'a test' }}      | ${[false, false]} | ${true}         | ${{ args: { args: ['--run-tests-by-path'] }, testFileNamePattern: '"/a/b.js"', testNamePattern: '"a test"' }}
+      ${'by-file-pattern'}      | ${{ testFileNamePattern: '"c:\\a\\b.ts"' }}                      | ${[false, false]} | ${true}         | ${{ args: { args: ['--test-path-pattern', '"c:\\\\a\\\\b\\.ts"'] } }}
+      ${'by-file-test-pattern'} | ${{ testFileNamePattern: '/a/b.js', testNamePattern: 'a test' }} | ${[false, false]} | ${true}         | ${{ args: { args: ['--test-path-pattern', '"/a/b\\.js"'] }, testNamePattern: '"a test"' }}
+      ${'not-test'}             | ${{ args: ['--list-tests', '--watch-all=false'] }}               | ${[false, false]} | ${false}        | ${{ args: { args: ['--list-tests'], replace: true } }}
     `(
       'supports jest process request: $type',
       async ({ type, extraProperty, startArgs, includeReporter, extraRunnerOptions }) => {
@@ -187,7 +187,7 @@ describe('JestProcess', () => {
         ${'by-file-test'}         | ${{ testFileName: '"/a/b.js"', testNamePattern: 'a test' }}      | ${true}      | ${true}
         ${'by-file-pattern'}      | ${{ testFileNamePattern: '"c:\\a\\b.ts"' }}                      | ${true}      | ${true}
         ${'by-file-test-pattern'} | ${{ testFileNamePattern: '/a/b.js', testNamePattern: 'a test' }} | ${true}      | ${true}
-        ${'not-test'}             | ${{ args: ['--listTests', '--watchAll=false'] }}                 | ${true}      | ${false}
+        ${'not-test'}             | ${{ args: ['--list-tests', '--watch-all=false'] }}               | ${true}      | ${false}
       `(
         'request $type: excludeWatch:$excludeWatch, withColors:$withColors',
         async ({ type, extraProperty, excludeWatch, withColors }) => {
@@ -205,9 +205,9 @@ describe('JestProcess', () => {
             expect(options.args.args).not.toContain('--colors');
           }
           if (excludeWatch) {
-            expect(options.args.args).toContain('--watchAll=false');
+            expect(options.args.args).toContain('--watch-all=false');
           } else {
-            expect(options.args.args).not.toContain('--watchAll=false');
+            expect(options.args.args).not.toContain('--watch-all=false');
           }
         }
       );
@@ -229,9 +229,9 @@ describe('JestProcess', () => {
       jestProcess.start();
       const [, options] = RunnerClassMock.mock.calls[0];
       if (expectUpdate) {
-        expect(options.args.args).toContain('--updateSnapshot');
+        expect(options.args.args).toContain('--update-snapshot');
       } else {
-        expect(options.args.args).not.toContain('--updateSnapshot');
+        expect(options.args.args).not.toContain('--update-snapshot');
       }
     });
     it('starting on a running process does nothing but returns the same promise', () => {
