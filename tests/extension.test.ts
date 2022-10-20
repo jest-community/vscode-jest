@@ -35,6 +35,7 @@ const extensionManager = {
   unregisterAll: jest.fn(),
   registerCommand: jest.fn().mockImplementation((args) => args),
   activate: jest.fn(),
+  startWizard: jest.fn(),
 };
 
 // tslint:disable-next-line: variable-name
@@ -47,7 +48,6 @@ jest.mock('../src/extensionManager', () => ({
 
 import * as vscode from 'vscode';
 import { activate, deactivate } from '../src/extension';
-import { startWizard } from '../src/setup-wizard';
 
 (vscode.commands as any).registerCommand = jest.fn().mockImplementation((...args) => args);
 (vscode.window as any).onDidChangeActiveTextEditor = jest
@@ -177,8 +177,7 @@ describe('Extension', () => {
       });
 
       expect(callArg).toBeDefined();
-      callArg[1]();
-      expect(startWizard).toHaveBeenCalled();
+      expect(callArg[1]).toBe(extensionManager.startWizard);
     });
 
     it('should register a DebugConfigurationProvider', () => {

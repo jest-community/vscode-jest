@@ -36,7 +36,8 @@ const defaultJestDebugConfig = {
 };
 
 const mockHelper = helper as jest.Mocked<any>;
-const { mockShowActionMenu, mockShowActionMessage, mockHelperSetup } = mockWizardHelper(mockHelper);
+const { mockShowActionMenu, mockShowActionMessage, mockHelperSetup, mockSelectWorkspace } =
+  mockWizardHelper(mockHelper);
 
 describe('wizard-tasks', () => {
   const mockProvideDebugConfigurations = jest.fn();
@@ -132,9 +133,10 @@ describe('wizard-tasks', () => {
     };
 
     beforeEach(() => {
-      context = createWizardContext('single-root', debugConfigProvider);
+      context = createWizardContext(debugConfigProvider, 'single-root');
 
       mockShowActionMessage('info', DebugSetupActionId.info);
+      mockSelectWorkspace('whatever');
 
       mockTextDocument.getText.mockReturnValue(`
         line 1...
@@ -146,6 +148,34 @@ describe('wizard-tasks', () => {
       vscode.Uri.joinPath = jest
         .fn()
         .mockImplementation((_uri: any, ...paths: string[]) => `/_uri_/${paths.join('/')}`);
+    });
+    describe('always works with explicit workspace', () => {
+      it.each`
+        case | wsInContext  | selectWs     | willAbort
+        ${1} | ${undefined} | ${undefined} | ${true}
+        ${2} | ${undefined} | ${'ws-2'}    | ${false}
+        ${3} | ${'ws-1'}    | ${undefined} | ${false}
+        ${4} | ${'ws-1'}    | ${undefined} | ${false}
+      `('case $case', async ({ wsInContext, selectWs, willAbort }) => {
+        expect.hasAssertions();
+
+        mockHelper.showActionMessage.mockReturnValueOnce(undefined);
+        mockSelectWorkspace(selectWs);
+        const c = createWizardContext(debugConfigProvider, wsInContext);
+
+        await setupJestDebug(c);
+
+        if (wsInContext) {
+          expect(mockHelper.selectWorkspace).not.toBeCalled();
+        } else {
+          expect(mockHelper.selectWorkspace).toBeCalled();
+        }
+        if (willAbort) {
+          expect(mockHelper.showActionMessage).not.toBeCalled();
+        } else {
+          expect(mockHelper.showActionMessage).toBeCalled();
+        }
+      });
     });
     describe(`will prompt user to setup jestCommandLine if missing`, () => {
       let mockCmdLineTask;
@@ -301,12 +331,16 @@ describe('wizard-tasks', () => {
         mockShowActionMenu(DebugSetupActionId.acceptExisting);
         await expect(setupJestDebug(context)).resolves.toEqual('success');
       });
-    });
-    it(`can abort task`, async () => {
-      expect.hasAssertions();
-      mockHelper.showActionMenu.mockReturnValue(undefined);
-      wizardSettings = { jestCommandLine: 'something' };
-      await expect(setupJestDebug(context)).resolves.toBeUndefined();
+      it(`can abort task`, async () => {
+        expect.hasAssertions();
+        const v1Config: any = { name: `${DEBUG_CONFIG_NAME}` };
+        wizardSettings = {
+          jestCommandLine: 'whatever',
+          configurations: [v1Config, otherConfig],
+        };
+        mockHelper.showActionMenu.mockReturnValue(undefined);
+        await expect(setupJestDebug(context)).resolves.toBeUndefined();
+      });
     });
   });
 });

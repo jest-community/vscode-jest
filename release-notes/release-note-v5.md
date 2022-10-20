@@ -1,7 +1,6 @@
 # vscode-jest v5 Releases <!-- omit in toc --> 
 
 ---
-
 - [v5.0.0 (pre-release)](#v500-pre-release)
   - [Features](#features)
     - [Output Terminals](#output-terminals)
@@ -44,6 +43,7 @@ While there are many work arounds, we want to add one more option for users pref
 
 Note, the extra initialization might have some performance overhead, use this with caution.
 
+(#874 - @connectdotz)
 ([#874](https://github.com/jest-community/vscode-jest/pull/874) - @connectdotz)
 
 #### Long Run Monitor

@@ -6,6 +6,13 @@ import { PluginWindowSettings } from './Settings';
 import { statusBar } from './StatusBar';
 import { CoverageCodeLensProvider } from './Coverage';
 import { extensionId, extensionName } from './appGlobals';
+import {
+  PendingSetupTask,
+  PendingSetupTaskKey,
+  startWizard,
+  StartWizardOptions,
+  WizardTaskId,
+} from './setup-wizard';
 
 export type GetJestExtByURI = (uri: vscode.Uri) => JestExt | undefined;
 
@@ -58,10 +65,12 @@ const CommandPrefix: Record<CommandType, string> = {
   'active-text-editor': `${extensionName}.editor`,
   'active-text-editor-workspace': `${extensionName}.editor.workspace`,
 };
+export type StartWizardFunc = (options?: StartWizardOptions) => ReturnType<typeof startWizard>;
 export class ExtensionManager {
   debugCodeLensProvider: DebugCodeLensProvider;
   debugConfigurationProvider: DebugConfigurationProvider;
   coverageCodeLensProvider: CoverageCodeLensProvider;
+  startWizard: StartWizardFunc;
 
   private extByWorkspace: Map<string, JestExt> = new Map();
   private context: vscode.ExtensionContext;
@@ -75,9 +84,29 @@ export class ExtensionManager {
     this.debugConfigurationProvider = new DebugConfigurationProvider();
     this.debugCodeLensProvider = new DebugCodeLensProvider(this.getByDocUri);
     this.coverageCodeLensProvider = new CoverageCodeLensProvider(this.getByDocUri);
+    this.startWizard = (options?: StartWizardOptions) =>
+      startWizard(this.debugConfigurationProvider, context, options);
     this.applySettings(this.commonPluginSettings);
   }
+  private getPendingSetupTask(): WizardTaskId | undefined {
+    const task = this.context.globalState.get<PendingSetupTask>(PendingSetupTaskKey);
+    if (
+      task &&
+      vscode.workspace.workspaceFolders &&
+      vscode.workspace.workspaceFolders[0].name === task.workspace
+    ) {
+      return task.taskId;
+    }
+  }
   applySettings(settings: PluginWindowSettings): void {
+    const setupTask = this.getPendingSetupTask();
+    if (setupTask) {
+      console.warn(
+        `setup task ${setupTask} in progress, skip extension activation to resume setup`
+      );
+      this.startWizard({ taskId: setupTask });
+      return;
+    }
     this.commonPluginSettings = settings;
     const { debugCodeLens } = settings;
     this.debugCodeLensProvider.showWhenTestStateIn = debugCodeLens.enabled
@@ -206,13 +235,12 @@ export class ExtensionManager {
   }
 
   onDidChangeConfiguration(e: vscode.ConfigurationChangeEvent): void {
-    if (e.affectsConfiguration('jest')) {
-      this.applySettings(getExtensionWindowSettings());
-    }
-    vscode.workspace.workspaceFolders?.forEach((workspaceFolder) => {
-      const jestExt = this.getByName(workspaceFolder.name);
-      if (jestExt && e.affectsConfiguration('jest', workspaceFolder.uri)) {
-        jestExt.triggerUpdateSettings();
+    vscode.workspace.workspaceFolders?.forEach((workspaceFolder, idx) => {
+      if (e.affectsConfiguration('jest', workspaceFolder.uri)) {
+        if (idx === 0) {
+          this.applySettings(getExtensionWindowSettings());
+        }
+        this.getByName(workspaceFolder.name)?.triggerUpdateSettings();
       }
     });
   }

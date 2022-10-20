@@ -15,7 +15,8 @@ import { validateTaskConfigUpdate, createWizardContext } from './task-test-helpe
 import * as path from 'path';
 
 const mockHelper = helper as jest.Mocked<any>;
-const { mockShowActionMenu, mockShowActionMessage, mockHelperSetup } = mockWizardHelper(mockHelper);
+const { mockShowActionMenu, mockShowActionMessage, mockHelperSetup, mockSelectWorkspace } =
+  mockWizardHelper(mockHelper);
 
 describe('wizard-tasks', () => {
   const mockSaveConfig = jest.fn();
@@ -51,7 +52,37 @@ describe('wizard-tasks', () => {
 
     let context;
     beforeEach(() => {
-      context = createWizardContext('single-root', debugConfigProvider);
+      context = createWizardContext(debugConfigProvider);
+      mockSelectWorkspace('whatever');
+    });
+
+    describe('always works with explicit workspace', () => {
+      it.each`
+        case | wsInContext  | selectWs     | willAbort
+        ${1} | ${undefined} | ${undefined} | ${true}
+        ${2} | ${undefined} | ${'ws-2'}    | ${false}
+        ${3} | ${'ws-1'}    | ${undefined} | ${false}
+        ${4} | ${'ws-1'}    | ${undefined} | ${false}
+      `('case $case', async ({ wsInContext, selectWs, willAbort }) => {
+        expect.hasAssertions();
+
+        mockHelper.getConfirmation = jest.fn().mockReturnValue(Promise.resolve(true));
+        mockSelectWorkspace(selectWs);
+        const c = createWizardContext(debugConfigProvider, wsInContext);
+
+        await setupJestCmdLine(c);
+
+        if (wsInContext) {
+          expect(mockHelper.selectWorkspace).not.toBeCalled();
+        } else {
+          expect(mockHelper.selectWorkspace).toBeCalled();
+        }
+        if (willAbort) {
+          expect(mockHelper.getConfirmation).not.toBeCalled();
+        } else {
+          expect(mockHelper.getConfirmation).toBeCalled();
+        }
+      });
     });
     describe('wthout existing command settings should ask user to input it', () => {
       it.each`
@@ -72,12 +103,9 @@ describe('wizard-tasks', () => {
         expect.hasAssertions();
 
         mockHelper.getConfirmation = jest.fn().mockReturnValue(Promise.resolve(false));
-        // mock the info message
-        mockShowActionMessage('warning', CLSetupActionId.info);
 
-        await expect(setupJestCmdLine(context)).resolves.toEqual('error');
+        await expect(setupJestCmdLine(context)).resolves.toEqual('abort');
         expect(mockHelper.getConfirmation).toHaveBeenCalled();
-        expect(mockHelper.showActionMessage).toHaveBeenCalled();
         expect(mockHelper.showActionInputBox).not.toHaveBeenCalled();
       });
       describe('when use can run jest in terminal', () => {

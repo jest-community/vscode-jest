@@ -7,19 +7,30 @@ import {
   WIZARD_HELP_URL,
 } from './types';
 import { jsonOut, actionItem, showActionMenu } from './wizard-helper';
-import { setupJestCmdLine, setupJestDebug } from './tasks';
-
-export const StartWizardActionId = {
-  cmdLine: 0,
-  debugConfig: 1,
-  exit: 2,
-};
+import { setupJestCmdLine, setupJestDebug, setupMonorepo } from './tasks';
+import { ExtOutputTerminal, OutputOptions } from '../JestExt/output-terminal';
+import { toErrorString } from '../helpers';
 
 // wizard tasks - right now only 2, could easily add more
-export type WizardTaskId = 'cmdLine' | 'debugConfig';
+export type WizardTaskId = 'cmdLine' | 'debugConfig' | 'monorepo';
+
+export const PendingSetupTaskKey = 'jest.PendingSetupTask';
+export interface PendingSetupTask {
+  workspace: string;
+  taskId: WizardTaskId;
+}
+
+export const StartWizardActionId: Record<WizardTaskId | 'exit', number> = {
+  cmdLine: 0,
+  debugConfig: 1,
+  monorepo: 2,
+  exit: 3,
+};
+
 export const WizardTasks: { [key in WizardTaskId]: { task: SetupTask; actionId: number } } = {
   ['cmdLine']: { task: setupJestCmdLine, actionId: StartWizardActionId.cmdLine },
   ['debugConfig']: { task: setupJestDebug, actionId: StartWizardActionId.debugConfig },
+  ['monorepo']: { task: setupMonorepo, actionId: StartWizardActionId.monorepo },
 };
 
 export interface StartWizardOptions {
@@ -29,36 +40,33 @@ export interface StartWizardOptions {
 }
 export const startWizard = (
   debugConfigProvider: vscode.DebugConfigurationProvider,
+  vscodeContext: vscode.ExtensionContext,
   options: StartWizardOptions = {}
 ): Promise<WizardStatus> => {
   const { workspace, taskId, verbose } = options;
 
-  const _output = vscode.window.createOutputChannel('vscode-jest Setup');
+  const terminal = new ExtOutputTerminal('vscode-jest Setup Tool');
 
-  const dispose = (): void => {
-    // TODO dispose the outputChannel once wizard is out of beta
-  };
-
-  const message = (msg: string, section?: string): void => {
-    if (section) {
-      const m = `\n===== ${section} =====\n`;
-      _output.appendLine(m);
-      if (verbose) {
-        console.log(`<SetupWizard> ${m}`);
-      }
-    }
+  const message = (msg: string, opt?: OutputOptions): string => {
+    const str = terminal.write(`${msg}${opt ? '' : '\r\n'}`, opt);
     if (verbose) {
-      console.log(`<SetupWizard> ${msg}`);
+      console.log(`<SetupTool> ${msg}`);
     }
-    _output.appendLine(msg);
-    _output.show(true);
+    return str;
   };
 
   const runTask = async (context: WizardContext, taskId: WizardTaskId): Promise<WizardStatus> => {
-    message(`starting ${taskId} task...`);
-    const result = await WizardTasks[taskId].task(context);
-    message(`${taskId} task returns ${result}`);
-    return result;
+    try {
+      const wsMsg = context.workspace ? `in workspace "${context.workspace.name}"` : '';
+      message(`=== starting ${taskId} task ${wsMsg} ===\r\n`, 'new-line');
+
+      const result = await WizardTasks[taskId].task(context);
+      message(`=== ${taskId} task completed with status "${result}" ===\r\n`, 'new-line');
+      return result;
+    } catch (e) {
+      message(`setup ${taskId} task encountered unexpected error:\r\n${toErrorString(e)}`, 'error');
+    }
+    return 'error';
   };
 
   const showMainMenu = async (context: WizardContext): Promise<WizardStatus> => {
@@ -75,7 +83,13 @@ export const startWizard = (
         'setup launch.json to debug jest tests',
         () => runTask(context, 'debugConfig')
       ),
-      actionItem(StartWizardActionId.exit, '$(close) Exit', 'Exit the setup wizard', () =>
+      actionItem(
+        StartWizardActionId.monorepo,
+        '$(folder-library) Setup Monorepo Project',
+        'setup and validate workspaces for monorepo project',
+        () => runTask(context, 'monorepo')
+      ),
+      actionItem(StartWizardActionId.exit, '$(close) Exit', 'Exit the setup tool', () =>
         Promise.resolve('exit')
       ),
     ];
@@ -86,7 +100,7 @@ export const startWizard = (
     );
     do {
       result = await showActionMenu(menuItems, {
-        title: 'vscode-jest Setup Wizard',
+        title: 'vscode-jest Setup Tool',
         placeholder: 'select a set up action below',
         selectItemIdx,
         verbose,
@@ -95,56 +109,31 @@ export const startWizard = (
     } while (result !== 'exit' && result !== 'error');
     return result;
   };
-  const workspaceSetup = (context: WizardContext): Promise<WizardStatus> => {
-    return showMainMenu(context);
-  };
-
-  const selectWorkspace = async (): Promise<vscode.WorkspaceFolder | undefined> => {
-    message('', 'Select a workspace folder to set up...');
-    if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length <= 0) {
-      return Promise.resolve(undefined);
-    }
-    return vscode.workspace.workspaceFolders.length <= 1
-      ? Promise.resolve(vscode.workspace.workspaceFolders[0])
-      : await vscode.window.showWorkspaceFolderPick();
-  };
 
   const launch = async (): Promise<WizardStatus> => {
-    _output.show(true);
-    _output.clear();
+    message(`Setup Tool Guide: ${WIZARD_HELP_URL}`, 'info');
+    terminal.show();
 
-    message(`Welcome to vscode-jest setup wizard!`);
-    message(`\t(More info about the setup wizard: ${WIZARD_HELP_URL})`);
+    const context: WizardContext = {
+      debugConfigProvider,
+      vscodeContext,
+      workspace,
+      message,
+      verbose,
+    };
 
-    const ws = workspace || (await selectWorkspace());
-
-    if (ws) {
-      message(`=> workspace "${ws.name}" is selected`);
-
-      const context: WizardContext = {
-        debugConfigProvider,
-        workspace: ws,
-        message,
-        verbose,
-      };
-
-      try {
-        const status = await workspaceSetup(context);
-        message(`\nwizard is done: status = ${status}`);
-        return status === 'exit' ? 'success' : status;
-      } catch (e) {
-        console.error(`wizard caught error:`, e);
-        message(`\nwizard exit with error: ${jsonOut(e)}`);
-        return 'error';
-      } finally {
-        dispose();
-      }
-    } else {
-      message(`\nNo workspace is selected, abort wizard`);
-      dispose();
-      return 'abort';
+    try {
+      const s = await showMainMenu(context);
+      const status = s === 'exit' ? 'success' : s;
+      message(`\nsetup-tool exit with status "${status}"`);
+      return status;
+    } catch (e) {
+      console.error(`setup-tool caught error:`, e);
+      message(`\nsetup-tool exit with error: ${jsonOut(e)}`);
+      return 'error';
     }
   };
 
+  vscodeContext.globalState.update(PendingSetupTaskKey, undefined);
   return launch();
 };

@@ -3,7 +3,6 @@ import * as vscode from 'vscode';
 import { statusBar } from './StatusBar';
 import { ExtensionManager, getExtensionWindowSettings } from './extensionManager';
 import { registerSnapshotCodeLens, registerSnapshotPreview } from './SnapshotCodeLens';
-import { startWizard, StartWizardOptions } from './setup-wizard';
 import { JestExt } from './JestExt';
 import { extensionName } from './appGlobals';
 
@@ -93,8 +92,7 @@ const addSubscriptions = (context: vscode.ExtensionContext): void => {
     }),
     vscode.commands.registerCommand(
       `${extensionName}.setup-extension`,
-      (options: StartWizardOptions = { verbose: true }) =>
-        startWizard(extensionManager.debugConfigurationProvider, options)
+      extensionManager.startWizard
     ),
     ...registerSnapshotCodeLens(getExtensionWindowSettings()?.enableSnapshotPreviews ?? false),
     ...registerSnapshotPreview(),

@@ -19,9 +19,10 @@ import {
   createSaveConfig,
   showActionMessage,
   validateCommandLine,
+  selectWorkspace,
 } from '../../src/setup-wizard/wizard-helper';
 import { ActionMessageType, WizardStatus } from '../../src/setup-wizard/types';
-import { throwError } from './test-helper';
+import { throwError, workspaceFolder } from './test-helper';
 
 describe('QuickInput Proxy', () => {
   const mockOnDidTriggerButton = jest.fn();
@@ -839,6 +840,21 @@ describe('createSaveConfig', () => {
       vscode.ConfigurationTarget.WorkspaceFolder
     );
   });
+  it('will save to workspace target if no workspace is given', async () => {
+    expect.hasAssertions();
+    mockUpdate.mockReturnValue(Promise.resolve());
+    context.workspace = undefined;
+    const saveConfig = createSaveConfig(context);
+    const entry = { name: 'jest.disabledWorkspaceFolders', value: '[]' };
+    await saveConfig(entry);
+
+    expect(mockUpdate).toBeCalledTimes(1);
+    expect(mockUpdate).toBeCalledWith(
+      entry.name,
+      entry.value,
+      vscode.ConfigurationTarget.Workspace
+    );
+  });
   it('when save failed, throws error', async () => {
     expect.hasAssertions();
     mockUpdate
@@ -852,5 +868,18 @@ describe('createSaveConfig', () => {
     await expect(saveConfig(entry1, entry2, entry3)).rejects.toEqual('failed');
 
     expect(mockUpdate).toBeCalledTimes(3);
+  });
+});
+
+describe('selectWorkspace', () => {
+  it.each`
+    desc                    | workspaceFolders                                      | callCount
+    ${'single-workspace'}   | ${[workspaceFolder('single-root')]}                   | ${0}
+    ${'multiple-workspace'} | ${[workspaceFolder('ws-1'), workspaceFolder('ws-2')]} | ${1}
+  `('will only prompt to picker if multi-root: $desc', async ({ workspaceFolders, callCount }) => {
+    expect.hasAssertions();
+    (vscode.workspace as any).workspaceFolders = workspaceFolders;
+    await selectWorkspace();
+    expect(vscode.window.showWorkspaceFolderPick).toBeCalledTimes(callCount);
   });
 });

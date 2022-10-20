@@ -1,8 +1,16 @@
+/* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 import { workspaceFolder } from '../test-helper';
+import * as path from 'path';
 
-export const createWizardContext = (wsName: string, debugConfigProvider: any) => ({
+export const createWizardContext = (debugConfigProvider: any, wsName?: string): any => ({
   debugConfigProvider,
-  workspace: workspaceFolder(wsName),
+  vscodeContext: {
+    globalState: {
+      get: jest.fn(),
+      update: jest.fn(),
+    },
+  },
+  workspace: wsName ? workspaceFolder(wsName) : undefined,
   message: jest.fn(),
 });
 
@@ -10,7 +18,7 @@ export const validateTaskConfigUpdate = <T>(
   mockSaveConfig: jest.Mocked<any>,
   key: string,
   callBack?: (value?: T) => void
-) => {
+): any => {
   if (!callBack) {
     expect(mockSaveConfig).not.toHaveBeenCalled();
     return;
@@ -28,3 +36,8 @@ export const validateTaskConfigUpdate = <T>(
     callBack();
   }
 };
+
+export const toUri = (...pathParts: string[]): any => ({
+  fsPath: path.join(...pathParts),
+  path: pathParts.join('/'),
+});

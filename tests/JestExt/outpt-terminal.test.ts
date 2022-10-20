@@ -2,7 +2,7 @@ jest.unmock('../../src/JestExt/output-terminal');
 jest.unmock('../../src/errors');
 
 import * as vscode from 'vscode';
-import { JestOutputTerminal } from '../../src/JestExt/output-terminal';
+import { ansiEsc, AnsiSeq, JestOutputTerminal, toAnsi } from '../../src/JestExt/output-terminal';
 import * as errors from '../../src/errors';
 
 describe('JestOutputTerminal', () => {
@@ -32,10 +32,14 @@ describe('JestOutputTerminal', () => {
     const a = { name: 'Jest (a)', dispose: jest.fn() };
     const b = { name: 'Jest (b)', dispose: jest.fn() };
     (vscode.window.terminals as any) = [a, b];
-    new JestOutputTerminal('a');
+    const t = new JestOutputTerminal('a');
+    expect(vscode.window.createTerminal).not.toBeCalled();
+    expect(a.dispose).not.toBeCalled();
+
+    t.write('something');
+    expect(vscode.window.createTerminal).toBeCalled();
     expect(a.dispose).toBeCalled();
     expect(b.dispose).not.toBeCalled();
-    expect(vscode.window.createTerminal).not.toBeCalled();
   });
   it('can buffer output until open', () => {
     const output = new JestOutputTerminal('a');
@@ -100,5 +104,33 @@ describe('JestOutputTerminal', () => {
       const t = output.write(text, options);
       expect(t).toMatchSnapshot();
     });
+  });
+});
+describe('text format utility function', () => {
+  it.each`
+    options
+    ${'error'}
+    ${'warn'}
+    ${'new-line'}
+    ${'bold'}
+    ${'info'}
+    ${'success'}
+    ${'lite'}
+    ${['error', 'lite']}
+    ${['bold', 'new-line']}
+  `('toAnsi: format by output options: $options', ({ options }) => {
+    const t = toAnsi('a message', options);
+    expect(t).toMatchSnapshot();
+  });
+  it.each`
+    desc         | escSeq
+    ${'error'}   | ${AnsiSeq.error}
+    ${'success'} | ${AnsiSeq.success}
+    ${'warn'}    | ${AnsiSeq.warn}
+    ${'info'}    | ${AnsiSeq.info}
+    ${'bold'}    | ${AnsiSeq.bold}
+    ${'lf'}      | ${AnsiSeq.lf}
+  `('ansiEsc: format by ANSI escape sequence: $desc', ({ escSeq }) => {
+    expect(ansiEsc(escSeq, 'whatever')).toMatchSnapshot();
   });
 });

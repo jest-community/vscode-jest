@@ -10,15 +10,14 @@ export interface JestExtOutput {
 }
 
 /** termerinal per workspace */
-export class JestOutputTerminal implements JestExtOutput {
-  private name;
+export class ExtOutputTerminal implements JestExtOutput {
   private pendingMessages: string[];
   private ptyIsOpen: boolean;
   private writeEmitter = new vscode.EventEmitter<string>();
   private pty: vscode.Pseudoterminal = {
     onDidWrite: this.writeEmitter.event,
     open: () => {
-      this.writeEmitter.fire(`${this.name}: Test Run Output \r\n`);
+      this.writeEmitter.fire(`${this.name}\r\n`);
       if (this.pendingMessages.length > 0) {
         this.writeEmitter.fire(this.pendingMessages.join(''));
         this.pendingMessages = [];
@@ -31,13 +30,7 @@ export class JestOutputTerminal implements JestExtOutput {
     },
   };
   private _terminal?: vscode.Terminal;
-  constructor(workspaceName: string) {
-    this.name = `Jest (${workspaceName})`;
-    vscode.window.terminals.forEach((t) => {
-      if (t.name === this.name) {
-        t.dispose();
-      }
-    });
+  constructor(private name: string) {
     this.ptyIsOpen = false;
     this.pendingMessages = [];
   }
@@ -47,6 +40,11 @@ export class JestOutputTerminal implements JestExtOutput {
     if (this._terminal) {
       return;
     }
+    vscode.window.terminals.forEach((t) => {
+      if (t.name === this.name) {
+        t.dispose();
+      }
+    });
     this._terminal = vscode.window.createTerminal({
       name: this.name,
       iconPath: new vscode.ThemeIcon('beaker'),
@@ -83,6 +81,11 @@ export class JestOutputTerminal implements JestExtOutput {
     this._terminal?.dispose();
   }
 }
+export class JestOutputTerminal extends ExtOutputTerminal {
+  constructor(workspaceName: string) {
+    super(`Jest (${workspaceName})`);
+  }
+}
 
 export const AnsiSeq = {
   error: '\x1b[0;31m',
@@ -93,8 +96,20 @@ export const AnsiSeq = {
   end: '\x1b[0m',
   lf: '\r\n',
 };
+export type AnsiSeqType = keyof typeof AnsiSeq;
 
-export type OutputOptionShort = 'error' | 'warn' | 'new-line' | 'bold';
+export const ansiEsc = (type: AnsiSeqType, text: string): string => {
+  return `${AnsiSeq[type]}${text}${AnsiSeq.end}`;
+};
+
+export type OutputOptionShort =
+  | 'error'
+  | 'warn'
+  | 'new-line'
+  | 'bold'
+  | 'info'
+  | 'success'
+  | 'lite';
 export type OutputOptions =
   | Array<OutputOptionShort | ExtErrorDef>
   | OutputOptionShort
@@ -113,31 +128,41 @@ const isErrorOutputType = (options?: OutputOptions): boolean => {
   return options.type === 'error';
 };
 /** convert string to ansi-coded string based on the options */
-const applyAnsiSeq = (text: string, opt: OutputOptionShort): string => {
+const applyAnsiSeq = (text: string, opt: OutputOptionShort, useLite = false): string => {
   switch (opt) {
     case 'error':
     case 'warn':
+    case 'info':
+    case 'success':
+      if (useLite) {
+        return `${AnsiSeq[opt]}${text}${AnsiSeq.end}${AnsiSeq.lf}`;
+      }
       return `${AnsiSeq.lf}${AnsiSeq[opt]}[${opt}] ${text}${AnsiSeq.end}${AnsiSeq.lf}`;
     case 'bold':
       return `${AnsiSeq[opt]}${text}${AnsiSeq.end}`;
     case 'new-line':
       return `${AnsiSeq.lf}${text}${AnsiSeq.lf}`;
+    default:
+      return text;
   }
 };
 
-export const toAnsi = (msg: string, options?: OutputOptions): string => {
+export const toAnsi = (msg: string, options?: OutputOptions): string =>
+  _toAnsi(msg, options, false);
+const _toAnsi = (msg: string, options?: OutputOptions, useLite = false): string => {
   let text = msg.replace(/\n/g, '\r\n');
   if (!options) {
     return text;
   }
   if (Array.isArray(options)) {
-    return options.reduce((t, opt) => toAnsi(t, opt), msg);
+    const _useLite = useLite || options.includes('lite');
+    return options.reduce((t, opt) => _toAnsi(t, opt, _useLite), msg);
   }
 
   if (typeof options === 'string') {
-    text = applyAnsiSeq(text, options);
+    text = applyAnsiSeq(text, options, useLite);
   } else {
-    text = applyAnsiSeq(text, options.type);
+    text = applyAnsiSeq(text, options.type, useLite);
     text = `${text}${AnsiSeq.lf}${AnsiSeq.info}[info]${AnsiSeq.end} ${options.desc}, please see: ${options.helpLink}${AnsiSeq.lf}`;
   }
   return text;

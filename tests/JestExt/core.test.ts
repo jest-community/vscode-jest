@@ -1142,7 +1142,16 @@ describe('JestExt', () => {
           expect(messaging.systemErrorMessage).toHaveBeenCalledWith(
             'something is wrong',
             { action: expect.any(Function), title: 'Help' },
-            { action: expect.any(Function), title: 'Run Setup Wizard' }
+            { action: expect.any(Function), title: 'Run Setup Tool' }
+          );
+          const setupAction: MessageAction = (messaging.systemErrorMessage as jest.Mocked<any>).mock
+            .calls[0][2];
+
+          setupAction.action();
+
+          expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+            expect.stringContaining('setup-extension'),
+            expect.objectContaining({ workspace: workspaceFolder })
           );
         });
         it('if error: status bar stopped and show error with ignore folder button', () => {
@@ -1153,7 +1162,7 @@ describe('JestExt', () => {
           expect(messaging.systemErrorMessage).toHaveBeenCalledWith(
             '(test-folder) something is wrong',
             { action: expect.any(Function), title: 'Help' },
-            { action: expect.any(Function), title: 'Run Setup Wizard' },
+            { action: expect.any(Function), title: 'Run Setup Tool' },
             { action: expect.any(Function), title: 'Ignore Folder' }
           );
 
