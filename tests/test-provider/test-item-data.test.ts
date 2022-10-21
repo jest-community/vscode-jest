@@ -1358,6 +1358,52 @@ describe('test-item-data', () => {
         expect(aRequest).toBe(runRequest);
         expect(option.item.id).toEqual(item.id);
       });
+      it('run explicit test block will not hang run', () => {
+        const process: any = mockScheduleProcess(context);
+        const item = env.scheduleItem('testBlock');
+        createTestRunSpy.mockClear();
+
+        expect(process.request.run).toBe(jestRun);
+        expect(process.request.run.vscodeRun.enqueued).toHaveBeenCalledWith(item);
+        expect(process.request.run.item).toBe(item);
+
+        //end the process: will not actually end the run but to only notify the provider
+        env.onRunEvent({ type: 'end', process });
+        expect(process.request.run.isClosed()).toBeFalsy();
+        expect(notifyProvider).toHaveBeenCalled();
+
+        //the parent run ends before test process completes
+        pRun.end();
+        expect(jestRun.isClosed()).toBeTruthy();
+        expect(process.request.run.isClosed()).toBeTruthy();
+
+        //received more data event: will create new run
+        env.onRunEvent({ type: 'data', process, raw: 'whatever', text: 'whatever' });
+        expect(createTestRunSpy).toHaveBeenCalledTimes(1);
+
+        // but will not keep creating runs
+        env.onRunEvent({ type: 'data', process, raw: 'again', text: 'again' });
+        expect(createTestRunSpy).toHaveBeenCalledTimes(1);
+
+        runMock = controllerMock.lastRunMock();
+        expect(runMock.end).not.toHaveBeenCalled();
+
+        // prepare for result processing
+        controllerMock.createTestRun.mockClear();
+        createTestRunSpy.mockClear();
+
+        // triggers testSuiteChanged event listener
+        context.ext.testResolveProvider.events.testSuiteChanged.event.mock.calls[0][0]({
+          type: 'assertions-updated',
+          process,
+          files: [env.file],
+        });
+
+        // expect the item status to be updated in the existing run
+        expect(controllerMock.createTestRun).not.toHaveBeenCalled();
+        // and the run should be closed at this point
+        expect(runMock.end).toHaveBeenCalled();
+      });
     });
     describe('extension managed autoRun', () => {
       let createTestRunSpy;
