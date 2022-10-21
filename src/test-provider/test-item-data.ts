@@ -330,9 +330,15 @@ export class WorkspaceRoot extends TestItemDataBase {
         case 'data': {
           const text = event.raw ?? event.text;
           if (text && text.length > 0) {
-            run = run ?? this.createRunForEvent(event);
+            const _run = run ?? this.createRunForEvent(event);
             const opt = event.isError ? 'error' : event.newLine ? 'new-line' : undefined;
-            run.write(text, opt);
+            _run.write(text, opt);
+            // sometimes we will get data event after "end" event, in such case if we don't close the run
+            // and there is no result generated, such as in runtime exec situation, we will leave with a hanging run.
+            // therefore, we will close the run always if we had to open a run here.
+            if (!run) {
+              _run.end();
+            }
           }
           break;
         }

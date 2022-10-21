@@ -1358,7 +1358,7 @@ describe('test-item-data', () => {
         expect(aRequest).toBe(runRequest);
         expect(option.item.id).toEqual(item.id);
       });
-      it('run explicit test block will not hang run', () => {
+      it('run explicit test block will not hang run with or without result', () => {
         const process: any = mockScheduleProcess(context);
         const item = env.scheduleItem('testBlock');
         createTestRunSpy.mockClear();
@@ -1377,16 +1377,17 @@ describe('test-item-data', () => {
         expect(jestRun.isClosed()).toBeTruthy();
         expect(process.request.run.isClosed()).toBeTruthy();
 
-        //received more data event: will create new run
+        //received more data event: will create new run and close it when done
         env.onRunEvent({ type: 'data', process, raw: 'whatever', text: 'whatever' });
         expect(createTestRunSpy).toHaveBeenCalledTimes(1);
-
-        // but will not keep creating runs
-        env.onRunEvent({ type: 'data', process, raw: 'again', text: 'again' });
-        expect(createTestRunSpy).toHaveBeenCalledTimes(1);
-
         runMock = controllerMock.lastRunMock();
-        expect(runMock.end).not.toHaveBeenCalled();
+        expect(runMock.end).toHaveBeenCalled();
+
+        // next data event will create and end the same as previous
+        env.onRunEvent({ type: 'data', process, raw: 'again', text: 'again' });
+        expect(createTestRunSpy).toHaveBeenCalledTimes(2);
+        runMock = controllerMock.lastRunMock();
+        expect(runMock.end).toHaveBeenCalled();
 
         // prepare for result processing
         controllerMock.createTestRun.mockClear();
@@ -1399,9 +1400,9 @@ describe('test-item-data', () => {
           files: [env.file],
         });
 
-        // expect the item status to be updated in the existing run
-        expect(controllerMock.createTestRun).not.toHaveBeenCalled();
-        // and the run should be closed at this point
+        // expect the item status to be updated with a new run
+        expect(controllerMock.createTestRun).toHaveBeenCalledTimes(1);
+        // and the run should be closed
         expect(runMock.end).toHaveBeenCalled();
       });
     });
