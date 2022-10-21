@@ -292,11 +292,15 @@ export class WorkspaceRoot extends TestItemDataBase {
   };
   /** return a valid run from process or process-run-cache. return undefined if run is closed. */
   private getJestRun = (process: JestProcessInfo): JestTestRun | undefined => {
-    const run = isJestTestRunRequest(process.request)
-      ? process.request.run
-      : this.cachedRun.get(process.id);
-
-    return run?.isClosed() ? undefined : run;
+    if (isJestTestRunRequest(process.request) && !process.request.run.isClosed()) {
+      return process.request.run;
+    }
+    const run = this.cachedRun.get(process.id);
+    if (run?.isClosed()) {
+      this.cachedRun.delete(process.id);
+      return;
+    }
+    return run;
   };
 
   private runLog(type: string): void {
