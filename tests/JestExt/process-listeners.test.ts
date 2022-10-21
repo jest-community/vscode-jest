@@ -20,7 +20,7 @@ describe('jest process listeners', () => {
   beforeEach(() => {
     jest.resetAllMocks();
 
-    jest.useFakeTimers('legacy');
+    jest.useFakeTimers({ legacyFakeTimers: true });
     jest.spyOn(global, 'setTimeout');
     jest.spyOn(global, 'clearTimeout');
 

@@ -59,7 +59,7 @@ describe('JestProcess', () => {
     jestProcess = new JestProcess(extContext, request);
     expect(`${jestProcess}`).toEqual(jestProcess.toString());
     expect(jestProcess.toString()).toMatchInlineSnapshot(
-      `"JestProcess: id: all-tests-0, request: {\\"type\\":\\"all-tests\\",\\"schedule\\":{\\"queue\\":\\"blocking\\"},\\"listener\\":\\"function\\"}; stopReason: undefined"`
+      `"JestProcess: id: all-tests-0, request: {"type":"all-tests","schedule":{"queue":"blocking"},"listener":"function"}; stopReason: undefined"`
     );
   });
   describe('when creating', () => {
