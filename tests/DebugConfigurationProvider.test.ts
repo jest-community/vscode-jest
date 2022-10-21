@@ -24,11 +24,11 @@ describe('DebugConfigurationProvider', () => {
     expect(config.program).toMatch('jest');
     expect(config.args).toEqual(
       expect.arrayContaining([
-        '--runInBand',
-        '--watchAll=false',
-        '--testNamePattern',
+        '--run-in-band',
+        '--watch-all=false',
+        '--test-name-pattern',
         '${jest.testNamePattern}',
-        '--runTestsByPath',
+        '--run-tests-by-path',
         '${jest.testFile}',
       ])
     );
@@ -53,20 +53,20 @@ describe('DebugConfigurationProvider', () => {
       expect.arrayContaining([
         'test',
         '--env=jsdom',
-        '--runInBand',
-        '--watchAll=false',
-        '--testNamePattern',
+        '--run-in-band',
+        '--watch-all=false',
+        '--test-name-pattern',
         '${jest.testNamePattern}',
-        '--runTestsByPath',
+        '--run-tests-by-path',
         '${jest.testFile}',
       ])
     );
   });
 
   it.each`
-    debugConfigArgs    | expectedArgs
-    ${[]}              | ${['--testNamePattern', testName, '--runTestsByPath', fileName]}
-    ${['--runInBand']} | ${['--runInBand', '--testNamePattern', testName, '--runTestsByPath', fileName]}
+    debugConfigArgs      | expectedArgs
+    ${[]}                | ${['--test-name-pattern', testName, '--run-tests-by-path', fileName]}
+    ${['--run-in-band']} | ${['--run-in-band', '--test-name-pattern', testName, '--run-tests-by-path', fileName]}
   `(
     'should append the specified tests arguments for non-v2 config',
     ({ debugConfigArgs, expectedArgs }) => {
@@ -81,7 +81,7 @@ describe('DebugConfigurationProvider', () => {
 
       expect(configuration).toBeDefined();
       expect(configuration.env && configuration.env.CI).toBeTruthy();
-      if (expectedArgs.includes('--runTestsByPath')) {
+      if (expectedArgs.includes('--run-tests-by-path')) {
         expect(toFilePath).toHaveBeenCalled();
       }
       expect(configuration.args).toEqual(expectedArgs);
@@ -90,13 +90,13 @@ describe('DebugConfigurationProvider', () => {
   describe('v2 config', () => {
     const fileNamePattern = 'a/b/test\\.ts';
     it.each`
-      args                                                                                        | expected
-      ${[]}                                                                                       | ${[]}
-      ${['${jest.testFile}']}                                                                     | ${[fileName]}
-      ${['${jest.testFilePattern}']}                                                              | ${[fileNamePattern]}
-      ${['${jest.testNamePattern}']}                                                              | ${[testName]}
-      ${['--testNamePattern', '${jest.testNamePattern}', '--runTestsByPath', '${jest.testFile}']} | ${['--testNamePattern', testName, '--runTestsByPath', fileName]}
-      ${['${jest.testNamePattern}', true]}                                                        | ${[testName, true]}
+      args                                                                                             | expected
+      ${[]}                                                                                            | ${[]}
+      ${['${jest.testFile}']}                                                                          | ${[fileName]}
+      ${['${jest.testFilePattern}']}                                                                   | ${[fileNamePattern]}
+      ${['${jest.testNamePattern}']}                                                                   | ${[testName]}
+      ${['--test-name-pattern', '${jest.testNamePattern}', '--run-tests-by-path', '${jest.testFile}']} | ${['--test-name-pattern', testName, '--run-tests-by-path', fileName]}
+      ${['${jest.testNamePattern}', true]}                                                             | ${[testName, true]}
     `('will only translate known variables: $args', ({ args, expected }) => {
       (toFilePath as unknown as jest.Mock<{}>).mockReturnValueOnce(fileName);
       (escapeRegExp as unknown as jest.Mock<{}>).mockReturnValueOnce(fileNamePattern);

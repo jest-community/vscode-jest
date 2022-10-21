@@ -39,10 +39,10 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
 
     if (this.fileNameToRun) {
       if (this.testToRun) {
-        args.push('--testNamePattern');
+        args.push('--test-name-pattern');
         args.push(this.testToRun);
       }
-      args.push('--runTestsByPath');
+      args.push('--run-tests-by-path');
       args.push(toFilePath(this.fileNameToRun));
 
       this.fileNameToRun = '';
@@ -112,11 +112,11 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
       name: 'vscode-jest-tests.v2',
       request: 'launch',
       args: [
-        '--runInBand',
-        '--watchAll=false',
-        '--testNamePattern',
+        '--run-in-band',
+        '--watch-all=false',
+        '--test-name-pattern',
         '${jest.testNamePattern}',
-        '--runTestsByPath',
+        '--run-tests-by-path',
         '${jest.testFile}',
       ],
       cwd: '${workspaceFolder}',

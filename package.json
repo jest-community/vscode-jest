@@ -352,11 +352,11 @@
               "request": "launch",
               "program": "^\"\\${workspaceFolder}/node_modules/.bin/jest\"",
               "args": [
-                "--runInBand",
-                "--watchAll=false",
-                "--testNamePattern",
+                "--run-in-band",
+                "--watch-all=false",
+                "--test-name-pattern",
                 "${jest.testNamePattern}",
-                "--runTestsByPath",
+                "--run-tests-by-path",
                 "${jest.testFile}"
               ],
               "cwd": "^\"\\${workspaceFolder}\"",
@@ -379,11 +379,11 @@
               "args": [
                 "test",
                 "--env=jsdom",
-                "--runInBand",
-                "--watchAll=false",
-                "--testNamePattern",
+                "--run-in-band",
+                "--watch-all=false",
+                "--test-name-pattern",
                 "${jest.testNamePattern}",
-                "--runTestsByPath",
+                "--run-tests-by-path",
                 "${jest.testFile}"
               ],
               "cwd": "^\"\\${workspaceFolder}\"",
@@ -403,11 +403,11 @@
               "program": "^\"\\${workspaceFolder}/scripts/test\"",
               "args": [
                 "--env=jsdom",
-                "--runInBand",
-                "--watchAll=false",
-                "--testNamePattern",
+                "--run-in-band",
+                "--watch-all=false",
+                "--test-name-pattern",
                 "${jest.testNamePattern}",
-                "--runTestsByPath",
+                "--run-tests-by-path",
                 "${jest.testFile}"
               ],
               "cwd": "^\"\\${workspaceFolder}\"",

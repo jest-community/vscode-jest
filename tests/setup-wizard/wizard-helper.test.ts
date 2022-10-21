@@ -511,15 +511,15 @@ describe('showActionMessage', () => {
 
 describe('validateCommandLine', () => {
   it.each`
-    cmdLine                            | isValid
-    ${''}                              | ${false}
-    ${'npm test'}                      | ${false}
-    ${'npm test --'}                   | ${true}
-    ${'npm test -- --runInBand'}       | ${true}
-    ${'npm test --runInBand --'}       | ${true}
-    ${'yarn test'}                     | ${true}
-    ${'yarn test --runInBand'}         | ${true}
-    ${'whatever npm test --runInBand'} | ${true}
+    cmdLine                              | isValid
+    ${''}                                | ${false}
+    ${'npm test'}                        | ${false}
+    ${'npm test --'}                     | ${true}
+    ${'npm test -- --run-in-band'}       | ${true}
+    ${'npm test --run-in-band --'}       | ${true}
+    ${'yarn test'}                       | ${true}
+    ${'yarn test --run-in-band'}         | ${true}
+    ${'whatever npm test --run-in-band'} | ${true}
   `('npm without "--" is invalid', ({ cmdLine, isValid }) => {
     if (isValid) {
       expect(validateCommandLine(cmdLine)).toBeUndefined();
@@ -539,7 +539,7 @@ describe('mergeDebugConfigWithCmdLine', () => {
     type: 'node',
     name: 'vscode-jest-tests',
     request: 'launch',
-    args: ['--runInBand'],
+    args: ['--run-in-band'],
     cwd: '${workspaceFolder}',
     console: 'integratedTerminal',
     internalConsoleOptions: 'neverOpen',
@@ -554,11 +554,11 @@ describe('mergeDebugConfigWithCmdLine', () => {
     name: 'vscode-jest-tests.v2',
     request: 'launch',
     args: [
-      '--runInBand',
-      '--watchAll=false',
-      '--testNamePattern',
+      '--run-in-band',
+      '--watch-all=false',
+      '--test-name-pattern',
       '${jest.testNamePattern}',
-      '--runTestsByPath',
+      '--run-tests-by-path',
       '${jest.testFile}',
     ],
     cwd: '${workspaceFolder}',
@@ -606,7 +606,7 @@ describe('mergeDebugConfigWithCmdLine', () => {
         ${false} | ${'../jest --config="../jest-config.json"'}                   | ${{ cmd: '../jest', args: ['--config=', '"../jest-config.json"'], program: '${workspaceFolder}/../jest' }}
         ${false} | ${'../jest --config "a dir/jest-config.json" --coverage'}     | ${{ cmd: '../jest', args: ['--config', '"a dir/jest-config.json"', '--coverage'], program: '${workspaceFolder}/../jest' }}
         ${false} | ${'jest --config "../dir with space/jest-config.json"'}       | ${{ cmd: 'jest', args: ['--config', '"../dir with space/jest-config.json"'], program: '${workspaceFolder}/jest' }}
-        ${false} | ${'/absolute/jest --runInBand'}                               | ${{ cmd: '/absolute/jest', args: ['--runInBand'], program: '/absolute/jest' }}
+        ${false} | ${'/absolute/jest --run-in-band'}                             | ${{ cmd: '/absolute/jest', args: ['--run-in-band'], program: '/absolute/jest' }}
         ${false} | ${'"dir with space/jest" --arg1=1 --arg2 2 "some string"'}    | ${{ cmd: 'dir with space/jest', args: ['--arg1=1', '--arg2', '2', '"some string"'], program: '${workspaceFolder}/dir with space/jest' }}
         ${false} | ${'"/dir with space/jest" --arg1=1 --arg2 2 "some string"'}   | ${{ cmd: '/dir with space/jest', args: ['--arg1=1', '--arg2', '2', '"some string"'], program: '/dir with space/jest' }}
         ${false} | ${"'/dir with space/jest' --arg1=1 --arg2 2 'some string'"}   | ${{ cmd: '/dir with space/jest', args: ['--arg1=1', '--arg2', '2', "'some string'"], program: '/dir with space/jest' }}
@@ -614,7 +614,7 @@ describe('mergeDebugConfigWithCmdLine', () => {
         ${true}  | ${'.\\node_modules\\.bin\\jest'}                              | ${{ cmd: 'node_modules\\.bin\\jest', args: [], program: '${workspaceFolder}\\node_modules\\.bin\\jest' }}
         ${true}  | ${'..\\jest --config="..\\jest-config.json"'}                 | ${{ cmd: '..\\jest', args: ['--config=', '"..\\jest-config.json"'], program: '${workspaceFolder}\\..\\jest' }}
         ${true}  | ${'jest --config "..\\dir with space\\jest-config.json"'}     | ${{ cmd: 'jest', args: ['--config', '"..\\dir with space\\jest-config.json"'], program: '${workspaceFolder}\\jest' }}
-        ${true}  | ${'\\absolute\\jest --runInBand'}                             | ${{ cmd: '\\absolute\\jest', args: ['--runInBand'], program: '\\absolute\\jest' }}
+        ${true}  | ${'\\absolute\\jest --run-in-band'}                           | ${{ cmd: '\\absolute\\jest', args: ['--run-in-band'], program: '\\absolute\\jest' }}
         ${true}  | ${'"\\dir with space\\jest" --arg1=1 --arg2 2 "some string"'} | ${{ cmd: '\\dir with space\\jest', args: ['--arg1=1', '--arg2', '2', '"some string"'], program: '\\dir with space\\jest' }}
         ${true}  | ${'c:\\jest --arg1 "escaped \\"this\\" string" --arg2 2'}     | ${{ cmd: 'c:\\jest', args: ['--arg1', '"escaped \\"this\\" string"', '--arg2', '2'], program: 'c:\\jest' }}
       `('$cmdLine', ({ cmdLine, expected, isWin32 }) => {
@@ -637,7 +637,7 @@ describe('mergeDebugConfigWithCmdLine', () => {
             program: newProgram,
             ...restNewConfig
           } = mergeDebugConfigWithCmdLine(config, cmdLine);
-          expect(newArgs).toContain('--runInBand');
+          expect(newArgs).toContain('--run-in-band');
           expect(newArgs).toEqual([...expected.args, ...args]);
           expect(newProgram).toEqual(expected.program);
           expect(hasPlatformSection({ ...restNewConfig })).toBeFalsy();
@@ -671,7 +671,7 @@ describe('mergeDebugConfigWithCmdLine', () => {
         runtimeExecutable,
         ...restNewConfig
       } = mergeDebugConfigWithCmdLine(config, cmdLine);
-      expect(newArgs).toContain('--runInBand');
+      expect(newArgs).toContain('--run-in-band');
       expect(runtimeExecutable).toEqual(cmd);
       expect(newProgram).toBeUndefined();
 
