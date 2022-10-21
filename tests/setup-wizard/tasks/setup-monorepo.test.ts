@@ -57,8 +57,8 @@ describe('setupMonorepo', () => {
   it('without workspace will abort right away', async () => {
     expect.hasAssertions();
     (vscode.workspace as any).workspaceFolders = [];
-    await expect(setupMonorepo(context)).rejects.toThrowError();
-    expect(helper.showActionMenu).not.toBeCalled();
+    await expect(setupMonorepo(context)).rejects.toThrow();
+    expect(helper.showActionMenu).not.toHaveBeenCalled();
   });
   describe('with singleroot workspace', () => {
     it('can still support monorepo', async () => {
@@ -67,7 +67,7 @@ describe('setupMonorepo', () => {
       (setupJestCmdLine as jest.Mocked<any>).mockResolvedValue('success');
       mockShowActionMenu(MonorepoSetupActionId.setupJestCmdLine);
       await expect(setupMonorepo(context)).resolves.toEqual('success');
-      expect(setupJestCmdLine).toBeCalled();
+      expect(setupJestCmdLine).toHaveBeenCalled();
     });
     it('can auto convert to a multi-root workspace', async () => {
       expect.hasAssertions();
@@ -76,12 +76,14 @@ describe('setupMonorepo', () => {
       await expect(setupMonorepo(context)).resolves.toEqual('exit');
 
       // updated pending task global state
-      expect(context.vscodeContext.globalState.update).toBeCalledWith(PendingSetupTaskKey, {
+      expect(context.vscodeContext.globalState.update).toHaveBeenCalledWith(PendingSetupTaskKey, {
         workspace: 'root',
         taskId: 'monorepo',
       });
       // execute saveWorkspaceAs command
-      expect(vscode.commands.executeCommand).toBeCalledWith('workbench.action.saveWorkspaceAs');
+      expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+        'workbench.action.saveWorkspaceAs'
+      );
     });
     it('if not able to run test in terminal => abort', async () => {
       expect.hasAssertions();
@@ -96,9 +98,9 @@ describe('setupMonorepo', () => {
       await expect(setupMonorepo(context)).resolves.toEqual('abort');
 
       // updated pending task global state
-      expect(context.vscodeContext.globalState.update).not.toBeCalled();
+      expect(context.vscodeContext.globalState.update).not.toHaveBeenCalled();
       // execute saveWorkspaceAs command
-      expect(vscode.commands.executeCommand).not.toBeCalled();
+      expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
     });
   });
   describe('when multi-root workspace', () => {
@@ -146,17 +148,17 @@ describe('setupMonorepo', () => {
           await expect(setupMonorepo(context)).resolves.toEqual(isError ? 'abort' : 'success');
 
           if (!isError) {
-            expect(vscode.workspace.onDidChangeWorkspaceFolders).toBeCalled();
-            expect(subscription.dispose).toBeCalled();
+            expect(vscode.workspace.onDidChangeWorkspaceFolders).toHaveBeenCalled();
+            expect(subscription.dispose).toHaveBeenCalled();
           }
           if (folderUris) {
-            expect(vscode.workspace.updateWorkspaceFolders).toBeCalledWith(
+            expect(vscode.workspace.updateWorkspaceFolders).toHaveBeenCalledWith(
               1,
               null,
               ...folderUris.map((uri) => ({ uri }))
             );
           } else {
-            expect(vscode.workspace.updateWorkspaceFolders).not.toBeCalled();
+            expect(vscode.workspace.updateWorkspaceFolders).not.toHaveBeenCalled();
           }
         });
         it('only validate workspace if updateWorkspaceFolders succeeds', async () => {
@@ -200,12 +202,12 @@ describe('setupMonorepo', () => {
           await expect(setupMonorepo(context)).resolves.toEqual('success');
           if (updateSetting) {
             expect(context.workspace).toBeUndefined();
-            expect(mockSaveConfig).toBeCalledWith({
+            expect(mockSaveConfig).toHaveBeenCalledWith({
               name: `jest.disabledWorkspaceFolders`,
               value: invalid,
             });
           } else {
-            expect(mockSaveConfig).not.toBeCalled();
+            expect(mockSaveConfig).not.toHaveBeenCalled();
           }
         });
       });
@@ -224,13 +226,13 @@ describe('setupMonorepo', () => {
 
           await expect(setupMonorepo(context)).resolves.toEqual('success');
 
-          expect(mockHelper.getConfirmation).not.toBeCalled();
+          expect(mockHelper.getConfirmation).not.toHaveBeenCalled();
 
-          expect(mockSaveConfig).toBeCalledWith({
+          expect(mockSaveConfig).toHaveBeenCalledWith({
             name: `jest.rootPath`,
             value: 'src',
           });
-          expect(mockSaveConfig).toBeCalledTimes(2);
+          expect(mockSaveConfig).toHaveBeenCalledTimes(2);
         });
         it.each`
           override
@@ -243,20 +245,20 @@ describe('setupMonorepo', () => {
 
           mockHelper.getConfirmation.mockReturnValue(Promise.resolve(override));
           await expect(setupMonorepo(context)).resolves.toEqual('success');
-          expect(mockHelper.getConfirmation).toBeCalled();
+          expect(mockHelper.getConfirmation).toHaveBeenCalled();
 
           if (override) {
-            expect(mockSaveConfig).toBeCalledWith({
+            expect(mockSaveConfig).toHaveBeenCalledWith({
               name: `jest.rootPath`,
               value: 'src',
             });
-            expect(mockSaveConfig).toBeCalledTimes(2);
+            expect(mockSaveConfig).toHaveBeenCalledTimes(2);
           } else {
-            expect(mockSaveConfig).not.toBeCalledWith({
+            expect(mockSaveConfig).not.toHaveBeenCalledWith({
               name: `jest.rootPath`,
               value: 'src',
             });
-            expect(mockSaveConfig).toBeCalledTimes(1);
+            expect(mockSaveConfig).toHaveBeenCalledTimes(1);
           }
         });
       });

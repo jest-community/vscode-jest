@@ -38,13 +38,13 @@ describe('ProcessSession', () => {
       processManagerMock.scheduleJestProcess.mockReturnValueOnce(undefined);
       let process = sm.scheduleProcess({ type: 'all-tests' });
       expect(process).toBeUndefined();
-      expect(context.onRunEvent.fire).not.toBeCalled();
+      expect(context.onRunEvent.fire).not.toHaveBeenCalled();
 
       const p = { id: 'whatever' };
       processManagerMock.scheduleJestProcess.mockReturnValueOnce(p);
       process = sm.scheduleProcess({ type: 'all-tests' });
       expect(process).toEqual(p);
-      expect(context.onRunEvent.fire).toBeCalledWith({ type: 'scheduled', process });
+      expect(context.onRunEvent.fire).toHaveBeenCalledWith({ type: 'scheduled', process });
     });
     it.each`
       type                      | inputProperty                                                | expectedSchedule                                                                          | expectedExtraProperty
@@ -179,8 +179,8 @@ describe('ProcessSession', () => {
       processManagerMock.numberOfProcesses.mockReturnValue(1);
       const session = createProcessSession(context);
       await session.start();
-      expect(processManagerMock.stopAll).toBeCalledTimes(1);
-      expect(processManagerMock.scheduleJestProcess).toBeCalledTimes(1);
+      expect(processManagerMock.stopAll).toHaveBeenCalledTimes(1);
+      expect(processManagerMock.scheduleJestProcess).toHaveBeenCalledTimes(1);
     });
   });
   describe('stop', () => {
@@ -190,7 +190,7 @@ describe('ProcessSession', () => {
       processManagerMock.numberOfProcesses.mockReturnValue(1);
       const session = createProcessSession(context);
       await session.stop();
-      expect(processManagerMock.stopAll).toBeCalledTimes(1);
+      expect(processManagerMock.stopAll).toHaveBeenCalledTimes(1);
     });
   });
 });

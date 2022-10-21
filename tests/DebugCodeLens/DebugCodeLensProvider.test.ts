@@ -111,7 +111,7 @@ describe('DebugCodeLensProvider', () => {
         sut.onDidChange.fire = jest.fn();
         sut.showWhenTestStateIn = allTestStates;
 
-        expect(sut.onDidChange.fire).toBeCalled();
+        expect(sut.onDidChange.fire).toHaveBeenCalled();
       });
     });
   });
@@ -167,7 +167,7 @@ describe('DebugCodeLensProvider', () => {
       getResults.mockReturnValueOnce([]);
       sut.provideCodeLenses(document, token);
 
-      expect(getResults).toBeCalledWith(document.fileName);
+      expect(getResults).toHaveBeenCalledWith(document.fileName);
     });
 
     it('should not show the CodeLens above failing tests unless configured', () => {
@@ -295,6 +295,6 @@ describe('DebugCodeLensProvider', () => {
     sut.onDidChange.fire = jest.fn();
     sut.didChange();
 
-    expect(sut.onDidChange.fire).toBeCalled();
+    expect(sut.onDidChange.fire).toHaveBeenCalled();
   });
 });

@@ -63,7 +63,7 @@ describe('StatusBar', () => {
   describe('register', () => {
     it('should add 2 commands', () => {
       statusBar.register(() => undefined);
-      expect(vscode.commands.registerCommand).toBeCalledTimes(2);
+      expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(2);
 
       const registerCommand = vscode.commands.registerCommand as unknown as jest.Mock<{}>;
       const calls = registerCommand.mock.calls;
@@ -102,7 +102,7 @@ describe('StatusBar', () => {
           ${5} | ${{ mode: ['auto-run-off'], stats: passStats }} | ${'$(wrench)'}            | ${'$(check)'}
         `('update: $update', ({ update, active, summary }) => {
           statusBar.bind('testSource1').update(update);
-          expect(renderSpy).toBeCalledTimes(2);
+          expect(renderSpy).toHaveBeenCalledTimes(2);
           expect(mockActiveSBItem.text).toContain(active);
           expect(mockSummarySBItem.text).toContain(summary);
         });
@@ -115,7 +115,7 @@ describe('StatusBar', () => {
           ${{ isDirty: true, success: 0, fail: 0, unknown: 0 }} | ${'$(sync-ignored) | $(pass) 0 $(error) 0 $(question) 0'}
         `('shows stats summary: $stats => $summary', ({ stats, summary }) => {
           statusBar.bind('testSource1').update({ stats });
-          expect(renderSpy).toBeCalledTimes(2);
+          expect(renderSpy).toHaveBeenCalledTimes(2);
           expect(mockActiveSBItem.text).not.toContain(`Jest: ${summary}`);
           expect(mockSummarySBItem.text).toContain(`Jest-WS: ${summary}`);
         });
@@ -141,34 +141,34 @@ describe('StatusBar', () => {
     it('will update both active and summary status', () => {
       statusBar.bind('testSource1').update({ state: 'initial' });
       expect(mockActiveSBItem.text).toEqual('Jest: ...');
-      expect(mockActiveSBItem.show).toBeCalled();
+      expect(mockActiveSBItem.show).toHaveBeenCalled();
       expect(mockSummarySBItem.text).toEqual('Jest-WS: $(pass) 0 $(error) 0 $(question) 0');
-      expect(mockSummarySBItem.show).toBeCalled();
+      expect(mockSummarySBItem.show).toHaveBeenCalled();
     });
     it('when multiple workspace status updated', () => {
       statusBar.bind('testSource1').update({ state: 'initial' });
-      expect(mockActiveSBItem.show).toBeCalledTimes(1);
+      expect(mockActiveSBItem.show).toHaveBeenCalledTimes(1);
       expect(mockActiveSBItem.text).toEqual('Jest: ...');
-      expect(mockSummarySBItem.show).toBeCalledTimes(1);
+      expect(mockSummarySBItem.show).toHaveBeenCalledTimes(1);
 
       statusBar.bind('testSource2').update({ state: 'initial' });
-      expect(mockSummarySBItem.show).toBeCalledTimes(2);
+      expect(mockSummarySBItem.show).toHaveBeenCalledTimes(2);
       expect(mockSummarySBItem.text).toMatchInlineSnapshot(
         `"Jest-WS: $(pass) 0 $(error) 0 $(question) 0"`
       );
 
-      expect(mockActiveSBItem.hide).toBeCalledTimes(0);
+      expect(mockActiveSBItem.hide).toHaveBeenCalledTimes(0);
     });
     it('will not show active status if no active workspace can be determined', () => {
       vscode.window.activeTextEditor = undefined;
       statusBar.bind('testSource1').update({ state: 'initial' });
-      expect(mockActiveSBItem.show).toBeCalledTimes(1);
+      expect(mockActiveSBItem.show).toHaveBeenCalledTimes(1);
       mockActiveSBItem.show.mockClear();
 
       // with boh workspaces reported and no active text editor, can't determine the active workspace
       statusBar.bind('testSource2').update({ state: 'initial' });
-      expect(mockActiveSBItem.show).toBeCalledTimes(0);
-      expect(mockActiveSBItem.hide).toBeCalledTimes(1);
+      expect(mockActiveSBItem.show).toHaveBeenCalledTimes(0);
+      expect(mockActiveSBItem.hide).toHaveBeenCalledTimes(1);
     });
     describe('onDidChangeActiveTextEditor', () => {
       beforeEach(() => {
@@ -256,13 +256,13 @@ describe('StatusBar', () => {
     });
     it('will still show active if only one workspace reported', () => {
       statusBar.bind('testSource1').update({ state: 'running' });
-      expect(mockActiveSBItem.show).toBeCalledTimes(1);
-      expect(mockActiveSBItem.hide).not.toBeCalled();
+      expect(mockActiveSBItem.show).toHaveBeenCalledTimes(1);
+      expect(mockActiveSBItem.hide).not.toHaveBeenCalled();
     });
     it('active status bar should be hidden if multiple workspaces reported', () => {
       statusBar.bind('testSource1').update({ state: 'running' });
       statusBar.bind('testSource2').update({ state: 'done' });
-      expect(mockActiveSBItem.hide).toBeCalledTimes(1);
+      expect(mockActiveSBItem.hide).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -286,7 +286,7 @@ describe('StatusBar', () => {
         { name: 'testproject', uri: vscode.Uri.file(''), index: 0 },
       ];
       statusBarClickHandler();
-      expect(getExtensionByName).toBeCalledWith('testproject');
+      expect(getExtensionByName).toHaveBeenCalledWith('testproject');
     });
 
     it('responds to clicks for two WorkspaceFolders but only one active', () => {
@@ -309,7 +309,7 @@ describe('StatusBar', () => {
       vscode.workspace.getWorkspaceFolder = (url) =>
         url === projectUrl ? vscode.workspace.workspaceFolders[1] : undefined;
       statusBarClickHandler();
-      expect(getExtensionByName).toBeCalledWith(vscode.workspace.workspaceFolders[1].name);
+      expect(getExtensionByName).toHaveBeenCalledWith(vscode.workspace.workspaceFolders[1].name);
     });
   });
 });

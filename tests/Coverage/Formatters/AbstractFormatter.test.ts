@@ -100,7 +100,7 @@ describe('AbstractFormatter', () => {
     it('should get the file coverage from the coverage provider', () => {
       const formatter = new TestFormatter(coverageMapProvider);
       formatter.lineCoverageRanges(editor);
-      expect(mockGetFileCoverage).toBeCalledWith(editor.document.fileName);
+      expect(mockGetFileCoverage).toHaveBeenCalledWith(editor.document.fileName);
     });
 
     it('if no coverage, should returns empty range', () => {

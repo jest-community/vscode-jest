@@ -171,7 +171,7 @@ describe('JestExt', () => {
         const configuration = startDebugging.mock.calls[startDebugging.mock.calls.length - 1][1];
         expect(configuration).toBeDefined();
         expect(configuration.type).toBe('dummyconfig');
-        expect(sut.debugConfigurationProvider.prepareTestRun).toBeCalledWith(
+        expect(sut.debugConfigurationProvider.prepareTestRun).toHaveBeenCalledWith(
           fileName,
           testNamePattern
         );
@@ -187,8 +187,11 @@ describe('JestExt', () => {
       expect(configuration).toBeDefined();
       expect(configuration.type).toBe('dummyconfig');
       // test identifier is cleaned up before debug
-      expect(mockHelpers.testIdString).toBeCalledWith('full-name', tId);
-      expect(sut.debugConfigurationProvider.prepareTestRun).toBeCalledWith(fileName, fullName);
+      expect(mockHelpers.testIdString).toHaveBeenCalledWith('full-name', tId);
+      expect(sut.debugConfigurationProvider.prepareTestRun).toHaveBeenCalledWith(
+        fileName,
+        fullName
+      );
     });
     it.each`
       desc                      | testIds                                | testIdStringCount | startDebug
@@ -202,8 +205,8 @@ describe('JestExt', () => {
       } else {
         await sut.debugTests(document);
       }
-      expect(mockShowQuickPick).not.toBeCalled();
-      expect(mockHelpers.testIdString).toBeCalledTimes(testIdStringCount);
+      expect(mockShowQuickPick).not.toHaveBeenCalled();
+      expect(mockHelpers.testIdString).toHaveBeenCalledTimes(testIdStringCount);
       if (testIdStringCount >= 1) {
         expect(mockHelpers.testIdString).toHaveBeenLastCalledWith('full-name', testIds[0]);
         expect(mockHelpers.escapeRegExp).toHaveBeenCalled();
@@ -254,7 +257,7 @@ describe('JestExt', () => {
           expect(items).toHaveLength(3);
           const hasIds = () => {
             // id string is called 4 times: 3 to construt the quickPickIems, the last one is for jest test fullName
-            expect(mockHelpers.testIdString).toBeCalledTimes(identifierIdCount + 1);
+            expect(mockHelpers.testIdString).toHaveBeenCalledTimes(identifierIdCount + 1);
             const calls = mockHelpers.testIdString.mock.calls;
             expect(
               calls.slice(0, identifierIdCount).every((c) => c[0] === 'display-reverse')
@@ -262,7 +265,7 @@ describe('JestExt', () => {
             expect(calls[calls.length - 1][0]).toEqual('full-name');
           };
           const hasNoId = () => {
-            expect(mockHelpers.testIdString).toBeCalledTimes(0);
+            expect(mockHelpers.testIdString).toHaveBeenCalledTimes(0);
           };
           if (identifierIdCount) {
             hasIds();
@@ -270,7 +273,7 @@ describe('JestExt', () => {
             hasNoId();
           }
           const selected = [tId1, tId2, tId3][selectIdx];
-          expect(mockHelpers.escapeRegExp).toBeCalledWith(selected);
+          expect(mockHelpers.escapeRegExp).toHaveBeenCalledWith(selected);
           // verify the actual test to be run is the one we selected: tId2
           expect(vscode.debug.startDebugging).toHaveBeenCalledWith(
             workspaceFolder,
@@ -279,7 +282,10 @@ describe('JestExt', () => {
           const configuration = startDebugging.mock.calls[startDebugging.mock.calls.length - 1][1];
           expect(configuration).toBeDefined();
           expect(configuration.type).toBe('dummyconfig');
-          expect(sut.debugConfigurationProvider.prepareTestRun).toBeCalledWith(fileName, selected);
+          expect(sut.debugConfigurationProvider.prepareTestRun).toHaveBeenCalledWith(
+            fileName,
+            selected
+          );
         });
         it('if user did not choose any test, no debug will be run', async () => {
           selectIdx = -1;
@@ -290,8 +296,8 @@ describe('JestExt', () => {
         it('if pass zero testId, all tests will be run', async () => {
           await sut.debugTests(document);
           expect(mockShowQuickPick).not.toHaveBeenCalled();
-          expect(mockHelpers.testIdString).not.toBeCalled();
-          expect(sut.debugConfigurationProvider.prepareTestRun).toBeCalledWith(
+          expect(mockHelpers.testIdString).not.toHaveBeenCalled();
+          expect(sut.debugConfigurationProvider.prepareTestRun).toHaveBeenCalledWith(
             document.fileName,
             '.*'
           );
@@ -318,7 +324,7 @@ describe('JestExt', () => {
 
         await sut.debugTests(document, testNamePattern);
 
-        expect(startDebugging).toBeCalledTimes(1);
+        expect(startDebugging).toHaveBeenCalledTimes(1);
         if (useDefaultConfig) {
           // debug with generated config
           expect(vscode.debug.startDebugging).toHaveBeenLastCalledWith(
@@ -332,7 +338,7 @@ describe('JestExt', () => {
           });
         }
 
-        expect(sut.debugConfigurationProvider.prepareTestRun).toBeCalledWith(
+        expect(sut.debugConfigurationProvider.prepareTestRun).toHaveBeenCalledWith(
           fileName,
           testNamePattern
         );
@@ -353,7 +359,7 @@ describe('JestExt', () => {
 
     it('should remove the cached test results', () => {
       sut.onDidCloseTextDocument(document);
-      expect(sut.removeCachedTestResults).toBeCalledWith(document);
+      expect(sut.removeCachedTestResults).toHaveBeenCalledWith(document);
     });
   });
 
@@ -366,28 +372,28 @@ describe('JestExt', () => {
 
     it('should do nothing when the document is falsy', () => {
       sut.removeCachedTestResults(null);
-      expect(sut.testResultProvider.removeCachedResults).not.toBeCalled();
+      expect(sut.testResultProvider.removeCachedResults).not.toHaveBeenCalled();
     });
 
     it('should do nothing when the document is untitled', () => {
       const document: any = { isUntitled: true } as any;
       sut.removeCachedTestResults(document);
 
-      expect(sut.testResultProvider.removeCachedResults).not.toBeCalled();
+      expect(sut.testResultProvider.removeCachedResults).not.toHaveBeenCalled();
     });
 
     it('should reset the test result cache for the document', () => {
       const expected = 'file.js';
       sut.removeCachedTestResults({ fileName: expected } as any);
 
-      expect(sut.testResultProvider.removeCachedResults).toBeCalledWith(expected);
+      expect(sut.testResultProvider.removeCachedResults).toHaveBeenCalledWith(expected);
     });
     it('can invalidate test results', () => {
       const expected = 'file.js';
       sut.removeCachedTestResults({ fileName: expected } as any, true);
 
-      expect(sut.testResultProvider.removeCachedResults).not.toBeCalled();
-      expect(sut.testResultProvider.invalidateTestResults).toBeCalledWith(expected);
+      expect(sut.testResultProvider.removeCachedResults).not.toHaveBeenCalled();
+      expect(sut.testResultProvider.invalidateTestResults).toHaveBeenCalledWith(expected);
     });
   });
 
@@ -405,7 +411,7 @@ describe('JestExt', () => {
       editor.document = {};
       sut.onDidChangeActiveTextEditor(editor);
 
-      expect(sut.triggerUpdateActiveEditor).toBeCalledWith(editor);
+      expect(sut.triggerUpdateActiveEditor).toHaveBeenCalledWith(editor);
     });
   });
 
@@ -429,8 +435,8 @@ describe('JestExt', () => {
       sut.triggerUpdateActiveEditor = jest.fn();
       sut.onDidChangeTextDocument(event);
 
-      expect(sut.removeCachedTestResults).not.toBeCalledWith(event.document);
-      expect(sut.triggerUpdateActiveEditor).not.toBeCalled();
+      expect(sut.removeCachedTestResults).not.toHaveBeenCalledWith(event.document);
+      expect(sut.triggerUpdateActiveEditor).not.toHaveBeenCalled();
     }
 
     it('should do nothing if the document has unsaved changes', () => {
@@ -474,13 +480,13 @@ describe('JestExt', () => {
       vscode.window.visibleTextEditors = [editor];
       sut.onDidChangeTextDocument(event);
 
-      expect(sut.triggerUpdateActiveEditor).toBeCalledWith(editor);
+      expect(sut.triggerUpdateActiveEditor).toHaveBeenCalledWith(editor);
     });
     it('should update statusBar for stats', () => {
       sut.onDidChangeTextDocument(event);
 
-      expect(sut.testResultProvider.getTestSuiteStats).toBeCalled();
-      expect(sbUpdateMock).toBeCalled();
+      expect(sut.testResultProvider.getTestSuiteStats).toHaveBeenCalled();
+      expect(sbUpdateMock).toHaveBeenCalled();
     });
   });
 
@@ -500,9 +506,9 @@ describe('JestExt', () => {
         sut.onWillSaveTextDocument(event);
 
         if (isDirty) {
-          expect(sut.testResultProvider.invalidateTestResults).toBeCalled();
+          expect(sut.testResultProvider.invalidateTestResults).toHaveBeenCalled();
         } else {
-          expect(sut.testResultProvider.invalidateTestResults).not.toBeCalled();
+          expect(sut.testResultProvider.invalidateTestResults).not.toHaveBeenCalled();
         }
       }
     );
@@ -542,7 +548,7 @@ describe('JestExt', () => {
           sut.onDidSaveTextDocument(document);
 
           if (shouldSchedule) {
-            expect(mockProcessSession.scheduleProcess).toBeCalledWith(
+            expect(mockProcessSession.scheduleProcess).toHaveBeenCalledWith(
               expect.objectContaining({
                 type: 'by-file',
                 testFileName: fileName,
@@ -550,9 +556,11 @@ describe('JestExt', () => {
               })
             );
           } else {
-            expect(mockProcessSession.scheduleProcess).not.toBeCalled();
+            expect(mockProcessSession.scheduleProcess).not.toHaveBeenCalled();
           }
-          expect(sbUpdateMock).toBeCalledWith(expect.objectContaining({ stats: { isDirty } }));
+          expect(sbUpdateMock).toHaveBeenCalledWith(
+            expect.objectContaining({ stats: { isDirty } })
+          );
         }
       );
     });
@@ -564,8 +572,8 @@ describe('JestExt', () => {
       sut.triggerUpdateSettings = jest.fn();
       sut.toggleCoverageOverlay();
 
-      expect(sut.coverageOverlay.toggleVisibility).toBeCalled();
-      expect(sut.triggerUpdateSettings).toBeCalled();
+      expect(sut.coverageOverlay.toggleVisibility).toHaveBeenCalled();
+      expect(sut.triggerUpdateSettings).toHaveBeenCalled();
     });
     it('overrides showCoverageOnLoad settings', async () => {
       const settings = { showCoverageOnLoad: true } as any;
@@ -594,7 +602,7 @@ describe('JestExt', () => {
       const sut = newJestExt();
       sut.triggerUpdateActiveEditor(editor);
 
-      expect(sut.coverageOverlay.updateVisibleEditors).toBeCalled();
+      expect(sut.coverageOverlay.updateVisibleEditors).toHaveBeenCalled();
     });
     it('should update both decorators and diagnostics for valid editor', () => {
       const sut = newJestExt();
@@ -609,8 +617,8 @@ describe('JestExt', () => {
       });
       sut.triggerUpdateActiveEditor(editor);
 
-      expect(sut.updateDecorators).toBeCalled();
-      expect(updateCurrentDiagnostics).toBeCalled();
+      expect(sut.updateDecorators).toHaveBeenCalled();
+      expect(updateCurrentDiagnostics).toHaveBeenCalled();
     });
     it.each`
       autoRun                                                  | isInteractive
@@ -625,7 +633,7 @@ describe('JestExt', () => {
       const sut = newJestExt({ settings: { autoRun } });
       const editor = mockEditor('a');
       sut.triggerUpdateActiveEditor(editor);
-      expect(vscode.commands.executeCommand).toBeCalledWith(
+      expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
         'setContext',
         'jest:run.interactive',
         isInteractive
@@ -641,13 +649,17 @@ describe('JestExt', () => {
       const updateDecoratorsSpy = jest.spyOn(sut, 'updateDecorators');
 
       sut.triggerUpdateActiveEditor(editor);
-      expect(mockOutputTerminal.write).toBeCalledWith(
+      expect(mockOutputTerminal.write).toHaveBeenCalledWith(
         expect.stringContaining('force error'),
         'error'
       );
 
-      expect(updateDecoratorsSpy).toBeCalled();
-      expect(updateCurrentDiagnostics).toBeCalledWith(EmptySortedResult.fail, undefined, editor);
+      expect(updateDecoratorsSpy).toHaveBeenCalled();
+      expect(updateCurrentDiagnostics).toHaveBeenCalledWith(
+        EmptySortedResult.fail,
+        undefined,
+        editor
+      );
     });
     describe('can skip non test-file related updates', () => {
       let sut;
@@ -677,18 +689,18 @@ describe('JestExt', () => {
         const editor = mockEditor('file', languageId);
         sut.triggerUpdateActiveEditor(editor);
         if (shouldSkip) {
-          expect(updateCurrentDiagnostics).not.toBeCalled();
-          expect(updateDecoratorsSpy).not.toBeCalled();
+          expect(updateCurrentDiagnostics).not.toHaveBeenCalled();
+          expect(updateDecoratorsSpy).not.toHaveBeenCalled();
         } else {
-          expect(updateCurrentDiagnostics).toBeCalled();
-          expect(updateDecoratorsSpy).toBeCalled();
+          expect(updateCurrentDiagnostics).toHaveBeenCalled();
+          expect(updateDecoratorsSpy).toHaveBeenCalled();
         }
       });
       it('if editor has no document', () => {
         const editor = {};
         sut.triggerUpdateActiveEditor(editor);
-        expect(updateCurrentDiagnostics).not.toBeCalled();
-        expect(updateDecoratorsSpy).not.toBeCalled();
+        expect(updateCurrentDiagnostics).not.toHaveBeenCalled();
+        expect(updateDecoratorsSpy).not.toHaveBeenCalled();
       });
       it.each`
         isTestFile   | shouldUpdate
@@ -710,11 +722,11 @@ describe('JestExt', () => {
           const editor = mockEditor('x');
           sut.triggerUpdateActiveEditor(editor);
           if (shouldUpdate) {
-            expect(updateCurrentDiagnostics).toBeCalled();
-            expect(updateDecoratorsSpy).toBeCalled();
+            expect(updateCurrentDiagnostics).toHaveBeenCalled();
+            expect(updateDecoratorsSpy).toHaveBeenCalled();
           } else {
-            expect(updateCurrentDiagnostics).not.toBeCalled();
-            expect(updateDecoratorsSpy).not.toBeCalled();
+            expect(updateCurrentDiagnostics).not.toHaveBeenCalled();
+            expect(updateDecoratorsSpy).not.toHaveBeenCalled();
           }
         }
       );
@@ -821,7 +833,7 @@ describe('JestExt', () => {
         mockProcessSession.start.mockReturnValueOnce(Promise.reject('forced error'));
         const sut = createJestExt();
         await sut.startSession();
-        expect(messaging.systemErrorMessage).toBeCalled();
+        expect(messaging.systemErrorMessage).toHaveBeenCalled();
       });
       it('dispose existing jestProvider before creating new one', async () => {
         expect.hasAssertions();
@@ -830,7 +842,7 @@ describe('JestExt', () => {
         expect(JestTestProvider).toHaveBeenCalledTimes(1);
 
         await sut.startSession();
-        expect(mockTestProvider.dispose).toBeCalledTimes(1);
+        expect(mockTestProvider.dispose).toHaveBeenCalledTimes(1);
         expect(JestTestProvider).toHaveBeenCalledTimes(2);
       });
       describe('will update test file list', () => {
@@ -850,17 +862,19 @@ describe('JestExt', () => {
 
             await sut.startSession();
 
-            expect(mockProcessSession.scheduleProcess).toBeCalledTimes(1);
+            expect(mockProcessSession.scheduleProcess).toHaveBeenCalledTimes(1);
             const { type, onResult } = mockProcessSession.scheduleProcess.mock.calls[0][0];
             expect(type).toEqual('list-test-files');
             expect(onResult).not.toBeUndefined();
 
             onResult(fileNames, error);
-            expect(sut.testResultProvider.updateTestFileList).toBeCalledWith(expectedTestFiles);
+            expect(sut.testResultProvider.updateTestFileList).toHaveBeenCalledWith(
+              expectedTestFiles
+            );
 
             // stats will be updated in status baar accordingly
-            expect(sut.testResultProvider.getTestSuiteStats).toBeCalled();
-            expect(sbUpdateMock).toBeCalledWith({ stats });
+            expect(sut.testResultProvider.getTestSuiteStats).toHaveBeenCalled();
+            expect(sbUpdateMock).toHaveBeenCalledWith({ stats });
           }
         );
       });
@@ -878,7 +892,7 @@ describe('JestExt', () => {
         expect(JestTestProvider).toHaveBeenCalledTimes(1);
 
         await sut.stopSession();
-        expect(mockTestProvider.dispose).toBeCalledTimes(1);
+        expect(mockTestProvider.dispose).toHaveBeenCalledTimes(1);
         expect(JestTestProvider).toHaveBeenCalledTimes(1);
       });
       it('updatae statusBar status', async () => {
@@ -890,7 +904,7 @@ describe('JestExt', () => {
         mockProcessSession.stop.mockReturnValueOnce(Promise.reject('forced error'));
         const sut = createJestExt();
         await sut.stopSession();
-        expect(messaging.systemErrorMessage).toBeCalled();
+        expect(messaging.systemErrorMessage).toHaveBeenCalled();
       });
     });
   });
@@ -904,8 +918,8 @@ describe('JestExt', () => {
       const coverageCodeLensProvider: any = { coverageChanged: jest.fn() };
       const sut = newJestExt({ coverageCodeLensProvider });
       await sut._updateCoverageMap({});
-      expect(coverageCodeLensProvider.coverageChanged).toBeCalled();
-      expect(sut.coverageOverlay.updateVisibleEditors).toBeCalled();
+      expect(coverageCodeLensProvider.coverageChanged).toHaveBeenCalled();
+      expect(sut.coverageOverlay.updateVisibleEditors).toHaveBeenCalled();
     });
   });
   describe('runAllTests', () => {
@@ -923,11 +937,11 @@ describe('JestExt', () => {
         dirtyFiles.clear = jest.fn();
 
         sut.runAllTests();
-        expect(mockProcessSession.scheduleProcess).toBeCalledWith({ type: 'all-tests' });
+        expect(mockProcessSession.scheduleProcess).toHaveBeenCalledWith({ type: 'all-tests' });
         if (scheduleProcess) {
-          expect(dirtyFiles.clear).toBeCalled();
+          expect(dirtyFiles.clear).toHaveBeenCalled();
         } else {
-          expect(dirtyFiles.clear).not.toBeCalled();
+          expect(dirtyFiles.clear).not.toHaveBeenCalled();
         }
       });
       it('can run all test for the given editor', () => {
@@ -939,15 +953,15 @@ describe('JestExt', () => {
         const editor: any = { document: { fileName: 'whatever' } };
 
         sut.runAllTests(editor);
-        expect(mockProcessSession.scheduleProcess).toBeCalledWith({
+        expect(mockProcessSession.scheduleProcess).toHaveBeenCalledWith({
           type: 'by-file',
           testFileName: editor.document.fileName,
           notTestFile: true,
         });
         if (scheduleProcess) {
-          expect(dirtyFiles.delete).toBeCalledWith(editor.document.fileName);
+          expect(dirtyFiles.delete).toHaveBeenCalledWith(editor.document.fileName);
         } else {
-          expect(dirtyFiles.delete).not.toBeCalled();
+          expect(dirtyFiles.delete).not.toHaveBeenCalled();
         }
       });
     });
@@ -966,13 +980,13 @@ describe('JestExt', () => {
 
         sut.runAllTests(editor);
         if (notTestFile) {
-          expect(mockProcessSession.scheduleProcess).toBeCalledWith({
+          expect(mockProcessSession.scheduleProcess).toHaveBeenCalledWith({
             type: 'by-file',
             testFileName: editor.document.fileName,
             notTestFile: true,
           });
         } else {
-          expect(mockProcessSession.scheduleProcess).toBeCalledWith({
+          expect(mockProcessSession.scheduleProcess).toHaveBeenCalledWith({
             type: 'by-file-pattern',
             testFileNamePattern: editor.document.fileName,
           });
@@ -1008,13 +1022,13 @@ describe('JestExt', () => {
   describe('triggerUpdateSettings', () => {
     it('should create a new ProcessSession', async () => {
       const jestExt = newJestExt();
-      expect(createProcessSession).toBeCalledTimes(1);
+      expect(createProcessSession).toHaveBeenCalledTimes(1);
       const settings: any = {
         debugMode: true,
         autoRun: { watch: true },
       };
       await jestExt.triggerUpdateSettings(settings);
-      expect(createProcessSession).toBeCalledTimes(2);
+      expect(createProcessSession).toHaveBeenCalledTimes(2);
       expect(createProcessSession).toHaveBeenLastCalledWith(expect.objectContaining({ settings }));
     });
   });
@@ -1036,18 +1050,18 @@ describe('JestExt', () => {
     });
     it('will invoke internal components to process test results', () => {
       updateWithData({}, 'test-all-12');
-      expect(mockCoverageMapProvider.update).toBeCalled();
-      expect(sut.testResultProvider.updateTestResults).toBeCalledWith(
+      expect(mockCoverageMapProvider.update).toHaveBeenCalled();
+      expect(sut.testResultProvider.updateTestResults).toHaveBeenCalledWith(
         expect.anything(),
         'test-all-12'
       );
-      expect(updateDiagnostics).toBeCalled();
+      expect(updateDiagnostics).toHaveBeenCalled();
     });
 
     it('will calculate stats and update statusBar', () => {
       updateWithData({});
-      expect(sut.testResultProvider.getTestSuiteStats).toBeCalled();
-      expect(sbUpdateMock).toBeCalled();
+      expect(sut.testResultProvider.getTestSuiteStats).toHaveBeenCalled();
+      expect(sbUpdateMock).toHaveBeenCalled();
     });
     it('will update visible editors for the current workspace', () => {
       (vscode.window.visibleTextEditors as any) = [
@@ -1060,7 +1074,7 @@ describe('JestExt', () => {
       );
       const triggerUpdateActiveEditorSpy = jest.spyOn(sut as any, 'triggerUpdateActiveEditor');
       updateWithData();
-      expect(triggerUpdateActiveEditorSpy).toBeCalledTimes(2);
+      expect(triggerUpdateActiveEditorSpy).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -1068,16 +1082,16 @@ describe('JestExt', () => {
     it('will stop session and output channel', () => {
       const sut = newJestExt();
       sut.deactivate();
-      expect(mockProcessSession.stop).toBeCalledTimes(1);
-      expect(mockOutputTerminal.dispose).toBeCalledTimes(1);
+      expect(mockProcessSession.stop).toHaveBeenCalledTimes(1);
+      expect(mockOutputTerminal.dispose).toHaveBeenCalledTimes(1);
     });
     it('will dispose test provider if initialized', () => {
       const sut = newJestExt();
       sut.deactivate();
-      expect(mockTestProvider.dispose).not.toBeCalledTimes(1);
+      expect(mockTestProvider.dispose).not.toHaveBeenCalledTimes(1);
       sut.startSession();
       sut.deactivate();
-      expect(mockTestProvider.dispose).toBeCalledTimes(1);
+      expect(mockTestProvider.dispose).toHaveBeenCalledTimes(1);
     });
     it('will dispose all events', () => {
       const sut = newJestExt();
@@ -1116,29 +1130,29 @@ describe('JestExt', () => {
 
     describe('can process run events', () => {
       it('register onRunEvent listener', () => {
-        expect(sut.events.onRunEvent.event).toBeCalledTimes(1);
+        expect(sut.events.onRunEvent.event).toHaveBeenCalledTimes(1);
       });
       it('will not process not testing process events', () => {
         process.request.type = 'not-test';
         onRunEvent({ type: 'start', process });
-        expect(sbUpdateMock).not.toBeCalled();
+        expect(sbUpdateMock).not.toHaveBeenCalled();
       });
       it('start event: notify status bar', () => {
         onRunEvent({ type: 'start', process });
-        expect(sbUpdateMock).toBeCalledWith({ state: 'running' });
+        expect(sbUpdateMock).toHaveBeenCalledWith({ state: 'running' });
       });
       it('end event: notify status bar', () => {
         onRunEvent({ type: 'end', process });
-        expect(sbUpdateMock).toBeCalledWith({ state: 'done' });
+        expect(sbUpdateMock).toHaveBeenCalledWith({ state: 'done' });
       });
       describe('exit event: notify status bar', () => {
         it('if no error: status bar done', () => {
           onRunEvent({ type: 'exit', process });
-          expect(sbUpdateMock).toBeCalledWith({ state: 'done' });
+          expect(sbUpdateMock).toHaveBeenCalledWith({ state: 'done' });
         });
         it('if error: status bar stopped and show error', () => {
           onRunEvent({ type: 'exit', error: 'something is wrong', process });
-          expect(sbUpdateMock).toBeCalledWith({ state: 'stopped' });
+          expect(sbUpdateMock).toHaveBeenCalledWith({ state: 'stopped' });
           expect(messaging.systemErrorMessage).toHaveBeenCalledWith(
             'something is wrong',
             { action: expect.any(Function), title: 'Help' },
@@ -1158,7 +1172,7 @@ describe('JestExt', () => {
           (vscode.workspace.workspaceFolders as any) = ['testfolder1', 'testfolder'];
 
           onRunEvent({ type: 'exit', error: 'something is wrong', process });
-          expect(sbUpdateMock).toBeCalledWith({ state: 'stopped' });
+          expect(sbUpdateMock).toHaveBeenCalledWith({ state: 'stopped' });
           expect(messaging.systemErrorMessage).toHaveBeenCalledWith(
             '(test-folder) something is wrong',
             { action: expect.any(Function), title: 'Help' },
@@ -1183,7 +1197,7 @@ describe('JestExt', () => {
         ({ numTotalTestSuites }) => {
           process = { ...process, request: { type: 'all-tests' } };
           onRunEvent({ type: 'long-run', numTotalTestSuites, threshold: 60000, process });
-          expect(messaging.systemWarningMessage).toBeCalledTimes(1);
+          expect(messaging.systemWarningMessage).toHaveBeenCalledTimes(1);
           const msg = (messaging.systemWarningMessage as jest.Mocked<any>).mock.calls[0][0];
           expect(msg).toContain('all-tests');
           if (numTotalTestSuites) {
@@ -1196,7 +1210,7 @@ describe('JestExt', () => {
     });
     it('events are disposed when extensioin deactivated', () => {
       sut.deactivate();
-      expect(sut.events.onRunEvent.dispose).toBeCalled();
+      expect(sut.events.onRunEvent.dispose).toHaveBeenCalled();
     });
   });
   it.each`
@@ -1212,19 +1226,19 @@ describe('JestExt', () => {
 
       await sut.startSession();
 
-      expect(mockProcessSession.scheduleProcess).toBeCalledTimes(1);
+      expect(mockProcessSession.scheduleProcess).toHaveBeenCalledTimes(1);
       const { type, onResult } = mockProcessSession.scheduleProcess.mock.calls[0][0];
       expect(type).toEqual('list-test-files');
       expect(onResult).not.toBeUndefined();
 
       // when process failed
       onResult(undefined, 'process error', exitCode);
-      expect(mockOutputTerminal.write).toBeCalledWith(expect.anything(), errorType);
+      expect(mockOutputTerminal.write).toHaveBeenCalledWith(expect.anything(), errorType);
     }
   );
   it('showOutput will show the output terminal', () => {
     const sut = newJestExt();
     sut.showOutput();
-    expect(mockOutputTerminal.show).toBeCalled();
+    expect(mockOutputTerminal.show).toHaveBeenCalled();
   });
 });

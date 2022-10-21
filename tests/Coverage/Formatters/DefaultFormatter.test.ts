@@ -67,7 +67,7 @@ describe('DefaultFormatter', () => {
 
     it('should clear all decorations', () => {
       sut.format(editor);
-      expect(mockSetDecorations).toBeCalledTimes(2);
+      expect(mockSetDecorations).toHaveBeenCalledTimes(2);
       expect(mockSetDecorations).toHaveBeenCalledWith(sut.uncoveredLine, []);
       expect(mockSetDecorations).toHaveBeenCalledWith(sut.partiallyCoveredLine, []);
     });
@@ -83,13 +83,13 @@ describe('DefaultFormatter', () => {
     });
     it('should decorate uncovered and partially-covered ranges', () => {
       sut.format(editor);
-      expect(mockSetDecorations).toBeCalledTimes(2);
+      expect(mockSetDecorations).toHaveBeenCalledTimes(2);
       expect(mockSetDecorations).toHaveBeenCalledWith(sut.uncoveredLine, [range2]);
       expect(mockSetDecorations).toHaveBeenCalledWith(sut.partiallyCoveredLine, [range3]);
     });
     it('can can clear decorator for the given editor', () => {
       sut.clear(editor);
-      expect(mockSetDecorations).toBeCalledTimes(2);
+      expect(mockSetDecorations).toHaveBeenCalledTimes(2);
       expect(mockSetDecorations).toHaveBeenCalledWith(sut.uncoveredLine, []);
       expect(mockSetDecorations).toHaveBeenCalledWith(sut.partiallyCoveredLine, []);
     });
@@ -97,7 +97,7 @@ describe('DefaultFormatter', () => {
 
   it('can dispose decorator for all editors', () => {
     sut.dispose();
-    expect(sut.uncoveredLine.dispose).toBeCalledTimes(1);
-    expect(sut.partiallyCoveredLine.dispose).toBeCalledTimes(1);
+    expect(sut.uncoveredLine.dispose).toHaveBeenCalledTimes(1);
+    expect(sut.partiallyCoveredLine.dispose).toHaveBeenCalledTimes(1);
   });
 });

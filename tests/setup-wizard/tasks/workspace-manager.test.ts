@@ -30,7 +30,7 @@ describe('workspaceFolder', () => {
 
       (vscode.workspace as any).workspaceFolders = [];
       const wsManager = new WorkspaceManager();
-      await expect(wsManager.getFoldersFromFilesystem).rejects.toThrowError();
+      await expect(wsManager.getFoldersFromFilesystem).rejects.toThrow();
     });
     it('from workspaces property in package.json', async () => {
       expect.hasAssertions();
@@ -41,8 +41,11 @@ describe('workspaceFolder', () => {
       const wsManager = new WorkspaceManager();
       const uris = await wsManager.getFoldersFromFilesystem();
 
-      expect(vscode.workspace.findFiles).toBeCalledTimes(1);
-      expect(vscode.RelativePattern).toBeCalledWith(expect.anything(), 'folder-1/package.json');
+      expect(vscode.workspace.findFiles).toHaveBeenCalledTimes(1);
+      expect(vscode.RelativePattern).toHaveBeenCalledWith(
+        expect.anything(),
+        'folder-1/package.json'
+      );
       expect(uris).toHaveLength(1);
       expect(uris.map((uri) => uri.fsPath)).toEqual(['folder-1']);
     });
@@ -61,8 +64,8 @@ describe('workspaceFolder', () => {
       const wsManager = new WorkspaceManager();
       const uris = await wsManager.getFoldersFromFilesystem();
 
-      expect(vscode.workspace.findFiles).toBeCalledTimes(1);
-      expect(vscode.workspace.findFiles).toBeCalledWith(
+      expect(vscode.workspace.findFiles).toHaveBeenCalledTimes(1);
+      expect(vscode.workspace.findFiles).toHaveBeenCalledWith(
         expect.stringContaining('package.json'),
         expect.anything()
       );
@@ -73,7 +76,7 @@ describe('workspaceFolder', () => {
       (vscode.workspace as any).workspaceFolders = [];
       mockFindFiles.mockReturnValue(Promise.resolve([]));
       const wsManager = new WorkspaceManager();
-      await expect(wsManager.getFoldersFromFilesystem()).rejects.toThrowError();
+      await expect(wsManager.getFoldersFromFilesystem()).rejects.toThrow();
     });
   });
   describe('can validate jest eligible workspaces', () => {
@@ -96,7 +99,7 @@ describe('workspaceFolder', () => {
         expect.hasAssertions();
         (vscode.workspace as any).workspaceFolders = [];
         const wsManager = new WorkspaceManager();
-        await expect(wsManager.getValidWorkspaces()).rejects.toThrowError();
+        await expect(wsManager.getValidWorkspaces()).rejects.toThrow();
       });
       describe('validate algorithms', () => {
         const byJestConfig = () => {

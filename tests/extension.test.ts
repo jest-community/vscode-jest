@@ -97,31 +97,31 @@ describe('Extension', () => {
     it('should register an event handler to handle when the editor changes focus', () => {
       activate(context);
 
-      expect(vscode.window.onDidChangeActiveTextEditor).toBeCalled();
+      expect(vscode.window.onDidChangeActiveTextEditor).toHaveBeenCalled();
       expect(context.subscriptions.push.mock.calls[0]).toContain('onDidChangeActiveTextEditor');
     });
 
     it('should register an event handler to handle when a document is saved', () => {
       activate(context);
 
-      expect(vscode.workspace.onDidChangeTextDocument).toBeCalled();
+      expect(vscode.workspace.onDidChangeTextDocument).toHaveBeenCalled();
       expect(context.subscriptions.push.mock.calls[0]).toContain('onDidChangeTextDocument');
 
-      expect(vscode.workspace.onDidSaveTextDocument).toBeCalled();
-      expect(vscode.workspace.onWillSaveTextDocument).toBeCalled();
+      expect(vscode.workspace.onDidSaveTextDocument).toHaveBeenCalled();
+      expect(vscode.workspace.onWillSaveTextDocument).toHaveBeenCalled();
     });
 
     it('should register an event handler to handle when an extension configuration changed', () => {
       activate(context);
 
-      expect(vscode.workspace.onDidChangeConfiguration).toBeCalled();
+      expect(vscode.workspace.onDidChangeConfiguration).toHaveBeenCalled();
       expect(context.subscriptions.push.mock.calls[0]).toContain('onDidChangeConfiguration');
     });
 
     it('should register an event handler to handle when workspace folders changed', () => {
       activate(context);
 
-      expect(vscode.workspace.onDidChangeWorkspaceFolders).toBeCalled();
+      expect(vscode.workspace.onDidChangeWorkspaceFolders).toHaveBeenCalled();
       expect(context.subscriptions.push.mock.calls[0]).toContain('onDidChangeWorkspaceFolders');
     });
 
@@ -145,7 +145,7 @@ describe('Extension', () => {
           expect(found).toHaveLength(types.length);
           found.forEach(([cmd]) => {
             (cmd.callback as any)(jestInstance);
-            expect(callbackFunc).toBeCalled();
+            expect(callbackFunc).toHaveBeenCalled();
           });
         }
       );
@@ -164,7 +164,7 @@ describe('Extension', () => {
           expect(found).toHaveLength(types.length);
           found.forEach(([cmd]) => {
             (cmd.callback as any)(jestInstance, editor);
-            expect(callbackFunc).toBeCalled();
+            expect(callbackFunc).toHaveBeenCalled();
           });
         }
       );
@@ -198,7 +198,7 @@ describe('Extension', () => {
   describe('deactivate()', () => {
     it('should call unregisterAll on instancesManager', () => {
       deactivate();
-      expect(extensionManager.unregisterAll).toBeCalled();
+      expect(extensionManager.unregisterAll).toHaveBeenCalled();
     });
   });
 });

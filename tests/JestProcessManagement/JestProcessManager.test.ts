@@ -70,7 +70,7 @@ describe('JestProcessManager', () => {
       const mockCreateTaskQueue = jest.spyOn(taskQueue, 'createTaskQueue');
       const jestProcessManager = new JestProcessManager(extContext);
       expect(jestProcessManager).not.toBe(null);
-      expect(mockCreateTaskQueue).toBeCalledTimes(3);
+      expect(mockCreateTaskQueue).toHaveBeenCalledTimes(3);
       const maxWorkers = mockCreateTaskQueue.mock.calls.map((c) => c[1]);
       // blocking queue has 1 worker
       expect(maxWorkers.filter((n) => n === 1)).toHaveLength(2);
@@ -94,8 +94,8 @@ describe('JestProcessManager', () => {
 
         const process = pm.scheduleJestProcess(request);
         expect(process.id).toEqual(expect.stringContaining(request.type));
-        expect(jestProcessMock).toBeCalledTimes(1);
-        expect(mockProcess.start).toBeCalledTimes(1);
+        expect(jestProcessMock).toHaveBeenCalledTimes(1);
+        expect(mockProcess.start).toHaveBeenCalledTimes(1);
 
         expect(getState(pm, mockProcess)).toEqual({ inQ: true, started: true, qSize: 1 });
       });
@@ -103,7 +103,7 @@ describe('JestProcessManager', () => {
         expect.hasAssertions();
 
         pm.scheduleJestProcess(request);
-        expect(jestProcessMock).toBeCalledTimes(1);
+        expect(jestProcessMock).toHaveBeenCalledTimes(1);
         expect(getState(pm, mockProcess)).toEqual({ inQ: true, started: true, qSize: 1 });
 
         await mockProcess.resolve();
@@ -112,7 +112,7 @@ describe('JestProcessManager', () => {
       it('the queue will be cleared when the process exit upon error', async () => {
         expect.hasAssertions();
         pm.scheduleJestProcess(request);
-        expect(jestProcessMock).toBeCalledTimes(1);
+        expect(jestProcessMock).toHaveBeenCalledTimes(1);
 
         expect(getState(pm, mockProcess)).toEqual({ inQ: true, started: true, qSize: 1 });
         await mockProcess.reject();
@@ -135,7 +135,7 @@ describe('JestProcessManager', () => {
         // submit all 3 request
         const results = requests.map((r) => pm.scheduleJestProcess(r));
         expect(results.every((r) => r)).toBeTruthy();
-        expect(jestProcessMock).toBeCalledTimes(3);
+        expect(jestProcessMock).toHaveBeenCalledTimes(3);
 
         expect(getState(pm, processes[0])).toEqual({ inQ: true, started: true, qSize: 3 });
         expect(getState(pm, processes[1])).toEqual({ inQ: true, started: false, qSize: 3 });
@@ -204,7 +204,7 @@ describe('JestProcessManager', () => {
 
         const results = requests.map((r) => pm.scheduleJestProcess(r));
         expect(results.every((r) => r)).toBeTruthy();
-        expect(jestProcessMock).toBeCalledTimes(requests.length);
+        expect(jestProcessMock).toHaveBeenCalledTimes(requests.length);
 
         // maxWorker is 3, so we should at most have 3 processes running at any given time
         expect(getState(pm, processes[0])).toEqual({ inQ: true, started: true, qSize: 4 });

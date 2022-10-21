@@ -91,7 +91,7 @@ describe('JestTestProvider', () => {
         );
       });
 
-      expect(WorkspaceRoot).toBeCalled();
+      expect(WorkspaceRoot).toHaveBeenCalled();
     });
     it.each`
       isWatchMode
@@ -121,27 +121,27 @@ describe('JestTestProvider', () => {
       const data = setupTestItemData('whatever', true, workspaceRootMock.context);
       data.item.canResolveChildren = true;
       controllerMock.resolveHandler(data.item);
-      expect(controllerMock.createTestRun).toBeCalled();
+      expect(controllerMock.createTestRun).toHaveBeenCalled();
       controllerMock.createTestRun.mockClear();
 
       data.item.canResolveChildren = false;
       controllerMock.resolveHandler(data.item);
-      expect(controllerMock.createTestRun).not.toBeCalled();
+      expect(controllerMock.createTestRun).not.toHaveBeenCalled();
     });
     describe('when no test item is requested', () => {
       it('will resolve the whole workspace via workspaceRoot', () => {
         new JestTestProvider(extExplorerContextMock);
         workspaceRootMock.item.canResolveChildren = true;
         controllerMock.resolveHandler();
-        expect(controllerMock.createTestRun).toBeCalled();
-        expect(workspaceRootMock.discoverTest).toBeCalledTimes(1);
+        expect(controllerMock.createTestRun).toHaveBeenCalled();
+        expect(workspaceRootMock.discoverTest).toHaveBeenCalledTimes(1);
 
         // run will be created with the controller's id
         expect(controllerMock.lastRunMock().name).toEqual(
           expect.stringContaining(controllerMock.id)
         );
         // run will be closed
-        expect(controllerMock.lastRunMock().end).toBeCalled();
+        expect(controllerMock.lastRunMock().end).toHaveBeenCalled();
       });
     });
     describe('when specific item is requested', () => {
@@ -150,28 +150,28 @@ describe('JestTestProvider', () => {
         const data = setupTestItemData('whatever', true, workspaceRootMock.context);
         data.item.canResolveChildren = true;
         controllerMock.resolveHandler(data.item);
-        expect(controllerMock.createTestRun).toBeCalled();
+        expect(controllerMock.createTestRun).toHaveBeenCalled();
 
         // run will be created with the controller's id
         expect(controllerMock.lastRunMock().name).toEqual(
           expect.stringContaining(controllerMock.id)
         );
         // run will be closed
-        expect(controllerMock.lastRunMock().end).toBeCalled();
+        expect(controllerMock.lastRunMock().end).toHaveBeenCalled();
       });
       it('should not crash if item not found in the item-data map', () => {
         new JestTestProvider(extExplorerContextMock);
         const data = makeItemData(true);
         controllerMock.resolveHandler({ canResolveChildren: true });
-        expect(controllerMock.createTestRun).toBeCalled();
-        expect(data.discoverTest).not.toBeCalled();
-        expect(workspaceRootMock.discoverTest).not.toBeCalled();
+        expect(controllerMock.createTestRun).toHaveBeenCalled();
+        expect(data.discoverTest).not.toHaveBeenCalled();
+        expect(workspaceRootMock.discoverTest).not.toHaveBeenCalled();
         // run will be created with the controller's id
         expect(controllerMock.lastRunMock().name).toEqual(
           expect.stringContaining(controllerMock.id)
         );
         // run will be closed
-        expect(controllerMock.lastRunMock().end).toBeCalled();
+        expect(controllerMock.lastRunMock().end).toHaveBeenCalled();
       });
     });
     describe('if discover failed', () => {
@@ -189,7 +189,7 @@ describe('JestTestProvider', () => {
           expect.stringContaining(controllerMock.id)
         );
         // run will be closed
-        expect(controllerMock.lastRunMock().end).toBeCalled();
+        expect(controllerMock.lastRunMock().end).toHaveBeenCalled();
       });
     });
   });
@@ -197,8 +197,8 @@ describe('JestTestProvider', () => {
     it('vscode.TestController will be disposed', () => {
       const testProvider = new JestTestProvider(extExplorerContextMock);
       testProvider.dispose();
-      expect(controllerMock.dispose).toBeCalled();
-      expect(workspaceRootMock.dispose).toBeCalled();
+      expect(controllerMock.dispose).toHaveBeenCalled();
+      expect(workspaceRootMock.dispose).toHaveBeenCalled();
     });
   });
   describe('supports explorer UI run and debug request', () => {
@@ -263,17 +263,20 @@ describe('JestTestProvider', () => {
           await expect(testProvider.runTests(request, cancelToken)).resolves.toBe(undefined);
 
           if (hasError) {
-            expect(controllerMock.lastRunMock().errored).toBeCalledWith(
+            expect(controllerMock.lastRunMock().errored).toHaveBeenCalledWith(
               itemDataList[0].item,
               expect.anything(),
               undefined
             );
-            expect(vscode.TestMessage).toBeCalledTimes(1);
+            expect(vscode.TestMessage).toHaveBeenCalledTimes(1);
           } else {
             if (testNamePattern) {
-              expect(extExplorerContextMock.debugTests).toBeCalledWith('file', testNamePattern);
+              expect(extExplorerContextMock.debugTests).toHaveBeenCalledWith(
+                'file',
+                testNamePattern
+              );
             } else {
-              expect(extExplorerContextMock.debugTests).toBeCalledWith('file');
+              expect(extExplorerContextMock.debugTests).toHaveBeenCalledWith('file');
             }
           }
         }
@@ -293,23 +296,23 @@ describe('JestTestProvider', () => {
         const p = testProvider.runTests(request, cancelToken);
 
         // a run is created
-        expect(controllerMock.createTestRun).toBeCalled();
+        expect(controllerMock.createTestRun).toHaveBeenCalled();
 
         // verify seerial execution
-        expect(extExplorerContextMock.debugTests).toBeCalledTimes(1);
+        expect(extExplorerContextMock.debugTests).toHaveBeenCalledTimes(1);
 
         await finishDebug();
-        expect(extExplorerContextMock.debugTests).toBeCalledTimes(2);
+        expect(extExplorerContextMock.debugTests).toHaveBeenCalledTimes(2);
 
         await finishDebug();
-        expect(extExplorerContextMock.debugTests).toBeCalledTimes(3);
+        expect(extExplorerContextMock.debugTests).toHaveBeenCalledTimes(3);
 
         await finishDebug();
         await p;
-        expect(extExplorerContextMock.debugTests).toBeCalledTimes(3);
+        expect(extExplorerContextMock.debugTests).toHaveBeenCalledTimes(3);
 
         // the run will be closed
-        expect(controllerMock.lastRunMock().end).toBeCalled();
+        expect(controllerMock.lastRunMock().end).toHaveBeenCalled();
       });
       it('cancellation means skip the rest of tests', async () => {
         expect.hasAssertions();
@@ -326,25 +329,25 @@ describe('JestTestProvider', () => {
         const p = testProvider.runTests(request, cancelToken);
 
         // a run is created
-        expect(controllerMock.createTestRun).toBeCalled();
-        expect(extExplorerContextMock.debugTests).toBeCalledTimes(1);
+        expect(controllerMock.createTestRun).toHaveBeenCalled();
+        expect(extExplorerContextMock.debugTests).toHaveBeenCalledTimes(1);
 
         const runMock = controllerMock.lastRunMock();
         await finishDebug();
-        expect(extExplorerContextMock.debugTests).toBeCalledTimes(2);
+        expect(extExplorerContextMock.debugTests).toHaveBeenCalledTimes(2);
 
         // cancel the run during 2nd debug, the 3rd one should be skipped
         cancelToken.isCancellationRequested = true;
 
         await finishDebug();
-        expect(extExplorerContextMock.debugTests).toBeCalledTimes(2);
+        expect(extExplorerContextMock.debugTests).toHaveBeenCalledTimes(2);
         await p;
 
-        expect(extExplorerContextMock.debugTests).toBeCalledTimes(2);
-        expect(runMock.skipped).toBeCalledWith(request.include[2]);
+        expect(extExplorerContextMock.debugTests).toHaveBeenCalledTimes(2);
+        expect(runMock.skipped).toHaveBeenCalledWith(request.include[2]);
 
         // the run will be closed
-        expect(runMock.end).toBeCalledTimes(1);
+        expect(runMock.end).toHaveBeenCalledTimes(1);
       });
       it('can handle exception', async () => {
         expect.hasAssertions();
@@ -364,11 +367,19 @@ describe('JestTestProvider', () => {
         await testProvider.runTests(request, cancelToken);
         const runMock = controllerMock.lastRunMock();
 
-        expect(extExplorerContextMock.debugTests).toBeCalledTimes(3);
-        expect(runMock.errored).toBeCalledTimes(2);
-        expect(runMock.errored).toBeCalledWith(request.include[1], expect.anything(), undefined);
-        expect(runMock.errored).toBeCalledWith(request.include[2], expect.anything(), undefined);
-        expect(runMock.end).toBeCalled();
+        expect(extExplorerContextMock.debugTests).toHaveBeenCalledTimes(3);
+        expect(runMock.errored).toHaveBeenCalledTimes(2);
+        expect(runMock.errored).toHaveBeenCalledWith(
+          request.include[1],
+          expect.anything(),
+          undefined
+        );
+        expect(runMock.errored).toHaveBeenCalledWith(
+          request.include[2],
+          expect.anything(),
+          undefined
+        );
+        expect(runMock.end).toHaveBeenCalled();
       });
     });
     describe('run tests', () => {
@@ -401,22 +412,26 @@ describe('JestTestProvider', () => {
           const runMock = controllerMock.lastRunMock();
 
           if (isCancelled) {
-            expect(tData.scheduleTest).not.toBeCalled();
+            expect(tData.scheduleTest).not.toHaveBeenCalled();
           } else {
-            expect(tData.scheduleTest).toBeCalled();
+            expect(tData.scheduleTest).toHaveBeenCalled();
           }
 
           await expect(p).resolves.toBe(undefined);
-          expect(runMock.end).toBeCalled();
+          expect(runMock.end).toHaveBeenCalled();
 
           switch (state) {
             case 'errored':
-              expect(runMock.errored).toBeCalledWith(tData.item, expect.anything(), undefined);
-              expect(vscode.TestMessage).toBeCalledTimes(1);
+              expect(runMock.errored).toHaveBeenCalledWith(
+                tData.item,
+                expect.anything(),
+                undefined
+              );
+              expect(vscode.TestMessage).toHaveBeenCalledTimes(1);
               break;
             case 'skipped':
-              expect(runMock.skipped).toBeCalledWith(tData.item);
-              expect(vscode.TestMessage).not.toBeCalled();
+              expect(runMock.skipped).toHaveBeenCalledWith(tData.item);
+              expect(vscode.TestMessage).not.toHaveBeenCalled();
               break;
             case undefined:
               break;
@@ -441,11 +456,11 @@ describe('JestTestProvider', () => {
         const p = testProvider.runTests(request, cancelToken);
 
         // a run is created
-        expect(controllerMock.createTestRun).toBeCalled();
+        expect(controllerMock.createTestRun).toHaveBeenCalled();
         const runMock = controllerMock.lastRunMock();
 
         itemDataList.forEach((d) => {
-          expect(d.scheduleTest).toBeCalled();
+          expect(d.scheduleTest).toHaveBeenCalled();
           const [run] = d.scheduleTest.mock.calls[0];
           expect(run).toEqual(expect.objectContaining({ vscodeRun: runMock }));
           // simulate each item is done the run
@@ -453,7 +468,7 @@ describe('JestTestProvider', () => {
         });
 
         await p;
-        expect(runMock.end).toBeCalledTimes(1);
+        expect(runMock.end).toHaveBeenCalledTimes(1);
       });
 
       it('cancellation is passed to the itemData to handle', async () => {
@@ -474,10 +489,10 @@ describe('JestTestProvider', () => {
         cancelToken.isCancellationRequested = true;
 
         // a run is already created
-        expect(controllerMock.createTestRun).toBeCalled();
+        expect(controllerMock.createTestRun).toHaveBeenCalled();
 
         itemDataList.forEach((d) => {
-          expect(d.scheduleTest).toBeCalled();
+          expect(d.scheduleTest).toHaveBeenCalled();
           const [run] = d.scheduleTest.mock.calls[0];
           expect(run).toEqual(expect.objectContaining({ vscodeRun: controllerMock.lastRunMock() }));
           // close the schedule
@@ -485,7 +500,7 @@ describe('JestTestProvider', () => {
         });
 
         await p;
-        expect(runMock.end).toBeCalledTimes(1);
+        expect(runMock.end).toHaveBeenCalledTimes(1);
       });
       it('can handle exception', async () => {
         expect.hasAssertions();
@@ -511,26 +526,34 @@ describe('JestTestProvider', () => {
         cancelToken.isCancellationRequested = true;
 
         // a run is already created
-        expect(controllerMock.createTestRun).toBeCalled();
+        expect(controllerMock.createTestRun).toHaveBeenCalled();
         const runMock = controllerMock.lastRunMock();
 
         itemDataList.forEach((d, idx) => {
-          expect(d.scheduleTest).toBeCalled();
+          expect(d.scheduleTest).toHaveBeenCalled();
           const [run] = d.scheduleTest.mock.calls[0];
           expect(run).toEqual(expect.objectContaining({ vscodeRun: controllerMock.lastRunMock() }));
 
           /* eslint-disable jest/no-conditional-expect */
           if (idx === 1) {
-            expect(run.vscodeRun.errored).toBeCalledWith(d.item, expect.anything(), undefined);
+            expect(run.vscodeRun.errored).toHaveBeenCalledWith(
+              d.item,
+              expect.anything(),
+              undefined
+            );
           } else {
-            expect(run.vscodeRun.errored).not.toBeCalledWith(d.item, expect.anything(), undefined);
+            expect(run.vscodeRun.errored).not.toHaveBeenCalledWith(
+              d.item,
+              expect.anything(),
+              undefined
+            );
             // close the schedule
             run.end();
           }
         });
 
         await p;
-        expect(runMock.end).toBeCalled();
+        expect(runMock.end).toHaveBeenCalled();
       });
       it('if no item in request, will run test for the whole workplace', async () => {
         expect.hasAssertions();
@@ -543,13 +566,13 @@ describe('JestTestProvider', () => {
 
         const p = testProvider.runTests(request, cancelToken);
         const runMock = controllerMock.lastRunMock();
-        expect(workspaceRootMock.scheduleTest).toBeCalledTimes(1);
+        expect(workspaceRootMock.scheduleTest).toHaveBeenCalledTimes(1);
         const [run] = workspaceRootMock.scheduleTest.mock.calls[0];
         expect(run).toEqual(expect.objectContaining({ vscodeRun: controllerMock.lastRunMock() }));
         run.end();
 
         await p;
-        expect(runMock.end).toBeCalled();
+        expect(runMock.end).toHaveBeenCalled();
       });
       it('will reject run request without profile', async () => {
         expect.hasAssertions();
@@ -558,8 +581,8 @@ describe('JestTestProvider', () => {
         const request: any = {};
 
         await expect(testProvider.runTests(request, cancelToken)).rejects.not.toThrow();
-        expect(workspaceRootMock.scheduleTest).toBeCalledTimes(0);
-        expect(controllerMock.createTestRun).not.toBeCalled();
+        expect(workspaceRootMock.scheduleTest).toHaveBeenCalledTimes(0);
+        expect(controllerMock.createTestRun).not.toHaveBeenCalled();
       });
     });
   });

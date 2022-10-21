@@ -44,7 +44,7 @@ describe('CoverageOverlay', () => {
     it('should set the default overlay formatter', () => {
       const sut = new CoverageOverlay(null, coverageMapProvider);
 
-      expect(DefaultFormatter).toBeCalledWith(coverageMapProvider, undefined);
+      expect(DefaultFormatter).toHaveBeenCalledWith(coverageMapProvider, undefined);
       expect(sut.formatter).toBeInstanceOf(DefaultFormatter);
     });
     it('can be cutomized', () => {
@@ -52,7 +52,7 @@ describe('CoverageOverlay', () => {
       const sut = new CoverageOverlay(null, coverageMapProvider, false, 'GutterFormatter', colors);
 
       expect(sut.enabled).toBe(false);
-      expect(GutterFormatter).toBeCalledWith(null, coverageMapProvider, colors);
+      expect(GutterFormatter).toHaveBeenCalledWith(null, coverageMapProvider, colors);
       expect(sut.formatter).toBeInstanceOf(GutterFormatter);
     });
   });
@@ -82,7 +82,7 @@ describe('CoverageOverlay', () => {
         sut.updateVisibleEditors = jest.fn();
         sut.enabled = true;
 
-        expect(sut.updateVisibleEditors).toBeCalled();
+        expect(sut.updateVisibleEditors).toHaveBeenCalled();
       });
     });
   });
@@ -111,7 +111,7 @@ describe('CoverageOverlay', () => {
       sut.updateVisibleEditors = jest.fn();
       sut.toggleVisibility();
 
-      expect(sut.updateVisibleEditors).toBeCalled();
+      expect(sut.updateVisibleEditors).toHaveBeenCalled();
     });
   });
 
@@ -137,8 +137,8 @@ describe('CoverageOverlay', () => {
       const editor: any = {};
       sut.update(editor);
 
-      expect(sut.formatter.format).not.toBeCalled();
-      expect(sut.formatter.clear).not.toBeCalled();
+      expect(sut.formatter.format).not.toHaveBeenCalled();
+      expect(sut.formatter.clear).not.toHaveBeenCalled();
     });
 
     it('should add the overlay when enabled', () => {
@@ -148,7 +148,7 @@ describe('CoverageOverlay', () => {
       const editor: any = { document: {} };
       sut.update(editor);
 
-      expect(sut.formatter.format).toBeCalledWith(editor);
+      expect(sut.formatter.format).toHaveBeenCalledWith(editor);
     });
 
     it('should remove the overlay when disabled', () => {
@@ -158,12 +158,12 @@ describe('CoverageOverlay', () => {
       const editor: any = { document: {} };
       sut.update(editor);
 
-      expect(sut.formatter.clear).toBeCalledWith(editor);
+      expect(sut.formatter.clear).toHaveBeenCalledWith(editor);
     });
   });
   it('supports formatter dispose', () => {
     const sut = new CoverageOverlay(null, coverageMapProvider);
     sut.dispose();
-    expect(sut.formatter.dispose).toBeCalledTimes(1);
+    expect(sut.formatter.dispose).toHaveBeenCalledTimes(1);
   });
 });

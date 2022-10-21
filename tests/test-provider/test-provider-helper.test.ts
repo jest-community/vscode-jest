@@ -20,15 +20,15 @@ describe('JestTestRun', () => {
   it('can deetect status update after run is closed', () => {
     const jestRun = new JestTestRun(context, vRun);
     jestRun.enqueued(item);
-    expect(vRun.enqueued).toBeCalled();
+    expect(vRun.enqueued).toHaveBeenCalled();
 
     jestRun.passed(item);
-    expect(vRun.passed).toBeCalled();
+    expect(vRun.passed).toHaveBeenCalled();
 
     // end the run
     jestRun.end();
     expect(jestRun.isClosed()).toBeTruthy();
-    expect(vRun.end).toBeCalled();
+    expect(vRun.end).toHaveBeenCalled();
 
     //update state now should throw exception
     expect(() => jestRun.passed(item)).toThrow();

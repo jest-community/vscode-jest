@@ -10,9 +10,9 @@ describe('VSCodeJest Reporter', () => {
   it('reports on RunStart and RunComplete via console.log', () => {
     const reporter = new VSCodeJestReporter();
     reporter.onRunStart({} as any);
-    expect(process.stderr.write).toBeCalledWith(expect.stringContaining('onRunStart'));
+    expect(process.stderr.write).toHaveBeenCalledWith(expect.stringContaining('onRunStart'));
     reporter.onRunComplete(new Set(), {} as any);
-    expect(process.stderr.write).toBeCalledWith('onRunComplete\r\n');
+    expect(process.stderr.write).toHaveBeenCalledWith('onRunComplete\r\n');
   });
   it.each`
     numTotalTests | numTotalTestSuites | hasError
@@ -25,17 +25,17 @@ describe('VSCodeJest Reporter', () => {
       const reporter = new VSCodeJestReporter();
       const args: any = { numTotalTestSuites };
       reporter.onRunStart(args);
-      expect(process.stderr.write).toBeCalledWith(
+      expect(process.stderr.write).toHaveBeenCalledWith(
         `onRunStart: numTotalTestSuites: ${numTotalTestSuites}\r\n`
       );
       const result: any = { numTotalTests, numTotalTestSuites };
       reporter.onRunComplete(new Set(), result);
       if (hasError) {
-        expect(process.stderr.write).toBeCalledWith(
+        expect(process.stderr.write).toHaveBeenCalledWith(
           expect.stringContaining('onRunComplete: execError')
         );
       } else {
-        expect(process.stderr.write).toBeCalledWith('onRunComplete\r\n');
+        expect(process.stderr.write).toHaveBeenCalledWith('onRunComplete\r\n');
       }
     }
   );

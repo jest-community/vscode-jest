@@ -74,7 +74,7 @@ describe('QuickInput Proxy', () => {
       };
       const items = [];
       const p = showActionMenu(items, options);
-      expect(mockShow).toBeCalledTimes(1);
+      expect(mockShow).toHaveBeenCalledTimes(1);
       await triggerSelection(mockItem('selected-item', () => Promise.resolve('success')));
 
       await p;
@@ -84,7 +84,7 @@ describe('QuickInput Proxy', () => {
       expect(mockQuickPick.placeholder).toEqual(options.placeholder);
       expect(mockQuickPick.items).toBe(items);
       expect(mockQuickPick.buttons).toBe(options.rightButtons);
-      expect(mockDispose).toBeCalledTimes(1);
+      expect(mockDispose).toHaveBeenCalledTimes(1);
     });
     it.each`
       action                                           | expected
@@ -103,7 +103,7 @@ describe('QuickInput Proxy', () => {
       const result = await p;
 
       expect(result).toEqual(expected);
-      expect(mockDispose).toBeCalledTimes(1);
+      expect(mockDispose).toHaveBeenCalledTimes(1);
     });
 
     it.each`
@@ -118,7 +118,7 @@ describe('QuickInput Proxy', () => {
       // trigger selection
       await triggerSelection(mockItem('selected-item', action));
       await expect(p).rejects.toEqual(expected);
-      expect(mockDispose).toBeCalledTimes(1);
+      expect(mockDispose).toHaveBeenCalledTimes(1);
     });
     it.each`
       enableBackButton | expected
@@ -140,7 +140,7 @@ describe('QuickInput Proxy', () => {
       const result = await p;
 
       expect(result).toEqual(expected);
-      expect(mockDispose).toBeCalledTimes(1);
+      expect(mockDispose).toHaveBeenCalledTimes(1);
     });
     describe('can have action buttons', () => {
       it.each`
@@ -153,12 +153,12 @@ describe('QuickInput Proxy', () => {
         const button = mockButton(action);
         const p = showActionMenu([], { rightButtons: [button] });
 
-        expect(mockShow).toBeCalledTimes(1);
+        expect(mockShow).toHaveBeenCalledTimes(1);
         await triggerButton(button);
         const result = await p;
 
         expect(result).toEqual(expected);
-        expect(mockDispose).toBeCalledTimes(1);
+        expect(mockDispose).toHaveBeenCalledTimes(1);
       });
       it.each`
         action                              | expected
@@ -170,10 +170,10 @@ describe('QuickInput Proxy', () => {
         const button = mockButton(action);
         const p = showActionMenu([], { rightButtons: [button] });
 
-        expect(mockShow).toBeCalledTimes(1);
+        expect(mockShow).toHaveBeenCalledTimes(1);
         await triggerButton(button);
         await expect(p).rejects.toEqual(expected);
-        expect(mockDispose).toBeCalledTimes(1);
+        expect(mockDispose).toHaveBeenCalledTimes(1);
       });
     });
     it.each`
@@ -195,13 +195,13 @@ describe('QuickInput Proxy', () => {
         ];
         const p = showActionMenu(items, { selectItemIdx });
 
-        expect(mockShow).toBeCalledTimes(1);
+        expect(mockShow).toHaveBeenCalledTimes(1);
 
         // exit the menu with the button that returns undefined
         await triggerButton(mockButton(() => Promise.resolve(undefined)));
         await p;
 
-        expect(mockDispose).toBeCalledTimes(1);
+        expect(mockDispose).toHaveBeenCalledTimes(1);
         if (isValidIndex) {
           expect(mockQuickPick.selectedItems).toEqual([items[selectItemIdx]]);
         } else {
@@ -227,8 +227,8 @@ describe('QuickInput Proxy', () => {
         await triggerSelection(item);
         await expect(p).resolves.toEqual('success');
 
-        expect(mockShow).toBeCalledTimes(1);
-        expect(console.log).toBeCalledWith(expect.stringMatching('item-1'));
+        expect(mockShow).toHaveBeenCalledTimes(1);
+        expect(console.log).toHaveBeenCalledWith(expect.stringMatching('item-1'));
       });
       it('when back button is triggered', async () => {
         expect.hasAssertions();
@@ -239,7 +239,7 @@ describe('QuickInput Proxy', () => {
         await triggerButton(vscode.QuickInputButtons.Back);
         await expect(p).resolves.toEqual(undefined);
 
-        expect(mockDispose).toBeCalledTimes(1);
+        expect(mockDispose).toHaveBeenCalledTimes(1);
       });
     });
   });
@@ -280,14 +280,14 @@ describe('QuickInput Proxy', () => {
       const inputValue = 'something';
       const p = showActionInputBox(options);
 
-      expect(mockShow).toBeCalledTimes(1);
+      expect(mockShow).toHaveBeenCalledTimes(1);
       await triggerInput(inputValue);
       const result = await p;
       expect(result).toEqual(inputValue);
       expect(mockInputBox.title).toEqual(options.title);
       expect(mockInputBox.prompt).toEqual(options.prompt);
       expect(mockInputBox.buttons).toEqual(options.rightButtons);
-      expect(mockDispose).toBeCalledTimes(1);
+      expect(mockDispose).toHaveBeenCalledTimes(1);
     });
     it('"escape" input returns undefined', async () => {
       expect.hasAssertions();
@@ -298,10 +298,10 @@ describe('QuickInput Proxy', () => {
 
       expect(result).toBeUndefined();
 
-      expect(mockShow).toBeCalledTimes(1);
+      expect(mockShow).toHaveBeenCalledTimes(1);
       expect(mockInputBox.title).toEqual(options.title);
       expect(mockInputBox.prompt).toEqual(options.prompt);
-      expect(mockDispose).toBeCalledTimes(1);
+      expect(mockDispose).toHaveBeenCalledTimes(1);
     });
     it('hide after accept should have no impact', async () => {
       expect.hasAssertions();
@@ -309,7 +309,7 @@ describe('QuickInput Proxy', () => {
       const inputValue = 'something2';
       const p = showActionInputBox(options);
 
-      expect(mockShow).toBeCalledTimes(1);
+      expect(mockShow).toHaveBeenCalledTimes(1);
       await triggerInput(inputValue);
       await triggerInput();
 
@@ -317,7 +317,7 @@ describe('QuickInput Proxy', () => {
       expect(result).toEqual(inputValue);
       expect(mockInputBox.title).toEqual(options.title);
       expect(mockInputBox.prompt).toEqual(options.prompt);
-      expect(mockDispose).toBeCalledTimes(1);
+      expect(mockDispose).toHaveBeenCalledTimes(1);
     });
     it.each`
       enableBackButton | expected
@@ -339,7 +339,7 @@ describe('QuickInput Proxy', () => {
       const result = await p;
 
       expect(result).toEqual(expected);
-      expect(mockDispose).toBeCalledTimes(1);
+      expect(mockDispose).toHaveBeenCalledTimes(1);
     });
     describe('on button click', () => {
       it.each`
@@ -354,9 +354,9 @@ describe('QuickInput Proxy', () => {
         await triggerButton(button);
 
         const result = await p;
-        expect(mockShow).toBeCalledTimes(1);
+        expect(mockShow).toHaveBeenCalledTimes(1);
         expect(result).toEqual(expected);
-        expect(mockDispose).toBeCalledTimes(1);
+        expect(mockDispose).toHaveBeenCalledTimes(1);
       });
       it.each`
         action                                    | expected
@@ -370,8 +370,8 @@ describe('QuickInput Proxy', () => {
         await triggerButton(button);
 
         await expect(p).rejects.toEqual(expected);
-        expect(mockShow).toBeCalledTimes(1);
-        expect(mockDispose).toBeCalledTimes(1);
+        expect(mockShow).toHaveBeenCalledTimes(1);
+        expect(mockDispose).toHaveBeenCalledTimes(1);
       });
     });
     describe('can be verbose', () => {
@@ -394,8 +394,8 @@ describe('QuickInput Proxy', () => {
 
         await expect(p).resolves.toEqual('some value');
 
-        expect(mockShow).toBeCalledTimes(1);
-        expect(console.log).toBeCalledWith(expect.stringMatching('some value'));
+        expect(mockShow).toHaveBeenCalledTimes(1);
+        expect(console.log).toHaveBeenCalledWith(expect.stringMatching('some value'));
       });
       it('when back button is triggered', async () => {
         const p = showActionInputBox(verboseOptions);
@@ -403,7 +403,7 @@ describe('QuickInput Proxy', () => {
 
         await expect(p).resolves.toEqual(undefined);
 
-        expect(mockShow).toBeCalledTimes(1);
+        expect(mockShow).toHaveBeenCalledTimes(1);
       });
     });
   });
@@ -811,8 +811,8 @@ describe('createSaveConfig', () => {
     const entry = { name: 'jest.jestCommandLine', value: 'whatever' };
     await saveConfig(entry);
 
-    expect(mockUpdate).toBeCalledTimes(1);
-    expect(mockUpdate).toBeCalledWith(
+    expect(mockUpdate).toHaveBeenCalledTimes(1);
+    expect(mockUpdate).toHaveBeenCalledWith(
       entry.name,
       entry.value,
       vscode.ConfigurationTarget.WorkspaceFolder
@@ -826,7 +826,7 @@ describe('createSaveConfig', () => {
     const entry2 = { name: 'launch.configurations', value: [1, 2, 3] };
     await saveConfig(entry1, entry2);
 
-    expect(mockUpdate).toBeCalledTimes(2);
+    expect(mockUpdate).toHaveBeenCalledTimes(2);
     expect(mockUpdate).toHaveBeenNthCalledWith(
       1,
       entry1.name,
@@ -848,8 +848,8 @@ describe('createSaveConfig', () => {
     const entry = { name: 'jest.disabledWorkspaceFolders', value: '[]' };
     await saveConfig(entry);
 
-    expect(mockUpdate).toBeCalledTimes(1);
-    expect(mockUpdate).toBeCalledWith(
+    expect(mockUpdate).toHaveBeenCalledTimes(1);
+    expect(mockUpdate).toHaveBeenCalledWith(
       entry.name,
       entry.value,
       vscode.ConfigurationTarget.Workspace
@@ -867,7 +867,7 @@ describe('createSaveConfig', () => {
     const entry3 = { name: 'entry-3', value: 42 };
     await expect(saveConfig(entry1, entry2, entry3)).rejects.toEqual('failed');
 
-    expect(mockUpdate).toBeCalledTimes(3);
+    expect(mockUpdate).toHaveBeenCalledTimes(3);
   });
 });
 
@@ -880,6 +880,6 @@ describe('selectWorkspace', () => {
     expect.hasAssertions();
     (vscode.workspace as any).workspaceFolders = workspaceFolders;
     await selectWorkspace();
-    expect(vscode.window.showWorkspaceFolderPick).toBeCalledTimes(callCount);
+    expect(vscode.window.showWorkspaceFolderPick).toHaveBeenCalledTimes(callCount);
   });
 });

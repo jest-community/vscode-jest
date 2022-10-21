@@ -97,7 +97,7 @@ describe('CoverageCodeLensProvider', () => {
       expect(provider.onDidChangeCodeLenses).toEqual(event);
 
       provider.coverageChanged();
-      expect(fireMock).toBeCalled();
+      expect(fireMock).toHaveBeenCalled();
     });
   });
 });

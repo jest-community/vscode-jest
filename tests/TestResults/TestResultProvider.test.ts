@@ -223,7 +223,7 @@ describe('TestResultProvider', () => {
     it('fire testSuiteChanged event for newly matched result', () => {
       const sut = newProviderWithData([makeData([testBlock], [], filePath)]);
       sut.getResults(filePath);
-      expect(sut.events.testSuiteChanged.fire).toBeCalledWith({
+      expect(sut.events.testSuiteChanged.fire).toHaveBeenCalledWith({
         type: 'result-matched',
         file: filePath,
       });
@@ -231,7 +231,7 @@ describe('TestResultProvider', () => {
     it('unmatched test will file test-parsed event instead', () => {
       const sut = newProviderWithData([makeData([testBlock], null, filePath)]);
       sut.getResults(filePath);
-      expect(sut.events.testSuiteChanged.fire).toBeCalledWith({
+      expect(sut.events.testSuiteChanged.fire).toHaveBeenCalledWith({
         type: 'test-parsed',
         file: filePath,
         testContainer: expect.anything(),
@@ -619,10 +619,10 @@ describe('TestResultProvider', () => {
     it('should return cached results if possible', () => {
       const getResultSpy = jest.spyOn(sut, 'getResults');
       const expected = sut.getSortedResults(filePath);
-      expect(getResultSpy).toBeCalledTimes(1);
+      expect(getResultSpy).toHaveBeenCalledTimes(1);
 
       expect(sut.getSortedResults(filePath)).toBe(expected);
-      expect(getResultSpy).toBeCalledTimes(1);
+      expect(getResultSpy).toHaveBeenCalledTimes(1);
     });
 
     it('should sort the test results', () => {
@@ -665,7 +665,7 @@ describe('TestResultProvider', () => {
         makeData(itBlocks, assertions, 'file 1'),
         makeData(itBlocks, assertions, 'file 2'),
       ]);
-      expect(mockReconciler.assertionsForTestFile).toBeCalledTimes(0);
+      expect(mockReconciler.assertionsForTestFile).toHaveBeenCalledTimes(0);
 
       // warm up the cache
       const results1 = sut.getResults('file 1');
@@ -682,13 +682,13 @@ describe('TestResultProvider', () => {
       // to get result from "file 1" should trigger mockReconciler.assertionsForTestFile
       const r1 = sut.getResults('file 1');
       expect(r1).toEqual(results1);
-      expect(mockReconciler.assertionsForTestFile).toBeCalledTimes(1);
+      expect(mockReconciler.assertionsForTestFile).toHaveBeenCalledTimes(1);
       mockReconciler.assertionsForTestFile.mockClear();
 
       // but get result from "file 2" should just return the cached value, i.e. not trigger mockReconciler.assertionsForTestFile
       const r2 = sut.getResults('file 2');
       expect(r2).toEqual(results2);
-      expect(mockReconciler.assertionsForTestFile).toBeCalledTimes(0);
+      expect(mockReconciler.assertionsForTestFile).toHaveBeenCalledTimes(0);
     });
 
     it('should update the jest-editor-support cached file status', () => {
@@ -699,7 +699,7 @@ describe('TestResultProvider', () => {
       const results: any = {};
 
       expect(sut.updateTestResults(results, {} as any)).toBe(expected);
-      expect(mockReconciler.updateFileWithJestStatus).toBeCalledWith(results);
+      expect(mockReconciler.updateFileWithJestStatus).toHaveBeenCalledWith(results);
     });
     it('should updated the stats', () => {
       const results: any = [
@@ -723,7 +723,7 @@ describe('TestResultProvider', () => {
       const sut = new TestResultProvider(eventsMock);
       const process: any = { id: 'a-process' };
       sut.updateTestResults({} as any, process);
-      expect(sut.events.testSuiteChanged.fire).toBeCalledWith({
+      expect(sut.events.testSuiteChanged.fire).toHaveBeenCalledWith({
         type: 'assertions-updated',
         files: ['a', 'b'],
         process,
@@ -804,7 +804,7 @@ describe('TestResultProvider', () => {
     describe('listen to session events', () => {
       it('when session start, cache and reconciler will be reset', () => {
         const sut = newProviderWithData([makeData([], [], 'whatever')]);
-        expect(eventsMock.onTestSessionStarted.event).toBeCalled();
+        expect(eventsMock.onTestSessionStarted.event).toHaveBeenCalled();
         expect(mockTestReconciler).toHaveBeenCalledTimes(1);
 
         sut.getResults('whatever');
@@ -820,8 +820,8 @@ describe('TestResultProvider', () => {
     it('will dispose result events', () => {
       const sut = new TestResultProvider(eventsMock);
       sut.dispose();
-      expect(sut.events.testListUpdated.dispose).toBeCalled();
-      expect(sut.events.testSuiteChanged.dispose).toBeCalled();
+      expect(sut.events.testListUpdated.dispose).toHaveBeenCalled();
+      expect(sut.events.testSuiteChanged.dispose).toHaveBeenCalled();
     });
   });
   describe('invalidateTestResults', () => {
@@ -839,7 +839,7 @@ describe('TestResultProvider', () => {
       sut.invalidateTestResults('file 1');
 
       // reconciler's test should be removed
-      expect(mockReconciler.removeTestFile).toBeCalled();
+      expect(mockReconciler.removeTestFile).toHaveBeenCalled();
       //internal cache for "file 1" should also be removed
       expect(sut.getTestSuiteResult('file 1')).toBeUndefined();
 

@@ -73,7 +73,7 @@ describe('JestProcess', () => {
       const request = mockProcessRequest('all-tests');
 
       jestProcess = new JestProcess(extContext, request);
-      expect(extContext.loggingFactory.create).toBeCalledTimes(1);
+      expect(extContext.loggingFactory.create).toHaveBeenCalledTimes(1);
     });
     it('does not start runner upon creation', () => {
       const request = mockProcessRequest('all-tests');
@@ -172,7 +172,7 @@ describe('JestProcess', () => {
           expect(options.args.replace).toEqual(replace);
           expect(options.args.args).toEqual(expect.arrayContaining(flags));
         }
-        expect(mockRunner.start).toBeCalledWith(...startArgs);
+        expect(mockRunner.start).toHaveBeenCalledWith(...startArgs);
         closeRunner();
         await p;
       }
@@ -241,8 +241,8 @@ describe('JestProcess', () => {
       const p1 = jestProcess.start();
       const p2 = jestProcess.start();
 
-      expect(RunnerClassMock).toBeCalledTimes(1);
-      expect(mockRunner.start).toBeCalledTimes(1);
+      expect(RunnerClassMock).toHaveBeenCalledTimes(1);
+      expect(mockRunner.start).toHaveBeenCalledTimes(1);
       expect(p1).toBe(p2);
     });
     describe('can prepare testNamePattern for used in correspoding spawned shell', () => {
@@ -283,13 +283,13 @@ describe('JestProcess', () => {
 
       const jestProcess1 = new JestProcess(extContext, request);
       jestProcess1.start();
-      expect(extContext.createRunnerWorkspace).toBeCalledWith(undefined);
+      expect(extContext.createRunnerWorkspace).toHaveBeenCalledWith(undefined);
 
       const request2 = mockRequest('by-file', { testFileName: 'abc' });
       request2.schedule.queue = 'blocking-2';
       const jestProcess2 = new JestProcess(extContext, request2);
       jestProcess2.start();
-      expect(extContext.createRunnerWorkspace).toBeCalledWith(
+      expect(extContext.createRunnerWorkspace).toHaveBeenCalledWith(
         expect.objectContaining({ outputFileSuffix: expect.anything() })
       );
     });
