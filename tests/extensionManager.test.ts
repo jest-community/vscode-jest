@@ -684,7 +684,7 @@ describe('ExtensionManager', () => {
         ${1} | ${'4.6'}   | ${false}   | ${undefined}             | ${false}
         ${2} | ${'5.0.0'} | ${true}    | ${undefined}             | ${false}
         ${3} | ${'5.0.0'} | ${true}    | ${'See What Is Changed'} | ${true}
-        ${4} | ${'5.0.1'} | ${false}   | ${undefined}             | ${false}
+        ${4} | ${'5.0.1'} | ${true}    | ${undefined}             | ${false}
         ${5} | ${'6.0.0'} | ${false}   | ${undefined}             | ${false}
       `(
         'show release note once for specific version: case $case',

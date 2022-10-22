@@ -2,6 +2,7 @@
 
 ---
 - [v5.0.1 (pre-release)](#v501-pre-release)
+  - [New Features](#new-features)
   - [Bug Fixes](#bug-fixes)
 - [v5.0.0 (pre-release)](#v500-pre-release)
   - [Features](#features)
@@ -17,9 +18,16 @@
 
 ---
 ## v5.0.1 (pre-release) 
+### New Features
+- expanded the setup-tool (renamed from setup wizard) to support monorepo project setup. 
+  ![main-menu](../images/setup-tool/main-menu.png) 
+  ([#921](https://github.com/jest-community/vscode-jest/pull/921) - @connectdotz)
+
 ### Bug Fixes
-- address issues that vscode runs occasionally appears to be hanging when the runs already completed. 
-- missing runtime error detection and reporting when the run fails to start.
+- address issues that vscode runs occasionally appears to be hanging when the runs already completed. ([#926](https://github.com/jest-community/vscode-jest/pull/926), [#927](https://github.com/jest-community/vscode-jest/pull/927)) 
+- missing runtime error detection and reporting when the run fails to start. ([#927](https://github.com/jest-community/vscode-jest/pull/927))
+
+_change log: [v5.0.1 pre-release](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.1)_
 
 ## v5.0.0 (pre-release) 
 
@@ -50,7 +58,6 @@ While there are many work arounds, we want to add one more option for users pref
 
 Note, the extra initialization might have some performance overhead, use this with caution.
 
-(#874 - @connectdotz)
 ([#874](https://github.com/jest-community/vscode-jest/pull/874) - @connectdotz)
 
 #### Long Run Monitor
@@ -94,6 +101,4 @@ Fixed the test suites got counted toward these counts.
   - can not be turned off any more. 
   - removed the "enable" and "showClassicStatus" attributes. The only valid attribute is "showInlineError".
 
----
-
-Detailed changes: [v5.0.0 pre-release](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.0)
+_change log: [v5.0.0 pre-release](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.0)_
