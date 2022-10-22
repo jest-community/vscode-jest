@@ -1,6 +1,8 @@
 # vscode-jest v5 Releases <!-- omit in toc --> 
 
 ---
+- [v5.0.1 (pre-release)](#v501-pre-release)
+  - [Bug Fixes](#bug-fixes)
 - [v5.0.0 (pre-release)](#v500-pre-release)
   - [Features](#features)
     - [Output Terminals](#output-terminals)
@@ -14,6 +16,11 @@
   - [Breaking Changes](#breaking-changes)
 
 ---
+## v5.0.1 (pre-release) 
+### Bug Fixes
+- address issues that vscode runs occasionally appears to be hanging when the runs already completed. 
+- missing runtime error detection and reporting when the run fails to start.
+
 ## v5.0.0 (pre-release) 
 
 After more than an year with the vscode TestExplorer, it has been proven stable and a preferred user-experience. In v5.0.0 we started to consolidate and clean up redundant legacy functions/UI in favor of TestExplorer, such as moving run output to Terminal, retire legacy test status decorators and settings.  
