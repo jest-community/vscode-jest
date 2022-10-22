@@ -118,7 +118,7 @@ describe('ModuleHelpers', () => {
       };
 
       expect(pathToJest(settings)).toBe(expected);
-      expect(mockNormalize).toBeCalledWith(settings.pathToJest);
+      expect(mockNormalize).toHaveBeenCalledWith(settings.pathToJest);
     });
     it('defaults to "node_modules/.bin/jest" when Jest is locally installed', () => {
       const expected = 'node_modules/.bin/jest.TEST';
@@ -357,7 +357,7 @@ describe('get info from Package.json', () => {
     it('can read package.json from file system', () => {
       mockReadFileSync.mockReturnValueOnce(JSON.stringify(packageWithTest));
       expect(getPackageJson('root')).toEqual(packageWithTest);
-      expect(mockReadFileSync).toBeCalledWith(
+      expect(mockReadFileSync).toHaveBeenCalledWith(
         expect.arrayContaining(['root', 'package.json']),
         expect.anything()
       );

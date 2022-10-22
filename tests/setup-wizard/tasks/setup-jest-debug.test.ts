@@ -121,11 +121,11 @@ describe('wizard-tasks', () => {
       return true;
     };
     const hasShownLaunchFile = (filePath: string): boolean => {
-      expect(mockOpenTextDocument).toBeCalledTimes(1);
+      expect(mockOpenTextDocument).toHaveBeenCalledTimes(1);
       const [aPath] = mockOpenTextDocument.mock.calls[0];
       expect(aPath).toEqual(filePath);
 
-      expect(mockShowTextDocument).toBeCalledTimes(1);
+      expect(mockShowTextDocument).toHaveBeenCalledTimes(1);
       const [doc, { selection }] = mockShowTextDocument.mock.calls[0];
       expect(doc).toBe(mockTextDocument);
       expect(selection).not.toBeUndefined();
@@ -166,14 +166,14 @@ describe('wizard-tasks', () => {
         await setupJestDebug(c);
 
         if (wsInContext) {
-          expect(mockHelper.selectWorkspace).not.toBeCalled();
+          expect(mockHelper.selectWorkspace).not.toHaveBeenCalled();
         } else {
-          expect(mockHelper.selectWorkspace).toBeCalled();
+          expect(mockHelper.selectWorkspace).toHaveBeenCalled();
         }
         if (willAbort) {
-          expect(mockHelper.showActionMessage).not.toBeCalled();
+          expect(mockHelper.showActionMessage).not.toHaveBeenCalled();
         } else {
-          expect(mockHelper.showActionMessage).toBeCalled();
+          expect(mockHelper.showActionMessage).toHaveBeenCalled();
         }
       });
     });
@@ -189,7 +189,7 @@ describe('wizard-tasks', () => {
         expect.hasAssertions();
         mockHelper.showActionMessage.mockReturnValueOnce(undefined);
         await expect(setupJestDebug(context)).resolves.toEqual('abort');
-        expect(mockHelper.showActionMessage).toBeCalledTimes(1);
+        expect(mockHelper.showActionMessage).toHaveBeenCalledTimes(1);
       });
       it.each`
         cmdLineResult | debugConfigResult | finalResult
@@ -212,9 +212,9 @@ describe('wizard-tasks', () => {
           mockShowActionMessage('error', DebugSetupActionId.setupJestCmdLine);
 
           await expect(setupJestDebug(context)).resolves.toEqual(finalResult);
-          expect(mockHelper.showActionMessage).toBeCalledTimes(1);
-          expect(mockCmdLineTask).toBeCalledTimes(1);
-          expect(mockDeubgConfigTask).toBeCalledTimes(debugConfigResult === null ? 0 : 1);
+          expect(mockHelper.showActionMessage).toHaveBeenCalledTimes(1);
+          expect(mockCmdLineTask).toHaveBeenCalledTimes(1);
+          expect(mockDeubgConfigTask).toHaveBeenCalledTimes(debugConfigResult === null ? 0 : 1);
         }
       );
     });
@@ -294,12 +294,12 @@ describe('wizard-tasks', () => {
           expect(configs.find((c) => c.name === existingConfig.name)).not.toBeUndefined();
         } else {
           // the rest of methods are not invoked
-          expect(mockHelper.mergeDebugConfigWithCmdLine).not.toBeCalled();
+          expect(mockHelper.mergeDebugConfigWithCmdLine).not.toHaveBeenCalled();
           validateConfigUpdate();
           if (menuId === DebugSetupActionId.edit) {
-            expect(mockShowTextDocument).toBeCalled();
+            expect(mockShowTextDocument).toHaveBeenCalled();
           } else {
-            expect(mockShowTextDocument).not.toBeCalled();
+            expect(mockShowTextDocument).not.toHaveBeenCalled();
           }
         }
       });
@@ -317,7 +317,7 @@ describe('wizard-tasks', () => {
         await expect(setupJestDebug(context)).resolves.toEqual('success');
 
         expect(hasShownLaunchFile('/_uri_/.vscode/launch.json')).toBeTruthy();
-        expect(mockTextDocument.positionAt).toBeCalledTimes(1);
+        expect(mockTextDocument.positionAt).toHaveBeenCalledTimes(1);
         const index = mockTextDocument.positionAt.mock.calls[0][0];
         expect(validateIndex(index)).toBeTruthy();
       });

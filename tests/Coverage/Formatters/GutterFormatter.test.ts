@@ -60,7 +60,7 @@ describe('GutterFormatter', () => {
       sut = new GutterFormatter(context, coverageMapProvider);
     });
     it('will decorate gutter with an Uri differ by color', () => {
-      expect(vscode.Uri.file).toBeCalledTimes(3);
+      expect(vscode.Uri.file).toHaveBeenCalledTimes(3);
 
       const decorations = [sut.uncoveredLine, sut.partiallyCoveredLine, sut.coveredLine];
       decorations.forEach((d) => {
@@ -99,7 +99,7 @@ describe('GutterFormatter', () => {
 
       it('should clear all decorations', () => {
         sut.format(editor);
-        expect(mockSetDecorations).toBeCalledTimes(3);
+        expect(mockSetDecorations).toHaveBeenCalledTimes(3);
         expect(mockSetDecorations).toHaveBeenCalledWith(sut.uncoveredLine, []);
         expect(mockSetDecorations).toHaveBeenCalledWith(sut.partiallyCoveredLine, []);
         expect(mockSetDecorations).toHaveBeenCalledWith(sut.coveredLine, []);
@@ -116,14 +116,14 @@ describe('GutterFormatter', () => {
       });
       it('should decorate uncovered and partially-covered ranges', () => {
         sut.format(editor);
-        expect(mockSetDecorations).toBeCalledTimes(3);
+        expect(mockSetDecorations).toHaveBeenCalledTimes(3);
         expect(mockSetDecorations).toHaveBeenCalledWith(sut.uncoveredLine, [range2]);
         expect(mockSetDecorations).toHaveBeenCalledWith(sut.partiallyCoveredLine, [range3]);
         expect(mockSetDecorations).toHaveBeenCalledWith(sut.coveredLine, [range1]);
       });
       it('can can clear decorator for the given editor', () => {
         sut.clear(editor);
-        expect(mockSetDecorations).toBeCalledTimes(3);
+        expect(mockSetDecorations).toHaveBeenCalledTimes(3);
         expect(mockSetDecorations).toHaveBeenCalledWith(sut.uncoveredLine, []);
         expect(mockSetDecorations).toHaveBeenCalledWith(sut.partiallyCoveredLine, []);
         expect(mockSetDecorations).toHaveBeenCalledWith(sut.coveredLine, []);
@@ -132,9 +132,9 @@ describe('GutterFormatter', () => {
 
     it('can dispose decorator for all editors', () => {
       sut.dispose();
-      expect(sut.uncoveredLine.dispose).toBeCalledTimes(1);
-      expect(sut.partiallyCoveredLine.dispose).toBeCalledTimes(1);
-      expect(sut.coveredLine.dispose).toBeCalledTimes(1);
+      expect(sut.uncoveredLine.dispose).toHaveBeenCalledTimes(1);
+      expect(sut.partiallyCoveredLine.dispose).toHaveBeenCalledTimes(1);
+      expect(sut.coveredLine.dispose).toHaveBeenCalledTimes(1);
     });
   });
 });

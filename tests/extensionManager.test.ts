@@ -103,9 +103,9 @@ describe('ExtensionManager', () => {
     });
     it('should created the components shared across of all workspaces', () => {
       new ExtensionManager(context);
-      expect(DebugConfigurationProvider).toBeCalled();
-      expect(DebugCodeLensProvider).toBeCalled();
-      expect(CoverageCodeLensProvider).toBeCalled();
+      expect(DebugConfigurationProvider).toHaveBeenCalled();
+      expect(DebugCodeLensProvider).toHaveBeenCalled();
+      expect(CoverageCodeLensProvider).toHaveBeenCalled();
     });
   });
   describe('upon pending monorepo setup task', () => {
@@ -463,7 +463,7 @@ describe('ExtensionManager', () => {
           ({ eventValue, EMCount, Ws1Count, Ws2Count }) => {
             const event = mockEvent(eventValue);
             extensionManager.onDidChangeConfiguration(event);
-            expect(applySettingsSpy).toBeCalledTimes(EMCount);
+            expect(applySettingsSpy).toHaveBeenCalledTimes(EMCount);
             expect(ws1Ext.triggerUpdateSettings).toHaveBeenCalledTimes(Ws1Count);
             expect(ws2Ext.triggerUpdateSettings).toHaveBeenCalledTimes(Ws2Count);
           }
@@ -591,21 +591,21 @@ describe('ExtensionManager', () => {
       it('onDidCreateFiles', () => {
         const event: any = { files };
         extensionManager.onDidCreateFiles(event);
-        expect(ext1.onDidCreateFiles).toBeCalledTimes(ext1Call);
-        expect(ext2.onDidCreateFiles).toBeCalledTimes(ext2Call);
+        expect(ext1.onDidCreateFiles).toHaveBeenCalledTimes(ext1Call);
+        expect(ext2.onDidCreateFiles).toHaveBeenCalledTimes(ext2Call);
       });
       it('onDidDeleteFiles', () => {
         const event: any = { files };
         extensionManager.onDidDeleteFiles(event);
-        expect(ext1.onDidDeleteFiles).toBeCalledTimes(ext1Call);
-        expect(ext2.onDidDeleteFiles).toBeCalledTimes(ext2Call);
+        expect(ext1.onDidDeleteFiles).toHaveBeenCalledTimes(ext1Call);
+        expect(ext2.onDidDeleteFiles).toHaveBeenCalledTimes(ext2Call);
       });
       it('onDidRenameFiles', () => {
         const renameFiles = files.map((f) => ({ oldUri: f, newUri: 'ws-1' }));
         const event: any = { files: renameFiles };
         extensionManager.onDidRenameFiles(event);
-        expect(ext1.onDidRenameFiles).toBeCalledTimes(1);
-        expect(ext2.onDidRenameFiles).toBeCalledTimes(ext2Call);
+        expect(ext1.onDidRenameFiles).toHaveBeenCalledTimes(1);
+        expect(ext2.onDidRenameFiles).toHaveBeenCalledTimes(ext2Call);
       });
     });
     describe('listen for save events', () => {
@@ -619,24 +619,24 @@ describe('ExtensionManager', () => {
       it('onDidSaveTextDocument', () => {
         const document: any = { uri: 'ws-1' };
         extensionManager.onDidSaveTextDocument(document);
-        expect(ext1.onDidSaveTextDocument).toBeCalledTimes(1);
-        expect(ext2.onDidSaveTextDocument).toBeCalledTimes(0);
+        expect(ext1.onDidSaveTextDocument).toHaveBeenCalledTimes(1);
+        expect(ext2.onDidSaveTextDocument).toHaveBeenCalledTimes(0);
 
         document.uri = 'ws-2';
         extensionManager.onDidSaveTextDocument(document);
-        expect(ext1.onDidSaveTextDocument).toBeCalledTimes(1);
-        expect(ext2.onDidSaveTextDocument).toBeCalledTimes(1);
+        expect(ext1.onDidSaveTextDocument).toHaveBeenCalledTimes(1);
+        expect(ext2.onDidSaveTextDocument).toHaveBeenCalledTimes(1);
       });
       it('onWillSaveTextDocument', () => {
         const event: any = { document: { uri: 'ws-1' } };
         extensionManager.onWillSaveTextDocument(event);
-        expect(ext1.onWillSaveTextDocument).toBeCalledTimes(1);
-        expect(ext2.onWillSaveTextDocument).toBeCalledTimes(0);
+        expect(ext1.onWillSaveTextDocument).toHaveBeenCalledTimes(1);
+        expect(ext2.onWillSaveTextDocument).toHaveBeenCalledTimes(0);
 
         event.document.uri = 'ws-2';
         extensionManager.onWillSaveTextDocument(event);
-        expect(ext1.onWillSaveTextDocument).toBeCalledTimes(1);
-        expect(ext2.onWillSaveTextDocument).toBeCalledTimes(1);
+        expect(ext1.onWillSaveTextDocument).toHaveBeenCalledTimes(1);
+        expect(ext2.onWillSaveTextDocument).toHaveBeenCalledTimes(1);
       });
     });
     describe('activate', () => {
@@ -663,21 +663,21 @@ describe('ExtensionManager', () => {
         const document: any = { document: { uri: 'ws-2' } };
         (vscode.window.activeTextEditor as any) = document;
         extensionManager.activate();
-        expect(ext1.activate).not.toBeCalled();
-        expect(ext2.activate).toBeCalled();
+        expect(ext1.activate).not.toHaveBeenCalled();
+        expect(ext2.activate).toHaveBeenCalled();
       });
       it('without active editor => do nothing', () => {
         (vscode.window.activeTextEditor as any) = undefined;
         extensionManager.activate();
-        expect(ext1.onDidChangeActiveTextEditor).not.toBeCalled();
-        expect(ext2.onDidChangeActiveTextEditor).not.toBeCalled();
+        expect(ext1.onDidChangeActiveTextEditor).not.toHaveBeenCalled();
+        expect(ext2.onDidChangeActiveTextEditor).not.toHaveBeenCalled();
       });
       it('with inactive workspace => do nothing', () => {
         const document: any = { document: { uri: 'ws-3' } };
         (vscode.window.activeTextEditor as any) = document;
         extensionManager.activate();
-        expect(ext1.onDidChangeActiveTextEditor).not.toBeCalled();
-        expect(ext2.onDidChangeActiveTextEditor).not.toBeCalled();
+        expect(ext1.onDidChangeActiveTextEditor).not.toHaveBeenCalled();
+        expect(ext2.onDidChangeActiveTextEditor).not.toHaveBeenCalled();
       });
       it.each`
         case | version    | showChoice | choice                   | showRN
@@ -705,25 +705,25 @@ describe('ExtensionManager', () => {
           await dummyAsync();
 
           if (showChoice) {
-            expect(vscode.window.showInformationMessage).toBeCalled();
+            expect(vscode.window.showInformationMessage).toHaveBeenCalled();
 
             if (showRN) {
-              expect(vscode.commands.executeCommand).toBeCalledWith(
+              expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
                 'vscode.open',
                 expect.anything()
               );
             } else {
-              expect(vscode.commands.executeCommand).not.toBeCalled();
+              expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
             }
           } else {
-            expect(vscode.window.showInformationMessage).not.toBeCalled();
+            expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
           }
 
           // calling activate again should not show release note again
           (vscode.window.showInformationMessage as jest.Mocked<any>).mockClear();
           extensionManager.activate();
           await dummyAsync();
-          expect(vscode.window.showInformationMessage).not.toBeCalled();
+          expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
         }
       );
     });

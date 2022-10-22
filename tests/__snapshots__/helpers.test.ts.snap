@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`toErrorString: arbitrary object 1`] = `"{\\"text\\":\\"anything\\",\\"value\\":1}"`;
+exports[`toErrorString: arbitrary object 1`] = `"{"text":"anything","value":1}"`;
 
 exports[`toErrorString: string 1`] = `"regular error"`;
 

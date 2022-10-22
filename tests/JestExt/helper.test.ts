@@ -105,11 +105,11 @@ describe('createJestExtContext', () => {
 
       const context = createJestExtContext(workspaceFolder, settings);
       expect(typeof context.createRunnerWorkspace).toEqual('function');
-      expect(ProjectWorkspace).not.toBeCalled();
+      expect(ProjectWorkspace).not.toHaveBeenCalled();
 
       const runnerWorkspace = context.createRunnerWorkspace();
-      expect(ProjectWorkspace).toBeCalled();
-      expect(toFilePath).toBeCalledWith(rootPath);
+      expect(ProjectWorkspace).toHaveBeenCalled();
+      expect(toFilePath).toHaveBeenCalledWith(rootPath);
       expect(runnerWorkspace).toEqual(mockRunnerWorkspace);
     });
     it('allow creating runnerWorkspace with custom options', () => {
@@ -137,7 +137,7 @@ describe('createJestExtContext', () => {
     const settings: any = { ...baseSettings };
     (workspaceLogging as jest.Mocked<any>).mockReturnValue({});
     const context = createJestExtContext(workspaceFolder, settings);
-    expect(workspaceLogging).toBeCalled();
+    expect(workspaceLogging).toHaveBeenCalled();
     expect(context.loggingFactory).toEqual({});
   });
 });
@@ -234,7 +234,7 @@ describe('getExtensionResourceSettings()', () => {
             })
           );
           if (showWarning) {
-            expect(vscode.window.showWarningMessage).toBeCalled();
+            expect(vscode.window.showWarningMessage).toHaveBeenCalled();
           }
         }
       );

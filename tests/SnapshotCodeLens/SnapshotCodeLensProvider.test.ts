@@ -18,8 +18,8 @@ describe('SnapshotCodeLensProvider', () => {
     it('register if enableSnapshotPreviews is not false', () => {
       const registration = registerSnapshotCodeLens(true);
       expect(registration.length > 0).toBeTruthy();
-      expect(vscode.languages.registerCodeLensProvider).toBeCalled();
-      expect(vscode.commands.registerCommand).toBeCalledWith(
+      expect(vscode.languages.registerCodeLensProvider).toHaveBeenCalled();
+      expect(vscode.commands.registerCommand).toHaveBeenCalledWith(
         expect.stringContaining('snapshot.missing'),
         expect.anything()
       );
@@ -27,8 +27,8 @@ describe('SnapshotCodeLensProvider', () => {
     it('not register if enableSnapshotPreviews is false', () => {
       const registration = registerSnapshotCodeLens(false);
       expect(registration).toHaveLength(0);
-      expect(vscode.languages.registerCodeLensProvider).not.toBeCalled();
-      expect(vscode.commands.registerCommand).not.toBeCalled();
+      expect(vscode.languages.registerCodeLensProvider).not.toHaveBeenCalled();
+      expect(vscode.commands.registerCommand).not.toHaveBeenCalled();
     });
   });
   describe('provideCodeLenses', () => {
@@ -47,7 +47,7 @@ describe('SnapshotCodeLensProvider', () => {
       );
 
       await provider.provideCodeLenses({ uri: { fsPath: 'whatever' } }, {});
-      expect(mockCodeLens).toBeCalledTimes(2);
+      expect(mockCodeLens).toHaveBeenCalledTimes(2);
 
       let [, command] = mockCodeLens.mock.calls[0];
       let range = (vscode.Range as jest.Mocked<any>).mock.calls[0];

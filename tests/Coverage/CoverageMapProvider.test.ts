@@ -55,7 +55,7 @@ describe('CoverageMapProvider', () => {
       const sut = new CoverageMapProvider();
       await sut.update(expected);
 
-      expect(transformCoverage).toBeCalledWith(expected);
+      expect(transformCoverage).toHaveBeenCalledWith(expected);
     });
 
     it('should store the transformed coverage map', async () => {
@@ -130,20 +130,20 @@ describe('CoverageMapProvider', () => {
   describe('onVisibilityChange', () => {
     it('visibility = false => the internal maps and store will be reset', () => {
       const sut = new CoverageMapProvider();
-      expect(createCoverageMapMock).toBeCalledTimes(1);
-      expect(createSourceMapStoreMock).toBeCalledTimes(1);
+      expect(createCoverageMapMock).toHaveBeenCalledTimes(1);
+      expect(createSourceMapStoreMock).toHaveBeenCalledTimes(1);
 
       sut.onVisibilityChanged(false);
-      expect(createCoverageMapMock).toBeCalledTimes(2);
-      expect(createSourceMapStoreMock).toBeCalledTimes(2);
+      expect(createCoverageMapMock).toHaveBeenCalledTimes(2);
+      expect(createSourceMapStoreMock).toHaveBeenCalledTimes(2);
     });
     it('visibility = true => no-op', () => {
       const sut = new CoverageMapProvider();
       jest.clearAllMocks();
 
       sut.onVisibilityChanged(true);
-      expect(createCoverageMapMock).toBeCalledTimes(0);
-      expect(createSourceMapStoreMock).toBeCalledTimes(0);
+      expect(createCoverageMapMock).toHaveBeenCalledTimes(0);
+      expect(createSourceMapStoreMock).toHaveBeenCalledTimes(0);
     });
   });
 });

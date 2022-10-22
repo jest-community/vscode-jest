@@ -82,7 +82,7 @@ describe('DebugConfigurationProvider', () => {
       expect(configuration).toBeDefined();
       expect(configuration.env && configuration.env.CI).toBeTruthy();
       if (expectedArgs.includes('--runTestsByPath')) {
-        expect(toFilePath).toBeCalled();
+        expect(toFilePath).toHaveBeenCalled();
       }
       expect(configuration.args).toEqual(expectedArgs);
     }

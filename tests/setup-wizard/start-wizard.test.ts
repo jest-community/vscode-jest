@@ -45,7 +45,7 @@ describe('startWizard', () => {
       return 'exit';
     });
     await startWizard(mockDebugConfigProvider, vscodeContext);
-    expect(vscodeContext.globalState.update).toBeCalledWith(PendingSetupTaskKey, undefined);
+    expect(vscodeContext.globalState.update).toHaveBeenCalledWith(PendingSetupTaskKey, undefined);
   });
   describe.each`
     taskId           | menuId
@@ -77,8 +77,8 @@ describe('startWizard', () => {
         await expect(startWizard(mockDebugConfigProvider, vscodeContext)).resolves.toEqual(
           wizardResult
         );
-        expect(task).toBeCalledTimes(1);
-        expect(showActionMenu).toBeCalledTimes(menuCallCount);
+        expect(task).toHaveBeenCalledTimes(1);
+        expect(showActionMenu).toHaveBeenCalledTimes(menuCallCount);
       }
     );
     it.each`
@@ -105,7 +105,7 @@ describe('startWizard', () => {
         startWizard(mockDebugConfigProvider, vscodeContext, { workspace, taskId })
       ).resolves.toEqual(wizardResult);
 
-      expect(task).toBeCalledTimes(1);
+      expect(task).toHaveBeenCalledTimes(1);
     });
   });
   it('can handle unexpected exception', async () => {

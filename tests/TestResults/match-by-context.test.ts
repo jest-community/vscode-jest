@@ -837,7 +837,7 @@ describe('matchTestAssertions', () => {
       expect(matched.map((m) => [m.name, m.sourceHistory])).toEqual(
         expect.arrayContaining([['desc-1 test-2', expect.arrayContaining(['match-failed'])]])
       );
-      expect(mockWarn).toBeCalledTimes(1);
+      expect(mockWarn).toHaveBeenCalledTimes(1);
 
       const info = mockWarn.mock.calls[0][1];
       expect(info.type).toEqual('report-unmatched');

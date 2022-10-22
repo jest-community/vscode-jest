@@ -35,7 +35,7 @@ describe('test diagnostics', () => {
     it('will clear given diagnostics', () => {
       const mockDiagnostics = new MockDiagnosticCollection();
       resetDiagnostics(mockDiagnostics);
-      expect(mockDiagnostics.clear).toBeCalled();
+      expect(mockDiagnostics.clear).toHaveBeenCalled();
     });
   });
 
@@ -77,8 +77,8 @@ describe('test diagnostics', () => {
       const mockDiagnostics = new MockDiagnosticCollection();
 
       updateDiagnostics([], mockDiagnostics);
-      expect(mockDiagnostics.clear).not.toBeCalled();
-      expect(mockDiagnostics.set).not.toBeCalled();
+      expect(mockDiagnostics.clear).not.toHaveBeenCalled();
+      expect(mockDiagnostics.set).not.toHaveBeenCalled();
     });
 
     it('ensures non-negative line number in diagnostic message', () => {
@@ -333,7 +333,7 @@ describe('test diagnostics', () => {
 
       updateCurrentDiagnostics([testResult1], mockDiagnostics, mockEditor as any);
 
-      expect(vscode.Diagnostic).toBeCalledTimes(2);
+      expect(vscode.Diagnostic).toHaveBeenCalledTimes(2);
       const [[, msg1], [, msg2]] = (vscode.Diagnostic as jest.Mock<any>).mock.calls;
       expect(msg1).toEqual('fail-1');
       expect(msg2).toEqual('fail-2');

@@ -73,14 +73,14 @@ describe('wizard-tasks', () => {
         await setupJestCmdLine(c);
 
         if (wsInContext) {
-          expect(mockHelper.selectWorkspace).not.toBeCalled();
+          expect(mockHelper.selectWorkspace).not.toHaveBeenCalled();
         } else {
-          expect(mockHelper.selectWorkspace).toBeCalled();
+          expect(mockHelper.selectWorkspace).toHaveBeenCalled();
         }
         if (willAbort) {
-          expect(mockHelper.getConfirmation).not.toBeCalled();
+          expect(mockHelper.getConfirmation).not.toHaveBeenCalled();
         } else {
-          expect(mockHelper.getConfirmation).toBeCalled();
+          expect(mockHelper.getConfirmation).toHaveBeenCalled();
         }
       });
     });
@@ -169,13 +169,13 @@ describe('wizard-tasks', () => {
 
         // user will be able to editing it before update
         if (menuId != null) {
-          expect(mockHelper.showActionInputBox).toBeCalled();
+          expect(mockHelper.showActionInputBox).toHaveBeenCalled();
 
           // both jestCommandLine and debug config should be updated
           validateConfigUpdate((cmdLine) => expect(cmdLine).toEqual(expectedCmdLine));
         } else {
           // user abort the menu
-          expect(mockHelper.showActionInputBox).not.toBeCalled();
+          expect(mockHelper.showActionInputBox).not.toHaveBeenCalled();
           validateConfigUpdate();
         }
       });
@@ -201,13 +201,13 @@ describe('wizard-tasks', () => {
 
         // user will be able to editing it before update
         if (updatedCmdLine) {
-          expect(mockHelper.showActionInputBox).toBeCalled();
+          expect(mockHelper.showActionInputBox).toHaveBeenCalled();
 
           // both jestCommandLine and debug config should be updated
           validateConfigUpdate((cmdLine) => expect(cmdLine).toEqual(expectedCmdLine));
         } else {
           // user abort the menu
-          expect(mockHelper.showActionInputBox).not.toBeCalled();
+          expect(mockHelper.showActionInputBox).not.toHaveBeenCalled();
           validateConfigUpdate();
         }
       });
@@ -224,18 +224,18 @@ describe('wizard-tasks', () => {
           mockShowActionMessage('warning', CLSetupActionId.editInvalidCmdLine);
           await expect(setupJestCmdLine(context)).resolves.toEqual('success');
           // showing warniing
-          expect(mockHelper.showActionMessage).toBeCalledTimes(1);
+          expect(mockHelper.showActionMessage).toHaveBeenCalledTimes(1);
           // show input box for editing and reediting
-          expect(mockHelper.showActionInputBox).toBeCalledTimes(2);
+          expect(mockHelper.showActionInputBox).toHaveBeenCalledTimes(2);
         });
         it('user can still choose to accept the command as it is', async () => {
           expect.hasAssertions();
           mockShowActionMessage('warning', CLSetupActionId.acceptInvalidCmdLine);
           await expect(setupJestCmdLine(context)).resolves.toEqual('success');
           // showing warniing
-          expect(mockHelper.showActionMessage).toBeCalledTimes(1);
+          expect(mockHelper.showActionMessage).toHaveBeenCalledTimes(1);
           // show input box for editing
-          expect(mockHelper.showActionInputBox).toBeCalledTimes(1);
+          expect(mockHelper.showActionInputBox).toHaveBeenCalledTimes(1);
         });
       });
       describe('when existing jestCommandLine is invalid: shows a warning panel', () => {
@@ -249,10 +249,10 @@ describe('wizard-tasks', () => {
           await expect(setupJestCmdLine(context)).resolves.toEqual('success');
 
           // showing warniing
-          expect(mockHelper.showActionMessage).toBeCalledTimes(1);
+          expect(mockHelper.showActionMessage).toHaveBeenCalledTimes(1);
 
           // no input box
-          expect(mockHelper.showActionInputBox).not.toBeCalled();
+          expect(mockHelper.showActionInputBox).not.toHaveBeenCalled();
 
           // no menu will be shown
           expect(mockHelper.showActionMenu).not.toHaveBeenCalled();
@@ -266,9 +266,9 @@ describe('wizard-tasks', () => {
 
             await expect(setupJestCmdLine(context)).resolves.toEqual('success');
             // showing warniing
-            expect(mockHelper.showActionMessage).toBeCalledTimes(1);
+            expect(mockHelper.showActionMessage).toHaveBeenCalledTimes(1);
             // show input box for editing
-            expect(mockHelper.showActionInputBox).toBeCalledTimes(1);
+            expect(mockHelper.showActionInputBox).toHaveBeenCalledTimes(1);
 
             // no menu will be shown
             expect(mockHelper.showActionMenu).not.toHaveBeenCalled();
@@ -278,9 +278,9 @@ describe('wizard-tasks', () => {
             mockHelper.validateCommandLine.mockReturnValueOnce('invalid command still');
             await expect(setupJestCmdLine(context)).resolves.toEqual('success');
             // showing warniing twice
-            expect(mockHelper.showActionMessage).toBeCalledTimes(2);
+            expect(mockHelper.showActionMessage).toHaveBeenCalledTimes(2);
             // show input box for editing twice
-            expect(mockHelper.showActionInputBox).toBeCalledTimes(2);
+            expect(mockHelper.showActionInputBox).toHaveBeenCalledTimes(2);
 
             // no menu will be shown
             expect(mockHelper.showActionMenu).not.toHaveBeenCalled();
