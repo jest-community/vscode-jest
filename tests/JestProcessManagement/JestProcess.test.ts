@@ -144,9 +144,9 @@ describe('JestProcess', () => {
       ${'watch-all-tests'}      | ${undefined}                                                     | ${[true, true]}   | ${true}         | ${undefined}
       ${'by-file'}              | ${{ testFileName: '"c:\\a\\b.ts"' }}                             | ${[false, false]} | ${true}         | ${{ args: { args: ['--runTestsByPath'] }, testFileNamePattern: '"C:\\a\\b.ts"' }}
       ${'by-file'}              | ${{ testFileName: '"c:\\a\\b.ts"', notTestFile: true }}          | ${[false, false]} | ${true}         | ${{ args: { args: ['--findRelatedTests', '"C:\\a\\b.ts"'] } }}
-      ${'by-file-test'}         | ${{ testFileName: '"/a/b.js"', testNamePattern: 'a test' }}      | ${[false, false]} | ${true}         | ${{ args: { args: ['--runTestsByPath'] }, testFileNamePattern: '"/a/b.js"', testNamePattern: '"a test"' }}
+      ${'by-file-test'}         | ${{ testFileName: '"/a/b.js"', testNamePattern: 'a test' }}      | ${[false, false]} | ${true}         | ${{ args: { args: ['--runTestsByPath'] }, testFileNamePattern: '"/a/b.js"', testNamePattern: 'a\\ test' }}
       ${'by-file-pattern'}      | ${{ testFileNamePattern: '"c:\\a\\b.ts"' }}                      | ${[false, false]} | ${true}         | ${{ args: { args: ['--testPathPattern', '"c:\\\\a\\\\b\\.ts"'] } }}
-      ${'by-file-test-pattern'} | ${{ testFileNamePattern: '/a/b.js', testNamePattern: 'a test' }} | ${[false, false]} | ${true}         | ${{ args: { args: ['--testPathPattern', '"/a/b\\.js"'] }, testNamePattern: '"a test"' }}
+      ${'by-file-test-pattern'} | ${{ testFileNamePattern: '/a/b.js', testNamePattern: 'a test' }} | ${[false, false]} | ${true}         | ${{ args: { args: ['--testPathPattern', '"/a/b\\.js"'] }, testNamePattern: 'a\\ test' }}
       ${'not-test'}             | ${{ args: ['--listTests', '--watchAll=false'] }}                 | ${[false, false]} | ${false}        | ${{ args: { args: ['--listTests'], replace: true } }}
     `(
       'supports jest process request: $type',
@@ -251,14 +251,14 @@ describe('JestProcess', () => {
         ${'win32'}  | ${undefined}    | ${'with special $character.abc*'} | ${'"with special \\$character\\.abc\\*"'}
         ${'win32'}  | ${'CMD.EXE'}    | ${'with special $character.abc*'} | ${'"with special \\$character\\.abc\\*"'}
         ${'win32'}  | ${'powershell'} | ${'with special $character.abc*'} | ${"'with special \\$character\\.abc\\*'"}
-        ${'darwin'} | ${undefined}    | ${'with special $character.abc*'} | ${'"with special \\\\\\$character\\\\.abc\\\\*"'}
-        ${'darwin'} | ${'zsh'}        | ${'with special $character.abc*'} | ${'"with special \\\\\\$character\\\\.abc\\\\*"'}
+        ${'darwin'} | ${undefined}    | ${'with special $character.abc*'} | ${'with\\ special\\ \\\\\\$character\\\\.abc\\\\\\*'}
+        ${'darwin'} | ${'zsh'}        | ${'with special $character.abc*'} | ${'with\\ special\\ \\\\\\$character\\\\.abc\\\\\\*'}
         ${'win32'}  | ${undefined}    | ${'with "$double quote"'}         | ${'"with ""\\$double quote"""'}
         ${'win32'}  | ${'powershell'} | ${'with "$double quote"'}         | ${'\'with ""\\$double quote""\''}
-        ${'linux'}  | ${'bash'}       | ${'with "$double quote"'}         | ${'"with \\"\\\\\\$double quote\\""'}
+        ${'linux'}  | ${'bash'}       | ${'with "$double quote"'}         | ${'with\\ \\"\\\\\\$double\\ quote\\"'}
         ${'win32'}  | ${undefined}    | ${"with '$single quote'"}         | ${'"with \'\\$single quote\'"'}
         ${'win32'}  | ${'powershell'} | ${"with '$single quote'"}         | ${"'with ''\\$single quote'''"}
-        ${'darwin'} | ${'bash'}       | ${"with '$single quote'"}         | ${'"with \\\'\\\\\\$single quote\\\'"'}
+        ${'darwin'} | ${'bash'}       | ${"with '$single quote'"}         | ${"with\\ \\'\\\\\\$single\\ quote\\'"}
       `(
         'convert "$testNamePattern" on $platform, $shell',
         ({ platform, shell, testNamePattern, expected }) => {

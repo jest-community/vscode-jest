@@ -301,27 +301,30 @@ describe('shellQuote', () => {
   it.each`
     platform    | shell                                     | str                      | expected
     ${'win32'}  | ${undefined}                              | ${'plain text'}          | ${'"plain text"'}
-    ${'linux'}  | ${undefined}                              | ${'plain text'}          | ${'"plain text"'}
+    ${'linux'}  | ${undefined}                              | ${'plain text'}          | ${'plain\\ text'}
     ${'win32'}  | ${'powershell'}                           | ${"with 'single quote'"} | ${"'with ''single quote'''"}
     ${'win32'}  | ${'cmd.exe'}                              | ${"with 'single quote'"} | ${'"with \'single quote\'"'}
-    ${'linux'}  | ${'/bin/bash'}                            | ${"with 'single quote'"} | ${'"with \\\'single quote\\\'"'}
-    ${'darwin'} | ${'/bin/zsh'}                             | ${"with 'single quote'"} | ${'"with \\\'single quote\\\'"'}
-    ${'darwin'} | ${{ path: '/bin/zsh', args: ['-l'] }}     | ${"with 'single quote'"} | ${'"with \\\'single quote\\\'"'}
+    ${'linux'}  | ${'/bin/bash'}                            | ${"with 'single quote'"} | ${"with\\ \\'single\\ quote\\'"}
+    ${'darwin'} | ${'/bin/zsh'}                             | ${"with 'single quote'"} | ${"with\\ \\'single\\ quote\\'"}
+    ${'darwin'} | ${{ path: '/bin/zsh', args: ['-l'] }}     | ${"with 'single quote'"} | ${"with\\ \\'single\\ quote\\'"}
     ${'win32'}  | ${undefined}                              | ${"with 'single quote'"} | ${'"with \'single quote\'"'}
-    ${'linux'}  | ${undefined}                              | ${"with 'single quote'"} | ${'"with \\\'single quote\\\'"'}
+    ${'linux'}  | ${undefined}                              | ${"with 'single quote'"} | ${"with\\ \\'single\\ quote\\'"}
     ${'win32'}  | ${'powershell'}                           | ${'with "double quote"'} | ${'\'with ""double quote""\''}
     ${'win32'}  | ${'cmd.exe'}                              | ${'with "double quote"'} | ${'"with ""double quote"""'}
-    ${'linux'}  | ${'bash'}                                 | ${'with "double quote"'} | ${'"with \\"double quote\\""'}
+    ${'linux'}  | ${'bash'}                                 | ${'with "double quote"'} | ${'with\\ \\"double\\ quote\\"'}
+    ${'win32'}  | ${'powershell'}                           | ${'with $name.txt'}      | ${"'with $name.txt'"}
+    ${'win32'}  | ${'cmd.exe'}                              | ${'with $name.txt'}      | ${'"with $name.txt"'}
+    ${'linux'}  | ${'bash'}                                 | ${'with $name.txt'}      | ${'with\\ \\$name.txt'}
     ${'win32'}  | ${'powershell'}                           | ${'with \\$name\\.txt'}  | ${"'with \\$name\\.txt'"}
     ${'win32'}  | ${'cmd.exe'}                              | ${'with \\$name\\.txt'}  | ${'"with \\$name\\.txt"'}
-    ${'linux'}  | ${'bash'}                                 | ${'with \\$name\\.txt'}  | ${'"with \\\\\\$name\\\\.txt"'}
-    ${'linux'}  | ${{ path: '/bin/sh', args: ['--login'] }} | ${'with \\$name\\.txt'}  | ${'"with \\\\\\$name\\\\.txt"'}
+    ${'linux'}  | ${'bash'}                                 | ${'with \\$name\\.txt'}  | ${'with\\ \\\\\\$name\\\\.txt'}
+    ${'linux'}  | ${{ path: '/bin/sh', args: ['--login'] }} | ${'with \\$name\\.txt'}  | ${'with\\ \\\\\\$name\\\\.txt'}
     ${'win32'}  | ${'powershell'}                           | ${''}                    | ${"''"}
     ${'win32'}  | ${undefined}                              | ${''}                    | ${'""'}
     ${'darwin'} | ${undefined}                              | ${''}                    | ${'""'}
     ${'win32'}  | ${'powershell'}                           | ${'with \\ and \\\\'}    | ${"'with \\ and \\\\\\\\'"}
     ${'win32'}  | ${undefined}                              | ${'with \\ and \\\\'}    | ${'"with \\ and \\\\\\\\"'}
-    ${'linux'}  | ${undefined}                              | ${'with \\ and \\\\'}    | ${'"with \\\\ and \\\\\\\\"'}
+    ${'linux'}  | ${undefined}                              | ${'with \\ and \\\\'}    | ${'with\\ \\\\\\ and\\ \\\\\\\\'}
     ${'win32'}  | ${'powershell'}                           | ${'something\\'}         | ${"'something\\'"}
     ${'win32'}  | ${undefined}                              | ${'something\\'}         | ${'something\\'}
     ${'darwin'} | ${undefined}                              | ${'something\\'}         | ${'something\\\\'}

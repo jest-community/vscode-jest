@@ -225,8 +225,10 @@ const getShellPath = (shell?: string | LoginShell): string | undefined => {
  * quoting a given string for it to be used as shell command arguments.
  *
  * Note: the logic is based on vscode's debug argument handling:
- * https://github.com/microsoft/vscode/blob/c0001d7becf437944f5898a7c9485922d60dd8d3/src/vs/workbench/contrib/debug/node/terminals.ts#L82 .
+ * https://github.com/microsoft/vscode/blob/c0001d7becf437944f5898a7c9485922d60dd8d3/src/vs/workbench/contrib/debug/node/terminals.ts#L82
  * However, had to modify a few places for windows platform.
+ *
+ * updated 10/22/2022 based on https://github.com/microsoft/vscode/blob/d1f38520db76f0e80e3cdcbb35b95651afe802ae/src/vs/workbench/contrib/debug/node/terminals.ts#L60
  *
  **/
 
@@ -256,6 +258,7 @@ export const shellQuote = (str: string, shell?: string | LoginShell): string => 
 
     case 'cmd': {
       let s = str.replace(/"/g, '""');
+      s = s.replace(/([><!^&|])/g, '^$1');
       if (s.length > 2 && s.slice(-2) === '\\\\') {
         s = `${s}\\\\`;
       }
@@ -264,11 +267,13 @@ export const shellQuote = (str: string, shell?: string | LoginShell): string => 
 
     default: {
       //'sh'
-      const s = str.replace(/(["'\\$])/g, '\\$1');
-      return s.indexOf(' ') >= 0 || s.indexOf(';') >= 0 || s.length === 0 ? `"${s}"` : s;
+      const s = str.replace(/(["'\\$!><#()[\]*&^| ;{}`])/g, '\\$1');
+      return s.length === 0 ? `""` : s;
     }
   }
 };
+// [.+?]
+// ["'!><#&;`]
 
 export const toErrorString = (e: unknown): string => {
   if (e == null) {
