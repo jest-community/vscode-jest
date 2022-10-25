@@ -328,6 +328,9 @@ describe('shellQuote', () => {
     ${'win32'}  | ${'powershell'}                           | ${'something\\'}         | ${"'something\\'"}
     ${'win32'}  | ${undefined}                              | ${'something\\'}         | ${'something\\'}
     ${'darwin'} | ${undefined}                              | ${'something\\'}         | ${'something\\\\'}
+    ${'win32'}  | ${'powershell'}                           | ${'with `backtick'}      | ${"'with `backtick'"}
+    ${'win32'}  | ${undefined}                              | ${'with `backtick'}      | ${'"with `backtick"'}
+    ${'darwin'} | ${undefined}                              | ${'with `backtick'}      | ${'with\\ \\`backtick'}
   `('can quote "$str" for $shell on $platform', ({ platform, shell, str, expected }) => {
     jest.resetAllMocks();
     mockPlatform.mockReturnValueOnce(platform);

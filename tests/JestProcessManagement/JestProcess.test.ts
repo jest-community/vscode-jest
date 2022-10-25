@@ -259,6 +259,7 @@ describe('JestProcess', () => {
         ${'win32'}  | ${undefined}    | ${"with '$single quote'"}         | ${'"with \'\\$single quote\'"'}
         ${'win32'}  | ${'powershell'} | ${"with '$single quote'"}         | ${"'with ''\\$single quote'''"}
         ${'darwin'} | ${'bash'}       | ${"with '$single quote'"}         | ${"with\\ \\'\\\\\\$single\\ quote\\'"}
+        ${'darwin'} | ${'bash'}       | ${'with single `backtick'}        | ${'with\\ single\\ \\`backtick'}
       `(
         'convert "$testNamePattern" on $platform, $shell',
         ({ platform, shell, testNamePattern, expected }) => {

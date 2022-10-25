@@ -272,8 +272,6 @@ export const shellQuote = (str: string, shell?: string | LoginShell): string => 
     }
   }
 };
-// [.+?]
-// ["'!><#&;`]
 
 export const toErrorString = (e: unknown): string => {
   if (e == null) {
