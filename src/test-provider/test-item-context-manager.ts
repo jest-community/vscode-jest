@@ -35,11 +35,9 @@ export class TestItemContextManager {
     //set context for both on and off
     let itemIds = list.filter((c) => c.value === true).flatMap((c) => c.itemIds);
     vscode.commands.executeCommand('setContext', this.contextKey(context.key, true), itemIds);
-    console.log(`setItemContext setContext=`, this.contextKey(context.key, true), itemIds);
 
     itemIds = list.filter((c) => c.value === false).flatMap((c) => c.itemIds);
     vscode.commands.executeCommand('setContext', this.contextKey(context.key, false), itemIds);
-    console.log(`setItemContext setContext=`, this.contextKey(context.key, false), itemIds);
   }
   private getWorkspace(
     key: TEItemContextKey,

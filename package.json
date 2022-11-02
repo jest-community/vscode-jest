@@ -364,8 +364,7 @@
           "group": "inline",
           "when": "testId in jest.coverage.off"
         }
-      ],
-      "testing/item/gutter": []
+      ]
     },
     "keybindings": [
       {
