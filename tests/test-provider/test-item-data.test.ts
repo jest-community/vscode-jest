@@ -323,7 +323,10 @@ describe('test-item-data', () => {
         describe('when testSuiteChanged.assertions-updated event filed', () => {
           it('all item data will be updated accordingly', () => {
             context.ext.testResolveProvider.getTestList.mockReturnValueOnce([]);
-            context.ext.settings = { testExplorer: { enabled: true, showInlineError: true } };
+            context.ext.settings = {
+              testExplorer: { enabled: true, showInlineError: true },
+              autoRun: {},
+            };
 
             const wsRoot = new WorkspaceRoot(context);
             wsRoot.discoverTest(jestRun);
@@ -1377,17 +1380,9 @@ describe('test-item-data', () => {
         expect(jestRun.isClosed()).toBeTruthy();
         expect(process.request.run.isClosed()).toBeTruthy();
 
-        //received more data event: will create new run and close it when done
+        //received more data event: will not create new run
         env.onRunEvent({ type: 'data', process, raw: 'whatever', text: 'whatever' });
-        expect(createTestRunSpy).toHaveBeenCalledTimes(1);
-        runMock = controllerMock.lastRunMock();
-        expect(runMock.end).toHaveBeenCalled();
-
-        // next data event will create and end the same as previous
-        env.onRunEvent({ type: 'data', process, raw: 'again', text: 'again' });
-        expect(createTestRunSpy).toHaveBeenCalledTimes(2);
-        runMock = controllerMock.lastRunMock();
-        expect(runMock.end).toHaveBeenCalled();
+        expect(createTestRunSpy).not.toHaveBeenCalled();
 
         // prepare for result processing
         controllerMock.createTestRun.mockClear();
@@ -1402,6 +1397,7 @@ describe('test-item-data', () => {
 
         // expect the item status to be updated with a new run
         expect(controllerMock.createTestRun).toHaveBeenCalledTimes(1);
+        runMock = controllerMock.lastRunMock();
         // and the run should be closed
         expect(runMock.end).toHaveBeenCalled();
       });

@@ -1,6 +1,7 @@
 jest.unmock('events');
 jest.unmock('../../src/JestExt/core');
 jest.unmock('../../src/JestExt/helper');
+jest.unmock('../../src/JestExt/auto-run');
 jest.unmock('../../src/appGlobals');
 jest.unmock('../../src/errors');
 jest.unmock('../test-helper');
@@ -24,6 +25,7 @@ jest.mock('jest-editor-support');
 
 import * as vscode from 'vscode';
 import { JestExt } from '../../src/JestExt/core';
+import { AutoRun } from '../../src/JestExt/auto-run';
 import { createProcessSession } from '../../src/JestExt/process-session';
 import { updateCurrentDiagnostics, updateDiagnostics } from '../../src/diagnostics';
 import { CoverageMapProvider } from '../../src/Coverage';
@@ -531,8 +533,8 @@ describe('JestExt', () => {
         ${{ watch: false, onSave: 'test-file' }}     | ${'json'}       | ${'unknown'} | ${false}       | ${false}
       `(
         'with autoRun: $runConfig $languageId $isTestFile => $shouldSchedule, $isDirty',
-        ({ runConfig: autoRun, languageId, isTestFile, shouldSchedule, isDirty }) => {
-          const sut: any = newJestExt({ settings: { autoRun } });
+        ({ runConfig, languageId, isTestFile, shouldSchedule, isDirty }) => {
+          const sut: any = newJestExt({ settings: { autoRun: new AutoRun(runConfig) } });
           const fileName = '/a/file;';
           const document: any = {
             uri: { scheme: 'file' },
@@ -1240,5 +1242,15 @@ describe('JestExt', () => {
     const sut = newJestExt();
     sut.showOutput();
     expect(mockOutputTerminal.show).toHaveBeenCalled();
+  });
+  it('toggleAutoRun will trigger autoRun to toggle runtime config', () => {
+    const autoRun = new AutoRun('watch');
+    const sut: any = newJestExt({ settings: { autoRun } });
+    expect(autoRun.isWatch).toBeTruthy();
+    expect(autoRun.isOff).toBeFalsy();
+
+    sut.toggleAutoRun();
+    expect(autoRun.isWatch).toBeFalsy();
+    expect(autoRun.isOff).toBeTruthy();
   });
 });

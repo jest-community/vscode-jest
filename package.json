@@ -279,6 +279,26 @@
       {
         "command": "io.orta.jest.setup-extension",
         "title": "Jest: Setup Extension"
+      },
+      {
+        "command": "io.orta.jest.test-item.auto-run.toggle-on",
+        "title": "Toggle AutoRun On",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "io.orta.jest.test-item.auto-run.toggle-off",
+        "title": "Toggle AutoRun Off",
+        "icon": "$(sync-ignored)"
+      },
+      {
+        "command": "io.orta.jest.test-item.coverage.toggle-off",
+        "title": "Toggle Coverage Off",
+        "icon": "$(circle-slash)"
+      },
+      {
+        "command": "io.orta.jest.test-item.coverage.toggle-on",
+        "title": "Toggle Coverage On",
+        "icon": "$(color-mode)"
       }
     ],
     "menus": {
@@ -322,7 +342,30 @@
           "command": "io.orta.jest.editor.run-all-tests",
           "group": "Jest"
         }
-      ]
+      ],
+      "testing/item/context": [
+        {
+          "command": "io.orta.jest.test-item.auto-run.toggle-off",
+          "group": "inline",
+          "when": "testId in jest.autoRun.on"
+        },
+        {
+          "command": "io.orta.jest.test-item.auto-run.toggle-on",
+          "group": "inline",
+          "when": "testId in jest.autoRun.off"
+        },
+        {
+          "command": "io.orta.jest.test-item.coverage.toggle-off",
+          "group": "inline",
+          "when": "testId in jest.coverage.on"
+        },
+        {
+          "command": "io.orta.jest.test-item.coverage.toggle-on",
+          "group": "inline",
+          "when": "testId in jest.coverage.off"
+        }
+      ],
+      "testing/item/gutter": []
     },
     "keybindings": [
       {

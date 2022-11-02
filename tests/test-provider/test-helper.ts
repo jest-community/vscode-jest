@@ -27,7 +27,6 @@ export class TestItemCollectionMock {
 export const mockExtExplorerContext = (wsName = 'ws-1', override: any = {}): any => {
   return {
     loggingFactory: { create: jest.fn().mockReturnValue(jest.fn()) },
-    autoRun: {},
     session: { scheduleProcess: jest.fn() },
     workspace: { name: wsName, uri: { fsPath: `/${wsName}` } },
     testResolveProvider: {
@@ -41,7 +40,7 @@ export const mockExtExplorerContext = (wsName = 'ws-1', override: any = {}): any
     },
     debugTests: jest.fn(),
     sessionEvents: mockJestExtEvents(),
-    settings: { testExplorer: { enabled: true } },
+    settings: { testExplorer: { enabled: true }, autoRun: {} },
     output: { write: jest.fn(), dispose: jest.fn() },
     ...override,
   };

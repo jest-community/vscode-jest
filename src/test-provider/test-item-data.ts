@@ -12,6 +12,7 @@ import { Debuggable, TestItemData } from './types';
 import { JestTestProviderContext, JestTestRun, JestTestRunOptions } from './test-provider-helper';
 import { JestProcessInfo, JestProcessRequest } from '../JestProcessManagement';
 import { GENERIC_ERROR, getExitErrorDef, LONG_RUNNING_TESTS } from '../errors';
+import { JestExtOutput } from '../JestExt/output-terminal';
 
 interface JestRunable {
   getJestRunRequest: () => JestExtRequestType;
@@ -99,7 +100,7 @@ export class WorkspaceRoot extends TestItemDataBase {
       undefined,
       ['run']
     );
-    item.description = `(${this.context.ext.autoRun.mode})`;
+    item.description = `(${this.context.ext.settings.autoRun.mode})`;
 
     item.canResolveChildren = true;
     return item;
@@ -310,6 +311,9 @@ export class WorkspaceRoot extends TestItemDataBase {
       'new-line',
     ]);
   }
+  private writer(run?: JestTestRun): JestExtOutput {
+    return run ?? this.context.output;
+  }
   private onRunEvent = (event: JestRunEvent) => {
     if (event.process.request.type === 'not-test') {
       return;
@@ -330,15 +334,8 @@ export class WorkspaceRoot extends TestItemDataBase {
         case 'data': {
           const text = event.raw ?? event.text;
           if (text && text.length > 0) {
-            const _run = run ?? this.createRunForEvent(event);
             const opt = event.isError ? 'error' : event.newLine ? 'new-line' : undefined;
-            _run.write(text, opt);
-            // sometimes we will get data event after "end" event, in such case if we don't close the run
-            // and there is no result generated, such as in runtime exec situation, we will leave with a hanging run.
-            // therefore, we will close the run always if we had to open a run here.
-            if (!run) {
-              _run.end();
-            }
+            this.writer(run).write(text, opt);
           }
           break;
         }
@@ -367,8 +364,7 @@ export class WorkspaceRoot extends TestItemDataBase {
           break;
         }
         case 'long-run': {
-          const output = run ?? this.context.output;
-          output.write(
+          this.writer(run).write(
             `Long Running Tests Warning: Tests exceeds ${event.threshold}ms threshold. Please reference Troubleshooting if this is not expected`,
             LONG_RUNNING_TESTS
           );

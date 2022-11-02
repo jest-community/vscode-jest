@@ -1,4 +1,5 @@
 jest.unmock('../../src/JestExt/helper');
+jest.unmock('../../src/JestExt/auto-run');
 jest.unmock('../test-helper');
 
 const mockPlatform = jest.fn();
@@ -15,6 +16,7 @@ import { ProjectWorkspace } from 'jest-editor-support';
 import { workspaceLogging } from '../../src/logging';
 import { pathToJest, pathToConfig } from '../../src/helpers';
 import { mockProjectWorkspace } from '../test-helper';
+
 import { toFilePath } from '../../src/helpers';
 import { RunnerWorkspaceOptions } from '../../src/JestExt/types';
 
@@ -26,74 +28,7 @@ describe('createJestExtContext', () => {
   });
   const baseSettings = { autoRun: { watch: true } };
   const workspaceFolder: any = { name: 'workspace' };
-  describe('autoRun', () => {
-    it('will use autoRun from pluginSettings', () => {
-      const settings: any = { autoRun: { watch: false } };
-      const { autoRun } = createJestExtContext(workspaceFolder, settings);
-      expect(autoRun.config).toEqual(settings.autoRun);
-    });
-    it.each`
-      autoRunConfig                                | mode
-      ${'off'}                                     | ${'auto-run-off'}
-      ${{ watch: true }}                           | ${'auto-run-watch'}
-      ${{ watch: false }}                          | ${'auto-run-off'}
-      ${{ watch: false, onSave: undefined }}       | ${'auto-run-off'}
-      ${{ watch: false, onSave: 'test-file' }}     | ${'auto-run-on-save-test'}
-      ${{ watch: false, onSave: 'test-src-file' }} | ${'auto-run-on-save'}
-    `('$autoRunConfig => $mode', ({ autoRunConfig, mode }) => {
-      const settings: any = { autoRun: autoRunConfig };
-      const { autoRun } = createJestExtContext(workspaceFolder, settings);
-      expect(autoRun.mode).toEqual(mode);
-    });
-    it.each`
-      autoRunConfig                                                      | accessor
-      ${{ watch: false }}                                                | ${{ isOff: true }}
-      ${{ watch: true }}                                                 | ${{ isOff: false, isWatch: true }}
-      ${{ watch: true, onStartup: ['all-tests'] }}                       | ${{ isOff: false, isWatch: true, onStartup: ['all-tests'] }}
-      ${{ watch: false, onStartup: ['all-tests'] }}                      | ${{ isOff: false, isWatch: false, onStartup: ['all-tests'] }}
-      ${{ watch: false, onStartup: ['all-tests'], onSave: 'test-file' }} | ${{ isOff: false, isWatch: false, onStartup: ['all-tests'], onSave: 'test-file' }}
-      ${{ watch: false, onSave: 'test-src-file' }}                       | ${{ isOff: false, isWatch: false, onSave: 'test-src-file' }}
-    `('check accessor for config: $autoRunConfig', ({ autoRunConfig, accessor }) => {
-      const settings: any = { autoRun: autoRunConfig };
-      const { autoRun } = createJestExtContext(workspaceFolder, settings);
-      expect(autoRun.isOff).toEqual(accessor.isOff);
-      expect(autoRun.isWatch).toEqual(accessor.isWatch ?? false);
-      expect(autoRun.onStartup).toEqual(accessor.onStartup);
-      expect(autoRun.onSave).toEqual(accessor.onSave);
-      expect(autoRun.config).toEqual(autoRunConfig);
-    });
-    describe('jestCommandSettings', () => {
-      beforeEach(() => {
-        (ProjectWorkspace as jest.Mocked<any>).mockImplementation(mockProjectWorkspace);
-        (pathToJest as jest.Mocked<any>).mockReturnValue('path-to-jest');
-        (pathToConfig as jest.Mocked<any>).mockReturnValue('path-to-config');
-      });
-      it('without jestCommandLine, returns pathToJest and pathToConfig', () => {
-        const settings: any = {
-          ...baseSettings,
-          pathToJest: 'abc',
-          pathToConfig: 'whatever',
-          rootPath: '',
-        };
-        const { createRunnerWorkspace } = createJestExtContext(workspaceFolder, settings);
-        const runnerWorkspace = createRunnerWorkspace();
-        expect(runnerWorkspace.jestCommandLine).toEqual('path-to-jest');
-        expect(runnerWorkspace.pathToConfig).toEqual('path-to-config');
-      });
-      it('with jestCommandLine, ignore both pathToJest and pathToConfig', () => {
-        const settings: any = {
-          ...baseSettings,
-          jestCommandLine: 'jest --coverage',
-          pathToJest: 'abc',
-          pathToConfig: 'whatever',
-        };
-        const { createRunnerWorkspace } = createJestExtContext(workspaceFolder, settings);
-        const runnerWorkspace = createRunnerWorkspace();
-        expect(runnerWorkspace.jestCommandLine).toEqual(settings.jestCommandLine);
-        expect(runnerWorkspace.pathToConfig).toEqual('');
-      });
-    });
-  });
+
   describe('runnerWorkspace', () => {
     it('will return runnerWorkspace factory method', () => {
       const rootPath = 'abc';
@@ -139,6 +74,37 @@ describe('createJestExtContext', () => {
     const context = createJestExtContext(workspaceFolder, settings);
     expect(workspaceLogging).toHaveBeenCalled();
     expect(context.loggingFactory).toEqual({});
+  });
+  describe('jestCommandSettings', () => {
+    beforeEach(() => {
+      (ProjectWorkspace as jest.Mocked<any>).mockImplementation(mockProjectWorkspace);
+      (pathToJest as jest.Mocked<any>).mockReturnValue('path-to-jest');
+      (pathToConfig as jest.Mocked<any>).mockReturnValue('path-to-config');
+    });
+    it('without jestCommandLine, returns pathToJest and pathToConfig', () => {
+      const settings: any = {
+        ...baseSettings,
+        pathToJest: 'abc',
+        pathToConfig: 'whatever',
+        rootPath: '',
+      };
+      const { createRunnerWorkspace } = createJestExtContext(workspaceFolder, settings);
+      const runnerWorkspace = createRunnerWorkspace();
+      expect(runnerWorkspace.jestCommandLine).toEqual('path-to-jest');
+      expect(runnerWorkspace.pathToConfig).toEqual('path-to-config');
+    });
+    it('with jestCommandLine, ignore both pathToJest and pathToConfig', () => {
+      const settings: any = {
+        ...baseSettings,
+        jestCommandLine: 'jest --coverage',
+        pathToJest: 'abc',
+        pathToConfig: 'whatever',
+      };
+      const { createRunnerWorkspace } = createJestExtContext(workspaceFolder, settings);
+      const runnerWorkspace = createRunnerWorkspace();
+      expect(runnerWorkspace.jestCommandLine).toEqual(settings.jestCommandLine);
+      expect(runnerWorkspace.pathToConfig).toEqual('');
+    });
   });
 });
 
@@ -192,7 +158,7 @@ describe('getExtensionResourceSettings()', () => {
       showCoverageOnLoad: false,
       debugMode: false,
       coverageColors: null,
-      autoRun: { watch: true },
+      autoRun: expect.objectContaining({ config: { watch: true } }),
       testExplorer: {},
       monitorLongRun: 60000,
     });
@@ -239,29 +205,7 @@ describe('getExtensionResourceSettings()', () => {
         }
       );
     });
-    it.each`
-      pluginSettings                                             | expectedConfig
-      ${{ autoEnable: false }}                                   | ${{ watch: false }}
-      ${{ autoEnable: true, runAllTestsFirst: true }}            | ${{ watch: true, onStartup: ['all-tests'] }}
-      ${{ autoEnable: true, runAllTestsFirst: false }}           | ${{ watch: true }}
-      ${{ autoEnable: true, autoRun: { watch: false } }}         | ${{ watch: false }}
-      ${{ autoRun: 'default' }}                                  | ${{ watch: true }}
-      ${{ autoRun: 'off' }}                                      | ${{ watch: false }}
-      ${{ autoRun: 'watch' }}                                    | ${{ watch: true }}
-      ${{ autoRun: 'legacy' }}                                   | ${{ watch: true, onStartup: ['all-tests'] }}
-      ${{ autoRun: 'on-save' }}                                  | ${{ watch: false, onSave: 'test-src-file' }}
-      ${{ autoRun: 'bad-string' }}                               | ${{ watch: true }}
-      ${{ autoRun: { watch: false, onStartup: ['all-tests'] } }} | ${{ watch: false, onStartup: ['all-tests'] }}
-    `(
-      'autoRun from user settings: $pluginSettings => $expectedConfig',
-      ({ pluginSettings, expectedConfig }) => {
-        const uri: any = { fsPath: 'workspaceFolder1' };
-        userSettings = { ...pluginSettings };
-        expect(getExtensionResourceSettings(uri)).toEqual(
-          expect.objectContaining({ autoRun: expectedConfig })
-        );
-      }
-    );
+
     it.each`
       platform    | args      | supported
       ${'win32'}  | ${[]}     | ${false}
