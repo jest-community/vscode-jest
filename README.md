@@ -66,6 +66,7 @@ Content
   - [Menu](#menu)
   - [Troubleshooting](#troubleshooting)
     - [Jest failed to run](#jest-failed-to-run)
+    - [Performance issue?](#performance-issue)
     - [I don't see "Jest" in the bottom status bar](#i-dont-see-jest-in-the-bottom-status-bar)
     - [What to do with "Long Running Tests Warning"](#what-to-do-with-long-running-tests-warning)
     - [The tests and status do not match or some tests showing question marks unexpectedly?](#the-tests-and-status-do-not-match-or-some-tests-showing-question-marks-unexpectedly)
@@ -216,18 +217,22 @@ shows the autoRun will be triggered by either test or source file changes.
 </details>
 
 ### How to use the Test Explorer?
-Users with `vscode` v1.59 and `vscode-jest` v4.1 and up will start to see tests appearing in the test explorer automatically. Test explorer provides a "test-centric" view (vs. "source-centric" view in the editors), allows users to run/debug tests directly from the explorer (in addition to the inline debug codeLens), and provides a native terminal output experience (with colors!):
+Users with `vscode` v1.59 and `vscode-jest` v4.1 and up will start to see tests appearing in the test explorer automatically. Test explorer provides a "test-centric" view, allows users to run/debug tests directly from the explorer (in addition to the inline debug codeLens), and provides a native terminal output experience (with colors!):
 
-![test-explorer.png](images/test-explorer.png)
+![TestExplorer-5.1.jpg](images/TestExplorer-5.1.jpg)
+
+<a id='how-to-toggle-auto-run'>**How to toggle autoRun for the workspace?**</a>
+- In TestExplorer, click on the root of the test tree, i.e. the one with the workspace name and the current autoRun mode. You will see a list of buttons to its right.
+- Click on the [autoRun](#autorun) button (see image above) to toggle it on or off.
+  - If autoRun is originally on, the button will turn it off and users can use the run menu (in both editor gutter and test explorer tree) to trigger test run(s).
+  - If the autoRun is originally off, the button will turn it on by restoring to your original autoRun setting, if it is not "off", otherwise it will switch to ["on-save"](#autorun) mode instead.
+
+<a id='how-to-toggle-coverage'>**How to toggle test coverage for the workspace?**</a>
+- In TestExplorer, click on the root of the test tree, i.e. the one with the workspace name and the current autoRun mode. You will see a list of buttons to its right.
+- Click on the coverage button (see image above) to toggle on or off.
+  - The next test run (auto or manual) will start reporting test coverage.
 
 You can further customize the explorer with [jest.testExplorer](#testexplorer) in [settings](#settings).
-
-However, test explorer is new and some features are still work-in-progress or not available yet:
-- can't turn on/off coverage yet (pending on vscode API change)
-- not able to accurately indicate run/debug eligibility on the item level, this means you might not be able to run/debug some items through run/debug buttons. (pending on vscode API change)
-- the tests stats on the top of the explorer might not be accurate, especially for multiroot workspaces. (pending on vscode fix))
-- for watch-mode workspaces, the run button is turned off since tests will be automatically executed.
-- debug can only be executed for the test blocks, not on the file or folder level. (Please let us know if you have an use case otherwise)
 
 ### How to see more debug info (self-diagnosis)?
 
@@ -337,6 +342,17 @@ for example:
 </details>
 
 ##### autoRun
+
+autoRun allow users to choose preferred automation vs. performance trade-off.
+
+![autoRun-tradeoff.jpg](images/autoRun-tradeoff.jpg)
+
+There are 2 ways to change autoRun: 
+1. Temporarily [toggle autRun on/off in TestExplorer](#how-to-toggle-auto-run)
+2. Change "jest.autoRun" in `settings.json` file.
+
+**autoRun Configuration**
+
   ```ts
   AutoRun =
     | "watch" | "off" | "legacy" | "on-save"
@@ -561,6 +577,18 @@ Sorry you are having trouble with the extension. If your issue did not get resol
     - see more in [monorepo projects](#how-to-use-the-extension-with-monorepo-projects) on how to set it up.
 
 There could be other causes, such as jest test root path is different from the project's, which can be fixed by setting [jest.rootPath](#rootPath). Feel free to check out the [customization](#customization) section to manually adjust the extension if needed.
+
+### Performance issue? 
+
+The extension should be a thin wrapper on top of the jest process, i.e. it shouldn't use much more resources than jest process itself. 
+
+Now that we get that out of the way, let's look at how we can actually help reducing the suffering. The short answer is [try turning off autoRun in the explorer](#how-to-toggle-auto-run), which should usually show noticeable improvement. 
+
+The long answer is a bit more complicated...
+- The jest/node/watchman might be slow due to version, your test setup, environment etc. See [facebook/jest#11956](https://github.com/facebook/jest/issues/11956) to get a glimpse of such examples. However, this issue should impact with or without this extension. There are many resource and tips online about  optimizing jest performance, we will leave it at that. 
+- Depending on the degree of cross-dependency, or your development habit (e.g., I often use "save" to trigger code-formatting in the middle of development before the test is ready to run), the jest watchman or "on-save" autoRun might decide to run many more tests than you intended to. Imagine adding a single test could trigger 90% of all the tests in the project... yeah we have been there and it's not fun. If that's you, try [toggling off autoRun in TestExplorer](#how-to-toggle-auto-run) and only trigger test run when you are ready with the run button in the gutter or test tree.
+  - But keep in mind when autoRun is off, your might not get full coverage report as it only reflects the tests you have run. (Just like in life, nothing is truly free :wink:, see [autoRun trade-off](#autorun))
+- Never say never, it is possible that we are doing something stupid. :cold_sweat: Feel free to log an issue if your performance awe is not resolved after patiently read and tried the above.
 
 ### I don't see "Jest" in the bottom status bar
 This means the extension is not activated. 
