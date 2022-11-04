@@ -343,9 +343,14 @@ for example:
 
 ##### autoRun
 
-autoRun allow users to choose preferred automation vs. performance trade-off.
+Performance and automation/completeness are often a trade-off. autoRun is the tool to fine-tune the balance, which is unique for every project and user. 
 
 ![autoRun-tradeoff.jpg](images/autoRun-tradeoff.jpg)
+
+Performance and automation are self-explanatory, "completeness" might not: 
+1. test coverage might not be complete as it only includes the tests that ran.
+2. when changing the source or test code, you might not see all the tests broken until you run them explicitly.
+3. tests with dynamic names (test.each with variables, template-literals, etc.) will not be translated; therefore, they can only be run through parent blocks (describe-with-static-name or test suite, etc.).
 
 There are 2 ways to change autoRun: 
 1. Temporarily [toggle autRun on/off in TestExplorer](#how-to-toggle-auto-run)
@@ -580,15 +585,25 @@ There could be other causes, such as jest test root path is different from the p
 
 ### Performance issue? 
 
-The extension should be a thin wrapper on top of the jest process, i.e. it shouldn't use much more resources than jest process itself. 
+The extension should be a thin wrapper on top of the jest process, i.e., it shouldn't use much more resources than the jest process itself. 
 
-Now that we get that out of the way, let's look at how we can actually help reducing the suffering. The short answer is [try turning off autoRun in the explorer](#how-to-toggle-auto-run), which should usually show noticeable improvement. 
+Having said that, the sluggish performance for some projects/users is real, and we can help. The short answer is [try turning off autoRun in the explorer](#how-to-toggle-auto-run), which should usually show noticeable improvement. 
 
-The long answer is a bit more complicated...
-- The jest/node/watchman might be slow due to version, your test setup, environment etc. See [facebook/jest#11956](https://github.com/facebook/jest/issues/11956) to get a glimpse of such examples. However, this issue should impact with or without this extension. There are many resource and tips online about  optimizing jest performance, we will leave it at that. 
-- Depending on the degree of cross-dependency, or your development habit (e.g., I often use "save" to trigger code-formatting in the middle of development before the test is ready to run), the jest watchman or "on-save" autoRun might decide to run many more tests than you intended to. Imagine adding a single test could trigger 90% of all the tests in the project... yeah we have been there and it's not fun. If that's you, try [toggling off autoRun in TestExplorer](#how-to-toggle-auto-run) and only trigger test run when you are ready with the run button in the gutter or test tree.
-  - But keep in mind when autoRun is off, your might not get full coverage report as it only reflects the tests you have run. (Just like in life, nothing is truly free :wink:, see [autoRun trade-off](#autorun))
-- Never say never, it is possible that we are doing something stupid. :cold_sweat: Feel free to log an issue if your performance awe is not resolved after patiently read and tried the above.
+The long answer is a bit more complicated:
+- The jest/node/watchman might be slow due to code changes, your test setup, environment, etc. See [facebook/jest#11956](https://github.com/facebook/jest/issues/11956) for a glimpse of such examples. However, this issue should impact with or without this extension. There are many resources and tips online about optimizing jest performance; we will leave it at that. 
+- Depending on the degree of cross-dependency or your development habit (e.g., save frequently even before the code is complete), the autoRun system ( jest watchman "watch" or "on-save") might decide to run many more tests than you intended to. Imagine adding a single test could trigger 90% of all the tests in the project... yeah we have been there, and it's not fun. If that's you, try [toggling off autoRun in TestExplorer](#how-to-toggle-auto-run) and only trigger test-run when ready with the run button in the gutter or test tree.
+  - But keep in mind while performance is important, turning autoRun off or setting it to be less "complete" does come with a cost, such as incomplete coverage and missing-broken-tests-detection. Please read up on the [autoRun trade-off](#autorun) and experiment to find the one that works for you.
+- Never say never; it is possible that we did something stupid. :cold_sweat: Feel free to log an issue if your performance awe still needs to be resolved after you patiently read and tried the above.
+
+<details>
+
+<summary>fine tune performance with autoRun demo</summary>
+
+https://user-images.githubusercontent.com/891093/199872543-4f37de90-1e56-4e0d-8387-9af591264e13.mov
+
+Every project and developer are different. Experiment and pick the autoRun setting that fits your style and preference!
+
+</details>
 
 ### I don't see "Jest" in the bottom status bar
 This means the extension is not activated. 
