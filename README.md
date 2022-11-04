@@ -219,7 +219,7 @@ shows the autoRun will be triggered by either test or source file changes.
 ### How to use the Test Explorer?
 Users with `vscode` v1.59 and `vscode-jest` v4.1 and up will start to see tests appearing in the test explorer automatically. Test explorer provides a "test-centric" view, allows users to run/debug tests directly from the explorer (in addition to the inline debug codeLens), and provides a native terminal output experience (with colors!):
 
-![TestExplorer-5.1.jpg](images/TestExplorer-5.1.jpg)
+![TestExplorer-5.1.jpg](images/testExplorer-5.1.jpg)
 
 <a id='how-to-toggle-auto-run'>**How to toggle autoRun for the workspace?**</a>
 - In TestExplorer, click on the root of the test tree, i.e. the one with the workspace name and the current autoRun mode. You will see a list of buttons to its right.
@@ -356,7 +356,7 @@ There are 2 ways to change autoRun:
 1. Temporarily [toggle autRun on/off in TestExplorer](#how-to-toggle-auto-run)
 2. Change "jest.autoRun" in `settings.json` file.
 
-**autoRun Configuration**
+<a id="autorun-config">**autoRun Configuration**</a>
 
   ```ts
   AutoRun =
