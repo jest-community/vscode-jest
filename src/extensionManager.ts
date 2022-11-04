@@ -53,6 +53,12 @@ export type RegisterCommand =
       callback: (extension: JestExt, ...args: any[]) => any;
     }
   | {
+      type: 'workspace';
+      name: string;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      callback: (extension: JestExt, ...args: any[]) => any;
+    }
+  | {
       type: 'active-text-editor' | 'active-text-editor-workspace';
       name: string;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -62,6 +68,7 @@ type CommandType = RegisterCommand['type'];
 const CommandPrefix: Record<CommandType, string> = {
   'all-workspaces': `${extensionName}`,
   'select-workspace': `${extensionName}.workspace`,
+  workspace: `${extensionName}.with-workspace`,
   'active-text-editor': `${extensionName}.editor`,
   'active-text-editor-workspace': `${extensionName}.editor.workspace`,
 };
@@ -112,16 +119,16 @@ export class ExtensionManager {
     this.debugCodeLensProvider.showWhenTestStateIn = debugCodeLens.enabled
       ? debugCodeLens.showWhenTestStateIn
       : [];
-    settings.disabledWorkspaceFolders.forEach(this.unregisterByName, this);
+    settings.disabledWorkspaceFolders.forEach(this.unregisterWorkspaceByName, this);
 
     //register workspace folder not in the disable list
     vscode.workspace.workspaceFolders?.forEach((ws) => {
       if (!this.extByWorkspace.get(ws.name)) {
-        this.register(ws);
+        this.registerWorkspace(ws);
       }
     });
   }
-  register(workspaceFolder: vscode.WorkspaceFolder): void {
+  registerWorkspace(workspaceFolder: vscode.WorkspaceFolder): void {
     if (!this.shouldStart(workspaceFolder.name)) {
       return;
     }
@@ -137,20 +144,20 @@ export class ExtensionManager {
     jestExt.startSession();
   }
 
-  unregister(workspaceFolder: vscode.WorkspaceFolder): void {
-    this.unregisterByName(workspaceFolder.name);
+  unregisterWorkspace(workspaceFolder: vscode.WorkspaceFolder): void {
+    this.unregisterWorkspaceByName(workspaceFolder.name);
   }
-  unregisterByName(name: string): void {
+  unregisterWorkspaceByName(name: string): void {
     const extension = this.extByWorkspace.get(name);
     if (extension) {
       extension.deactivate();
       this.extByWorkspace.delete(name);
     }
   }
-  unregisterAll(): void {
+  unregisterAllWorkspaces(): void {
     const keys = this.extByWorkspace.keys();
     for (const key of keys) {
-      this.unregisterByName(key);
+      this.unregisterWorkspaceByName(key);
     }
   }
   shouldStart(workspaceFolderName: string): boolean {
@@ -174,6 +181,7 @@ export class ExtensionManager {
       return this.getByName(workspace.name);
     }
   };
+
   async selectExtension(): Promise<JestExt | undefined> {
     const workspace =
       vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length <= 1
@@ -215,6 +223,17 @@ export class ExtensionManager {
           }
         });
       }
+      case 'workspace': {
+        return vscode.commands.registerCommand(
+          commandName,
+          async (workspace: vscode.WorkspaceFolder, ...args) => {
+            const extension = this.getByName(workspace.name);
+            if (extension) {
+              command.callback.call(thisArg, extension, ...args);
+            }
+          }
+        );
+      }
       case 'active-text-editor':
       case 'active-text-editor-workspace': {
         return vscode.commands.registerTextEditorCommand(
@@ -245,8 +264,8 @@ export class ExtensionManager {
     });
   }
   onDidChangeWorkspaceFolders(e: vscode.WorkspaceFoldersChangeEvent): void {
-    e.added.forEach(this.register, this);
-    e.removed.forEach(this.unregister, this);
+    e.added.forEach(this.registerWorkspace, this);
+    e.removed.forEach(this.unregisterWorkspace, this);
   }
   onDidCloseTextDocument(document: vscode.TextDocument): void {
     const ext = this.getByDocUri(document.uri);
@@ -300,6 +319,112 @@ export class ExtensionManager {
       return list;
     }, [] as vscode.Uri[]);
     this.onFilesChange(files, (ext) => ext.onDidRenameFiles(event));
+  }
+
+  public register(): vscode.Disposable[] {
+    return [
+      this.registerCommand({
+        type: 'all-workspaces',
+        name: 'start',
+        callback: (extension) => extension.startSession(),
+      }),
+      this.registerCommand({
+        type: 'select-workspace',
+        name: 'start',
+        callback: (extension) => extension.startSession(),
+      }),
+      this.registerCommand({
+        type: 'all-workspaces',
+        name: 'stop',
+        callback: (extension) => extension.stopSession(),
+      }),
+      this.registerCommand({
+        type: 'select-workspace',
+        name: 'stop',
+        callback: (extension) => extension.stopSession(),
+      }),
+      this.registerCommand({
+        type: 'all-workspaces',
+        name: 'toggle-coverage',
+        callback: (extension) => extension.toggleCoverageOverlay(),
+      }),
+      this.registerCommand({
+        type: 'select-workspace',
+        name: 'toggle-coverage',
+        callback: (extension) => extension.toggleCoverageOverlay(),
+      }),
+      this.registerCommand({
+        type: 'active-text-editor-workspace',
+        name: 'toggle-coverage',
+        callback: (extension) => extension.toggleCoverageOverlay(),
+      }),
+      this.registerCommand({
+        type: 'all-workspaces',
+        name: 'run-all-tests',
+        callback: (extension) => extension.runAllTests(),
+      }),
+      this.registerCommand({
+        type: 'select-workspace',
+        name: 'run-all-tests',
+        callback: (extension) => extension.runAllTests(),
+      }),
+      this.registerCommand({
+        type: 'active-text-editor-workspace',
+        name: 'run-all-tests',
+        callback: (extension) => extension.runAllTests(),
+      }),
+      this.registerCommand({
+        type: 'active-text-editor',
+        name: 'run-all-tests',
+        callback: (extension, editor) => extension.runAllTests(editor),
+      }),
+      this.registerCommand({
+        type: 'active-text-editor',
+        name: 'debug-tests',
+        callback: (extension, editor, ...identifiers) => {
+          extension.debugTests(editor.document, ...identifiers);
+        },
+      }),
+      // with-workspace commands
+      this.registerCommand({
+        type: 'workspace',
+        name: 'toggle-auto-run',
+        callback: (extension) => {
+          extension.toggleAutoRun();
+        },
+      }),
+      this.registerCommand({
+        type: 'workspace',
+        name: 'toggle-coverage',
+        callback: (extension) => {
+          extension.toggleCoverageOverlay();
+        },
+      }),
+
+      // setup tool
+      vscode.commands.registerCommand(`${extensionName}.setup-extension`, this.startWizard),
+
+      // this provides the opportunity to inject test names into the DebugConfiguration
+      vscode.debug.registerDebugConfigurationProvider('node', this.debugConfigurationProvider),
+      // this provides the snippets generation
+      vscode.debug.registerDebugConfigurationProvider(
+        'vscode-jest-tests',
+        this.debugConfigurationProvider
+      ),
+      vscode.workspace.onDidChangeConfiguration(this.onDidChangeConfiguration, this),
+
+      vscode.workspace.onDidChangeWorkspaceFolders(this.onDidChangeWorkspaceFolders, this),
+
+      vscode.workspace.onDidCloseTextDocument(this.onDidCloseTextDocument, this),
+
+      vscode.window.onDidChangeActiveTextEditor(this.onDidChangeActiveTextEditor, this),
+      vscode.workspace.onDidChangeTextDocument(this.onDidChangeTextDocument, this),
+      vscode.workspace.onDidCreateFiles(this.onDidCreateFiles, this),
+      vscode.workspace.onDidRenameFiles(this.onDidRenameFiles, this),
+      vscode.workspace.onDidDeleteFiles(this.onDidDeleteFiles, this),
+      vscode.workspace.onDidSaveTextDocument(this.onDidSaveTextDocument, this),
+      vscode.workspace.onWillSaveTextDocument(this.onWillSaveTextDocument, this),
+    ];
   }
 
   private showReleaseMessage(): void {

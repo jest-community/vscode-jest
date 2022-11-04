@@ -2,13 +2,7 @@ import { JestTotalResults, ProjectWorkspace } from 'jest-editor-support';
 
 import * as vscode from 'vscode';
 import { LoggingFactory } from '../logging';
-import {
-  JestExtAutoRunSetting,
-  OnSaveFileType,
-  OnStartupType,
-  PluginResourceSettings,
-} from '../Settings';
-import { AutoRunMode } from '../StatusBar';
+import { PluginResourceSettings } from '../Settings';
 import { ProcessSession } from './process-session';
 import { DebugTestIdentifier } from '../DebugCodeLens';
 import { JestProcessInfo } from '../JestProcessManagement';
@@ -19,14 +13,6 @@ export enum WatchMode {
   Watch = 'watch',
   WatchAll = 'watchAll',
 }
-export interface AutoRunAccessor {
-  config: JestExtAutoRunSetting;
-  isOff: boolean;
-  isWatch: boolean;
-  onSave: OnSaveFileType | undefined;
-  onStartup: OnStartupType | undefined;
-  mode: AutoRunMode;
-}
 export interface RunnerWorkspaceOptions {
   outputFileSuffix?: string;
   collectCoverage?: boolean;
@@ -35,7 +21,6 @@ export interface JestExtContext {
   settings: PluginResourceSettings;
   workspace: vscode.WorkspaceFolder;
   loggingFactory: LoggingFactory;
-  autoRun: AutoRunAccessor;
   createRunnerWorkspace: (options?: RunnerWorkspaceOptions) => ProjectWorkspace;
   output: JestOutputTerminal;
 }

@@ -7,71 +7,22 @@ import { ProjectWorkspace, LoginShell } from 'jest-editor-support';
 import { JestProcessRequest } from '../JestProcessManagement';
 import {
   PluginResourceSettings,
-  JestExtAutoRunSetting,
   TestExplorerConfig,
   NodeEnv,
   MonitorLongRun,
-  JestExtAutoRunConfig,
-  JestExtAutoRunShortHand,
   TestExplorerConfigLegacy,
+  JestExtAutoRunSetting,
 } from '../Settings';
-import { AutoRunMode } from '../StatusBar';
 import { pathToJest, pathToConfig, toFilePath } from '../helpers';
 import { workspaceLogging } from '../logging';
-import { AutoRunAccessor, JestExtContext, RunnerWorkspaceOptions } from './types';
+import { JestExtContext, RunnerWorkspaceOptions } from './types';
 import { CoverageColors } from '../Coverage';
 import { platform } from 'os';
 import { JestOutputTerminal } from './output-terminal';
+import { AutoRun } from './auto-run';
 
 export const isWatchRequest = (request: JestProcessRequest): boolean =>
   request.type === 'watch-tests' || request.type === 'watch-all-tests';
-
-const autoRunMode = (autoRun: JestExtAutoRunConfig): AutoRunMode => {
-  if (autoRun.watch === false && !autoRun.onSave && !autoRun.onStartup) {
-    return 'auto-run-off';
-  }
-  if (autoRun.watch === true) {
-    return 'auto-run-watch';
-  }
-  if (autoRun.onSave === 'test-src-file') {
-    return 'auto-run-on-save';
-  }
-  if (autoRun.onSave === 'test-file') {
-    return 'auto-run-on-save-test';
-  }
-  return 'auto-run-off';
-};
-
-export const toAutoRun = (shortHand: JestExtAutoRunShortHand): JestExtAutoRunConfig => {
-  switch (shortHand) {
-    case 'legacy':
-      return { watch: true, onStartup: ['all-tests'] };
-    case 'default':
-    case 'watch':
-      return { watch: true };
-    case 'off':
-      return { watch: false };
-    case 'on-save':
-      return { watch: false, onSave: 'test-src-file' };
-    default: {
-      const message = `invalid autoRun setting "${shortHand}". Will use default setting instead`;
-      console.error(message);
-      vscode.window.showErrorMessage(message);
-      return toAutoRun('default');
-    }
-  }
-};
-export const AutoRun = (pluginSettings: PluginResourceSettings): AutoRunAccessor => {
-  const config = pluginSettings.autoRun;
-  return {
-    config,
-    isOff: config.watch === false && config.onSave == null && config.onStartup == null,
-    isWatch: config.watch === true,
-    onSave: config.watch === false ? config.onSave : undefined,
-    onStartup: config.onStartup,
-    mode: autoRunMode(config),
-  };
-};
 
 /**
  * This method retrieve a jest command line, if available, otherwise fall back to the legacy
@@ -113,7 +64,6 @@ export const createJestExtContext = (
     settings,
     createRunnerWorkspace,
     loggingFactory: workspaceLogging(workspaceFolder.name, settings.debugMode ?? false),
-    autoRun: AutoRun(settings),
     output,
   };
 };
@@ -143,37 +93,6 @@ const getShell = (config: vscode.WorkspaceConfiguration): string | LoginShell | 
     }
     return shell;
   }
-};
-
-/**
- * create a backward compatible runMode from the the legacy settings
- */
-const autoRunFromLegacySettings = (
-  autoEnable?: boolean,
-  runAllTestsFirst?: boolean
-): JestExtAutoRunConfig | undefined => {
-  if (autoEnable === false) {
-    return toAutoRun('off');
-  }
-  if (runAllTestsFirst === true) {
-    return toAutoRun('legacy');
-  }
-};
-
-const getAutoRunSetting = (
-  config: vscode.WorkspaceConfiguration,
-  autoEnable?: boolean,
-  runAllTestsFirst?: boolean
-): JestExtAutoRunConfig => {
-  const setting = config.get<JestExtAutoRunSetting | null>('autoRun');
-
-  if (!setting) {
-    return autoRunFromLegacySettings(autoEnable, runAllTestsFirst) ?? toAutoRun('default');
-  }
-  if (typeof setting === 'string') {
-    return toAutoRun(setting);
-  }
-  return setting;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -225,7 +144,11 @@ export const getExtensionResourceSettings = (uri: vscode.Uri): PluginResourceSet
     nodeEnv: config.get<NodeEnv | null>('nodeEnv') ?? undefined,
     shell: getShell(config) ?? undefined,
     monitorLongRun: config.get<MonitorLongRun>('monitorLongRun') ?? undefined,
-    autoRun: getAutoRunSetting(config, autoEnable, runAllTestsFirst),
+    autoRun: new AutoRun(
+      config.get<JestExtAutoRunSetting | null>('autoRun'),
+      autoEnable,
+      runAllTestsFirst
+    ),
   };
 };
 
