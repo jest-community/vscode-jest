@@ -5,6 +5,7 @@ import { Debuggable, JestExtExplorerContext, TestItemData } from './types';
 import { extensionId } from '../appGlobals';
 import { Logging } from '../logging';
 import { toErrorString } from '../helpers';
+import { tiContextManager } from './test-item-context-manager';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const isDebuggable = (arg: any): arg is Debuggable => arg && typeof arg.getDebugInfo === 'function';
@@ -33,6 +34,24 @@ export class JestTestProvider {
       this.createProfiles(this.controller)
     );
     this.workspaceRoot = new WorkspaceRoot(this.context);
+    this.updateMenuContext();
+  }
+
+  private updateMenuContext() {
+    const autoRunOn = !this.context.ext.settings.autoRun.isOff;
+    const withConverage = this.context.ext.settings.showCoverageOnLoad;
+    tiContextManager.setItemContext({
+      workspace: this.context.ext.workspace,
+      key: 'jest.autoRun',
+      value: autoRunOn,
+      itemIds: [this.workspaceRoot.item.id],
+    });
+    tiContextManager.setItemContext({
+      workspace: this.context.ext.workspace,
+      key: 'jest.coverage',
+      value: withConverage,
+      itemIds: [this.workspaceRoot.item.id],
+    });
   }
 
   private createController = (wsFolder: vscode.WorkspaceFolder): vscode.TestController => {

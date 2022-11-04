@@ -1,6 +1,7 @@
 jest.unmock('events');
 jest.unmock('../../src/JestExt/core');
 jest.unmock('../../src/JestExt/helper');
+jest.unmock('../../src/JestExt/auto-run');
 jest.unmock('../../src/appGlobals');
 jest.unmock('../../src/errors');
 jest.unmock('../test-helper');
@@ -24,6 +25,7 @@ jest.mock('jest-editor-support');
 
 import * as vscode from 'vscode';
 import { JestExt } from '../../src/JestExt/core';
+import { AutoRun } from '../../src/JestExt/auto-run';
 import { createProcessSession } from '../../src/JestExt/process-session';
 import { updateCurrentDiagnostics, updateDiagnostics } from '../../src/diagnostics';
 import { CoverageMapProvider } from '../../src/Coverage';
@@ -531,8 +533,8 @@ describe('JestExt', () => {
         ${{ watch: false, onSave: 'test-file' }}     | ${'json'}       | ${'unknown'} | ${false}       | ${false}
       `(
         'with autoRun: $runConfig $languageId $isTestFile => $shouldSchedule, $isDirty',
-        ({ runConfig: autoRun, languageId, isTestFile, shouldSchedule, isDirty }) => {
-          const sut: any = newJestExt({ settings: { autoRun } });
+        ({ runConfig, languageId, isTestFile, shouldSchedule, isDirty }) => {
+          const sut: any = newJestExt({ settings: { autoRun: new AutoRun(runConfig) } });
           const fileName = '/a/file;';
           const document: any = {
             uri: { scheme: 'file' },
@@ -732,84 +734,6 @@ describe('JestExt', () => {
       );
     });
   });
-
-  // describe('updateDecorators', () => {
-  //   let sut: JestExt;
-  //   const mockEditor: any = { document: { uri: { fsPath: `file://a/b/c.js` } } };
-  //   const emptyTestResults = { success: [], fail: [], skip: [], unknown: [] };
-
-  //   const settings: any = {
-  //     debugCodeLens: {},
-  //     enableInlineErrorMessages: false,
-  //   };
-
-  //   const tr1 = {
-  //     start: { line: 1, column: 0 },
-  //   };
-  //   const tr2 = {
-  //     start: { line: 100, column: 0 },
-  //   };
-
-  //   beforeEach(() => {
-  //     StateDecorationsMock.mockImplementation(() => ({
-  //       passing: { key: 'pass' } as vscode.TextEditorDecorationType,
-  //       failing: { key: 'fail' } as vscode.TextEditorDecorationType,
-  //       skip: { key: 'skip' } as vscode.TextEditorDecorationType,
-  //       unknown: { key: 'unknown' } as vscode.TextEditorDecorationType,
-  //     }));
-
-  //     mockEditor.setDecorations = jest.fn();
-  //   });
-
-  //   describe('when "showClassicStatus" is on', () => {
-  //     beforeEach(() => {
-  //       sut = newJestExt({
-  //         settings: { ...settings, testExplorer: { enabled: true, showClassicStatus: true } },
-  //       });
-  //       sut.debugCodeLensProvider.didChange = jest.fn();
-  //     });
-  //     it('will reset decorator if testResults is empty', () => {
-  //       sut.updateDecorators(emptyTestResults, mockEditor);
-  //       expect(mockEditor.setDecorations).toHaveBeenCalledTimes(4);
-  //       for (const args of mockEditor.setDecorations.mock.calls) {
-  //         expect(args[1].length).toBe(0);
-  //       }
-  //     });
-  //     it('will generate dot dectorations for test results', () => {
-  //       const testResults2: any = { success: [tr1], fail: [tr2], skip: [], unknown: [] };
-  //       sut.updateDecorators(testResults2, mockEditor);
-  //       expect(mockEditor.setDecorations).toHaveBeenCalledTimes(4);
-  //       for (const args of mockEditor.setDecorations.mock.calls) {
-  //         let expectedLength = -1;
-  //         switch (args[0].key) {
-  //           case 'fail':
-  //           case 'pass':
-  //             expectedLength = 1;
-  //             break;
-  //           case 'skip':
-  //           case 'unknown':
-  //             expectedLength = 0;
-  //             break;
-  //         }
-  //         expect(args[1].length).toBe(expectedLength);
-  //       }
-  //     });
-  //   });
-  //   describe('when showDecorations for "status.classic" is off', () => {
-  //     it.each([[{ enabled: true }], [{ enabled: true, showClassicStatus: false }]])(
-  //       'no dot decorators will be generatred for testExplore config: %s',
-  //       (testExplorerConfig) => {
-  //         sut = newJestExt({
-  //           settings: { ...settings, testExplorer: testExplorerConfig },
-  //         });
-  //         sut.debugCodeLensProvider.didChange = jest.fn();
-  //         const testResults2: any = { success: [tr1], fail: [tr2], skip: [], unknown: [] };
-  //         sut.updateDecorators(testResults2, mockEditor);
-  //         expect(mockEditor.setDecorations).toHaveBeenCalledTimes(0);
-  //       }
-  //     );
-  //   });
-  // });
 
   describe('session', () => {
     const createJestExt = () => {
@@ -1240,5 +1164,15 @@ describe('JestExt', () => {
     const sut = newJestExt();
     sut.showOutput();
     expect(mockOutputTerminal.show).toHaveBeenCalled();
+  });
+  it('toggleAutoRun will trigger autoRun to toggle runtime config', () => {
+    const autoRun = new AutoRun('watch');
+    const sut: any = newJestExt({ settings: { autoRun } });
+    expect(autoRun.isWatch).toBeTruthy();
+    expect(autoRun.isOff).toBeFalsy();
+
+    sut.toggleAutoRun();
+    expect(autoRun.isWatch).toBeFalsy();
+    expect(autoRun.isOff).toBeTruthy();
   });
 });

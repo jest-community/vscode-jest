@@ -514,13 +514,13 @@ export class JestExt {
   }
 
   private handleOnSaveRun(document: vscode.TextDocument): void {
-    if (!this.isSupportedDocument(document) || this.extContext.autoRun.isWatch) {
+    if (!this.isSupportedDocument(document) || this.extContext.settings.autoRun.isWatch) {
       return;
     }
     const isTestFile = this.testResultProvider.isTestFile(document.fileName);
     if (
-      this.extContext.autoRun.onSave &&
-      (this.extContext.autoRun.onSave === 'test-src-file' || isTestFile !== 'no')
+      this.extContext.settings.autoRun.onSave &&
+      (this.extContext.settings.autoRun.onSave === 'test-src-file' || isTestFile !== 'no')
     ) {
       this.processSession.scheduleProcess({
         type: 'by-file',
@@ -618,6 +618,12 @@ export class JestExt {
     // restart jest since coverage condition has changed
     this.triggerUpdateSettings(this.extContext.settings);
   }
+  toggleAutoRun(): void {
+    this.extContext.settings.autoRun.toggle();
+
+    // restart jest since coverage condition has changed
+    this.triggerUpdateSettings(this.extContext.settings);
+  }
 
   private setupStatusBar(): void {
     this.updateStatusBar({ state: 'initial' });
@@ -628,7 +634,7 @@ export class JestExt {
     if (this.coverageOverlay.enabled) {
       modes.push('coverage');
     }
-    modes.push(this.extContext.autoRun.mode);
+    modes.push(this.extContext.settings.autoRun.mode);
 
     this.updateStatusBar({ state: 'initial', mode: modes, stats: emptyTestStats() });
   }

@@ -9,6 +9,7 @@ import { WorkspaceRoot } from '../../src/test-provider/test-item-data';
 import { JestTestProviderContext } from '../../src/test-provider/test-provider-helper';
 import { extensionId } from '../../src/appGlobals';
 import { mockController, mockExtExplorerContext } from './test-helper';
+import { tiContextManager } from '../../src/test-provider/test-item-context-manager';
 
 const throwError = () => {
   throw new Error('debug error');
@@ -98,7 +99,7 @@ describe('JestTestProvider', () => {
       ${true}
       ${false}
     `('will create Profiles regardless isWatchMode=$isWatchMode', ({ isWatchMode }) => {
-      extExplorerContextMock.autoRun.isWatch = isWatchMode;
+      extExplorerContextMock.settings.autoRun.isWatch = isWatchMode;
       new JestTestProvider(extExplorerContextMock);
       const kinds = [vscode.TestRunProfileKind.Debug, vscode.TestRunProfileKind.Run];
 
@@ -584,6 +585,30 @@ describe('JestTestProvider', () => {
         expect(workspaceRootMock.scheduleTest).toHaveBeenCalledTimes(0);
         expect(controllerMock.createTestRun).not.toHaveBeenCalled();
       });
+    });
+  });
+  describe('supports test-explorer item-menu', () => {
+    it('updates item-menu context', () => {
+      extExplorerContextMock.settings.autoRun.isOff = false;
+      extExplorerContextMock.settings.showCoverageOnLoad = false;
+
+      new JestTestProvider(extExplorerContextMock);
+      expect(tiContextManager.setItemContext).toHaveBeenCalledWith(
+        expect.objectContaining({
+          workspace: extExplorerContextMock.workspace,
+          key: 'jest.autoRun',
+          value: true,
+          itemIds: [workspaceRootMock.item.id],
+        })
+      );
+      expect(tiContextManager.setItemContext).toHaveBeenCalledWith(
+        expect.objectContaining({
+          workspace: extExplorerContextMock.workspace,
+          key: 'jest.coverage',
+          value: false,
+          itemIds: [workspaceRootMock.item.id],
+        })
+      );
     });
   });
 });

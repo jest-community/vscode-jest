@@ -1,6 +1,7 @@
 import { TestState } from '../DebugCodeLens';
 import { CoverageColors } from '../Coverage/CoverageOverlay';
 import { LoginShell, ProjectWorkspace } from 'jest-editor-support';
+import { AutoRun } from '../JestExt/auto-run';
 
 export type JestTestProcessType =
   | 'all-tests'
@@ -48,7 +49,7 @@ export interface PluginResourceSettings {
   coverageFormatter: string;
   debugMode?: boolean;
   coverageColors?: CoverageColors;
-  autoRun: JestExtAutoRunConfig;
+  autoRun: AutoRun;
   testExplorer: TestExplorerConfig;
   nodeEnv?: NodeEnv;
   shell?: string | LoginShell;

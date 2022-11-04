@@ -1,11 +1,12 @@
 jest.unmock('../../src/JestExt/process-session');
 jest.unmock('../../src/JestExt/helper');
+jest.unmock('../../src/JestExt/auto-run');
 jest.unmock('../test-helper');
 
 import { createProcessSession } from '../../src/JestExt/process-session';
 import * as listeners from '../../src/JestExt/process-listeners';
 import { JestProcessManager } from '../../src/JestProcessManagement';
-import { AutoRun } from '../../src/JestExt/helper';
+import { AutoRun } from '../../src/JestExt/auto-run';
 import { mockJestProcessContext } from '../test-helper';
 
 const mockProcessManager = JestProcessManager as jest.Mocked<any>;
@@ -160,8 +161,7 @@ describe('ProcessSession', () => {
       'will execute the onStartup processes with autoRun=$autoRun',
       async ({ autoRun, expectedRequests }) => {
         expect.hasAssertions();
-        const settings: any = { autoRun };
-        context.autoRun = AutoRun(settings);
+        context.settings = { autoRun: new AutoRun(autoRun) };
         processManagerMock.numberOfProcesses.mockReturnValue(0);
         const session = createProcessSession(context);
         await session.start();
@@ -174,8 +174,7 @@ describe('ProcessSession', () => {
     );
     it('will clear all process before starting new ones', async () => {
       expect.hasAssertions();
-      const settings: any = { autoRun: { watch: true } };
-      context.autoRun = AutoRun(settings);
+      context.settings = { autoRun: new AutoRun({ watch: true }) };
       processManagerMock.numberOfProcesses.mockReturnValue(1);
       const session = createProcessSession(context);
       await session.start();
