@@ -62,7 +62,7 @@ const mockGetExtensionResourceSettings = jest.spyOn(extHelper, 'getExtensionReso
 describe('JestExt', () => {
   const getConfiguration = vscode.workspace.getConfiguration as jest.Mock<any>;
   const context: any = { asAbsolutePath: (text) => text } as vscode.ExtensionContext;
-  const workspaceFolder = { name: 'test-folder' } as any;
+  const workspaceFolder = { name: 'test-folder', uri: { fsPath: '/test-folder' } } as any;
 
   const debugCodeLensProvider = {} as any;
   const debugConfigurationProvider = {
@@ -348,6 +348,40 @@ describe('JestExt', () => {
         expect(messaging.systemWarningMessage).not.toHaveBeenCalled();
       }
     );
+    describe('can fallback to workspace config if no folder config found', () => {
+      const defaultConfig = { name: 'vscode-jest-tests.v2' };
+      const v1Config = { name: 'vscode-jest-tests' };
+      const v2Config = { name: 'vscode-jest-tests.v2' };
+      const notJestConfig = { name: 'not-for-jest' };
+      it.each`
+        case | folderConfigs      | workspaceConfigs        | expectedConfig
+        ${1} | ${undefined}       | ${undefined}            | ${defaultConfig}
+        ${2} | ${[notJestConfig]} | ${[v1Config, v2Config]} | ${v2Config}
+        ${3} | ${[v1Config]}      | ${[v2Config]}           | ${v1Config}
+        ${4} | ${undefined}       | ${[v2Config]}           | ${v2Config}
+        ${5} | ${[v2Config]}      | ${[]}                   | ${v2Config}
+      `('case $case', ({ folderConfigs, workspaceConfigs, expectedConfig }) => {
+        debugConfigurationProvider.provideDebugConfigurations.mockReturnValue([defaultConfig]);
+        vscode.workspace.getConfiguration = jest.fn().mockImplementation((section, scope) => {
+          return {
+            get: () => {
+              if (section !== 'launch') {
+                return;
+              }
+              if (scope === workspaceFolder.ui) {
+                return folderConfigs;
+              }
+              if (!scope) {
+                return workspaceConfigs;
+              }
+            },
+          };
+        });
+        sut = newJestExt();
+        sut.debugTests(document, 'testNamePattern');
+        expect(vscode.debug.startDebugging).toHaveBeenCalledWith(workspaceFolder, expectedConfig);
+      });
+    });
   });
 
   describe('onDidCloseTextDocument()', () => {

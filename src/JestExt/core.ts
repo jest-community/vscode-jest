@@ -404,6 +404,17 @@ export class JestExt {
   ): Promise<void> => {
     const idString = (type: IdStringType, id: DebugTestIdentifier): string =>
       typeof id === 'string' ? id : testIdString(type, id);
+    const getDebugConfig = (
+      folder?: vscode.WorkspaceFolder
+    ): vscode.DebugConfiguration | undefined => {
+      const configs = vscode.workspace
+        .getConfiguration('launch', folder?.uri)
+        ?.get<vscode.DebugConfiguration[]>('configurations');
+      return (
+        configs?.find((c) => c.name === 'vscode-jest-tests.v2') ??
+        configs?.find((c) => c.name === 'vscode-jest-tests')
+      );
+    };
     const selectTest = async (
       testIdentifiers: DebugTestIdentifier[]
     ): Promise<DebugTestIdentifier | undefined> => {
@@ -439,12 +450,7 @@ export class JestExt {
       testId ? escapeRegExp(idString('full-name', testId)) : '.*'
     );
 
-    const configs = vscode.workspace
-      .getConfiguration('launch', this.extContext.workspace.uri)
-      ?.get<vscode.DebugConfiguration[]>('configurations');
-    let debugConfig =
-      configs?.find((c) => c.name === 'vscode-jest-tests.v2') ??
-      configs?.find((c) => c.name === 'vscode-jest-tests');
+    let debugConfig = getDebugConfig(this.extContext.workspace) ?? getDebugConfig();
 
     if (!debugConfig) {
       this.logging(
