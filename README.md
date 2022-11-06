@@ -112,54 +112,41 @@ The extension starts jest on behave of the user, therefore a valid Jest command 
 
 ### How to trigger the test run?
 
-By default, users need not do anything, the extension will automatically trigger related test run when needed by running jest in the watch mode. However, this can be easily changed if more granular control is desired. Below shows the execution models supported and how to use [jest.autoRun](#autorun) to opt into it:
+vscode-jest provided various on-demand test execution, as well as automated test runs:
 
-<details>
+<img src="images/run-test.jpg" alt="run-test.jpg" width="800"/>
 
-<summary>fully automated</summary>
+1. trigger test run via gutter menu in from of each test and describe block.
+2. trigger test run via test tree inline menu.
+3. trigger test run via command palette, such as `Jest: Run All Tests`
+4. trigger test run via editor context menu: `Jest: Run Related Tests`
+5. use [autoRun](#autorun) to automatically trigger test runs when changes are detected
+   1. use watchman to run related tests upon file save. (`watch`)
+   2. use editor save event to trigger test run for the changed file. (`on-save`)
+   3. or create a custom [autoRun](#autorun)
 
-No need to manually trigger any test run, all changes will be monitored and related tests will be run accordingly. It is basically running jest with `--watch` or `--watchAll`. This is the default mode prior to v4. Example:
-- `"jest.autoRun": "watch"` => will start the jest with the watch flag and leave all tests at "unknown" state until changes are detected. This is also the default after v4.7.
-- `"jest.autoRun": "legacy"` => will start running all tests upon project launch to update overall project test stats, followed by the jest watch for changes. This was the default prior to v4.7.
+By default, users need not do anything, the default autoRun `"watch"` will run all related tests and populate TestExplorer. However the convenience doesn't go without cost - it could sometimes trigger test runs unnecessarily. Please check the [tuning tips](#performance-issue) if encountered performance related issues. 
 
-</details>
-
-<details>
-
-<summary>interactive mode</summary>
-
-Allow users to control test run completely either through commands/menu/TestExplorer manually or use vscode's onSave event to automate related test runs:
-- fully manual
-  - there will be no automatic test run, users will trigger test run by either command or context-menu.
-  - Example: `"jest.autoRun": "off"`
-- automatically run tests when test or source file changed
-  - the extension will trigger test run for the given test or source file upon save.
-  - Example: `"jest.autoRun": "on-save"`
-  
-</details>
-
-Note: see [jest.autoRun](#autorun) for full control options.
 ### How to debug tests?
 
-A test can be debugged via the debug codeLens appeared above the [debuggable](#debugcodelensshowwhenteststatein) tests. Simply clicking on the codeLens will launch vscode debugger for the specific test. The extension also supports parameterized tests and allows users to pick the specific parameter set to debug.
+There are 3 ways to debug a specific test
 
-The simplest use cases should be supported out-of-the-box. If VS Code displays errors about the attribute `program` or `runtimeExecutable` not being available, you can either use [setup tool](setup-wizard.md) to help or create your own debug configuration within `launch.json`. See more details in [Customization - Debug Config](#debug-config).
+<img src="images/run-debug.jpg" alt="run-debug" width="800"/>
 
-<details>
+1. via gutter context menu from test status icon
+2. via test tree item inline menu
+3. via debug codeLens (_to be deprecated ( [poll :speech_balloon: ](https://github.com/jest-community/vscode-jest/discussions/936)_))
 
-<summary>Illustration</summary>
 
-For parameterized tests, you might see debug codeLens like `Debug (2)`, which indicated there are 2 test candidates can be debugged. In such case, you will be prompted to choose when clicking the debug codeLens. All failed test results will appear in both the hovering message panel and the `PROBLEMS` area.
-
-![debug-screen-shot](images/debug-screen-shot.png)
-
-By default debug codeLens will appear for failed and unknown tests, to change that and others, please see [customization](#customization) for more details.
-
-</details>
+If you have problem debugging, see [Customization - Debug Config](#debug-config).
 
 ### How to use code coverage?
 
-Code coverage can be triggered via [Command Palette](https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette), select command like **Jest: Toggle Coverage** to activate or deactivate code coverage (see full list in [commands](#commands). The coverage state is also shown in the StatusBar:
+Code coverage can be triggered via
+1. test tree item inline menu (see [toggle coverage](how-to-toggle-coverage))
+2. [Command Palette](https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette), select command like **Jest: Toggle Coverage** to activate or deactivate code coverage (see full list in [commands](#commands). 
+  
+The coverage state is reflected in test tree toggle menu, as well as  StatusBar:
 
 ![status-bar-modes](images/status-bar-watch-coverage.png)
 
@@ -179,8 +166,6 @@ In addition to the coverage summary that is shown on the top of the file, each l
 You can customize coverage start up behavior, style and colors, see [customization](#customization) for more details.
 
 </details>
-
-⚠️ In rare cases, coverage info might be less than what it actual is in "watch" mode (with `--watch` flag), where only changed files/tests are run (see facebook/jest#1284).
 
 ### How to use the extension with monorepo projects?
 
@@ -445,9 +430,12 @@ By default, jest command is executed in default shell ('cmd' for windows, '/bin/
 Note the LoginShell is only applicable for non-windows platform and could cause a bit more overhead.
 ### Debug Config
 
-This extension looks for jest specific debug config (`"vscode-jest-tests"` or `"vscode-jest-tests.v2"`) in the workspace `.vscode/launch.json`. If not found, it will attempt to generate a default config that should work for most standard jest or projects bootstrapped by `create-react-app`.
-
-If the default config is not working for your project, you can either use the [setup tool](setup-wizard.md), probably the easier approach (available in v4), or edit the `launch.json` file manually.
+This extension looks for jest specific debug config (`"vscode-jest-tests"` or `"vscode-jest-tests.v2"`) in the following order:
+1. workspace folder `.vscode/launch.json`. 
+2. workspace `xxx.code-workspace`, if exists
+3. generated default config
+  
+The default config should work for most standard jest or projects bootstrapped by `create-react-app`, however it might fall short for more sophisticated projects. Please use the [setup tool](setup-wizard.md) to help you configure or edit the `launch.json` file manually. 
 
 If you choose to edit the `launch.json` manually, you can use the jest templates, such as "Jest: Default jest configuration" or "Jest: create-react-app", as a starting point. See more detail on how to add debug config in vscode [Debugging](https://code.visualstudio.com/docs/editor/debugging#_launch-configurations).
 
