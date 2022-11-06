@@ -3,7 +3,8 @@ jest.unmock('../../src/JestExt/auto-run');
 jest.unmock('../test-helper');
 
 const mockPlatform = jest.fn();
-jest.mock('os', () => ({ platform: mockPlatform }));
+const mockUserInfo = jest.fn();
+jest.mock('os', () => ({ platform: mockPlatform, userInfo: mockUserInfo }));
 
 import * as vscode from 'vscode';
 import { readFileSync } from 'fs';
@@ -11,6 +12,7 @@ import {
   createJestExtContext,
   getExtensionResourceSettings,
   isWatchRequest,
+  outputFileSuffix,
 } from '../../src/JestExt/helper';
 import { ProjectWorkspace } from 'jest-editor-support';
 import { workspaceLogging } from '../../src/logging';
@@ -25,6 +27,7 @@ jest.mock('jest-editor-support', () => ({ isLoginShell: jest.fn(), ProjectWorksp
 describe('createJestExtContext', () => {
   beforeAll(() => {
     console.error = jest.fn();
+    console.warn = jest.fn();
   });
   const baseSettings = { autoRun: { watch: true } };
   const workspaceFolder: any = { name: 'workspace' };
@@ -66,6 +69,20 @@ describe('createJestExtContext', () => {
       args = (ProjectWorkspace as jest.Mocked<any>).mock.calls[1];
       const collectCoverage2 = args[5];
       expect(collectCoverage2).toEqual(true);
+    });
+    describe('construct outputFileSuffix', () => {
+      it.each`
+        case | uInfo                                  | extra           | expected
+        ${1} | ${{ uid: 123, username: 'user1' }}     | ${undefined}    | ${'123'}
+        ${2} | ${{ uid: 0, username: 'user1' }}       | ${undefined}    | ${'0'}
+        ${3} | ${{ uid: 123, username: 'user1' }}     | ${'extra'}      | ${'123_extra'}
+        ${4} | ${{ uid: -1, username: 'john smith' }} | ${'extra'}      | ${'john_smith_extra'}
+        ${5} | ${{ uid: -1, username: 'a**name' }}    | ${'with space'} | ${'a__name_with_space'}
+      `('case $case', ({ uInfo, extra, expected }) => {
+        mockUserInfo.mockReturnValue(uInfo);
+        const ws = 'a';
+        expect(outputFileSuffix(ws, extra)).toEqual(`${ws}_${expected}`);
+      });
     });
   });
   it('will create logging factory', () => {

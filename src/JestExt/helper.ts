@@ -17,7 +17,7 @@ import { pathToJest, pathToConfig, toFilePath } from '../helpers';
 import { workspaceLogging } from '../logging';
 import { JestExtContext, RunnerWorkspaceOptions } from './types';
 import { CoverageColors } from '../Coverage';
-import { platform } from 'os';
+import { platform, userInfo } from 'os';
 import { JestOutputTerminal } from './output-terminal';
 import { AutoRun } from './auto-run';
 
@@ -38,6 +38,25 @@ const getJestCommandSettings = (settings: PluginResourceSettings): [string, stri
   return [pathToJest(settings), pathToConfig(settings)];
 };
 
+const getUserIdString = (): string => {
+  try {
+    const user = userInfo();
+    if (user.uid >= 0) {
+      return user.uid.toString();
+    }
+    if (user.username.length > 0) {
+      return user.username;
+    }
+  } catch (e) {
+    console.warn('failed to get userInfo:', e);
+  }
+  return 'unknown';
+};
+export const outputFileSuffix = (ws: string, extra?: string): string => {
+  const s = `${ws}_${getUserIdString()}${extra ? `_${extra}` : ''}`;
+  // replace non-word with '_'
+  return s.replace(/\W/g, '_');
+};
 export const createJestExtContext = (
   workspaceFolder: vscode.WorkspaceFolder,
   settings: PluginResourceSettings
@@ -51,7 +70,7 @@ export const createJestExtContext = (
       jestCommandLine,
       pathToConfig,
       currentJestVersion,
-      options?.outputFileSuffix ? `${ws}_${options.outputFileSuffix}` : ws,
+      outputFileSuffix(ws, options?.outputFileSuffix),
       options?.collectCoverage ?? settings.showCoverageOnLoad,
       settings.debugMode,
       settings.nodeEnv,
