@@ -125,7 +125,7 @@ vscode-jest provided various on-demand test execution, as well as automated test
    2. use editor save event to trigger test run for the changed file. (`on-save`)
    3. or create a custom [autoRun](#autorun)
 
-By default, users need not do anything, the default autoRun `"watch"` will run all related tests and populate TestExplorer. However the convenience doesn't go without cost - it could sometimes trigger test runs unnecessarily. Please check the [tuning tips](#performance-issue) if encountered performance related issues. 
+By default, users need not do anything. The default autoRun `"watch"` will run all related tests and populate the test tree. However, the convenience doesn't go without cost - it could sometimes trigger test runs unnecessarily. Please check the [tuning tips](#performance-issue) if you encounter performance-related issues. 
 
 ### How to debug tests?
 
