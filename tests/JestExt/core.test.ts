@@ -41,6 +41,7 @@ import { JestTestProvider } from '../../src/test-provider';
 import { MessageAction } from '../../src/messaging';
 import { addFolderToDisabledWorkspaceFolders } from '../../src/extensionManager';
 import { JestOutputTerminal } from '../../src/JestExt/output-terminal';
+import { RunShell } from '../../src/JestExt/run-shell';
 import * as errors from '../../src/errors';
 
 /* eslint jest/expect-expect: ["error", { "assertFunctionNames": ["expect", "expectItTakesNoAction"] }] */
@@ -126,6 +127,7 @@ describe('JestExt', () => {
     (vscode.EventEmitter as jest.Mocked<any>) = jest.fn().mockImplementation(() => {
       return { fire: jest.fn(), event: jest.fn(), dispose: jest.fn() };
     });
+    (RunShell as jest.Mocked<any>).mockImplementation(() => ({ toSetting: jest.fn() }));
   });
 
   describe('debugTests()', () => {
@@ -612,7 +614,7 @@ describe('JestExt', () => {
       expect(sut.triggerUpdateSettings).toHaveBeenCalled();
     });
     it('overrides showCoverageOnLoad settings', async () => {
-      const settings = { showCoverageOnLoad: true } as any;
+      const settings = { showCoverageOnLoad: true, shell: { toSetting: jest.fn() } } as any;
       const sut = newJestExt({ settings });
 
       const { createRunnerWorkspace } = (createProcessSession as jest.Mocked<any>).mock.calls[0][0];
@@ -1208,5 +1210,39 @@ describe('JestExt', () => {
     sut.toggleAutoRun();
     expect(autoRun.isWatch).toBeFalsy();
     expect(autoRun.isOff).toBeTruthy();
+  });
+  describe('enableLoginShell', () => {
+    let mockShell;
+    beforeEach(() => {
+      mockShell = {
+        toSetting: jest.fn(),
+        useLoginShell: false,
+        enableLoginShell: jest.fn(),
+      };
+    });
+    describe('only restart session when needed', () => {
+      it.each`
+        useLoginShell | restartSession
+        ${false}      | ${true}
+        ${true}       | ${false}
+        ${'never'}    | ${false}
+      `(
+        'useLoginShell=$useLoginShell, restart session = $restartSession',
+        ({ useLoginShell, restartSession }) => {
+          mockShell.useLoginShell = useLoginShell;
+          const sut: any = newJestExt({ settings: { shell: mockShell } });
+          const startSessionSpy = jest.spyOn(sut, 'startSession');
+
+          sut.enableLoginShell();
+          if (restartSession) {
+            expect(mockShell.enableLoginShell).toHaveBeenCalled();
+            expect(startSessionSpy).toHaveBeenCalled();
+          } else {
+            expect(mockShell.enableLoginShell).not.toHaveBeenCalled();
+            expect(startSessionSpy).not.toHaveBeenCalled();
+          }
+        }
+      );
+    });
   });
 });

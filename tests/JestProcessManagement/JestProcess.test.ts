@@ -270,7 +270,7 @@ describe('JestProcess', () => {
             testFileNamePattern: 'abc',
             testNamePattern,
           });
-          extContext.settings = { shell };
+          extContext.settings.shell.toSetting.mockReturnValue(shell);
           jestProcess = new JestProcess(extContext, request);
           jestProcess.start();
           const [, options] = RunnerClassMock.mock.calls[0];
@@ -284,14 +284,16 @@ describe('JestProcess', () => {
 
       const jestProcess1 = new JestProcess(extContext, request);
       jestProcess1.start();
-      expect(extContext.createRunnerWorkspace).toHaveBeenCalledWith(undefined);
+      expect(extContext.createRunnerWorkspace).toHaveBeenCalledWith(
+        expect.objectContaining({ outputFileSuffix: undefined })
+      );
 
       const request2 = mockRequest('by-file', { testFileName: 'abc' });
       request2.schedule.queue = 'blocking-2';
       const jestProcess2 = new JestProcess(extContext, request2);
       jestProcess2.start();
       expect(extContext.createRunnerWorkspace).toHaveBeenCalledWith(
-        expect.objectContaining({ outputFileSuffix: expect.anything() })
+        expect.objectContaining({ outputFileSuffix: expect.stringContaining('2') })
       );
     });
   });

@@ -11,6 +11,16 @@ import {
 } from '../../src/JestExt/process-listeners';
 import { cleanAnsi, toErrorString } from '../../src/helpers';
 import * as messaging from '../../src/messaging';
+import { extensionName } from '../../src/appGlobals';
+
+class DummyListener extends AbstractProcessListener {
+  constructor(session) {
+    super(session);
+  }
+  retryWithLoginShell(process, code, signal): boolean {
+    return super.retryWithLoginShell(process, code, signal);
+  }
+}
 
 describe('jest process listeners', () => {
   let mockSession: any;
@@ -27,7 +37,7 @@ describe('jest process listeners', () => {
     mockSession = {
       scheduleProcess: jest.fn(),
       context: {
-        settings: {},
+        settings: { shell: { useLoginShell: false } },
         autoRun: {},
         workspace: {},
         setupWizardAction: jest.fn(),
@@ -46,15 +56,15 @@ describe('jest process listeners', () => {
   describe('listener base class: AbstractProcessListener', () => {
     it.each`
       event                 | log
-      ${'processStarting'}  | ${true}
+      ${'processStarting'}  | ${false}
       ${'processClose'}     | ${false}
       ${'processExit'}      | ${false}
-      ${'executableJSON'}   | ${true}
-      ${'executableStdErr'} | ${true}
-      ${'executableOutput'} | ${true}
+      ${'executableJSON'}   | ${false}
+      ${'executableStdErr'} | ${false}
+      ${'executableOutput'} | ${false}
       ${'terminalError'}    | ${true}
     `('listening for runner event $event,  will log=$log', ({ event, log }) => {
-      mockProcess.request = { type: 'all-tests' };
+      mockProcess = { id: 'all-tests-0', request: { type: 'all-tests' } };
       const listener = new AbstractProcessListener(mockSession);
       listener.onEvent(mockProcess, event, jest.fn(), jest.fn());
       if (log) {
@@ -65,6 +75,51 @@ describe('jest process listeners', () => {
       } else {
         expect(mockLogging).not.toHaveBeenCalled();
       }
+    });
+    describe('can flag possible process env error', () => {
+      it.each`
+        case | data                                                   | CmdNotFoundEnv
+        ${1} | ${'/bin/sh: jest: command not found'}                  | ${false}
+        ${2} | ${'/bin/sh: node: command not found'}                  | ${true}
+        ${3} | ${'/bin/sh: npm: command not found'}                   | ${true}
+        ${4} | ${'env: yarn: No such file or directory'}              | ${true}
+        ${5} | ${'env: jest: No such file or directory'}              | ${false}
+        ${6} | ${'env: node: No such file or directory'}              | ${true}
+        ${7} | ${'/bin/sh: react-scripts: command not found'}         | ${false}
+        ${8} | ${'/bin/sh: react-scripts: No such file or directory'} | ${false}
+      `('case $case', ({ data, CmdNotFoundEnv }) => {
+        mockProcess = { id: 'all-tests-0', request: { type: 'all-tests' } };
+        const listener = new AbstractProcessListener(mockSession);
+        listener.onEvent(mockProcess, 'executableStdErr', data, '');
+        expect((listener as any).CmdNotFoundEnv).toEqual(CmdNotFoundEnv);
+      });
+    });
+    describe('can retry with login-shell if applicable', () => {
+      it.each`
+        case | useLoginShell | exitCode | hasEnvIssue | retry
+        ${1} | ${false}      | ${127}   | ${true}     | ${true}
+        ${2} | ${true}       | ${127}   | ${true}     | ${false}
+        ${3} | ${'never'}    | ${127}   | ${true}     | ${false}
+        ${4} | ${false}      | ${127}   | ${false}    | ${false}
+        ${5} | ${false}      | ${136}   | ${true}     | ${true}
+        ${6} | ${false}      | ${1}     | ${true}     | ${false}
+      `('case $case', ({ useLoginShell, exitCode, hasEnvIssue, retry }) => {
+        mockProcess = { id: 'all-tests-0', request: { type: 'all-tests' } };
+        mockSession.context.settings.shell.useLoginShell = useLoginShell;
+        const listener = new DummyListener(mockSession);
+        if (hasEnvIssue) {
+          listener.onEvent(mockProcess, 'executableStdErr', 'whatever: command not found', '');
+        }
+        expect(listener.retryWithLoginShell(mockProcess, exitCode, undefined)).toEqual(retry);
+        if (retry) {
+          expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+            `${extensionName}.with-workspace.enable-login-shell`,
+            mockSession.context.workspace
+          );
+        } else {
+          expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+        }
+      });
     });
   });
 
@@ -88,8 +143,7 @@ describe('jest process listeners', () => {
       (toErrorString as jest.Mocked<any>).mockReturnValue(expectedFiles);
 
       output.forEach((m) => listener.onEvent(mockProcess, 'executableOutput', Buffer.from(m)));
-      listener.onEvent(mockProcess, 'processExit', 0);
-      listener.onEvent(mockProcess, 'processClose');
+      listener.onEvent(mockProcess, 'processClose', 0);
 
       // should not fire exit event
       expect(mockSession.context.onRunEvent.fire).not.toHaveBeenCalled();
@@ -125,7 +179,7 @@ describe('jest process listeners', () => {
         listener.onEvent(mockProcess, 'executableStdErr', Buffer.from('some error'));
         listener.onEvent(mockProcess, 'executableOutput', Buffer.from('["a", "b"]'));
         listener.onEvent(mockProcess, 'processExit', exitCode);
-        listener.onEvent(mockProcess, 'processClose');
+        listener.onEvent(mockProcess, 'processClose', exitCode);
 
         // should not fire exit event
         expect(mockSession.context.onRunEvent.fire).not.toHaveBeenCalled();
@@ -326,7 +380,7 @@ describe('jest process listeners', () => {
       });
       it.each`
         eventType             | args
-        ${'processExit'}      | ${[]}
+        ${'processClose'}     | ${[0]}
         ${'executableStdErr'} | ${['onRunComplete']}
       `(
         'should not trigger timeout after process/run ended with $eventType',

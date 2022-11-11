@@ -219,11 +219,12 @@ export class JestExt {
     return actions;
   };
   private createProcessSession(): ProcessSession {
-    return createProcessSession({
+    const sessionContext = {
       ...this.extContext,
       updateWithData: this.updateWithData.bind(this),
       onRunEvent: this.events.onRunEvent,
-    });
+    };
+    return createProcessSession(sessionContext);
   }
   private toSBStats(stats: TestStats): SBTestStats {
     return { ...stats, isDirty: this.dirtyFiles.size > 0 };
@@ -629,6 +630,17 @@ export class JestExt {
 
     // restart jest since coverage condition has changed
     this.triggerUpdateSettings(this.extContext.settings);
+  }
+  enableLoginShell(): void {
+    if (this.extContext.settings.shell.useLoginShell) {
+      return;
+    }
+    this.extContext.settings.shell.enableLoginShell();
+    this.triggerUpdateSettings(this.extContext.settings);
+    this.extContext.output.write(
+      `possible process env issue detected, restarting with a login-shell...\r\n`,
+      'warn'
+    );
   }
 
   private setupStatusBar(): void {
