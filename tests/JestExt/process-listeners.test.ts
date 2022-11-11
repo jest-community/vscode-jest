@@ -202,6 +202,29 @@ describe('jest process listeners', () => {
         }
       }
     );
+    describe('can retry with login-shell if process.env is not correct', () => {
+      it.each`
+        case | useLoginShell | exitCode | willRetry
+        ${1} | ${false}      | ${1}     | ${false}
+        ${2} | ${false}      | ${127}   | ${true}
+        ${3} | ${false}      | ${136}   | ${true}
+        ${4} | ${true}       | ${127}   | ${false}
+        ${5} | ${'never'}    | ${127}   | ${false}
+      `('will retry with login-shell', ({ useLoginShell, exitCode, willRetry }) => {
+        mockSession.context.settings.shell.useLoginShell = useLoginShell;
+        const onResult = jest.fn();
+        const listener = new ListTestFileListener(mockSession, onResult);
+
+        listener.onEvent(mockProcess, 'executableStdErr', Buffer.from('node: command not found'));
+        listener.onEvent(mockProcess, 'processClose', exitCode);
+
+        if (willRetry) {
+          expect(onResult).not.toHaveBeenCalled();
+        } else {
+          expect(onResult).toHaveBeenCalled();
+        }
+      });
+    });
   });
   describe('RunTestListener', () => {
     /* eslint-disable jest/no-conditional-expect */
@@ -581,6 +604,38 @@ describe('jest process listeners', () => {
             })
           );
         });
+      });
+    });
+    describe('can retry with login-shell if process.env is not correct', () => {
+      it.each`
+        case | useLoginShell | exitCode | willRetry
+        ${1} | ${false}      | ${1}     | ${false}
+        ${2} | ${false}      | ${127}   | ${true}
+        ${3} | ${false}      | ${136}   | ${true}
+        ${4} | ${true}       | ${127}   | ${false}
+        ${5} | ${'never'}    | ${127}   | ${false}
+      `('will retry with login-shell', ({ useLoginShell, exitCode, willRetry }) => {
+        mockSession.context.settings.shell.useLoginShell = useLoginShell;
+        const listener = new RunTestListener(mockSession);
+
+        listener.onEvent(mockProcess, 'executableStdErr', Buffer.from('node: command not found'));
+        listener.onEvent(mockProcess, 'processClose', exitCode);
+
+        if (willRetry) {
+          expect(mockSession.context.onRunEvent.fire).not.toHaveBeenCalledWith(
+            expect.objectContaining({
+              type: 'exit',
+              error: expect.anything(),
+            })
+          );
+        } else {
+          expect(mockSession.context.onRunEvent.fire).toHaveBeenCalledWith(
+            expect.objectContaining({
+              type: 'exit',
+              error: expect.anything(),
+            })
+          );
+        }
       });
     });
   });
