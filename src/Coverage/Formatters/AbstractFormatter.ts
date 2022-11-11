@@ -3,9 +3,7 @@ import * as vscode from 'vscode';
 import { CoverageColors, CoverageStatus } from '../CoverageOverlay';
 import { FileCoverage } from 'istanbul-lib-coverage';
 
-export type CoverageRanges = {
-  [status in CoverageStatus]?: vscode.Range[];
-};
+export type CoverageRanges = Partial<Record<CoverageStatus, vscode.Range[]>>;
 
 type FunctionCoverageByLine = { [line: number]: number };
 export abstract class AbstractFormatter {
@@ -40,8 +38,6 @@ export abstract class AbstractFormatter {
         return this.colors?.[status] ?? `rgba(235, 198, 52, ${opacity})`; // yellow
       case 'uncovered':
         return this.colors?.[status] ?? `rgba(121, 31, 10, ${opacity})`; // red
-      default:
-        throw new Error(`unrecognized status: ${status}`);
     }
   }
 
@@ -57,6 +53,7 @@ export abstract class AbstractFormatter {
   }
   /**
    * mapping the coverage map to a line-based coverage ranges
+   * the coverage format is based on instanbuljs: https://github.com/istanbuljs/istanbuljs/blob/master/docs/raw-output.md
    * @param editor
    */
   lineCoverageRanges(
@@ -78,32 +75,53 @@ export abstract class AbstractFormatter {
       const lc = lineCoverage[line];
       const bc = branchCoveravge[line];
       const fc = funcCoverage[line];
-      let status: CoverageStatus;
+      const statusList: CoverageStatus[] = [];
       if (fc != null) {
-        status = fc > 0 ? 'covered' : 'uncovered';
-      } else if (bc != null) {
+        statusList.push(fc > 0 ? 'covered' : 'uncovered');
+      }
+      if (bc != null) {
         switch (bc.coverage) {
           case 100:
-            status = 'covered';
+            statusList.push('covered');
             break;
           case 0:
-            status = 'uncovered';
+            statusList.push('uncovered');
             break;
           default:
-            status = 'partially-covered';
+            statusList.push('partially-covered');
             break;
         }
-      } else if (lc != null) {
-        status = lc > 0 ? 'covered' : 'uncovered';
-      } else if (onNoCoverageInfo) {
-        status = onNoCoverageInfo();
-      } else {
-        continue;
+      }
+      if (lc != null) {
+        statusList.push(lc > 0 ? 'covered' : 'uncovered');
+      }
+      if (statusList.length <= 0 && onNoCoverageInfo) {
+        statusList.push(onNoCoverageInfo());
       }
 
+      if (statusList.length <= 0) {
+        continue;
+      }
+      // sort by severity: uncovered > partially-covered > covered
+      statusList.sort((s1, s2) => {
+        if (s1 === s2) {
+          return 0;
+        }
+        switch (s1) {
+          case 'covered':
+            return 1;
+          case 'partially-covered':
+            return s2 === 'covered' ? -1 : 1;
+          case 'uncovered':
+            return -1;
+        }
+      });
+      const status = statusList[0];
+
       const range = new vscode.Range(zeroBasedLineNumber, 0, zeroBasedLineNumber, 0);
-      if (ranges[status] != null) {
-        ranges[status]!.push(range);
+      const list = ranges[status];
+      if (list) {
+        list.push(range);
       } else {
         ranges[status] = [range];
       }
