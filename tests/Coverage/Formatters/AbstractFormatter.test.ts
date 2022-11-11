@@ -159,32 +159,36 @@ describe('AbstractFormatter', () => {
       };
       expect(isEqual(coverRanges, expected)).toBeTruthy();
     });
-    it('precedence: function > branch > line', () => {
-      const bc = {
-        1: { coverage: 0 },
-        3: { coverage: 50 },
-        4: { coverage: 100 },
-      };
-      const lc = {
-        2: 1,
-        3: 1, // note here the line is covered but branch shows partial coverage
-        4: 0,
-        5: 1,
-      };
-      generateFunctionCoverage(fileCoverage, { line: 1, hits: 1 }, { line: 2, hits: 0 });
-      mockGetBranchCoverageByLine.mockReturnValue(bc);
-      mockGetLineCoverage.mockReturnValue(lc);
-      mockGetFileCoverage.mockReturnValue(fileCoverage);
-      const formatter = new TestFormatter(coverageMapProvider);
+    describe('reports highest severity', () => {
+      it.each`
+        case | line | branch | func | expected
+        ${1} | ${1} | ${0}   | ${1} | ${'uncovered'}
+        ${2} | ${1} | ${50}  | ${1} | ${'partially-covered'}
+        ${3} | ${0} | ${50}  | ${1} | ${'uncovered'}
+        ${4} | ${1} | ${100} | ${1} | ${'covered'}
+      `('case $case', ({ line, branch, func, expected }) => {
+        const bc = {
+          1: { coverage: branch },
+        };
+        const lc = {
+          1: line,
+        };
+        generateFunctionCoverage(fileCoverage, { line: 1, hits: func });
+        mockGetBranchCoverageByLine.mockReturnValue(bc);
+        mockGetLineCoverage.mockReturnValue(lc);
+        mockGetFileCoverage.mockReturnValue(fileCoverage);
+        const formatter = new TestFormatter(coverageMapProvider);
 
-      editor.document.lineCount = 5;
-      const coverRanges = formatter.lineCoverageRanges(editor);
-      const expected: ExpectedCoverageInfo = {
-        covered: [0, 3, 4],
-        'partially-covered': [2],
-        uncovered: [1],
-      };
-      expect(isEqual(coverRanges, expected)).toBeTruthy();
+        editor.document.lineCount = 1;
+        const coverRanges = formatter.lineCoverageRanges(editor);
+        ['covered', 'partially-covered', 'uncovered'].forEach((s) => {
+          if (s === expected) {
+            expect(coverRanges[s]).not.toBeUndefined();
+          } else {
+            expect(coverRanges[s]).toBeUndefined();
+          }
+        });
+      });
     });
     describe('for line without any coverage info, i.e. blank line', () => {
       beforeEach(() => {

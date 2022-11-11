@@ -150,6 +150,8 @@ The coverage state is reflected in test tree toggle menu, as well as  StatusBar:
 
 ![status-bar-modes](images/status-bar-watch-coverage.png)
 
+This extension supports both `babel` and `v8` coverageProviders. However, please note the coverage might not be exactly the same, see [facebook/jest#11188](https://github.com/facebook/jest/issues/11188) for more details.
+
 <details>
 
 <summary>How to read coverage scheme and customize it</summary>
