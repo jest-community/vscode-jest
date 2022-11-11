@@ -400,6 +400,13 @@ export class ExtensionManager {
           extension.toggleCoverageOverlay();
         },
       }),
+      this.registerCommand({
+        type: 'workspace',
+        name: 'enable-login-shell',
+        callback: (extension) => {
+          extension.enableLoginShell();
+        },
+      }),
 
       // setup tool
       vscode.commands.registerCommand(`${extensionName}.setup-extension`, this.startWizard),

@@ -95,6 +95,7 @@ export class JestProcess implements JestProcessInfo {
   private quoteFilePattern(aString: string): string {
     return `"${removeSurroundingQuote(aString)}"`;
   }
+
   private startRunner(): Promise<void> {
     if (this.task) {
       this.logging('warn', `the runner task has already started!`);
@@ -144,7 +145,7 @@ export class JestProcess implements JestProcessInfo {
         options.testFileNamePattern = this.quoteFileName(this.request.testFileName);
         options.testNamePattern = shellQuote(
           escapeRegExp(this.request.testNamePattern),
-          this.extContext.settings.shell
+          this.extContext.settings.shell.toSetting()
         );
         args.push('--runTestsByPath', '--watchAll=false');
         if (this.request.updateSnapshot) {
@@ -156,7 +157,7 @@ export class JestProcess implements JestProcessInfo {
         const regex = this.quoteFilePattern(escapeRegExp(this.request.testFileNamePattern));
         options.testNamePattern = shellQuote(
           escapeRegExp(this.request.testNamePattern),
-          this.extContext.settings.shell
+          this.extContext.settings.shell.toSetting()
         );
         args.push('--watchAll=false', '--testPathPattern', regex);
         if (this.request.updateSnapshot) {
@@ -170,9 +171,9 @@ export class JestProcess implements JestProcessInfo {
         break;
     }
 
-    const runnerWorkspace = this.extContext.createRunnerWorkspace(
-      this.request.schedule.queue === 'blocking-2' ? { outputFileSuffix: '2' } : undefined
-    );
+    const runnerWorkspace = this.extContext.createRunnerWorkspace({
+      outputFileSuffix: this.request.schedule.queue === 'blocking-2' ? '2' : undefined,
+    });
 
     const runner = new Runner(runnerWorkspace, options);
     this.registerListener(runner);

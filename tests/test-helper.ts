@@ -148,10 +148,11 @@ export const mockJestExtEvents: any = () => ({
 });
 
 export const mockJestExtContext = (autoRun?: AutoRun): any => {
+  const baseSettings = { shell: { toSetting: jest.fn() } };
   return {
     workspace: jest.fn(),
     createRunnerWorkspace: jest.fn(),
-    settings: autoRun ? { autoRun } : jest.fn(),
+    settings: autoRun ? { ...baseSettings, autoRun } : baseSettings,
     loggingFactory: { create: jest.fn(() => jest.fn()) },
     events: mockJestExtEvents(),
   };

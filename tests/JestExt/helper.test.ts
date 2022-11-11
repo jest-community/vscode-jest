@@ -13,6 +13,7 @@ import {
   getExtensionResourceSettings,
   isWatchRequest,
   outputFileSuffix,
+  prefixWorkspace,
 } from '../../src/JestExt/helper';
 import { ProjectWorkspace } from 'jest-editor-support';
 import { workspaceLogging } from '../../src/logging';
@@ -21,6 +22,7 @@ import { mockProjectWorkspace } from '../test-helper';
 
 import { toFilePath } from '../../src/helpers';
 import { RunnerWorkspaceOptions } from '../../src/JestExt/types';
+import { RunShell } from '../../src/JestExt/run-shell';
 
 jest.mock('jest-editor-support', () => ({ isLoginShell: jest.fn(), ProjectWorkspace: jest.fn() }));
 
@@ -29,7 +31,7 @@ describe('createJestExtContext', () => {
     console.error = jest.fn();
     console.warn = jest.fn();
   });
-  const baseSettings = { autoRun: { watch: true } };
+  const baseSettings = { autoRun: { watch: true }, shell: { toSetting: jest.fn() } };
   const workspaceFolder: any = { name: 'workspace' };
 
   describe('runnerWorkspace', () => {
@@ -50,25 +52,28 @@ describe('createJestExtContext', () => {
       expect(toFilePath).toHaveBeenCalledWith(rootPath);
       expect(runnerWorkspace).toEqual(mockRunnerWorkspace);
     });
-    it('allow creating runnerWorkspace with custom options', () => {
-      const settings: any = { ...baseSettings, showCoverageOnLoad: false };
+    describe('allow creating runnerWorkspace with custom options', () => {
+      it('outputFileSuffix and collectCoverage', () => {
+        const settings: any = { ...baseSettings, showCoverageOnLoad: false };
 
-      jest.clearAllMocks();
+        jest.clearAllMocks();
 
-      const { createRunnerWorkspace } = createJestExtContext(workspaceFolder, settings);
+        const { createRunnerWorkspace } = createJestExtContext(workspaceFolder, settings);
 
-      let options: RunnerWorkspaceOptions = { outputFileSuffix: 'extra' };
-      createRunnerWorkspace(options);
-      let args = (ProjectWorkspace as jest.Mocked<any>).mock.calls[0];
-      const [outputFileSuffix, collectCoverage] = [args[4], args[5]];
-      expect(outputFileSuffix.endsWith('extra')).toBeTruthy();
-      expect(collectCoverage).toEqual(false);
+        let options: RunnerWorkspaceOptions = { outputFileSuffix: 'extra' };
+        createRunnerWorkspace(options);
+        let args = (ProjectWorkspace as jest.Mocked<any>).mock.calls[0];
+        let [outputFileSuffix, collectCoverage] = [args[4], args[5]];
 
-      options = { collectCoverage: true };
-      createRunnerWorkspace(options);
-      args = (ProjectWorkspace as jest.Mocked<any>).mock.calls[1];
-      const collectCoverage2 = args[5];
-      expect(collectCoverage2).toEqual(true);
+        expect(outputFileSuffix.endsWith('extra')).toBeTruthy();
+        expect(collectCoverage).toBeFalsy();
+
+        options = { collectCoverage: true };
+        createRunnerWorkspace(options);
+        args = (ProjectWorkspace as jest.Mocked<any>).mock.calls[1];
+        [outputFileSuffix, collectCoverage] = [args[4], args[5]];
+        expect(collectCoverage).toEqual(true);
+      });
     });
     describe('construct outputFileSuffix', () => {
       it.each`
@@ -161,6 +166,8 @@ describe('getExtensionResourceSettings()', () => {
     });
   });
   it('should return the extension resource configuration', async () => {
+    const mockShell = jest.fn();
+    (RunShell as jest.Mocked<any>).mockImplementation(() => mockShell);
     const uri: any = { fsPath: 'workspaceFolder1' };
     expect(getExtensionResourceSettings(uri)).toEqual({
       autoEnable: true,
@@ -178,14 +185,20 @@ describe('getExtensionResourceSettings()', () => {
       autoRun: expect.objectContaining({ config: { watch: true } }),
       testExplorer: {},
       monitorLongRun: 60000,
+      shell: mockShell,
     });
   });
 
   describe('can read user settings', () => {
+    let mockShell;
+    beforeEach(() => {
+      mockShell = jest.fn();
+      (RunShell as jest.Mocked<any>).mockImplementation(() => mockShell);
+    });
     it('with nodeEnv and shell path', () => {
       userSettings = {
         nodeEnv: { whatever: '1' },
-        shell: '/bin/bash',
+        shell: mockShell,
       };
       const uri: any = { fsPath: 'workspaceFolder1' };
       const settings = getExtensionResourceSettings(uri);
@@ -222,37 +235,16 @@ describe('getExtensionResourceSettings()', () => {
         }
       );
     });
-
-    it.each`
-      platform    | args      | supported
-      ${'win32'}  | ${[]}     | ${false}
-      ${'linux'}  | ${['-l']} | ${true}
-      ${'darwin'} | ${['-l']} | ${true}
-      ${'darwin'} | ${[]}     | ${false}
-    `(
-      'supports loginShell with $args in $platform => $supported',
-      ({ platform, supported, args }) => {
-        mockPlatform.mockReturnValue(platform);
-
-        userSettings = {
-          shell: { path: '/bin/zsh', args },
-        };
-        const uri: any = { fsPath: 'workspaceFolder1' };
-
-        if (supported) {
-          expect(getExtensionResourceSettings(uri)).toEqual(
-            expect.objectContaining({
-              ...userSettings,
-            })
-          );
-        } else {
-          expect(getExtensionResourceSettings(uri)).not.toEqual(
-            expect.objectContaining({
-              ...userSettings,
-            })
-          );
-        }
-      }
-    );
+  });
+});
+describe('prefixWorkspace', () => {
+  const context: any = { workspace: { name: 'ws' } };
+  it('whill not prefix if not multi-root', () => {
+    (vscode.workspace as any).workspaceFolders = [{}];
+    expect(prefixWorkspace(context, 'a message')).toEqual('a message');
+  });
+  it('prefix workspace name for multi-root workspace message', () => {
+    (vscode.workspace as any).workspaceFolders = [{}, {}];
+    expect(prefixWorkspace(context, 'a message')).toEqual('(ws) a message');
   });
 });
