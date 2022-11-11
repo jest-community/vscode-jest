@@ -7,10 +7,11 @@
     - [2. automate monorepo project setup through "Setup Tool"](#2-automate-monorepo-project-setup-through-setup-tool)
     - [3. improve test run output with terminal](#3-improve-test-run-output-with-terminal)
     - [4. deep activation](#4-deep-activation)
-    - [5. login shell support and auto-recovery for intermittent command-not-found issues](#5-login-shell-support-and-auto-recovery-for-intermittent-command-not-found-issues)
+    - [5. fixes intermittent command-not-found issues (auto recovery with login-shell)](#5-fixes-intermittent-command-not-found-issues-auto-recovery-with-login-shell)
     - [6. long run monitor](#6-long-run-monitor)
     - [7. one-click disable non-jest folder for monorepo project](#7-one-click-disable-non-jest-folder-for-monorepo-project)
     - [8. autoRun change](#8-autorun-change)
+    - [9. supports v8 coverage provider](#9-supports-v8-coverage-provider)
   - [Fixes](#fixes)
   - [Breaking Changes](#breaking-changes)
   - [Change log](#change-log)
@@ -18,7 +19,7 @@
 ---
 ## v5.0 (pre-release) (roll-up)
 
-v5 mainly focuses on addressing performance and ease of use. The goal is to help new and experienced users fully utilize the extension features to make testing a fun experience.
+v5 mainly focuses on addressing performance, stablity and ease of use. The goal is to help new and experienced users fully utilize the extension features to make testing a fun experience.
 
 We have also decided to make TestExplorer a preferred UI outlet instead of our custom UI developed before TestExplorer. For example, we no longer support the inline decorator for test status as TestExplorer provided a much more powerful gutter status/menu.
 ### Main Features
@@ -60,7 +61,7 @@ For projects do not meet any of the existing activation events, there is now a n
 
 ([v5.0.0](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.0): [#907](https://github.com/jest-community/vscode-jest/pull/907) - @connectdotz)
 
-#### 5. login shell support and auto-recovery for intermittent command-not-found issues
+#### 5. fixes intermittent command-not-found issues (auto recovery with login-shell)
 
 vscode process env doesn't always fully initialized, especially during restart. This usually manifest into command not found errors (exit code 127), such as `"env: node: No such file or directory"` or `"/bin/sh: yarn: command not found"` when running jest process. 
 
@@ -101,6 +102,9 @@ If you already have the `"jest.autoRun"` in your settings.json file, nothing wil
 
 ([v5.0.0](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.0): [#906](https://github.com/jest-community/vscode-jest/pull/906) - @connectdotz)
 
+#### 9. supports v8 coverage provider
+
+Users with jest coverageProvider `v8` should be able to see coverage like with the default `babel` coverageProvider. Please be mindful that these providers do generate slightly different coverage reports, see [facebook/jest#11188](https://github.com/facebook/jest/issues/11188) for more details.
 ### Fixes
 - add user id/name to output file name to resolve permission conflict in shared computers. ([#938](https://github.com/jest-community/vscode-jest/pull/938)) 
 - support look up debug config from workspace file `.code-workspace`. ([#937](https://github.com/jest-community/vscode-jest/pull/937))  
@@ -108,7 +112,7 @@ If you already have the `"jest.autoRun"` in your settings.json file, nothing wil
 - missing runtime error detection and reporting when the run fails to start. ([#927](https://github.com/jest-community/vscode-jest/pull/927))
 - Fix quoting test names with special characters ([#928](https://github.com/jest-community/vscode-jest/pull/928))
 - fixed incorrect TestExplorer tests passed count ([#916](https://github.com/jest-community/vscode-jest/pull/916) - @connectdotz)
-- address dependency alerts
+- fix various dependency alerts
 - various document updates
 
 ### Breaking Changes
