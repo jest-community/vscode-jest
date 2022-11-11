@@ -7,7 +7,7 @@
     - [2. automate monorepo project setup through "Setup Tool"](#2-automate-monorepo-project-setup-through-setup-tool)
     - [3. improve test run output with terminal](#3-improve-test-run-output-with-terminal)
     - [4. deep activation](#4-deep-activation)
-    - [5. login shell support](#5-login-shell-support)
+    - [5. login shell support and auto-recovery for intermittent command-not-found issues](#5-login-shell-support-and-auto-recovery-for-intermittent-command-not-found-issues)
     - [6. long run monitor](#6-long-run-monitor)
     - [7. one-click disable non-jest folder for monorepo project](#7-one-click-disable-non-jest-folder-for-monorepo-project)
     - [8. autoRun change](#8-autorun-change)
@@ -60,18 +60,18 @@ For projects do not meet any of the existing activation events, there is now a n
 
 ([v5.0.0](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.0): [#907](https://github.com/jest-community/vscode-jest/pull/907) - @connectdotz)
 
-#### 5. login shell support
+#### 5. login shell support and auto-recovery for intermittent command-not-found issues
 
-vscode process env doesn't always fully initialized, especially during restart. This usually manifest into command not found errors (exit code 127), such as `"env: node: No such file or directory"` or `"env: yarn: No such file or directory"` when running jest process. 
+vscode process env doesn't always fully initialized, especially during restart. This usually manifest into command not found errors (exit code 127), such as `"env: node: No such file or directory"` or `"/bin/sh: yarn: command not found"` when running jest process. 
 
-While there are many work arounds, we want to add one more option for users prefer launching jest in a login shell, which will initialize the shell env independent of vscode process env. This is accomplished by expanding the current ["jest.shell"](../README.md#shell) setting, for example:
-```json
-"jest.shell": {"path": "/bin/bash", "args": ["--login"]}
-```
+To work around such issue, we added the functionality to automatically retry tests with a login-shell, instead of the default non-login-shell, when detecting error mentioned above. 
 
-Note, the extra initialization might have some performance overhead, use this with caution.
+We have also expanded current ["jest.shell"](../README.md#shell) setting to allow users configure their own login shell if not already supported by the extension. 
+
+Please note, these changes only apply to test runs, you might still experience similar issues when debugging tests, as we do not control how vscode debugger is launched. However, fear not, a similar solution (use login-shell) can work for debugging as well, see instruction in [intermitten error troubleshooting](../README.md##intermittent-errors-for-npmyarnode-command-not-found-during-test-run-or-debugging)
 
 ([v5.0.0](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.0): [#874](https://github.com/jest-community/vscode-jest/pull/874) - @connectdotz)
+([v5.0.2](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.2): [#941](https://github.com/jest-community/vscode-jest/pull/941) - @connectdotz)
 
 #### 6. long run monitor
 
@@ -102,10 +102,13 @@ If you already have the `"jest.autoRun"` in your settings.json file, nothing wil
 ([v5.0.0](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.0): [#906](https://github.com/jest-community/vscode-jest/pull/906) - @connectdotz)
 
 ### Fixes
+- add user id/name to output file name to resolve permission conflict in shared computers. ([#938](https://github.com/jest-community/vscode-jest/pull/938)) 
+- support look up debug config from workspace file `.code-workspace`. ([#937](https://github.com/jest-community/vscode-jest/pull/937))  
 - address issues that vscode runs occasionally appears to be hanging when the runs already completed. ([#926](https://github.com/jest-community/vscode-jest/pull/926), [#927](https://github.com/jest-community/vscode-jest/pull/927), [#932](https://github.com/jest-community/vscode-jest/pull/932))  
 - missing runtime error detection and reporting when the run fails to start. ([#927](https://github.com/jest-community/vscode-jest/pull/927))
 - Fix quoting test names with special characters ([#928](https://github.com/jest-community/vscode-jest/pull/928))
 - fixed incorrect TestExplorer tests passed count ([#916](https://github.com/jest-community/vscode-jest/pull/916) - @connectdotz)
+- address dependency alerts
 - various document updates
 
 ### Breaking Changes

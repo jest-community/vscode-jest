@@ -27,7 +27,7 @@ Happy testing!
 
 ## Release Notes
 - **stable**: [v4.6.0](release-notes/release-note-v4.md#v460)
-- **pre-release**: [v5.0.1](release-notes/release-note-v5.md#v50-pre-release-roll-up)
+- **pre-release**: [v5.0.2](release-notes/release-note-v5.md#v50-pre-release-roll-up)
 
 All: [Release Notes](release-notes/release-notes.md)
 
