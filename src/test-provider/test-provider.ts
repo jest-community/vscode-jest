@@ -65,6 +65,7 @@ export class JestTestProvider {
   };
   private createProfiles = (controller: vscode.TestController): vscode.TestRunProfile[] => {
     const runTag = new vscode.TestTag('run');
+    // const updateSnapshotTag = new vscode.TestTag('update-snapshot');
     const debugTag = new vscode.TestTag('debug');
     const profiles = [
       controller.createRunProfile(
@@ -72,6 +73,13 @@ export class JestTestProvider {
         vscode.TestRunProfileKind.Run,
         this.runTests,
         true,
+        runTag
+      ),
+      controller.createRunProfile(
+        'run-update-snapshot',
+        vscode.TestRunProfileKind.Run,
+        this.runTests,
+        false,
         runTag
       ),
       controller.createRunProfile(
