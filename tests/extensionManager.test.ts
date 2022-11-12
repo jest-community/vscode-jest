@@ -72,6 +72,7 @@ const makeJestExt = (workspace: vscode.WorkspaceFolder): any => {
     triggerUpdateSettings: jest.fn(),
     toggleAutoRun: jest.fn(),
     toggleCoverageOverlay: jest.fn(),
+    enableLoginShell: jest.fn(),
     workspace,
   };
 };
@@ -687,17 +688,18 @@ describe('ExtensionManager', () => {
         extensionManager = createExtensionManager(['ws-1', 'ws-2']);
       });
       it.each`
-        name                                | extFunc
-        ${'start'}                          | ${'startSession'}
-        ${'workspace.start'}                | ${'startSession'}
-        ${'stop'}                           | ${'stopSession'}
-        ${'workspace.stop'}                 | ${'stopSession'}
-        ${'toggle-coverage'}                | ${'toggleCoverageOverlay'}
-        ${'workspace.toggle-coverage'}      | ${'toggleCoverageOverlay'}
-        ${'run-all-tests'}                  | ${'runAllTests'}
-        ${'workspace.run-all-tests'}        | ${'runAllTests'}
-        ${'with-workspace.toggle-auto-run'} | ${'toggleAutoRun'}
-        ${'with-workspace.toggle-coverage'} | ${'toggleCoverageOverlay'}
+        name                                   | extFunc
+        ${'start'}                             | ${'startSession'}
+        ${'workspace.start'}                   | ${'startSession'}
+        ${'stop'}                              | ${'stopSession'}
+        ${'workspace.stop'}                    | ${'stopSession'}
+        ${'toggle-coverage'}                   | ${'toggleCoverageOverlay'}
+        ${'workspace.toggle-coverage'}         | ${'toggleCoverageOverlay'}
+        ${'run-all-tests'}                     | ${'runAllTests'}
+        ${'workspace.run-all-tests'}           | ${'runAllTests'}
+        ${'with-workspace.toggle-auto-run'}    | ${'toggleAutoRun'}
+        ${'with-workspace.toggle-coverage'}    | ${'toggleCoverageOverlay'}
+        ${'with-workspace.enable-login-shell'} | ${'enableLoginShell'}
       `('extension-based commands "$name"', async ({ name, extFunc }) => {
         extensionManager.register();
         const expectedName = `${extensionName}.${name}`;

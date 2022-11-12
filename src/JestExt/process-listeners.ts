@@ -6,16 +6,28 @@ import { ListenerSession, ListTestFilesCallback } from './process-session';
 import { Logging } from '../logging';
 import { JestRunEvent } from './types';
 import { MonitorLongRun } from '../Settings';
+import { extensionName } from '../appGlobals';
+import { RunShell } from './run-shell';
 
+// command not found error for anything but "jest", as it most likely not be caused by env issue
+const POSSIBLE_ENV_ERROR_REGEX =
+  /^(((?!(jest|react-scripts)).)*)(command not found|no such file or directory)/im;
 export class AbstractProcessListener {
   protected session: ListenerSession;
   protected readonly logging: Logging;
   public onRunEvent: vscode.EventEmitter<JestRunEvent>;
 
+  // flag indicating command not found due to process env issue
+  protected CmdNotFoundEnv: boolean;
+  private useLoginShell: RunShell['useLoginShell'];
+
   constructor(session: ListenerSession) {
     this.session = session;
     this.logging = session.context.loggingFactory.create(this.name);
     this.onRunEvent = session.context.onRunEvent;
+
+    this.CmdNotFoundEnv = false;
+    this.useLoginShell = session.context.settings.shell.useLoginShell;
   }
   protected get name(): string {
     return 'AbstractProcessListener';
@@ -67,16 +79,17 @@ export class AbstractProcessListener {
 
   protected onProcessStarting(process: JestProcess): void {
     this.session.context.onRunEvent.fire({ type: 'process-start', process });
-    this.logging('debug', `${process.request.type} onProcessStarting`);
   }
-  protected onExecutableStdErr(process: JestProcess, data: string, _raw: string): void {
-    this.logging('debug', `${process.request.type} onExecutableStdErr:`, data);
+  protected onExecutableStdErr(_process: JestProcess, data: string, _raw: string): void {
+    if (POSSIBLE_ENV_ERROR_REGEX.test(data)) {
+      this.CmdNotFoundEnv = true;
+    }
   }
-  protected onExecutableJSON(process: JestProcess, data: JestTotalResults): void {
-    this.logging('debug', `${process.request.type} onExecutableJSON:`, data);
+  protected onExecutableJSON(_process: JestProcess, _data: JestTotalResults): void {
+    // no default behavior...
   }
-  protected onExecutableOutput(process: JestProcess, data: string, _raw: string): void {
-    this.logging('debug', `${process.request.type} onExecutableOutput:`, data);
+  protected onExecutableOutput(_process: JestProcess, _data: string, _raw: string): void {
+    // no default behavior...
   }
   protected onTerminalError(process: JestProcess, data: string, _raw: string): void {
     this.logging('error', `${process.request.type} onTerminalError:`, data);
@@ -84,18 +97,29 @@ export class AbstractProcessListener {
   protected onProcessClose(_process: JestProcess, _code?: number, _signal?: string): void {
     // no default behavior...
   }
-  protected onProcessExit(process: JestProcess, code?: number, signal?: string): void {
-    // default behavior: logging error
-    if (this.isProcessError(code)) {
-      const error = `${process.request.type} onProcessExit: process exit with code=${code}, signal=${signal}`;
-      this.logging('warn', `${error} :`, process.toString());
-    }
+  protected onProcessExit(_process: JestProcess, _code?: number, _signal?: string): void {
+    // no default behavior
   }
-  protected isProcessError(code?: number): boolean {
-    // code = 1 is general error, usually mean the command emit error, which should already handled by other event processing, for example when jest has failed tests.
-    // However, error beyond 1, usually means some error outside of the command it is trying to execute, so reporting here for debugging purpose
-    // see shell error code: https://www.linuxjournal.com/article/10844
-    return code != null && code > 1;
+
+  /**
+   * retry the process with login shell if possible. return true if will retry, otherwise false.
+   * @param process
+   * @param code
+   * @param signal
+   */
+  protected retryWithLoginShell(process: JestProcess, code?: number, signal?: string): boolean {
+    const msg = `${process.id} exit with code=${code}, signal=${signal}`;
+
+    if (code && code >= 127 && this.CmdNotFoundEnv && !this.useLoginShell) {
+      // enable login-shell
+      this.logging('debug', `${msg}; will retry with login-shell`);
+      vscode.commands.executeCommand(
+        `${extensionName}.with-workspace.enable-login-shell`,
+        this.session.context.workspace
+      );
+      return true;
+    }
+    return false;
   }
 }
 
@@ -106,7 +130,6 @@ export class ListTestFileListener extends AbstractProcessListener {
   }
   private buffer = '';
   private stderrOutput = '';
-  private exitCode?: number;
   private onResult: ListTestFilesCallback;
 
   constructor(session: ListenerSession, onResult: ListTestFilesCallback) {
@@ -122,16 +145,12 @@ export class ListTestFileListener extends AbstractProcessListener {
     this.stderrOutput += raw;
   }
 
-  protected onProcessExit(process: JestProcess, code?: number, signal?: string): void {
-    // Note: will not fire 'exit' event, as the output is reported via the onResult() callback
-    super.onProcessExit(process, code, signal);
-    this.exitCode = code;
-  }
-
-  protected onProcessClose(process: JestProcess): void {
-    super.onProcessClose(process);
-    if (this.exitCode !== 0) {
-      return this.onResult(undefined, this.stderrOutput, this.exitCode);
+  protected onProcessClose(process: JestProcess, code?: number, signal?: string): void {
+    if (code !== 0) {
+      if (super.retryWithLoginShell(process, code, signal)) {
+        return;
+      }
+      return this.onResult(undefined, this.stderrOutput, code);
     }
 
     try {
@@ -151,7 +170,7 @@ export class ListTestFileListener extends AbstractProcessListener {
       return this.onResult(uriFiles);
     } catch (e) {
       this.logging('warn', 'failed to parse result:', this.buffer, 'error=', e);
-      this.onResult(undefined, toErrorString(e), this.exitCode);
+      this.onResult(undefined, toErrorString(e), code);
     }
   }
 }
@@ -211,7 +230,6 @@ export class RunTestListener extends AbstractProcessListener {
   // fire long-run warning once per run
   private longRunMonitor: LongRunMonitor;
   private runInfo: RunInfo | undefined;
-  private exitCode?: number;
 
   constructor(session: ListenerSession) {
     super(session);
@@ -332,6 +350,7 @@ export class RunTestListener extends AbstractProcessListener {
     if (this.shouldIgnoreOutput(message)) {
       return;
     }
+    super.onExecutableStdErr(process, message, raw);
 
     const cleaned = this.cleanupOutput(raw);
     this.handleRunStart(process, message);
@@ -388,15 +407,16 @@ export class RunTestListener extends AbstractProcessListener {
   protected onTerminalError(process: JestProcess, data: string, raw: string): void {
     this.onRunEvent.fire({ type: 'data', process, text: data, raw, newLine: true, isError: true });
   }
-  protected onProcessExit(process: JestProcess, code?: number, signal?: string): void {
-    this.runEnded();
-    super.onProcessExit(process, code, signal);
-    this.exitCode = code;
-  }
 
-  protected onProcessClose(process: JestProcess): void {
-    super.onProcessClose(process);
+  protected onProcessClose(process: JestProcess, code?: number, signal?: string): void {
+    this.runEnded();
     const error = this.handleWatchProcessCrash(process);
-    this.onRunEvent.fire({ type: 'exit', process, error, code: this.exitCode });
+
+    if (code && code > 1) {
+      if (this.retryWithLoginShell(process, code, signal)) {
+        return;
+      }
+    }
+    this.onRunEvent.fire({ type: 'exit', process, error, code });
   }
 }

@@ -17,9 +17,10 @@ import { pathToJest, pathToConfig, toFilePath } from '../helpers';
 import { workspaceLogging } from '../logging';
 import { JestExtContext, RunnerWorkspaceOptions } from './types';
 import { CoverageColors } from '../Coverage';
-import { platform, userInfo } from 'os';
+import { userInfo } from 'os';
 import { JestOutputTerminal } from './output-terminal';
 import { AutoRun } from './auto-run';
+import { RunShell } from './run-shell';
 
 export const isWatchRequest = (request: JestProcessRequest): boolean =>
   request.type === 'watch-tests' || request.type === 'watch-all-tests';
@@ -74,7 +75,7 @@ export const createJestExtContext = (
       options?.collectCoverage ?? settings.showCoverageOnLoad,
       settings.debugMode,
       settings.nodeEnv,
-      settings.shell
+      settings.shell.toSetting()
     );
   };
   const output = new JestOutputTerminal(workspaceFolder.name);
@@ -85,33 +86,6 @@ export const createJestExtContext = (
     loggingFactory: workspaceLogging(workspaceFolder.name, settings.debugMode ?? false),
     output,
   };
-};
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const isLoginShell = (arg: any): arg is LoginShell =>
-  arg && typeof arg.path === 'string' && Array.isArray(arg.args);
-
-const getShell = (config: vscode.WorkspaceConfiguration): string | LoginShell | undefined => {
-  const shell = config.get<string | LoginShell>('shell');
-
-  if (!shell || typeof shell === 'string') {
-    return shell;
-  }
-
-  if (isLoginShell(shell)) {
-    if (platform() === 'win32') {
-      console.error(`LoginShell is not supported for windows currently.`);
-      return;
-    }
-    if (shell.args.length <= 0) {
-      console.error(
-        'Invalid login-shell arguments. Expect arguments like "--login" or "-l", but got:',
-        shell.args.length
-      );
-      return;
-    }
-    return shell;
-  }
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -161,7 +135,7 @@ export const getExtensionResourceSettings = (uri: vscode.Uri): PluginResourceSet
     coverageColors: config.get<CoverageColors>('coverageColors'),
     testExplorer: getTestExplorer(config),
     nodeEnv: config.get<NodeEnv | null>('nodeEnv') ?? undefined,
-    shell: getShell(config) ?? undefined,
+    shell: new RunShell(config.get<string | LoginShell>('shell')),
     monitorLongRun: config.get<MonitorLongRun>('monitorLongRun') ?? undefined,
     autoRun: new AutoRun(
       config.get<JestExtAutoRunSetting | null>('autoRun'),
