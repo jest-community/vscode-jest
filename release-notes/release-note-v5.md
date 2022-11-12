@@ -7,7 +7,7 @@
     - [2. automate monorepo project setup through "Setup Tool"](#2-automate-monorepo-project-setup-through-setup-tool)
     - [3. improve test run output with terminal](#3-improve-test-run-output-with-terminal)
     - [4. deep activation](#4-deep-activation)
-    - [5. fixes intermittent command-not-found issues (auto recovery with login-shell)](#5-fixes-intermittent-command-not-found-issues-auto-recovery-with-login-shell)
+    - [5. no more intermittent "command not found" (auto recovery with login-shell)](#5-no-more-intermittent-command-not-found-auto-recovery-with-login-shell)
     - [6. long run monitor](#6-long-run-monitor)
     - [7. one-click disable non-jest folder for monorepo project](#7-one-click-disable-non-jest-folder-for-monorepo-project)
     - [8. autoRun change](#8-autorun-change)
@@ -61,15 +61,14 @@ For projects do not meet any of the existing activation events, there is now a n
 
 ([v5.0.0](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.0): [#907](https://github.com/jest-community/vscode-jest/pull/907) - @connectdotz)
 
-#### 5. fixes intermittent command-not-found issues (auto recovery with login-shell)
+#### 5. no more intermittent "command not found" (auto recovery with login-shell)
 
-vscode process env doesn't always fully initialized, especially during restart. This usually manifest into command not found errors (exit code 127), such as `"env: node: No such file or directory"` or `"/bin/sh: yarn: command not found"` when running jest process. 
+On non-windows platforms, vscode sometimes fails to initialize its process env upon starting up, which crashes jest run/debug with "command not found" errors (exit code 127), such as `"env: node: No such file or directory"` or `"/bin/sh: yarn: command not found"`. This has caused a lot confusion and frustration, therefore, we added the functionality to automatically retry tests with a login shell (instead of the default non-login shell) when detecting the above-mentioned errors. 
 
-To work around such issue, we added the functionality to automatically retry tests with a login-shell, instead of the default non-login-shell, when detecting error mentioned above. 
+The extension can auto generate login shell for `bash`, `zsh`, and `fish`. Users can also configure custom login shells by expanding the current ["jest.shell"](../README.md#shell) setting, such as: `"jest.shell": {"path:": "/bin/bash", "args": ["-l"]}`. This will instruct the extension to always use the login shell.
 
-We have also expanded current ["jest.shell"](../README.md#shell) setting to allow users configure their own login shell if not already supported by the extension. 
+Please note these changes only apply to test runs; you might experience similar issues when debugging tests, as we do not control how the vscode debugger is launched. But fortunately, a similar solution (login shell) will work for debugging as well - by customizing `"terminal.integrated.automationProfile.<platform>"`; see instruction in [intermitten error troubleshooting](../README.md##intermittent-errors-for-npmyarnnode-command-not-found-during-test-run-or-debugging)
 
-Please note, these changes only apply to test runs, you might still experience similar issues when debugging tests, as we do not control how vscode debugger is launched. However, fear not, a similar solution (use login-shell) can work for debugging as well, see instruction in [intermitten error troubleshooting](../README.md##intermittent-errors-for-npmyarnode-command-not-found-during-test-run-or-debugging)
 
 ([v5.0.0](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.0): [#874](https://github.com/jest-community/vscode-jest/pull/874) - @connectdotz)
 ([v5.0.2](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.2): [#941](https://github.com/jest-community/vscode-jest/pull/941) - @connectdotz)
@@ -105,13 +104,15 @@ If you already have the `"jest.autoRun"` in your settings.json file, nothing wil
 #### 9. supports v8 coverage provider
 
 Users with jest coverageProvider `v8` should be able to see coverage like with the default `babel` coverageProvider. Please be mindful that these providers do generate slightly different coverage reports, see [facebook/jest#11188](https://github.com/facebook/jest/issues/11188) for more details.
+
+([v5.0.2](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.0): [#943](https://github.com/jest-community/vscode-jest/pull/943) - @connectdotz)
 ### Fixes
 - add user id/name to output file name to resolve permission conflict in shared computers. ([#938](https://github.com/jest-community/vscode-jest/pull/938)) 
 - support look up debug config from workspace file `.code-workspace`. ([#937](https://github.com/jest-community/vscode-jest/pull/937))  
 - address issues that vscode runs occasionally appears to be hanging when the runs already completed. ([#926](https://github.com/jest-community/vscode-jest/pull/926), [#927](https://github.com/jest-community/vscode-jest/pull/927), [#932](https://github.com/jest-community/vscode-jest/pull/932))  
 - missing runtime error detection and reporting when the run fails to start. ([#927](https://github.com/jest-community/vscode-jest/pull/927))
 - Fix quoting test names with special characters ([#928](https://github.com/jest-community/vscode-jest/pull/928))
-- fixed incorrect TestExplorer tests passed count ([#916](https://github.com/jest-community/vscode-jest/pull/916) - @connectdotz)
+- fixed incorrect TestExplorer tests passed count ([#916](https://github.com/jest-community/vscode-jest/pull/916))
 - fix various dependency alerts
 - various document updates
 
@@ -122,6 +123,7 @@ Users with jest coverageProvider `v8` should be able to see coverage like with t
   - removed the "enable" and "showClassicStatus" attributes. The only valid attribute is "showInlineError".
 - `"jest.autoRun` default value has changed. see detail above.
 ### Change log
+- [v5.0.2 pre-release](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.2)
 - [v5.0.1 pre-release](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.1)
 - [v5.0.0 pre-release](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.0)
 
