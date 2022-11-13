@@ -25,9 +25,9 @@ You can see the full [features](#features) and learn more details in the [How-To
 
 Happy testing!
 
-## Release Notes
+## Releases 
 - **stable**: [v4.6.0](release-notes/release-note-v4.md#v460)
-- **pre-release**: [v5.0.1](release-notes/release-note-v5.md#v50-pre-release-roll-up)
+- **pre-release**: [v5.0.2](release-notes/release-note-v5.md#v50-pre-release-roll-up)
 
 All: [Release Notes](release-notes/release-notes.md)
 
@@ -36,7 +36,7 @@ All: [Release Notes](release-notes/release-notes.md)
 Content
 - [vscode-jest](#vscode-jest)
   - [Getting Started](#getting-started)
-  - [Release Notes](#release-notes)
+  - [Releases](#releases)
   - [Features](#features)
   - [Installation](#installation)
   - [How To?](#how-to)
@@ -67,7 +67,7 @@ Content
   - [Troubleshooting](#troubleshooting)
     - [Jest failed to run](#jest-failed-to-run)
     - [Performance issue?](#performance-issue)
-    - [Intermittent errors for (npm/yar/node) command not found during test run or debugging](#intermittent-errors-for-npmyarnode-command-not-found-during-test-run-or-debugging)
+    - [Intermittent errors for (npm/yarn/node) command not found during test run or debugging](#intermittent-errors-for-npmyarnnode-command-not-found-during-test-run-or-debugging)
     - [I don't see "Jest" in the bottom status bar](#i-dont-see-jest-in-the-bottom-status-bar)
     - [What to do with "Long Running Tests Warning"](#what-to-do-with-long-running-tests-warning)
     - [The tests and status do not match or some tests showing question marks unexpectedly?](#the-tests-and-status-do-not-match-or-some-tests-showing-question-marks-unexpectedly)
@@ -432,7 +432,7 @@ By default, jest command is executed in default shell ('cmd' for windows, '/bin/
 
 Note the LoginShell is only applicable for non-windows platform and could cause a bit more overhead.
 
-<a id="auto-fallback-login-shell"></a>
+<a id="auto-recovery-login-shell"></a>
 _Note_: If detected shell env issue, such as `node: command not found` or `npm: no such file or directory`, the extension will fallback to a login shell to ensure tests can run correctly. If will try to auto generate a login shell configuration based on the `jest.shell` setting, otherwise, it will use the default `bash` login-shell. Currently supported auto-fallback shells are `bash`, `zsh`, `fish`.
 ### Debug Config
 
@@ -592,12 +592,12 @@ Every project and developer are different. Experiment and pick the autoRun setti
 
 </details>
 
-### Intermittent errors for (npm/yar/node) command not found during test run or debugging
+### Intermittent errors for (npm/yarn/node) command not found during test run or debugging
 
 This should only happen in Linux or MacOS, and is due to vscode not able to fully initialize the shell env when it starts up (more details [here](https://code.visualstudio.com/docs/supporting/faq#_resolving-shell-environment-fails)).
 
 - for test run:
-  A solution is introduced in [v5.0.2](release-notes/release-note-v5.md#v50-pre-release-roll-up), which will [automatically fallback to a login-shell](#auto-fallback-login-shell) during such situation. Hopefully, this should not be an issue any more 🤞.
+  A solution is introduced in [v5.0.2](release-notes/release-note-v5.md#v50-pre-release-roll-up), which will [automatically recover with a login-shell](#auto-recovery-login-shell) during such situation. Hopefully, this should not be an issue any more 🤞.
 - for test debugging:
   - you can instruct vscode debugger to use a login shell via [task/debug profile](https://code.visualstudio.com/docs/terminal/profiles#_configuring-the-taskdebug-profile), for example, adding the following in your user's settings then restart:
 
