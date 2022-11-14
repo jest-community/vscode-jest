@@ -341,7 +341,7 @@ Performance and automation are self-explanatory, "completeness" might not:
 3. tests with dynamic names (test.each with variables, template-literals, etc.) will not be translated; therefore, they can only be run through parent blocks (describe-with-static-name or test suite, etc.).
 
 There are 2 ways to change autoRun: 
-1. Temporarily [toggle autRun on/off in TestExplorer](#how-to-toggle-auto-run)
+1. Temporarily [toggle autoRun on/off in TestExplorer](#how-to-toggle-auto-run)
 2. Change "jest.autoRun" in `settings.json` file.
 
 <a id="autorun-config">**autoRun Configuration**</a>
