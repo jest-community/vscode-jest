@@ -175,7 +175,6 @@ export class ListTestFileListener extends AbstractProcessListener {
   }
 }
 
-const SnapshotFailRegex = /(snapshots? failed)|(snapshot test failed)/i;
 const IS_OUTSIDE_REPOSITORY_REGEXP =
   /Test suite failed to run[\s\S]*fatal:[\s\S]*is outside repository/im;
 const WATCH_IS_NOT_SUPPORTED_REGEXP =
@@ -271,47 +270,6 @@ export class RunTestListener extends AbstractProcessListener {
     return text.replace(CONTROL_MESSAGES, '');
   }
 
-  // if snapshot error, offer update snapshot option and execute if user confirms
-  private handleSnapshotTestFailuer(process: JestProcess, data: string) {
-    // if already in the updateSnapshot run, do not prompt again
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if ((process.request as any).updateSnapshot) {
-      return;
-    }
-
-    if (
-      this.session.context.settings.enableSnapshotUpdateMessages &&
-      SnapshotFailRegex.test(data)
-    ) {
-      const msg =
-        process.request.type === 'watch-all-tests' || process.request.type === 'watch-tests'
-          ? 'all files'
-          : 'files in this run';
-      vscode.window
-        .showInformationMessage(
-          `[${this.session.context.workspace.name}] Would you like to update snapshots for ${msg}?`,
-          {
-            title: 'Replace them',
-          }
-        )
-        .then((response) => {
-          // No response == cancel
-          if (response) {
-            this.session.scheduleProcess({
-              type: 'update-snapshot',
-              baseRequest: process.request,
-            });
-            this.onRunEvent.fire({
-              type: 'data',
-              process,
-              text: 'Updating snapshots...',
-              newLine: true,
-            });
-          }
-        });
-    }
-  }
-
   // restart the process with watch-all if it is due to "watch not supported" error
   private handleWatchNotSupportedError(process: JestProcess, data: string) {
     if (IS_OUTSIDE_REPOSITORY_REGEXP.test(data) || WATCH_IS_NOT_SUPPORTED_REGEXP.test(data)) {
@@ -358,8 +316,6 @@ export class RunTestListener extends AbstractProcessListener {
     this.onRunEvent.fire({ type: 'data', process, text: message, raw: cleaned });
 
     this.handleRunComplete(process, message);
-
-    this.handleSnapshotTestFailuer(process, message);
 
     this.handleWatchNotSupportedError(process, message);
   }
