@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { JestTestProviderContext, JestTestRun } from './test-provider-helper';
 import { WorkspaceRoot } from './test-item-data';
-import { Debuggable, JestExtExplorerContext, TestItemData } from './types';
+import { Debuggable, JestExtExplorerContext, TestItemData, TestTagId } from './types';
 import { extensionId } from '../appGlobals';
 import { Logging } from '../logging';
 import { toErrorString } from '../helpers';
@@ -9,12 +9,6 @@ import { tiContextManager } from './test-item-context-manager';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const isDebuggable = (arg: any): arg is Debuggable => arg && typeof arg.getDebugInfo === 'function';
-
-export const RunProfileInfo: Record<vscode.TestRunProfileKind, string> = {
-  [vscode.TestRunProfileKind.Run]: 'run',
-  [vscode.TestRunProfileKind.Debug]: 'debug',
-  [vscode.TestRunProfileKind.Coverage]: 'run with coverage',
-};
 
 export class JestTestProvider {
   private readonly controller: vscode.TestController;
@@ -64,9 +58,9 @@ export class JestTestProvider {
     return controller;
   };
   private createProfiles = (controller: vscode.TestController): vscode.TestRunProfile[] => {
-    const runTag = new vscode.TestTag('run');
-    // const updateSnapshotTag = new vscode.TestTag('update-snapshot');
-    const debugTag = new vscode.TestTag('debug');
+    const runTag = new vscode.TestTag(TestTagId.Run);
+    const updateSnapshotTag = new vscode.TestTag(TestTagId.UpdateSnapshot);
+    const debugTag = new vscode.TestTag(TestTagId.Debug);
     const profiles = [
       controller.createRunProfile(
         'run',
@@ -76,11 +70,11 @@ export class JestTestProvider {
         runTag
       ),
       controller.createRunProfile(
-        'run-update-snapshot',
+        'update snapshot',
         vscode.TestRunProfileKind.Run,
         this.runTests,
         false,
-        runTag
+        updateSnapshotTag
       ),
       controller.createRunProfile(
         'debug',
@@ -179,7 +173,7 @@ export class JestTestProvider {
                   item: test,
                   end: resolve,
                 });
-                tData.scheduleTest(itemRun);
+                tData.scheduleTest(itemRun, request.profile);
               } catch (e) {
                 const msg = `failed to schedule test for ${tData.item.id}: ${toErrorString(e)}`;
                 this.log('error', msg, e);

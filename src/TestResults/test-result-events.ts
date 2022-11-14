@@ -3,12 +3,19 @@ import * as vscode from 'vscode';
 import { JestProcessInfo } from '../JestProcessManagement';
 import { ContainerNode } from './match-node';
 
-export type TestSuiteChangeReason = 'assertions-updated' | 'result-matched';
+export type TestSuiteChangeReason =
+  | 'assertions-updated'
+  | 'result-matched'
+  | 'snapshot-suite-changed';
 export type TestSuitChangeEvent =
   | {
       type: 'assertions-updated';
       process: JestProcessInfo;
       files: string[];
+    }
+  | {
+      type: 'snapshot-suite-changed';
+      testPath: string;
     }
   | {
       type: 'result-matched';

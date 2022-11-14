@@ -1,57 +1,42 @@
 import { Snapshot, SnapshotMetadata } from 'jest-editor-support';
 
 export type SnapshotStatus = 'exists' | 'missing' | 'inline';
-export interface SnapshotInfo {
-  status: SnapshotStatus;
+
+export interface SnapshotNode {
+  isInline: boolean;
+  //TODO refactor jest-e-ditor-support to split metadata and api
   metadata: SnapshotMetadata;
 }
+export interface SnapshotSuite {
+  testPath: string;
+  nodes: SnapshotNode[];
+}
+export interface SnapshotResult {
+  status: SnapshotStatus;
+  content?: string;
+}
+
+const inlineKeys = ['toMatchInlineSnapshot', 'toThrowErrorMatchingInlineSnapshot'];
 export class SnapshotProvider {
-  private cache: Map<string, SnapshotInfo[]>;
   private snapshots: Snapshot;
 
   constructor() {
-    this.snapshots = new Snapshot(undefined, [
-      'toMatchInlineSnapshot',
-      'toThrowErrorMatchingInlineSnapshot',
-    ]);
-    this.cache = new Map();
+    this.snapshots = new Snapshot(undefined, inlineKeys);
   }
 
-  private getSnapshotStatus(snapshot: SnapshotMetadata): SnapshotStatus {
-    if (snapshot.exists) {
-      return 'exists';
-    }
-    if (snapshot.name.includes('inline')) {
-      return 'inline';
-    }
-    return 'missing';
-  }
-  public getSuiteSnapshots(testPath: string): Promise<SnapshotInfo[] | undefined> {
-    const infoList = this.cache.get(testPath);
-    if (infoList) {
-      return Promise.resolve(infoList);
-    }
-    return this.parse(testPath);
-  }
-  public removeSuiteSnapshots(testPath: string): void {
-    this.cache.delete(testPath);
-  }
-  private async parse(testPath: string): Promise<SnapshotInfo[]> {
+  public async parse(testPath: string): Promise<SnapshotSuite> {
     try {
       const metadataList = await this.snapshots.getMetadataAsync(testPath);
-      const infoList = metadataList.map((metadata) => ({
-        status: this.getSnapshotStatus(metadata),
+      const nodes = metadataList.map((metadata) => ({
+        // TODO use the node.name instead
+        isInline: inlineKeys.find((key) => metadata.name.includes(key)) ? true : false,
         metadata,
       }));
-      this.cache.set(testPath, infoList);
-      return infoList;
+      const snapshotSuite = { testPath, nodes };
+      return snapshotSuite;
     } catch (e) {
       console.warn('[SnapshotProvider] getMetadataAsync failed:', e);
-      this.cache.delete(testPath);
-      return [];
+      return { testPath, nodes: [] };
     }
-  }
-  public resetCache(): void {
-    this.cache.clear();
   }
 }

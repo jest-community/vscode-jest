@@ -18,9 +18,15 @@ export interface TestItemData {
   readonly uri: vscode.Uri;
   context: JestTestProviderContext;
   discoverTest?: (run: JestTestRun) => void;
-  scheduleTest: (run: JestTestRun) => void;
+  scheduleTest: (run: JestTestRun, runProfile?: vscode.TestRunProfile) => void;
 }
 
 export interface Debuggable {
   getDebugInfo: () => { fileName: string; testNamePattern?: string };
+}
+
+export enum TestTagId {
+  Run = 'run',
+  UpdateSnapshot = 'update-snapshot',
+  Debug = 'debug',
 }

@@ -9,7 +9,7 @@ import { JestExtExplorerContext, TestItemData } from './types';
  * as well as factory functions to create TestItem and TestRun that could impact the state
  */
 
-export type TagIdType = 'run' | 'debug';
+export type TagIdType = 'run' | 'debug' | 'update-snapshot';
 
 let RunSeq = 0;
 export class JestTestProviderContext {
@@ -32,7 +32,7 @@ export class JestTestProviderContext {
     uri: vscode.Uri,
     data: TestItemData,
     parent?: vscode.TestItem,
-    tagIds: TagIdType[] = ['run', 'debug']
+    tagIds: TagIdType[] = ['run', 'debug', 'update-snapshot']
   ): vscode.TestItem => {
     const testItem = this.controller.createTestItem(id, label, uri);
     this.testItemData.set(testItem, data);

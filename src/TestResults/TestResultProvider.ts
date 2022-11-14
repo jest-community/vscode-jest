@@ -15,6 +15,7 @@ import { emptyTestStats } from '../helpers';
 import { createTestResultEvents, TestResultEvents } from './test-result-events';
 import { ContainerNode } from './match-node';
 import { JestProcessInfo } from '../JestProcessManagement';
+import { SnapshotNode, SnapshotProvider } from './snapshot-provider';
 
 export interface TestSuiteResult {
   status: TestReconciliationStateType;
@@ -22,6 +23,7 @@ export interface TestSuiteResult {
   assertionContainer?: ContainerNode<TestAssertionStatus>;
   results?: TestResult[];
   sorted?: SortedTestResults;
+  snapshotNodes?: SnapshotNode[];
 }
 export interface SortedTestResults {
   fail: TestResult[];
@@ -42,12 +44,14 @@ export class TestResultProvider {
   private reconciler: TestReconciler;
   private testSuites: Map<string, TestSuiteResult>;
   private testFiles?: string[];
+  private snapshotProvider: SnapshotProvider;
 
   constructor(extEvents: JestSessionEvents, verbose = false) {
     this.reconciler = new TestReconciler();
     this.verbose = verbose;
     this.events = createTestResultEvents();
     this.testSuites = new Map();
+    this.snapshotProvider = new SnapshotProvider();
     extEvents.onTestSessionStarted.event(this.onSessionStart.bind(this));
   }
 
@@ -181,6 +185,7 @@ export class TestResultProvider {
     try {
       const parseResult = parse(filePath);
       this.testSuites.set(filePath, this.matchResults(filePath, parseResult));
+      this.parseSnapshots(filePath);
       return this.testSuites.get(filePath)?.results;
     } catch (e) {
       const message = `failed to get test results for ${filePath}`;
@@ -287,5 +292,20 @@ export class TestResultProvider {
       }
     }
     return stats;
+  }
+
+  // snapshot support
+  private async parseSnapshots(testPath: string): Promise<void> {
+    const snapshotSuite = await this.snapshotProvider.parse(testPath);
+    const suiteResult = this.testSuites.get(testPath);
+    if (suiteResult) {
+      suiteResult.snapshotNodes = snapshotSuite.nodes;
+      this.events.testSuiteChanged.fire({
+        type: 'snapshot-suite-changed',
+        testPath,
+      });
+    } else {
+      console.warn(`snapshots are ready but there is no test result record for ${testPath}:`);
+    }
   }
 }

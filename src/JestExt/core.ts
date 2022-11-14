@@ -631,6 +631,10 @@ export class JestExt {
     // restart jest since coverage condition has changed
     this.triggerUpdateSettings(this.extContext.settings);
   }
+  viewSnapshot(_testItem: vscode.TestItem): void {
+    //TODO implement this
+    console.warn('viewSnapshot not yet implemented');
+  }
   enableLoginShell(): void {
     if (this.extContext.settings.shell.useLoginShell) {
       return;

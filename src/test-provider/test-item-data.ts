@@ -8,11 +8,12 @@ import { ItBlock, TestAssertionStatus } from 'jest-editor-support';
 import { ContainerNode, DataNode, NodeType, ROOT_NODE_NAME } from '../TestResults/match-node';
 import { Logging } from '../logging';
 import { TestSuitChangeEvent } from '../TestResults/test-result-events';
-import { Debuggable, TestItemData } from './types';
+import { Debuggable, TestItemData, TestTagId } from './types';
 import { JestTestProviderContext, JestTestRun, JestTestRunOptions } from './test-provider-helper';
 import { JestProcessInfo, JestProcessRequest } from '../JestProcessManagement';
 import { GENERIC_ERROR, getExitErrorDef, LONG_RUNNING_TESTS } from '../errors';
 import { JestExtOutput } from '../JestExt/output-terminal';
+import { tiContextManager } from './test-item-context-manager';
 
 interface JestRunable {
   getJestRunRequest: () => JestExtRequestType;
@@ -52,8 +53,8 @@ abstract class TestItemDataBase implements TestItemData, JestRunable, WithUri {
     item.children.forEach((child) => this.deepItemState(child, setState));
   }
 
-  scheduleTest(run: JestTestRun): void {
-    const jestRequest = this.getJestRunRequest();
+  scheduleTest(run: JestTestRun, runProfile?: vscode.TestRunProfile): void {
+    const jestRequest = this.getJestRunRequest(runProfile);
     run.item = this.item;
 
     this.deepItemState(this.item, run.enqueued);
@@ -70,7 +71,7 @@ abstract class TestItemDataBase implements TestItemData, JestRunable, WithUri {
     }
   }
 
-  abstract getJestRunRequest(): JestExtRequestType;
+  abstract getJestRunRequest(runProfile?: vscode.TestRunProfile): JestExtRequestType;
 }
 
 /**
@@ -98,7 +99,7 @@ export class WorkspaceRoot extends TestItemDataBase {
       this.context.ext.workspace.uri,
       this,
       undefined,
-      ['run']
+      ['run', 'update-snapshot']
     );
     item.description = `(${this.context.ext.settings.autoRun.mode})`;
 
@@ -106,12 +107,13 @@ export class WorkspaceRoot extends TestItemDataBase {
     return item;
   }
 
-  getJestRunRequest(): JestExtRequestType {
+  getJestRunRequest(runProfile?: vscode.TestRunProfile): JestExtRequestType {
     const transform = (request: JestProcessRequest) => {
       request.schedule.queue = 'blocking-2';
       return request;
     };
-    return { type: 'all-tests', transform };
+    const updateSnapshot = runProfile?.tag?.id === TestTagId.UpdateSnapshot;
+    return { type: 'all-tests', updateSnapshot, transform };
   }
   discoverTest(run: JestTestRun): void {
     const testList = this.context.ext.testResolveProvider.getTestList();
@@ -245,9 +247,35 @@ export class WorkspaceRoot extends TestItemDataBase {
         this.addTestFile(event.file, (testRoot) =>
           testRoot.discoverTest(undefined, event.testContainer)
         );
+        break;
+      }
+      case 'snapshot-suite-changed': {
+        this.onSnapshotResult(event.testPath);
+        break;
       }
     }
   };
+
+  private onSnapshotResult(testPath: string) {
+    // const inlineSnapshotItems = [];
+    const snapshotItems: vscode.TestItem[] = [];
+    const docRoot = this.testDocuments.get(testPath);
+    const suiteResult = this.context.ext.testResolveProvider.getTestSuiteResult(testPath);
+    if (docRoot && suiteResult) {
+      suiteResult.snapshotNodes?.forEach((node) => {
+        if (node.isInline) {
+          return;
+        }
+        const testItems = findItemByLine(node.metadata.node.loc.start.line - 1, docRoot.item);
+        snapshotItems.push(...testItems);
+      });
+    }
+    tiContextManager.setItemContext({
+      workspace: this.context.ext.workspace,
+      key: 'jest.editor-view-snapshot',
+      itemIds: snapshotItems.map((item) => item.id),
+    });
+  }
 
   /** get test item from jest process. If running tests from source file, will return undefined */
   private getItemFromProcess = (process: JestProcessInfo): vscode.TestItem | undefined => {
@@ -398,14 +426,19 @@ export class FolderData extends TestItemDataBase {
   }
   private createTestItem(name: string, parent: vscode.TestItem) {
     const uri = FolderData.makeUri(parent, name);
-    const item = this.context.createTestItem(uri.fsPath, name, uri, this, parent, ['run']);
+    const item = this.context.createTestItem(uri.fsPath, name, uri, this, parent, [
+      'run',
+      'update-snapshot',
+    ]);
 
     item.canResolveChildren = false;
     return item;
   }
-  getJestRunRequest(): JestExtRequestType {
+  getJestRunRequest(runProfile?: vscode.TestRunProfile): JestExtRequestType {
+    const updateSnapshot = runProfile?.tag?.id === TestTagId.UpdateSnapshot;
     return {
       type: 'by-file-pattern',
+      updateSnapshot,
       testFileNamePattern: this.uri.fsPath,
     };
   }
@@ -600,12 +633,14 @@ export class TestDocumentRoot extends TestResultData {
     );
   }
 
-  getJestRunRequest = (): JestExtRequestType => {
+  getJestRunRequest(runProfile?: vscode.TestRunProfile): JestExtRequestType {
+    const updateSnapshot = runProfile?.tag?.id === TestTagId.UpdateSnapshot;
     return {
       type: 'by-file-pattern',
+      updateSnapshot,
       testFileNamePattern: this.uri.fsPath,
     };
-  };
+  }
 
   getDebugInfo(): ReturnType<Debuggable['getDebugInfo']> {
     return { fileName: this.uri.fsPath };
@@ -616,6 +651,22 @@ export class TestDocumentRoot extends TestResultData {
     );
   };
 }
+const findItemByLine = (zeroBasedLine: number, item: vscode.TestItem): vscode.TestItem[] => {
+  const found: vscode.TestItem[] = [];
+  const range = item.range;
+  if (range && (range.start.line > zeroBasedLine || range.end.line < zeroBasedLine)) {
+    return [];
+  }
+  if (range && range.start.line <= zeroBasedLine && range.end.line >= zeroBasedLine) {
+    found.push(item);
+  }
+
+  item.children.forEach((child) => {
+    found.push(...findItemByLine(zeroBasedLine, child));
+  });
+
+  return found;
+};
 export class TestData extends TestResultData implements Debuggable {
   constructor(
     readonly context: JestTestProviderContext,
@@ -642,9 +693,11 @@ export class TestData extends TestResultData implements Debuggable {
     return item;
   }
 
-  getJestRunRequest(): JestExtRequestType {
+  getJestRunRequest(runProfile?: vscode.TestRunProfile): JestExtRequestType {
+    const updateSnapshot = runProfile?.tag?.id === TestTagId.UpdateSnapshot;
     return {
       type: 'by-file-test-pattern',
+      updateSnapshot,
       testFileNamePattern: this.uri.fsPath,
       testNamePattern: this.node.fullName,
     };

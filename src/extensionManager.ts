@@ -59,6 +59,12 @@ export type RegisterCommand =
       callback: (extension: JestExt, ...args: any[]) => any;
     }
   | {
+      type: 'workspace-test-item';
+      name: string;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      callback: (extension: JestExt, testItem: vscode.TestItem, ...args: any[]) => any;
+    }
+  | {
       type: 'active-text-editor' | 'active-text-editor-workspace';
       name: string;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -69,6 +75,7 @@ const CommandPrefix: Record<CommandType, string> = {
   'all-workspaces': `${extensionName}`,
   'select-workspace': `${extensionName}.workspace`,
   workspace: `${extensionName}.with-workspace`,
+  'workspace-test-item': `${extensionName}.with-workspace-test-item`,
   'active-text-editor': `${extensionName}.editor`,
   'active-text-editor-workspace': `${extensionName}.editor.workspace`,
 };
@@ -230,6 +237,17 @@ export class ExtensionManager {
             const extension = this.getByName(workspace.name);
             if (extension) {
               command.callback.call(thisArg, extension, ...args);
+            }
+          }
+        );
+      }
+      case 'workspace-test-item': {
+        return vscode.commands.registerCommand(
+          commandName,
+          async (workspace: vscode.WorkspaceFolder, testItem: vscode.TestItem, ...args) => {
+            const extension = this.getByName(workspace.name);
+            if (extension) {
+              command.callback.call(thisArg, extension, testItem, ...args);
             }
           }
         );
@@ -405,6 +423,15 @@ export class ExtensionManager {
         name: 'enable-login-shell',
         callback: (extension) => {
           extension.enableLoginShell();
+        },
+      }),
+
+      // with-workspace-test-item commands
+      this.registerCommand({
+        type: 'workspace-test-item',
+        name: 'view-snapshot',
+        callback: (extension, testItem) => {
+          extension.viewSnapshot(testItem);
         },
       }),
 
