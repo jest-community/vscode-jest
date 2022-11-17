@@ -86,6 +86,10 @@ export class TestSuiteRecord implements TestSuiteUpdatable {
     if (!this._testBlocks) {
       try {
         const pResult = parse(this.testFile);
+        if (![pResult.describeBlocks, pResult.itBlocks].find((blocks) => blocks.length > 0)) {
+          // nothing in this file yet, skip. Otherwise we might accidentally publish a source file, for example
+          return 'failed';
+        }
         const sourceContainer = match.buildSourceContainer(pResult.root);
         this._testBlocks = { ...pResult, sourceContainer };
 
@@ -242,12 +246,12 @@ export class TestResultProvider {
     return Array.from(this.testSuites.keys());
   }
 
-  isTestFile(fileName: string): 'yes' | 'no' | 'unknown' {
-    if (this.testFiles?.includes(fileName) || this.testSuites.get(fileName) != null) {
+  isTestFile(fileName: string): 'yes' | 'no' | 'maybe' {
+    if (this.testFiles?.includes(fileName)) {
       return 'yes';
     }
-    if (!this.testFiles) {
-      return 'unknown';
+    if (!this.testFiles || this.testSuites.get(fileName) != null) {
+      return 'maybe';
     }
     return 'no';
   }
