@@ -1,8 +1,7 @@
 import * as vscode from 'vscode';
 
 import { statusBar } from './StatusBar';
-import { ExtensionManager, getExtensionWindowSettings } from './extensionManager';
-import { registerSnapshotCodeLens, registerSnapshotPreview } from './SnapshotCodeLens';
+import { ExtensionManager } from './extensionManager';
 import { tiContextManager } from './test-provider/test-item-context-manager';
 
 let extensionManager: ExtensionManager;
@@ -21,8 +20,6 @@ const addSubscriptions = (context: vscode.ExtensionContext): void => {
   context.subscriptions.push(
     ...statusBar.register((folder: string) => extensionManager.getByName(folder)),
     ...extensionManager.register(),
-    ...registerSnapshotCodeLens(getExtensionWindowSettings()?.enableSnapshotPreviews ?? false),
-    ...registerSnapshotPreview(),
     vscode.languages.registerCodeLensProvider(languages, extensionManager.coverageCodeLensProvider),
     vscode.languages.registerCodeLensProvider(languages, extensionManager.debugCodeLensProvider),
     ...tiContextManager.registerCommands()

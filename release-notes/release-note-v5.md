@@ -122,6 +122,10 @@ Users with jest coverageProvider `v8` should be able to see coverage like with t
   - can not be turned off any more. 
   - removed the "enable" and "showClassicStatus" attributes. The only valid attribute is "showInlineError".
 - `"jest.autoRun` default value has changed. see detail above.
+- Snapshot changes:
+  - Snapshot codeLenses are gone and replaced with commands in test status and test explorer tree menu.
+  - No more snapshot update messaging when running tests but users can update any snapshot any time they want.
+  - Retired the following snapshot related settings: `jest.enableSnapshotPreviews`, `jest.enableSnapshotUpdateMessages`, `restartJestOnSnapshotUpdate`.
 ### Change log
 - [v5.0.2 pre-release](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.2)
 - [v5.0.1 pre-release](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.1)
