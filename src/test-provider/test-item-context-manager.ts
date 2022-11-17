@@ -6,6 +6,10 @@ import { extensionName } from '../appGlobals';
  * TestExplorer menu when-condition
  */
 
+export interface SnapshotItem {
+  itemId: string;
+  testFullName: string;
+}
 export type ItemContext =
   | {
       key: 'jest.autoRun' | 'jest.coverage';
@@ -18,6 +22,7 @@ export type ItemContext =
       key: 'jest.editor-view-snapshot';
       workspace: vscode.WorkspaceFolder;
       itemIds: string[];
+      onClick: (testItem: vscode.TestItem) => void;
     };
 export type TEItemContextKey = ItemContext['key'];
 
@@ -44,13 +49,13 @@ export class TestItemContextManager {
 
         //set context for both on and off
         let itemIds = list
-          .filter((c) => c.key === context.key && c.value === true)
-          .flatMap((c) => c.itemIds as string[]);
+          .flatMap((c) => (c.key === context.key && c.value === true ? c.itemIds : undefined))
+          .filter((c) => c !== undefined);
         vscode.commands.executeCommand('setContext', this.contextKey(context.key, true), itemIds);
 
         itemIds = list
-          .filter((c) => c.key === context.key && c.value === false)
-          .flatMap((c) => c.itemIds as string[]);
+          .flatMap((c) => (c.key === context.key && c.value === false ? c.itemIds : undefined))
+          .filter((c) => c !== undefined);
         vscode.commands.executeCommand('setContext', this.contextKey(context.key, false), itemIds);
         break;
       }
@@ -61,18 +66,15 @@ export class TestItemContextManager {
       }
     }
   }
-  private getWorkspace(
-    key: TEItemContextKey,
-    item: vscode.TestItem
-  ): vscode.WorkspaceFolder | undefined {
+  private getItemContext(key: TEItemContextKey, item: vscode.TestItem): ItemContext | undefined {
     const list = this.cache.get(key);
-    return list?.find((c) => c.itemIds.includes(item.id))?.workspace;
+    return list?.find((c) => c.itemIds.includes(item.id));
   }
   public registerCommands(): vscode.Disposable[] {
     const autoRunCommands = ['test-item.auto-run.toggle-off', 'test-item.auto-run.toggle-on'].map(
       (n) =>
         vscode.commands.registerCommand(`${extensionName}.${n}`, (testItem: vscode.TestItem) => {
-          const workspace = this.getWorkspace('jest.autoRun', testItem);
+          const workspace = this.getItemContext('jest.autoRun', testItem)?.workspace;
           if (workspace) {
             vscode.commands.executeCommand(
               `${extensionName}.with-workspace.toggle-auto-run`,
@@ -84,7 +86,7 @@ export class TestItemContextManager {
     const coverageCommands = ['test-item.coverage.toggle-off', 'test-item.coverage.toggle-on'].map(
       (n) =>
         vscode.commands.registerCommand(`${extensionName}.${n}`, (testItem: vscode.TestItem) => {
-          const workspace = this.getWorkspace('jest.coverage', testItem);
+          const workspace = this.getItemContext('jest.coverage', testItem)?.workspace;
           if (workspace) {
             vscode.commands.executeCommand(
               `${extensionName}.with-workspace.toggle-coverage`,
@@ -96,13 +98,9 @@ export class TestItemContextManager {
     const viewSnapshotCommand = vscode.commands.registerCommand(
       `${extensionName}.test-item.view-snapshot`,
       (testItem: vscode.TestItem) => {
-        const workspace = this.getWorkspace('jest.editor-view-snapshot', testItem);
-        if (workspace) {
-          vscode.commands.executeCommand(
-            `${extensionName}.with-workspace-test-item.view-snapshot`,
-            workspace,
-            testItem
-          );
+        const context = this.getItemContext('jest.editor-view-snapshot', testItem);
+        if (context && context.key === 'jest.editor-view-snapshot') {
+          context.onClick(testItem);
         }
       }
     );

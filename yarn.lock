@@ -2934,10 +2934,9 @@ jest-each@^29.2.1:
     jest-util "^29.2.1"
     pretty-format "^29.2.1"
 
-jest-editor-support@^30.2.1:
-  version "30.2.1"
-  resolved "https://registry.yarnpkg.com/jest-editor-support/-/jest-editor-support-30.2.1.tgz#902911427fe46f052ec29320de8b8da41f832d97"
-  integrity sha512-zsWAv6Taoqvci1jSiEVqCEG/IS/+Lwhyu1VJ/skcdlrhjjFrrcV+W3PRPjjI6bgSWMVNi20yPU1CrA88+e56Tg==
+"jest-editor-support@file:../jest-editor-support/jest-editor-support-30.3.0.tgz":
+  version "30.3.0"
+  resolved "file:../jest-editor-support/jest-editor-support-30.3.0.tgz#dae605e7b749be57512c14c8a9b5a1e6970ea74d"
   dependencies:
     "@babel/parser" "^7.15.7"
     "@babel/runtime" "^7.15.4"

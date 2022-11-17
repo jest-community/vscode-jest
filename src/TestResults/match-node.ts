@@ -57,6 +57,7 @@ export interface OptionalAttributes {
   nonLiteralName?: boolean;
   // zero-based location range
   range?: ParsedRange;
+  snapshot?: 'inline' | 'external';
 }
 export class BaseNode {
   name: string;

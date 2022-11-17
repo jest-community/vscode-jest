@@ -197,6 +197,7 @@ const ContextMatch = (): ContextMatchAlgorithm => {
     tNode.addEvent(event);
     aNode.addEvent(event);
     aNode.attrs.range = tNode.attrs.range;
+    aNode.attrs.snapshot = tNode.attrs.snapshot;
   };
   const onMatchResult = (
     tNode: DataNode<ItBlock>,
@@ -455,11 +456,11 @@ const { match } = ContextMatch();
 
 export const matchTestAssertions = (
   fileName: string,
-  sourceRoot: ParsedNode,
+  source: ParsedNode | ContainerNode<ItBlock>,
   assertions: TestAssertionStatus[] | ContainerNode<TestAssertionStatus>,
   verbose = false
 ): TestResult[] => {
-  const tContainer = buildSourceContainer(sourceRoot);
+  const tContainer = source instanceof ParsedNode ? buildSourceContainer(source) : source;
   const aContainer = Array.isArray(assertions) ? buildAssertionContainer(assertions) : assertions;
 
   const messaging = createMessaging(fileName, verbose);

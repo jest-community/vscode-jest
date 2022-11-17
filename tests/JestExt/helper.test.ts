@@ -172,7 +172,6 @@ describe('getExtensionResourceSettings()', () => {
     expect(getExtensionResourceSettings(uri)).toEqual({
       autoEnable: true,
       coverageFormatter: 'DefaultFormatter',
-      enableSnapshotUpdateMessages: true,
       pathToConfig: '',
       pathToJest: null,
       jestCommandLine: undefined,

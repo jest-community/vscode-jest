@@ -263,7 +263,6 @@ export class RunTestListener extends AbstractProcessListener {
   }
   //=== private methods ===
   private shouldIgnoreOutput(text: string): boolean {
-    // this fails when snapshots change - to be revised - returning always false for now
     return text.length <= 0 || text.includes('Watch Usage');
   }
   private cleanupOutput(text: string): string {
