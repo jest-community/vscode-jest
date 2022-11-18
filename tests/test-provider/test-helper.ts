@@ -70,12 +70,12 @@ export const mockController = (): any => {
       return run;
     }),
     dispose: jest.fn(),
-    createRunProfile: jest.fn().mockImplementation((label, kind, runHandler, isDefault, tags) => ({
+    createRunProfile: jest.fn().mockImplementation((label, kind, runHandler, isDefault, tag) => ({
       label,
       kind,
       runHandler,
       isDefault,
-      tags: tags ?? [],
+      tag,
     })),
     createTestItem: jest.fn().mockImplementation((id, label, uri) => {
       const item: any = {

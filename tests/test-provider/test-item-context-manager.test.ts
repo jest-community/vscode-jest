@@ -10,61 +10,113 @@ describe('TestItemContextManager', () => {
     jest.resetAllMocks();
   });
   describe('can set itemContext', () => {
-    it.each`
-      case | context                                                   | withItemKey            | withoutItemKey
-      ${1} | ${{ key: 'jest.autoRun', value: true, itemIds: ['a'] }}   | ${'jest.autoRun.on'}   | ${'jest.autoRun.off'}
-      ${2} | ${{ key: 'jest.autoRun', value: false, itemIds: ['a'] }}  | ${'jest.autoRun.off'}  | ${'jest.autoRun.on'}
-      ${2} | ${{ key: 'jest.coverage', value: true, itemIds: ['a'] }}  | ${'jest.coverage.on'}  | ${'jest.coverage.off'}
-      ${2} | ${{ key: 'jest.coverage', value: false, itemIds: ['a'] }} | ${'jest.coverage.off'} | ${'jest.coverage.on'}
-    `('case $case: setContext for $expectedKey', ({ context, withItemKey, withoutItemKey }) => {
-      const workspace: any = { name: 'ws' };
-      const manager = new TestItemContextManager();
-      manager.setItemContext({ workspace, ...context });
-      expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-        'setContext',
-        withItemKey,
-        context.itemIds
-      );
-      expect(vscode.commands.executeCommand).toHaveBeenCalledWith('setContext', withoutItemKey, []);
+    describe('jest.autoRun and jest.coverage', () => {
+      it.each`
+        case | context                                                   | withItemKey            | withoutItemKey
+        ${1} | ${{ key: 'jest.autoRun', value: true, itemIds: ['a'] }}   | ${'jest.autoRun.on'}   | ${'jest.autoRun.off'}
+        ${2} | ${{ key: 'jest.autoRun', value: false, itemIds: ['a'] }}  | ${'jest.autoRun.off'}  | ${'jest.autoRun.on'}
+        ${3} | ${{ key: 'jest.coverage', value: true, itemIds: ['a'] }}  | ${'jest.coverage.on'}  | ${'jest.coverage.off'}
+        ${4} | ${{ key: 'jest.coverage', value: false, itemIds: ['a'] }} | ${'jest.coverage.off'} | ${'jest.coverage.on'}
+      `('case $case: setContext for $expectedKey', ({ context, withItemKey, withoutItemKey }) => {
+        const workspace: any = { name: 'ws' };
+        const manager = new TestItemContextManager();
+        manager.setItemContext({ workspace, ...context });
+        expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+          'setContext',
+          withItemKey,
+          context.itemIds
+        );
+        expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+          'setContext',
+          withoutItemKey,
+          []
+        );
+      });
+      it('can manage itemContext for multiple workspaces', () => {
+        const ws1: any = { name: 'ws1' };
+        const ws2: any = { name: 'ws2' };
+        const manager = new TestItemContextManager();
+        manager.setItemContext({
+          workspace: ws1,
+          key: 'jest.autoRun',
+          value: true,
+          itemIds: ['a', 'b'],
+        });
+        manager.setItemContext({
+          workspace: ws2,
+          key: 'jest.autoRun',
+          value: true,
+          itemIds: ['c'],
+        });
+        manager.setItemContext({
+          workspace: ws2,
+          key: 'jest.autoRun',
+          value: false,
+          itemIds: ['d'],
+        });
+        manager.setItemContext({
+          workspace: ws2,
+          key: 'jest.coverage',
+          value: true,
+          itemIds: ['c'],
+        });
+        expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+          'setContext',
+          'jest.autoRun.on',
+          ['a', 'b', 'c']
+        );
+        expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+          'setContext',
+          'jest.autoRun.off',
+          ['d']
+        );
+        expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+          'setContext',
+          'jest.coverage.on',
+          ['c']
+        );
+        expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+          'setContext',
+          'jest.coverage.off',
+          []
+        );
+      });
     });
-    it('can manage itemContext for multiple workspaces', () => {
-      const ws1: any = { name: 'ws1' };
-      const ws2: any = { name: 'ws2' };
-      const manager = new TestItemContextManager();
-      manager.setItemContext({
-        workspace: ws1,
-        key: 'jest.autoRun',
-        value: true,
-        itemIds: ['a', 'b'],
+    describe('jest.editor-view-snapshot', () => {
+      it('can set context with itemId and onClick action', () => {
+        const workspace: any = { name: 'ws' };
+        const manager = new TestItemContextManager();
+        const context: any = {
+          workspace,
+          key: 'jest.editor-view-snapshot',
+          itemIds: ['a'],
+          onClick: jest.fn(),
+        };
+        manager.setItemContext(context);
+        expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+          'setContext',
+          'jest.editor-view-snapshot',
+          context.itemIds
+        );
       });
-      manager.setItemContext({ workspace: ws2, key: 'jest.autoRun', value: true, itemIds: ['c'] });
-      manager.setItemContext({ workspace: ws2, key: 'jest.autoRun', value: false, itemIds: ['d'] });
-      manager.setItemContext({
-        workspace: ws2,
-        key: 'jest.coverage',
-        value: true,
-        itemIds: ['c'],
+      it('new context will override the olde one', () => {
+        const workspace: any = { name: 'ws' };
+        const manager = new TestItemContextManager();
+        const context1: any = {
+          workspace,
+          key: 'jest.editor-view-snapshot',
+          itemIds: ['a'],
+          onClick: jest.fn(),
+        };
+        const context2 = { ...context1, itemIds: ['b'] };
+        manager.setItemContext(context1);
+        manager.setItemContext(context2);
+        expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+          'setContext',
+          'jest.editor-view-snapshot',
+          context2.itemIds
+        );
       });
-      expect(vscode.commands.executeCommand).toHaveBeenCalledWith('setContext', 'jest.autoRun.on', [
-        'a',
-        'b',
-        'c',
-      ]);
-      expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-        'setContext',
-        'jest.autoRun.off',
-        ['d']
-      );
-      expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-        'setContext',
-        'jest.coverage.on',
-        ['c']
-      );
-      expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-        'setContext',
-        'jest.coverage.off',
-        []
-      );
     });
   });
   describe('can register item menu commands', () => {
@@ -123,6 +175,35 @@ describe('TestItemContextManager', () => {
         callBack({ id: 'b' });
         expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(extCmd, workspace);
       });
+    });
+    it('view-snapshot menu commands', () => {
+      const manager = new TestItemContextManager();
+      const disposableList = manager.registerCommands();
+      expect(disposableList.length).toBeGreaterThanOrEqual(5);
+
+      const calls = (vscode.commands.registerCommand as jest.Mocked<any>).mock.calls.filter(
+        (call) => call[0] === `${extensionName}.test-item.view-snapshot`
+      );
+
+      expect(calls).toHaveLength(1);
+
+      // set some itemContext then trigger the menu
+      const workspace: any = { name: 'ws' };
+      const context: any = {
+        workspace,
+        key: 'jest.editor-view-snapshot',
+        itemIds: ['a'],
+        onClick: jest.fn(),
+      };
+      manager.setItemContext(context);
+      const callBack = calls[0][1];
+      callBack({ id: 'a' });
+      expect(context.onClick).toHaveBeenCalled();
+
+      (context.onClick as jest.Mocked<any>).mockClear();
+
+      callBack({ id: 'b' });
+      expect(context.onClick).not.toHaveBeenCalled();
     });
   });
 });

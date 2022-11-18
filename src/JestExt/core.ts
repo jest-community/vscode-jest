@@ -631,7 +631,6 @@ export class JestExt {
     // restart jest since coverage condition has changed
     this.triggerUpdateSettings(this.extContext.settings);
   }
-
   enableLoginShell(): void {
     if (this.extContext.settings.shell.useLoginShell) {
       return;

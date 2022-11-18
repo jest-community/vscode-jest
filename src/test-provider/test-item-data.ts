@@ -259,26 +259,6 @@ export class WorkspaceRoot extends TestItemDataBase {
     }
   };
 
-  // private onSnapshotResult(testPath: string, snapshotBlocks: ExtSnapshotBlock[]) {
-  //   // const inlineSnapshotItems = [];
-  //   const snapshotItems: vscode.TestItem[] = [];
-  //   const docRoot = this.testDocuments.get(testPath);
-  //   if (docRoot) {
-  //     snapshotBlocks?.forEach((block) => {
-  //       if (block.isInline) {
-  //         return;
-  //       }
-  //       const testItems = findItemByLine(block.node.loc.start.line - 1, docRoot.item);
-  //       snapshotItems.push(...testItems);
-  //     });
-  //   }
-  //   tiContextManager.setItemContext({
-  //     workspace: this.context.ext.workspace,
-  //     key: 'jest.editor-view-snapshot',
-  //     itemIds: snapshotItems.map((item) => item.id),
-  //     onClick: this.onPreviewSnapshot,
-  //   });
-  // }
   private onPreviewSnapshot = (testItem: vscode.TestItem): Promise<void> => {
     const data = this.context.getData(testItem);
     if (data instanceof TestData) {
@@ -664,32 +644,6 @@ export class TestDocumentRoot extends TestResultData {
     );
   };
 }
-// const findItemByLine = (
-//   zeroBasedLine: number,
-//   item: vscode.TestItem,
-//   onlyLeaf = true
-// ): vscode.TestItem[] => {
-//   const found: vscode.TestItem[] = [];
-//   const range = item.range;
-
-//   const label = item.label;
-//   console.log(`label = ${label}`);
-
-//   if (range && (range.start.line > zeroBasedLine || range.end.line < zeroBasedLine)) {
-//     return [];
-//   }
-//   if (!onlyLeaf || item.children.size === 0) {
-//     if (range && range.start.line <= zeroBasedLine && range.end.line >= zeroBasedLine) {
-//       found.push(item);
-//     }
-//   }
-
-//   item.children.forEach((child) => {
-//     found.push(...findItemByLine(zeroBasedLine, child));
-//   });
-
-//   return found;
-// };
 export class TestData extends TestResultData implements Debuggable {
   constructor(
     readonly context: JestTestProviderContext,
