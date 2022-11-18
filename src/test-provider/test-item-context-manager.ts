@@ -33,8 +33,6 @@ export class TestItemContextManager {
     return `${key}.${value ? 'on' : 'off'}`;
   }
   public setItemContext(context: ItemContext): void {
-    console.log(`setItemContext for context=`, context);
-
     switch (context.key) {
       case 'jest.autoRun':
       case 'jest.coverage': {
