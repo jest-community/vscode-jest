@@ -15,11 +15,6 @@ jest.mock('../src/Coverage', () => ({
   CoverageCodeLensProvider: jest.fn().mockReturnValue({}),
 }));
 
-jest.mock('../src/SnapshotCodeLens', () => ({
-  registerSnapshotCodeLens: jest.fn(() => []),
-  registerSnapshotPreview: jest.fn(() => []),
-}));
-
 jest.mock('../src/test-provider/test-item-context-manager', () => ({
   tiContextManager: { registerCommands: jest.fn(() => []) },
 }));

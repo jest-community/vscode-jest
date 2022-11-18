@@ -458,7 +458,7 @@ describe('test-item-data', () => {
             const t1 = helper.makeItBlock('test-1', [1, 1, 5, 1]);
             const t2 = helper.makeItBlock('test-2', [6, 1, 7, 1]);
             const sourceRoot = helper.makeRoot([t2, t1]);
-            const testContainer = buildSourceContainer(sourceRoot);
+            const sourceContainer = buildSourceContainer(sourceRoot);
 
             const wsRoot = new WorkspaceRoot(context);
             wsRoot.discoverTest(jestRun);
@@ -473,7 +473,7 @@ describe('test-item-data', () => {
             context.ext.testResolveProvider.events.testSuiteChanged.event.mock.calls[0][0]({
               type: 'test-parsed',
               file: '/ws-1/a.test.ts',
-              testContainer,
+              sourceContainer,
             });
             expect(docItem.children.size).toEqual(2);
             let dItem = getChildItem(docItem, 'test-1');
@@ -493,11 +493,11 @@ describe('test-item-data', () => {
         const t1 = helper.makeItBlock('test-1', [1, 1, 5, 1]);
         const t2 = helper.makeItBlock('test-2', [6, 1, 7, 1]);
         const sourceRoot = helper.makeRoot([t2, t1]);
-        const testContainer = buildSourceContainer(sourceRoot);
+        const sourceContainer = buildSourceContainer(sourceRoot);
         context.ext.testResolveProvider.events.testSuiteChanged.event.mock.calls[0][0]({
           type: 'test-parsed',
           file: '/ws-1/a.test.ts',
-          testContainer,
+          sourceContainer,
         });
         expect(wsRoot.item.children.size).toBe(1);
         let docItem = getChildItem(wsRoot.item, 'a.test.ts');

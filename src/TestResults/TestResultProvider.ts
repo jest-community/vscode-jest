@@ -30,6 +30,9 @@ interface TestSuiteResultRaw {
   assertionContainer?: ContainerNode<TestAssertionStatus>;
   results?: TestResult[];
   sorted?: SortedTestResults;
+  // if we are certain the record is for a test file, set this flag to true
+  // otherwise isTestFile is determined by the testFileList
+  isTestFile?: boolean;
 }
 
 export type TestSuiteResult = Readonly<TestSuiteResultRaw>;
@@ -54,6 +57,7 @@ export class TestSuiteRecord implements TestSuiteUpdatable {
   private _message: string;
   private _results?: TestResult[];
   private _sorted?: SortedTestResults;
+  private _isTestFile?: boolean;
 
   private _testBlocks?: TestBlocks | 'failed';
   // private _snapshotBlocks?: ExtSnapshotBlock[] | 'failed';
@@ -80,6 +84,9 @@ export class TestSuiteRecord implements TestSuiteUpdatable {
   }
   public get sorted(): SortedTestResults | undefined {
     return this._sorted;
+  }
+  public get isTestFile(): boolean | undefined {
+    return this._isTestFile;
   }
 
   public get testBlocks(): TestBlocks | 'failed' {
@@ -156,6 +163,7 @@ export class TestSuiteRecord implements TestSuiteUpdatable {
     this._status = change.status ?? this.status;
     this._message = change.message ?? this.message;
 
+    this._isTestFile = 'isTestFile' in change ? change.isTestFile : this._isTestFile;
     this._results = 'results' in change ? change.results : this._results;
     this._sorted = 'sorted' in change ? change.sorted : this._sorted;
     this._testBlocks = 'testBlocks' in change ? change.testBlocks : this._testBlocks;
@@ -247,10 +255,10 @@ export class TestResultProvider {
   }
 
   isTestFile(fileName: string): 'yes' | 'no' | 'maybe' {
-    if (this.testFiles?.includes(fileName)) {
+    if (this.testFiles?.includes(fileName) || this.testSuites.get(fileName)?.isTestFile) {
       return 'yes';
     }
-    if (!this.testFiles || this.testSuites.get(fileName) != null) {
+    if (!this.testFiles) {
       return 'maybe';
     }
     return 'no';
@@ -260,7 +268,13 @@ export class TestResultProvider {
     return this.testSuites.get(filePath);
   }
 
-  /** match assertions with source file, if successful, update cache.results and related. Will also fire testSuiteChanged event */
+  /**
+   * match assertions with source file, if successful, update cache, results and related.
+   * Will also fire testSuiteChanged event
+   *
+   * if the file is not a test or can not be parsed, the results will be undefined.
+   * any other errors will result the source blocks to be returned as unmatched block.
+   **/
   private updateMatchedResults(filePath: string, record: TestSuiteRecord): void {
     let error: string | undefined;
     if (record.testBlocks === 'failed') {
@@ -305,18 +319,16 @@ export class TestResultProvider {
   /**
    * returns matched test results for the given file
    * @param filePath
-   * @returns valid test result list or undefined if the file is not a test.
-   *  In the case when file can not be parsed or match error, empty results will be returned.
-   * @throws if parsing or matching internal error
+   * @returns valid test result list or an empty array if the source file is not a test or can not be parsed.
    */
   getResults(filePath: string, record?: TestSuiteRecord): TestResult[] | undefined {
+    if (this.isTestFile(filePath) === 'no') {
+      return;
+    }
+
     const _record = record ?? this.testSuites.get(filePath) ?? this.addTestSuiteRecord(filePath);
     if (_record.results) {
       return _record.results;
-    }
-
-    if (this.isTestFile(filePath) === 'no') {
-      return;
     }
 
     this.updateMatchedResults(filePath, _record);
@@ -327,10 +339,13 @@ export class TestResultProvider {
    * returns sorted test results for the given file
    * @param filePath
    * @returns valid sorted test result or undefined if the file is not a test.
-   * @throws if encountered internal error for test files
    */
 
   getSortedResults(filePath: string): SortedTestResults | undefined {
+    if (this.isTestFile(filePath) === 'no') {
+      return;
+    }
+
     const record = this.testSuites.get(filePath) ?? this.addTestSuiteRecord(filePath);
     if (record.sorted) {
       return record.sorted;
@@ -343,26 +358,22 @@ export class TestResultProvider {
       unknown: [],
     };
 
-    try {
-      const testResults = this.getResults(filePath, record);
-      if (!testResults) {
-        return;
-      }
-
-      for (const test of testResults) {
-        if (test.status === TestReconciliationState.KnownFail) {
-          sorted.fail.push(test);
-        } else if (test.status === TestReconciliationState.KnownSkip) {
-          sorted.skip.push(test);
-        } else if (test.status === TestReconciliationState.KnownSuccess) {
-          sorted.success.push(test);
-        } else {
-          sorted.unknown.push(test);
-        }
-      }
-    } finally {
-      record.update({ sorted });
+    const testResults = this.getResults(filePath, record);
+    if (!testResults) {
+      return;
     }
+    for (const test of testResults) {
+      if (test.status === TestReconciliationState.KnownFail) {
+        sorted.fail.push(test);
+      } else if (test.status === TestReconciliationState.KnownSkip) {
+        sorted.skip.push(test);
+      } else if (test.status === TestReconciliationState.KnownSuccess) {
+        sorted.success.push(test);
+      } else {
+        sorted.unknown.push(test);
+      }
+    }
+    record.update({ sorted });
     return sorted;
   }
 
@@ -373,6 +384,7 @@ export class TestResultProvider {
       record.update({
         status: r.status,
         message: r.message,
+        isTestFile: true,
         assertionContainer: undefined,
         results: undefined,
         sorted: undefined,

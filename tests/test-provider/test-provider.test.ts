@@ -78,41 +78,22 @@ describe('JestTestProvider', () => {
         `${extensionId}:TestProvider:ws-1`,
         expect.stringContaining('ws-1')
       );
-      expect(controllerMock.createRunProfile).toHaveBeenCalledTimes(2);
+      expect(controllerMock.createRunProfile).toHaveBeenCalledTimes(3);
       [
-        [vscode.TestRunProfileKind.Run, 'run'],
-        [vscode.TestRunProfileKind.Debug, 'debug'],
-      ].forEach(([kind, id]) => {
+        [vscode.TestRunProfileKind.Run, 'run', true],
+        [vscode.TestRunProfileKind.Run, 'update-snapshot', false],
+        [vscode.TestRunProfileKind.Debug, 'debug', true],
+      ].forEach(([kind, id, isDefault]) => {
         expect(controllerMock.createRunProfile).toHaveBeenCalledWith(
           expect.anything(),
           kind,
           expect.anything(),
-          true,
+          isDefault,
           expect.objectContaining({ id })
         );
       });
 
       expect(WorkspaceRoot).toHaveBeenCalled();
-    });
-    it.each`
-      isWatchMode
-      ${true}
-      ${false}
-    `('will create Profiles regardless isWatchMode=$isWatchMode', ({ isWatchMode }) => {
-      extExplorerContextMock.settings.autoRun.isWatch = isWatchMode;
-      new JestTestProvider(extExplorerContextMock);
-      const kinds = [vscode.TestRunProfileKind.Debug, vscode.TestRunProfileKind.Run];
-
-      expect(controllerMock.createRunProfile).toHaveBeenCalledTimes(kinds.length);
-      kinds.forEach((kind) => {
-        expect(controllerMock.createRunProfile).toHaveBeenCalledWith(
-          expect.anything(),
-          kind,
-          expect.anything(),
-          true,
-          expect.anything()
-        );
-      });
     });
   });
 

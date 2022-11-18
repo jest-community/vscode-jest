@@ -16,6 +16,7 @@ import {
   DescribeBlock,
   Location,
   NamedBlock,
+  ParsedNodeTypes,
 } from 'jest-editor-support';
 import { TestReconciliationState } from './TestReconciliationState';
 import { TestResult } from './TestResult';
@@ -453,14 +454,16 @@ const ContextMatch = (): ContextMatchAlgorithm => {
  */
 
 const { match } = ContextMatch();
-
+const isParsedNode = (source: ParsedNode | ContainerNode<ItBlock>): source is ParsedNode =>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (source as any).type in ParsedNodeTypes;
 export const matchTestAssertions = (
   fileName: string,
   source: ParsedNode | ContainerNode<ItBlock>,
   assertions: TestAssertionStatus[] | ContainerNode<TestAssertionStatus>,
   verbose = false
 ): TestResult[] => {
-  const tContainer = source instanceof ParsedNode ? buildSourceContainer(source) : source;
+  const tContainer = isParsedNode(source) ? buildSourceContainer(source) : source;
   const aContainer = Array.isArray(assertions) ? buildAssertionContainer(assertions) : assertions;
 
   const messaging = createMessaging(fileName, verbose);
