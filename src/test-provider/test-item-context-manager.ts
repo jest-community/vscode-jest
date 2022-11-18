@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { extensionName } from '../appGlobals';
+import { ItemCommand } from './types';
 
 /**
  * A cross-workspace Context Manager that manages the testId context used in
@@ -19,10 +20,9 @@ export type ItemContext =
       itemIds: string[];
     }
   | {
-      key: 'jest.editor-view-snapshot';
+      key: 'jest.editor-view-snapshot' | 'jest.editor-update-snapshot';
       workspace: vscode.WorkspaceFolder;
       itemIds: string[];
-      onClick: (testItem: vscode.TestItem) => void;
     };
 export type TEItemContextKey = ItemContext['key'];
 
@@ -57,7 +57,8 @@ export class TestItemContextManager {
         vscode.commands.executeCommand('setContext', this.contextKey(context.key, false), itemIds);
         break;
       }
-      case 'jest.editor-view-snapshot': {
+      case 'jest.editor-view-snapshot':
+      case 'jest.editor-update-snapshot': {
         this.cache.set(context.key, [context]);
         vscode.commands.executeCommand('setContext', context.key, context.itemIds);
         break;
@@ -96,13 +97,32 @@ export class TestItemContextManager {
     const viewSnapshotCommand = vscode.commands.registerCommand(
       `${extensionName}.test-item.view-snapshot`,
       (testItem: vscode.TestItem) => {
-        const context = this.getItemContext('jest.editor-view-snapshot', testItem);
-        if (context && context.key === 'jest.editor-view-snapshot') {
-          context.onClick(testItem);
+        const workspace = this.getItemContext('jest.editor-view-snapshot', testItem)?.workspace;
+        if (workspace) {
+          vscode.commands.executeCommand(
+            `${extensionName}.with-workspace.item-command`,
+            workspace,
+            testItem,
+            ItemCommand.viewSnapshot
+          );
         }
       }
     );
-    return [...autoRunCommands, ...coverageCommands, viewSnapshotCommand];
+    const updateSnapshotCommand = vscode.commands.registerCommand(
+      `${extensionName}.test-item.update-snapshot`,
+      (testItem: vscode.TestItem) => {
+        const workspace = this.getItemContext('jest.editor-update-snapshot', testItem)?.workspace;
+        if (workspace) {
+          vscode.commands.executeCommand(
+            `${extensionName}.with-workspace.item-command`,
+            workspace,
+            testItem,
+            ItemCommand.updateSnapshot
+          );
+        }
+      }
+    );
+    return [...autoRunCommands, ...coverageCommands, viewSnapshotCommand, updateSnapshotCommand];
   }
 }
 

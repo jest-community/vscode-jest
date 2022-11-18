@@ -8,7 +8,7 @@ import { ItBlock, TestAssertionStatus } from 'jest-editor-support';
 import { ContainerNode, DataNode, NodeType, ROOT_NODE_NAME } from '../TestResults/match-node';
 import { Logging } from '../logging';
 import { TestSuitChangeEvent } from '../TestResults/test-result-events';
-import { Debuggable, TestItemData, TestTagId } from './types';
+import { Debuggable, ItemCommand, TestItemData } from './types';
 import { JestTestProviderContext, JestTestRun, JestTestRunOptions } from './test-provider-helper';
 import { JestProcessInfo, JestProcessRequest } from '../JestProcessManagement';
 import { GENERIC_ERROR, getExitErrorDef, LONG_RUNNING_TESTS } from '../errors';
@@ -53,8 +53,8 @@ abstract class TestItemDataBase implements TestItemData, JestRunable, WithUri {
     item.children.forEach((child) => this.deepItemState(child, setState));
   }
 
-  scheduleTest(run: JestTestRun, runProfile?: vscode.TestRunProfile): void {
-    const jestRequest = this.getJestRunRequest(runProfile);
+  scheduleTest(run: JestTestRun, itemCommand?: ItemCommand): void {
+    const jestRequest = this.getJestRunRequest(itemCommand);
     run.item = this.item;
 
     this.deepItemState(this.item, run.enqueued);
@@ -71,7 +71,33 @@ abstract class TestItemDataBase implements TestItemData, JestRunable, WithUri {
     }
   }
 
-  abstract getJestRunRequest(runProfile?: vscode.TestRunProfile): JestExtRequestType;
+  runItemCommand(command: ItemCommand): void {
+    switch (command) {
+      case ItemCommand.updateSnapshot: {
+        const request = new vscode.TestRunRequest([this.item]);
+        const run = this.context.createTestRun(request, {
+          name: `${command}-${this.item.id}`,
+        });
+        this.scheduleTest(run, command);
+        break;
+      }
+      case ItemCommand.viewSnapshot: {
+        this.viewSnapshot();
+        break;
+      }
+    }
+  }
+  viewSnapshot(): Promise<void> {
+    const msg = `viewSnapshot is not supported for ${this.item.id}`;
+    this.log('warn', msg);
+    return Promise.reject(msg);
+  }
+  abstract getJestRunRequest(itemCommand?: ItemCommand): JestExtRequestType;
+}
+
+interface SnapshotItemCollection {
+  viewable: vscode.TestItem[];
+  updatable: vscode.TestItem[];
 }
 
 /**
@@ -99,7 +125,7 @@ export class WorkspaceRoot extends TestItemDataBase {
       this.context.ext.workspace.uri,
       this,
       undefined,
-      ['run', 'update-snapshot']
+      ['run']
     );
     item.description = `(${this.context.ext.settings.autoRun.mode})`;
 
@@ -107,12 +133,12 @@ export class WorkspaceRoot extends TestItemDataBase {
     return item;
   }
 
-  getJestRunRequest(runProfile?: vscode.TestRunProfile): JestExtRequestType {
+  getJestRunRequest(itemCommand?: ItemCommand): JestExtRequestType {
     const transform = (request: JestProcessRequest) => {
       request.schedule.queue = 'blocking-2';
       return request;
     };
-    const updateSnapshot = runProfile?.tag?.id === TestTagId.UpdateSnapshot;
+    const updateSnapshot = itemCommand === ItemCommand.updateSnapshot;
     return { type: 'all-tests', updateSnapshot, transform };
   }
   discoverTest(run: JestTestRun): void {
@@ -149,6 +175,15 @@ export class WorkspaceRoot extends TestItemDataBase {
       item,
     });
   };
+  private traverseDataTree(data: TestItemData, onItemData: (data: TestItemData) => void): void {
+    onItemData(data);
+    data.item.children.forEach((item) => {
+      const child = this.context.getData(item);
+      if (child) {
+        this.traverseDataTree(child, onItemData);
+      }
+    });
+  }
 
   private addFolder = (parent: FolderData | undefined, folderName: string): FolderData => {
     const p = parent ?? this;
@@ -240,35 +275,43 @@ export class WorkspaceRoot extends TestItemDataBase {
         break;
       }
       case 'result-matched': {
-        const extSnapshotItems: vscode.TestItem[] = [];
-        this.addTestFile(event.file, (testRoot) => testRoot.onTestMatched(extSnapshotItems));
-        tiContextManager.setItemContext({
-          workspace: this.context.ext.workspace,
-          key: 'jest.editor-view-snapshot',
-          itemIds: extSnapshotItems.map((item) => item.id),
-          onClick: this.onPreviewSnapshot,
+        const snapshotItems: SnapshotItemCollection = {
+          viewable: [],
+          updatable: [],
+        };
+        this.addTestFile(event.file, (testRoot) => {
+          testRoot.onTestMatched();
+          testRoot.gatherSnapshotItems(snapshotItems);
         });
+        this.updateSnapshotContext(snapshotItems);
         break;
       }
       case 'test-parsed': {
-        this.addTestFile(event.file, (testRoot) =>
-          testRoot.discoverTest(undefined, event.sourceContainer)
-        );
+        const snapshotItems: SnapshotItemCollection = {
+          viewable: [],
+          updatable: [],
+        };
+        this.addTestFile(event.file, (testRoot) => {
+          testRoot.discoverTest(undefined, event.sourceContainer);
+          testRoot.gatherSnapshotItems(snapshotItems);
+        });
+        this.updateSnapshotContext(snapshotItems);
         break;
       }
     }
   };
-
-  private onPreviewSnapshot = (testItem: vscode.TestItem): Promise<void> => {
-    const data = this.context.getData(testItem);
-    if (data instanceof TestData) {
-      return data.previewSnapshot();
-    }
-    vscode.window.showErrorMessage(
-      `Preview snapshot failed: unexpected test block: ${testItem.id}`
-    );
-    return Promise.resolve();
-  };
+  private updateSnapshotContext(snapshotItems: SnapshotItemCollection): void {
+    tiContextManager.setItemContext({
+      workspace: this.context.ext.workspace,
+      key: 'jest.editor-view-snapshot',
+      itemIds: snapshotItems.viewable.map((item) => item.id),
+    });
+    tiContextManager.setItemContext({
+      workspace: this.context.ext.workspace,
+      key: 'jest.editor-update-snapshot',
+      itemIds: snapshotItems.updatable.map((item) => item.id),
+    });
+  }
 
   /** get test item from jest process. If running tests from source file, will return undefined */
   private getItemFromProcess = (process: JestProcessInfo): vscode.TestItem | undefined => {
@@ -419,16 +462,13 @@ export class FolderData extends TestItemDataBase {
   }
   private createTestItem(name: string, parent: vscode.TestItem) {
     const uri = FolderData.makeUri(parent, name);
-    const item = this.context.createTestItem(uri.fsPath, name, uri, this, parent, [
-      'run',
-      'update-snapshot',
-    ]);
+    const item = this.context.createTestItem(uri.fsPath, name, uri, this, parent, ['run']);
 
     item.canResolveChildren = false;
     return item;
   }
-  getJestRunRequest(runProfile?: vscode.TestRunProfile): JestExtRequestType {
-    const updateSnapshot = runProfile?.tag?.id === TestTagId.UpdateSnapshot;
+  getJestRunRequest(itemCommand?: ItemCommand): JestExtRequestType {
+    const updateSnapshot = itemCommand === ItemCommand.updateSnapshot;
     return {
       type: 'by-file-pattern',
       updateSnapshot,
@@ -521,6 +561,7 @@ abstract class TestResultData extends TestItemDataBase {
     const truncateExtra = (id: string): string => id.replace(/(.*)(#[0-9]+$)/, '$1');
     return truncateExtra(id1) === truncateExtra(id2);
   }
+
   syncChildNodes(node: ItemNodeType): void {
     const testId = this.makeTestId(this.uri, node);
     if (!this.isSameId(testId, this.item.id)) {
@@ -566,6 +607,15 @@ abstract class TestResultData extends TestItemDataBase {
       uri,
       new vscode.Range(new vscode.Position(zeroBasedLine, 0), new vscode.Position(zeroBasedLine, 0))
     );
+  }
+
+  forEachChild(onTestData: (child: TestData) => void): void {
+    this.item.children.forEach((childItem) => {
+      const child = this.context.getData<TestData>(childItem);
+      if (child) {
+        onTestData(child);
+      }
+    });
   }
 }
 export class TestDocumentRoot extends TestResultData {
@@ -620,14 +670,11 @@ export class TestDocumentRoot extends TestResultData {
     if (isEmpty(suiteResult?.assertionContainer)) {
       this.updateItemState(run, suiteResult);
     }
-
-    this.item.children.forEach((childItem) =>
-      this.context.getData<TestData>(childItem)?.updateResultState(run)
-    );
+    this.forEachChild((child) => child.updateResultState(run));
   }
 
-  getJestRunRequest(runProfile?: vscode.TestRunProfile): JestExtRequestType {
-    const updateSnapshot = runProfile?.tag?.id === TestTagId.UpdateSnapshot;
+  getJestRunRequest(itemCommand?: ItemCommand): JestExtRequestType {
+    const updateSnapshot = itemCommand === ItemCommand.updateSnapshot;
     return {
       type: 'by-file-pattern',
       updateSnapshot,
@@ -638,11 +685,13 @@ export class TestDocumentRoot extends TestResultData {
   getDebugInfo(): ReturnType<Debuggable['getDebugInfo']> {
     return { fileName: this.uri.fsPath };
   }
-  public onTestMatched = (extSnapshotItems: vscode.TestItem[]): void => {
-    this.item.children.forEach((childItem) =>
-      this.context.getData<TestData>(childItem)?.onTestMatched(extSnapshotItems)
-    );
-  };
+
+  public onTestMatched(): void {
+    this.forEachChild((child) => child.onTestMatched());
+  }
+  public gatherSnapshotItems(snapshotItems: SnapshotItemCollection): void {
+    this.forEachChild((child) => child.gatherSnapshotItems(snapshotItems));
+  }
 }
 export class TestData extends TestResultData implements Debuggable {
   constructor(
@@ -670,15 +719,15 @@ export class TestData extends TestResultData implements Debuggable {
     return item;
   }
 
-  getJestRunRequest(runProfile?: vscode.TestRunProfile): JestExtRequestType {
-    const updateSnapshot = runProfile?.tag?.id === TestTagId.UpdateSnapshot;
+  getJestRunRequest(itemCommand?: ItemCommand): JestExtRequestType {
     return {
       type: 'by-file-test-pattern',
-      updateSnapshot,
+      updateSnapshot: itemCommand === ItemCommand.updateSnapshot,
       testFileNamePattern: this.uri.fsPath,
       testNamePattern: this.node.fullName,
     };
   }
+
   getDebugInfo(): ReturnType<Debuggable['getDebugInfo']> {
     return { fileName: this.uri.fsPath, testNamePattern: this.node.fullName };
   }
@@ -704,17 +753,35 @@ export class TestData extends TestResultData implements Debuggable {
     this.syncChildNodes(node);
   }
 
-  public onTestMatched(extSnapshotItems: vscode.TestItem[]): void {
+  public onTestMatched(): void {
     // assertion might have picked up source block location
     this.updateItemRange();
-    if (this.node.attrs.snapshot === 'external') {
-      extSnapshotItems.push(this.item);
-    }
-    this.item.children.forEach((childItem) =>
-      this.context.getData<TestData>(childItem)?.onTestMatched(extSnapshotItems)
-    );
+    this.forEachChild((child) => child.onTestMatched());
   }
 
+  /**
+   * determine if a test contains dynamic content, such as template-literal or "test.each" variables from the node info.
+   * Once the test is run, the node should reflect the resolved names.
+   */
+  private isTestNameResolved(): boolean {
+    //isGroup = true means "test.each"
+    return !(this.node.attrs.isGroup === 'yes' || this.node.attrs.nonLiteralName === true);
+  }
+  public gatherSnapshotItems(snapshotItems: SnapshotItemCollection): void {
+    // only response if not a "dynamic named" test, which we can't update or view snapshot until the names are resolved
+    // after running the tests
+    if (!this.isTestNameResolved()) {
+      return;
+    }
+    if (this.node.attrs.snapshot === 'inline') {
+      snapshotItems.updatable.push(this.item);
+    }
+    if (this.node.attrs.snapshot === 'external') {
+      snapshotItems.updatable.push(this.item);
+      snapshotItems.viewable.push(this.item);
+    }
+    this.forEachChild((child) => child.gatherSnapshotItems(snapshotItems));
+  }
   public updateResultState(run: JestTestRun): void {
     if (this.node && isAssertDataNode(this.node)) {
       const assertion = this.node.data;
@@ -722,14 +789,16 @@ export class TestData extends TestResultData implements Debuggable {
         assertion.line != null ? this.createLocation(this.uri, assertion.line - 1) : undefined;
       this.updateItemState(run, assertion, errorLine);
     }
-    this.item.children.forEach((childItem) =>
-      this.context.getData<TestData>(childItem)?.updateResultState(run)
-    );
+    this.forEachChild((child) => child.updateResultState(run));
   }
-  public previewSnapshot(): Promise<void> {
-    return this.context.ext.testResolveProvider.previewSnapshot(
-      this.uri.fsPath,
-      this.node.fullName
-    );
+  public viewSnapshot(): Promise<void> {
+    if (this.node.attrs.snapshot === 'external') {
+      return this.context.ext.testResolveProvider.previewSnapshot(
+        this.uri.fsPath,
+        this.node.fullName
+      );
+    }
+    this.log('error', `no external snapshot to be viewed: ${this.item.id}`);
+    return Promise.resolve();
   }
 }

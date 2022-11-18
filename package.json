@@ -302,8 +302,13 @@
       },
       {
         "command": "io.orta.jest.test-item.view-snapshot",
-        "title": "View snapshot",
+        "title": "View Snapshot",
         "icon": "$(camera)"
+      },
+      {
+        "command": "io.orta.jest.test-item.update-snapshot",
+        "title": "Update Snapshot",
+        "icon": "$(export)"
       }
     ],
     "menus": {
@@ -368,13 +373,20 @@
           "command": "io.orta.jest.test-item.coverage.toggle-on",
           "group": "inline",
           "when": "testId in jest.coverage.off"
-        }
+        },
+        {
+          "command": "io.orta.jest.test-item.update-snapshot"
+        }  
       ],
       "testing/item/gutter": [
         {
           "command": "io.orta.jest.test-item.view-snapshot",
           "when": "testId in jest.editor-view-snapshot"
-        } 
+        },
+        {
+          "command": "io.orta.jest.test-item.update-snapshot",
+          "when": "testId in jest.editor-update-snapshot"
+        }  
       ]
     },
     "keybindings": [

@@ -18,7 +18,8 @@ export interface TestItemData {
   readonly uri: vscode.Uri;
   context: JestTestProviderContext;
   discoverTest?: (run: JestTestRun) => void;
-  scheduleTest: (run: JestTestRun, runProfile?: vscode.TestRunProfile) => void;
+  scheduleTest: (run: JestTestRun, itemCommand?: ItemCommand) => void;
+  runItemCommand: (command: ItemCommand) => void;
 }
 
 export interface Debuggable {
@@ -27,6 +28,10 @@ export interface Debuggable {
 
 export enum TestTagId {
   Run = 'run',
-  UpdateSnapshot = 'update-snapshot',
   Debug = 'debug',
+}
+
+export enum ItemCommand {
+  updateSnapshot = 'update-snapshot',
+  viewSnapshot = 'view-snapshot',
 }

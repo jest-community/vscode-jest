@@ -32,7 +32,7 @@ export class JestTestProviderContext {
     uri: vscode.Uri,
     data: TestItemData,
     parent?: vscode.TestItem,
-    tagIds: TagIdType[] = ['run', 'debug', 'update-snapshot']
+    tagIds: TagIdType[] = ['run', 'debug']
   ): vscode.TestItem => {
     const testItem = this.controller.createTestItem(id, label, uri);
     this.testItemData.set(testItem, data);
@@ -84,8 +84,13 @@ export class JestTestProviderContext {
   };
 
   // tags
-  getTag = (tagId: TagIdType): vscode.TestTag | undefined =>
-    this.profiles.find((p) => p.tag?.id === tagId)?.tag;
+  getTag = (tagId: TagIdType): vscode.TestTag => {
+    const tag = this.profiles.find((p) => p.tag?.id === tagId)?.tag;
+    if (!tag) {
+      throw new Error(`unrecognized tag: ${tagId}`);
+    }
+    return tag;
+  };
 }
 
 export interface JestTestRunOptions {

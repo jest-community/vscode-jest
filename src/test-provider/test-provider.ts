@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { JestTestProviderContext, JestTestRun } from './test-provider-helper';
 import { WorkspaceRoot } from './test-item-data';
-import { Debuggable, JestExtExplorerContext, TestItemData, TestTagId } from './types';
+import { Debuggable, ItemCommand, JestExtExplorerContext, TestItemData, TestTagId } from './types';
 import { extensionId } from '../appGlobals';
 import { Logging } from '../logging';
 import { toErrorString } from '../helpers';
@@ -59,7 +59,6 @@ export class JestTestProvider {
   };
   private createProfiles = (controller: vscode.TestController): vscode.TestRunProfile[] => {
     const runTag = new vscode.TestTag(TestTagId.Run);
-    const updateSnapshotTag = new vscode.TestTag(TestTagId.UpdateSnapshot);
     const debugTag = new vscode.TestTag(TestTagId.Debug);
     const profiles = [
       controller.createRunProfile(
@@ -68,13 +67,6 @@ export class JestTestProvider {
         this.runTests,
         true,
         runTag
-      ),
-      controller.createRunProfile(
-        'update snapshot',
-        vscode.TestRunProfileKind.Run,
-        this.runTests,
-        false,
-        updateSnapshotTag
       ),
       controller.createRunProfile(
         'debug',
@@ -173,7 +165,7 @@ export class JestTestProvider {
                   item: test,
                   end: resolve,
                 });
-                tData.scheduleTest(itemRun, request.profile);
+                tData.scheduleTest(itemRun);
               } catch (e) {
                 const msg = `failed to schedule test for ${tData.item.id}: ${toErrorString(e)}`;
                 this.log('error', msg, e);
@@ -192,6 +184,11 @@ export class JestTestProvider {
     await Promise.allSettled(promises);
     run.end();
   };
+
+  public runItemCommand(testItem: vscode.TestItem, command: ItemCommand): void {
+    const data = this.context.getData(testItem);
+    return data?.runItemCommand(command);
+  }
 
   dispose(): void {
     this.workspaceRoot.dispose();
