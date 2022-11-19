@@ -38,6 +38,16 @@ export const findResultForTest = (results: TestResult[], itBlock: ItBlock): Test
 };
 
 // factory method
+export const makeSnapshotBlock = (marker?: string, isInline?: boolean, line?: number): any => {
+  const loc = line ? makePositionRange([line, 0, line, 0]) : EmptyLocationRange;
+  return {
+    marker,
+    isInline: isInline ?? false,
+    node: { name: 'node', loc },
+    parents: [],
+  };
+};
+
 export const makeItBlock = (
   name?: string,
   pos?: [number, number, number, number],

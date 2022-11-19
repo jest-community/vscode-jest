@@ -8,6 +8,7 @@ jest.unmock('./test-helper');
 jest.unmock('../../src/errors');
 
 import { JestTestRun } from '../../src/test-provider/test-provider-helper';
+import { tiContextManager } from '../../src/test-provider/test-item-context-manager';
 
 jest.mock('path', () => {
   let sep = '/';
@@ -43,6 +44,7 @@ import {
 import * as path from 'path';
 import { mockController, mockExtExplorerContext } from './test-helper';
 import * as errors from '../../src/errors';
+import { ItemCommand } from '../../src/test-provider/types';
 
 const mockPathSep = (newSep: string) => {
   (path as jest.Mocked<any>).setSep(newSep);
@@ -148,10 +150,8 @@ describe('test-item-data', () => {
     const uri: any = { fsPath: 'whatever' };
     const doc = new TestDocumentRoot(context, uri, folder.item);
     const node: any = { fullName: 'a test', attrs: {}, data: {} };
-    const test = new TestData(context, uri, node, doc.item);
-    const snapshotProfile = { tag: { id: 'update-snapshot' } };
-    const runProfile = { tag: { id: 'run' } };
-    return { wsRoot, folder, doc, test, snapshotProfile, runProfile };
+    const testItem = new TestData(context, uri, node, doc.item);
+    return { wsRoot, folder, doc, testItem };
   };
 
   beforeEach(() => {
@@ -169,6 +169,7 @@ describe('test-item-data', () => {
       .fn()
       .mockImplementation((uri, p) => ({ fsPath: `${uri.fsPath}/${p}` }));
     vscode.Uri.file = jest.fn().mockImplementation((f) => ({ fsPath: f }));
+    (tiContextManager.setItemContext as jest.Mocked<any>).mockClear();
   });
   describe('discover children', () => {
     describe('WorkspaceRoot', () => {
@@ -390,7 +391,7 @@ describe('test-item-data', () => {
           });
         });
         describe('when testSuiteChanged.result-matched event fired', () => {
-          it('test data range will be updated accordingly', () => {
+          it('test data range and snapshot context will be updated accordingly', () => {
             // assertion should be discovered prior
             context.ext.testResolveProvider.getTestList.mockReturnValueOnce(['/ws-1/a.test.ts']);
 
@@ -436,6 +437,8 @@ describe('test-item-data', () => {
               start: { line: 2, column: 2 },
               end: { line: 10, column: 4 },
             };
+            // add snapshot marker
+            testNode.attrs.snapshot = 'inline';
 
             // triggers testSuiteChanged event listener
             context.ext.testResolveProvider.events.testSuiteChanged.event.mock.calls[0][0]({
@@ -464,10 +467,25 @@ describe('test-item-data', () => {
                 testNode.attrs.range.end.column,
               ],
             });
+
+            // snapshot menu context is populated
+            expect(tiContextManager.setItemContext).toHaveBeenCalledTimes(2);
+            expect(tiContextManager.setItemContext).toHaveBeenCalledWith(
+              expect.objectContaining({
+                key: 'jest.editor-update-snapshot',
+                itemIds: [tItem.id],
+              })
+            );
+            expect(tiContextManager.setItemContext).toHaveBeenCalledWith(
+              expect.objectContaining({
+                key: 'jest.editor-view-snapshot',
+                itemIds: [],
+              })
+            );
           });
         });
         describe('when testSuiteChanged.test-parsed event filed', () => {
-          it('test items will be added based on parsed test files (test blocks)', () => {
+          it('test items will be added and snapshot context updated accordingly', () => {
             // assertion should be discovered prior
             context.ext.testResolveProvider.getTestList.mockReturnValueOnce(['/ws-1/a.test.ts']);
 
@@ -475,6 +493,10 @@ describe('test-item-data', () => {
             const t2 = helper.makeItBlock('test-2', [6, 1, 7, 1]);
             const sourceRoot = helper.makeRoot([t2, t1]);
             const sourceContainer = buildSourceContainer(sourceRoot);
+            const node1 = sourceContainer.childData.find((child) => child.fullName === 'test-1');
+            const node2 = sourceContainer.childData.find((child) => child.fullName === 'test-2');
+            node1.attrs = { ...node1.attrs, snapshot: 'external' };
+            node2.attrs = { ...node2.attrs, snapshot: 'external', nonLiteralName: true };
 
             const wsRoot = new WorkspaceRoot(context);
             wsRoot.discoverTest(jestRun);
@@ -492,13 +514,28 @@ describe('test-item-data', () => {
               sourceContainer,
             });
             expect(docItem.children.size).toEqual(2);
-            let dItem = getChildItem(docItem, 'test-1');
-            expect(dItem.range).toEqual({ args: [0, 0, 4, 0] });
-            dItem = getChildItem(docItem, 'test-2');
-            expect(dItem.range).toEqual({ args: [5, 0, 6, 0] });
+            const dItem1 = getChildItem(docItem, 'test-1');
+            expect(dItem1.range).toEqual({ args: [0, 0, 4, 0] });
+            const dItem2 = getChildItem(docItem, 'test-2');
+            expect(dItem2.range).toEqual({ args: [5, 0, 6, 0] });
 
             expect(context.ext.testResolveProvider.getTestSuiteResult).not.toHaveBeenCalled();
             expect(controllerMock.createTestRun).not.toHaveBeenCalled();
+
+            // snapshot menu context is populated for "test-1" only
+            expect(tiContextManager.setItemContext).toHaveBeenCalledTimes(2);
+            expect(tiContextManager.setItemContext).toHaveBeenCalledWith(
+              expect.objectContaining({
+                key: 'jest.editor-view-snapshot',
+                itemIds: [dItem1.id],
+              })
+            );
+            expect(tiContextManager.setItemContext).toHaveBeenCalledWith(
+              expect.objectContaining({
+                key: 'jest.editor-update-snapshot',
+                itemIds: [dItem1.id],
+              })
+            );
           });
         });
       });
@@ -651,25 +688,15 @@ describe('test-item-data', () => {
         expect(request.run.item).toBe(folderData.item);
       });
       describe('can update snapshot based on runProfile', () => {
-        let wsRoot, folder, doc, test, snapshotProfile, runProfile;
+        let wsRoot, folder, doc, testItem;
         beforeEach(() => {
-          ({ wsRoot, folder, doc, test, snapshotProfile, runProfile } = createAllTestItems());
+          ({ wsRoot, folder, doc, testItem } = createAllTestItems());
         });
         it('with snapshot profile', () => {
-          [wsRoot, folder, doc, test].forEach((testItem) => {
-            testItem.scheduleTest(jestRun, snapshotProfile);
+          [wsRoot, folder, doc, testItem].forEach((testItem) => {
+            testItem.scheduleTest(jestRun, ItemCommand.updateSnapshot);
             expect(context.ext.session.scheduleProcess).toHaveBeenCalledWith(
               expect.objectContaining({
-                updateSnapshot: true,
-              })
-            );
-          });
-        });
-        it('no update snapshot with run profile', () => {
-          [wsRoot, folder, doc, test].forEach((testItem) => {
-            testItem.scheduleTest(jestRun, runProfile);
-            expect(context.ext.session.scheduleProcess).toHaveBeenCalledWith(
-              expect.not.objectContaining({
                 updateSnapshot: true,
               })
             );
@@ -1039,18 +1066,17 @@ describe('test-item-data', () => {
     });
   });
   describe('tags', () => {
-    let wsRoot, folder, doc, test;
+    let wsRoot, folder, doc, testItem;
     beforeEach(() => {
-      ({ wsRoot, folder, doc, test } = createAllTestItems());
+      ({ wsRoot, folder, doc, testItem } = createAllTestItems());
     });
-    it('all TestItem supports run and update-snapshot tag', () => {
-      [wsRoot, folder, doc, test].forEach((itemData) => {
+    it('all TestItem supports run tag', () => {
+      [wsRoot, folder, doc, testItem].forEach((itemData) => {
         expect(itemData.item.tags.find((t) => t.id === 'run')).toBeTruthy();
-        expect(itemData.item.tags.find((t) => t.id === 'update-snapshot')).toBeTruthy();
       });
     });
     it('only TestData and TestDocument supports debug tags', () => {
-      [doc, test].forEach((itemData) =>
+      [doc, testItem].forEach((itemData) =>
         expect(itemData.item.tags.find((t) => t.id === 'debug')).toBeTruthy()
       );
       [wsRoot, folder].forEach((itemData) =>
@@ -1496,47 +1522,61 @@ describe('test-item-data', () => {
       });
     });
   });
-  // describe('snapshow preview', () => {
-  //   let wsRoot, folder, doc, test;
-  //   beforeEach(() => {
-  //     ({ wsRoot, folder, doc, test } = createAllTestItems());
-  //   });
-  //   it('update menu context for eligibile test items', () => {
-  //     const a1 = helper.makeAssertion('test-a', 'KnownFail', ['desc-1'], [1, 0]);
-  //     const assertionContainer = buildAssertionContainer([a1]);
-  //     context.ext.testResolveProvider.getTestSuiteResult.mockReturnValue({
-  //       status: 'KnownFail',
-  //       assertionContainer,
-  //     });
+  describe('runItemCommand', () => {
+    let wsRoot, folder, doc, testItem;
+    beforeEach(() => {
+      ({ wsRoot, folder, doc, testItem } = createAllTestItems());
+    });
+    it('can update-snapshot for every TestItemData', () => {
+      const createTestRunSpy = jest.spyOn(context, 'createTestRun');
+      [wsRoot, folder, doc, testItem].forEach((itemData) => {
+        createTestRunSpy.mockClear();
+        context.ext.session.scheduleProcess.mockClear();
 
-  //     // after jest test run, result suite should be updated and test block should be populated
-  //     context.ext.testResolveProvider.events.testSuiteChanged.event.mock.calls[0][0]({
-  //       type: 'assertions-updated',
-  //       process: { id: 'whatever', request: { type: 'watch-tests' } },
-  //       files: ['/ws-1/a.test.ts'],
-  //     });
-
-  //     // change the node
-  //     const descNode = assertionContainer.childContainers[0];
-  //     descNode.attrs.range = {
-  //       start: { line: 1, column: 2 },
-  //       end: { line: 13, column: 4 },
-  //     };
-  //     const testNode = descNode.childData[0];
-  //     testNode.attrs.range = {
-  //       start: { line: 2, column: 2 },
-  //       end: { line: 10, column: 4 },
-  //     };
-
-  //     // triggers testSuiteChanged event
-  //     context.ext.testResolveProvider.events.testSuiteChanged.event.mock.calls[0][0]({
-  //       type: 'result-matched',
-  //       file: '/ws-1/a.test.ts',
-  //     });
-
-  //     // should update the context with snapshot items
-  //     expect(true).toEqual(true);
-  //   });
-  //   it.todo('trigger the test item to perform previewSnapshot upon menu click');
-  // });
+        itemData.runItemCommand(ItemCommand.updateSnapshot);
+        expect(createTestRunSpy).toHaveBeenCalledTimes(1);
+        expect(context.ext.session.scheduleProcess).toHaveBeenCalledWith(
+          expect.objectContaining({ updateSnapshot: true })
+        );
+      });
+    });
+    describe('view-snapshot', () => {
+      beforeEach(() => {
+        context.ext.testResolveProvider.previewSnapshot.mockReturnValue(Promise.resolve());
+      });
+      it.each`
+        case          | index | canView
+        ${'wsRoot'}   | ${0}  | ${false}
+        ${'folder'}   | ${1}  | ${false}
+        ${'doc'}      | ${2}  | ${false}
+        ${'testItem'} | ${3}  | ${true}
+      `('$case supports view-snapshot? $canView', async ({ index, canView }) => {
+        testItem.node.attrs = { ...testItem.node.attrs, snapshot: 'external' };
+        const data = [wsRoot, folder, doc, testItem][index];
+        await data.runItemCommand(ItemCommand.viewSnapshot);
+        if (canView) {
+          expect(context.ext.testResolveProvider.previewSnapshot).toHaveBeenCalled();
+        } else {
+          expect(context.ext.testResolveProvider.previewSnapshot).not.toHaveBeenCalled();
+        }
+      });
+      it.each`
+        snapshotAttr  | canView
+        ${'inline'}   | ${false}
+        ${'external'} | ${true}
+        ${undefined}  | ${false}
+      `(
+        'testItem: snapshot = $snapshotAttr, canView? $canView',
+        async ({ snapshotAttr, canView }) => {
+          testItem.node.attrs = { ...testItem.node.attrs, snapshot: snapshotAttr };
+          await testItem.runItemCommand(ItemCommand.viewSnapshot);
+          if (canView) {
+            expect(context.ext.testResolveProvider.previewSnapshot).toHaveBeenCalled();
+          } else {
+            expect(context.ext.testResolveProvider.previewSnapshot).not.toHaveBeenCalled();
+          }
+        }
+      );
+    });
+  });
 });

@@ -10,6 +10,7 @@ import { JestTestProviderContext } from '../../src/test-provider/test-provider-h
 import { extensionId } from '../../src/appGlobals';
 import { mockController, mockExtExplorerContext } from './test-helper';
 import { tiContextManager } from '../../src/test-provider/test-item-context-manager';
+import { ItemCommand } from '../../src/test-provider/types';
 
 const throwError = () => {
   throw new Error('debug error');
@@ -20,6 +21,7 @@ describe('JestTestProvider', () => {
     const data: any = {
       discoverTest: jest.fn(),
       scheduleTest: jest.fn(),
+      runItemCommand: jest.fn(),
       dispose: jest.fn(),
     };
     if (debuggable) {
@@ -78,10 +80,9 @@ describe('JestTestProvider', () => {
         `${extensionId}:TestProvider:ws-1`,
         expect.stringContaining('ws-1')
       );
-      expect(controllerMock.createRunProfile).toHaveBeenCalledTimes(3);
+      expect(controllerMock.createRunProfile).toHaveBeenCalledTimes(2);
       [
         [vscode.TestRunProfileKind.Run, 'run', true],
-        [vscode.TestRunProfileKind.Run, 'update-snapshot', false],
         [vscode.TestRunProfileKind.Debug, 'debug', true],
       ].forEach(([kind, id, isDefault]) => {
         expect(controllerMock.createRunProfile).toHaveBeenCalledWith(
@@ -97,7 +98,7 @@ describe('JestTestProvider', () => {
     });
   });
 
-  describe('can  discover tests', () => {
+  describe('can discover tests', () => {
     it('should only discover items with canResolveChildren = true', () => {
       new JestTestProvider(extExplorerContextMock);
       const data = setupTestItemData('whatever', true, workspaceRootMock.context);
@@ -591,5 +592,10 @@ describe('JestTestProvider', () => {
         })
       );
     });
+  });
+  it('supports runItemCommand', () => {
+    const provider = new JestTestProvider(extExplorerContextMock);
+    provider.runItemCommand(workspaceRootMock.item, ItemCommand.updateSnapshot);
+    expect(workspaceRootMock.runItemCommand).toHaveBeenCalled();
   });
 });

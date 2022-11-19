@@ -185,7 +185,7 @@ export class JestTestProvider {
     run.end();
   };
 
-  public runItemCommand(testItem: vscode.TestItem, command: ItemCommand): void {
+  public runItemCommand(testItem: vscode.TestItem, command: ItemCommand): void | Promise<void> {
     const data = this.context.getData(testItem);
     return data?.runItemCommand(command);
   }

@@ -41,7 +41,7 @@ import * as helper from '../test-helper';
 import { ItBlock, TestAssertionStatus, TestReconcilationState } from 'jest-editor-support';
 import * as match from '../../src/TestResults/match-by-context';
 import { mockJestExtEvents } from '../test-helper';
-import { SnapshotProvider } from '../../src/TestResults/snapshot-provider';
+import { ExtSnapshotBlock, SnapshotProvider } from '../../src/TestResults/snapshot-provider';
 
 const setupMockParse = (itBlocks: ItBlock[]) => {
   mockParse.mockReturnValue({
@@ -51,7 +51,7 @@ const setupMockParse = (itBlocks: ItBlock[]) => {
   });
 };
 
-const createDataSet = (): [ItBlock[], TestAssertionStatus[]] => {
+const createDataSet = (): [ItBlock[], TestAssertionStatus[], ExtSnapshotBlock[]] => {
   const testBlocks = [
     helper.makeItBlock('test 1', [2, 3, 4, 5]),
     helper.makeItBlock('test 2', [12, 13, 14, 15]),
@@ -66,7 +66,11 @@ const createDataSet = (): [ItBlock[], TestAssertionStatus[]] => {
     helper.makeAssertion('test 4', TestReconciliationState.Unknown, undefined, [32, 0]),
     helper.makeAssertion('test 5', TestReconciliationState.KnownSuccess, undefined, [42, 0]),
   ];
-  return [testBlocks, assertions];
+  const snapshots = [
+    helper.makeSnapshotBlock('test 2', false, 13),
+    helper.makeSnapshotBlock('test 5', true, 43),
+  ];
+  return [testBlocks, assertions, snapshots];
 };
 
 interface TestData {
@@ -155,6 +159,7 @@ describe('TestResultProvider', () => {
     (vscode.EventEmitter as jest.Mocked<any>) = jest.fn().mockImplementation(helper.mockEvent);
     mockSnapshotProvider = {
       parse: jest.fn().mockReturnValue({ blocks: [] }),
+      previewSnapshot: jest.fn().mockReturnValue(Promise.resolve()),
     };
     (SnapshotProvider as jest.Mocked<any>).mockReturnValue(mockSnapshotProvider);
   });
@@ -934,6 +939,59 @@ describe('TestResultProvider', () => {
       }
 
       expect(sut.isTestFile(target)).toEqual(expected);
+    });
+  });
+  describe('snapshot', () => {
+    const testPath = 'test-file';
+    let itBlocks, assertions, snapshotBlocks;
+    beforeEach(() => {
+      [itBlocks, assertions, snapshotBlocks] = createDataSet();
+      const dBlock0 = helper.makeDescribeBlock('describe-test-1', [itBlocks[0]], {
+        start: itBlocks[0].start,
+        end: itBlocks[0].end,
+      });
+      const dBlock4 = helper.makeDescribeBlock('describe-test-5', [itBlocks[4]], {
+        start: itBlocks[4].start,
+        end: itBlocks[4].end,
+      });
+      itBlocks[0] = dBlock0;
+      itBlocks[4] = dBlock4;
+
+      mockSnapshotProvider.parse.mockImplementation((testPath: string) => ({
+        testPath,
+        blocks: snapshotBlocks,
+      }));
+    });
+    it('parsing test file should fire event for testBlocks with snapshot info', () => {
+      const sut = newProviderWithData([makeData(itBlocks, assertions, testPath)]);
+      sut.getResults(testPath);
+      const testParsedCall = (sut.events.testSuiteChanged.fire as jest.Mocked<any>).mock.calls.find(
+        (call) => call[0].type === 'test-parsed'
+      );
+      expect(testParsedCall).not.toBeUndefined();
+      const sourceContainer = testParsedCall[0].sourceContainer;
+      let matchCount = 0;
+      [
+        ...sourceContainer.childContainers.flatMap((c) => c.childData),
+        ...sourceContainer.childData,
+      ].forEach((child) => {
+        const sBlock = snapshotBlocks.find((block) => block.marker === child.name);
+        if (sBlock) {
+          expect(child.attrs.snapshot).toEqual(sBlock.isInline ? 'inline' : 'external');
+          matchCount += 1;
+        } else {
+          expect(child.attrs.snapshot).toBeUndefined();
+        }
+      });
+      expect(matchCount).toEqual(2);
+    });
+    it('forward previewSnapshot to the snapshot provider', async () => {
+      const sut = newProviderWithData([makeData([], [], '')]);
+      await sut.previewSnapshot('whatever', 'full test name');
+      expect(mockSnapshotProvider.previewSnapshot).toHaveBeenCalledWith(
+        'whatever',
+        'full test name'
+      );
     });
   });
 });

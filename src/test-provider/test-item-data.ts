@@ -71,7 +71,7 @@ abstract class TestItemDataBase implements TestItemData, JestRunable, WithUri {
     }
   }
 
-  runItemCommand(command: ItemCommand): void {
+  runItemCommand(command: ItemCommand): void | Promise<void> {
     switch (command) {
       case ItemCommand.updateSnapshot: {
         const request = new vscode.TestRunRequest([this.item]);
@@ -82,15 +82,12 @@ abstract class TestItemDataBase implements TestItemData, JestRunable, WithUri {
         break;
       }
       case ItemCommand.viewSnapshot: {
-        this.viewSnapshot();
-        break;
+        return this.viewSnapshot().catch((e) => this.log('error', e));
       }
     }
   }
   viewSnapshot(): Promise<void> {
-    const msg = `viewSnapshot is not supported for ${this.item.id}`;
-    this.log('warn', msg);
-    return Promise.reject(msg);
+    return Promise.reject(`viewSnapshot is not supported for ${this.item.id}`);
   }
   abstract getJestRunRequest(itemCommand?: ItemCommand): JestExtRequestType;
 }
@@ -175,15 +172,6 @@ export class WorkspaceRoot extends TestItemDataBase {
       item,
     });
   };
-  private traverseDataTree(data: TestItemData, onItemData: (data: TestItemData) => void): void {
-    onItemData(data);
-    data.item.children.forEach((item) => {
-      const child = this.context.getData(item);
-      if (child) {
-        this.traverseDataTree(child, onItemData);
-      }
-    });
-  }
 
   private addFolder = (parent: FolderData | undefined, folderName: string): FolderData => {
     const p = parent ?? this;

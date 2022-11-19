@@ -13,16 +13,16 @@ export interface SnapshotSuite {
 
 const inlineKeys = ['toMatchInlineSnapshot', 'toThrowErrorMatchingInlineSnapshot'];
 export class SnapshotProvider {
-  private snapshots: Snapshot;
+  private snapshotSupport: Snapshot;
   private panel?: vscode.WebviewPanel;
 
   constructor() {
-    this.snapshots = new Snapshot(undefined, inlineKeys);
+    this.snapshotSupport = new Snapshot(undefined, inlineKeys);
   }
 
   public parse(testPath: string): SnapshotSuite {
     try {
-      const sBlocks = this.snapshots.parse(testPath);
+      const sBlocks = this.snapshotSupport.parse(testPath);
       const blocks = sBlocks.map((block) => ({
         ...block,
         isInline: inlineKeys.find((key) => block.node.name.includes(key)) ? true : false,
@@ -30,12 +30,12 @@ export class SnapshotProvider {
       const snapshotSuite = { testPath, blocks };
       return snapshotSuite;
     } catch (e) {
-      console.warn('[SnapshotProvider] getMetadataAsync failed:', e);
+      console.warn('[SnapshotProvider] parse failed:', e);
       return { testPath, blocks: [] };
     }
   }
   public async getContent(testPath: string, testFullName: string): Promise<string | undefined> {
-    return this.snapshots.getSnapshotContent(testPath, testFullName);
+    return this.snapshotSupport.getSnapshotContent(testPath, testFullName);
   }
   private escapeContent = (content: string) => {
     if (content) {

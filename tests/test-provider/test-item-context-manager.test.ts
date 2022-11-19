@@ -4,6 +4,7 @@ jest.unmock('../../src/appGlobals');
 import * as vscode from 'vscode';
 import { extensionName } from '../../src/appGlobals';
 import { TestItemContextManager } from '../../src/test-provider/test-item-context-manager';
+import { ItemCommand } from '../../src/test-provider/types';
 
 describe('TestItemContextManager', () => {
   beforeEach(() => {
@@ -176,34 +177,51 @@ describe('TestItemContextManager', () => {
         expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(extCmd, workspace);
       });
     });
-    it('view-snapshot menu commands', () => {
-      const manager = new TestItemContextManager();
-      const disposableList = manager.registerCommands();
-      expect(disposableList.length).toBeGreaterThanOrEqual(5);
+    describe('snapshot menu commands', () => {
+      it.each`
+        contextId                        | contextCommand                 | itemCommand
+        ${'jest.editor-view-snapshot'}   | ${'test-item.view-snapshot'}   | ${ItemCommand.viewSnapshot}
+        ${'jest.editor-update-snapshot'} | ${'test-item.update-snapshot'} | ${ItemCommand.updateSnapshot}
+      `('$contextId', ({ contextId, contextCommand, itemCommand }) => {
+        const manager = new TestItemContextManager();
+        const disposableList = manager.registerCommands();
+        expect(disposableList.length).toBeGreaterThanOrEqual(6);
 
-      const calls = (vscode.commands.registerCommand as jest.Mocked<any>).mock.calls.filter(
-        (call) => call[0] === `${extensionName}.test-item.view-snapshot`
-      );
+        const calls = (vscode.commands.registerCommand as jest.Mocked<any>).mock.calls.filter(
+          (call) => call[0] === `${extensionName}.${contextCommand}`
+        );
 
-      expect(calls).toHaveLength(1);
+        expect(calls).toHaveLength(1);
 
-      // set some itemContext then trigger the menu
-      const workspace: any = { name: 'ws' };
-      const context: any = {
-        workspace,
-        key: 'jest.editor-view-snapshot',
-        itemIds: ['a'],
-        onClick: jest.fn(),
-      };
-      manager.setItemContext(context);
-      const callBack = calls[0][1];
-      callBack({ id: 'a' });
-      expect(context.onClick).toHaveBeenCalled();
+        // set some itemContext then trigger the menu
+        const workspace: any = { name: 'ws' };
+        const context: any = {
+          workspace,
+          key: contextId,
+          itemIds: ['a'],
+        };
+        manager.setItemContext(context);
+        const callBack = calls[0][1];
+        const testItem = { id: 'a' };
+        callBack(testItem);
+        const extCmd = `${extensionName}.with-workspace.item-command`;
+        expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+          extCmd,
+          workspace,
+          testItem,
+          itemCommand
+        );
 
-      (context.onClick as jest.Mocked<any>).mockClear();
+        (vscode.commands.executeCommand as jest.Mocked<any>).mockClear();
 
-      callBack({ id: 'b' });
-      expect(context.onClick).not.toHaveBeenCalled();
+        callBack({ id: 'b' });
+        expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(
+          extCmd,
+          workspace,
+          testItem,
+          itemCommand
+        );
+      });
     });
   });
 });

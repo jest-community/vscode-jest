@@ -37,6 +37,7 @@ export const mockExtExplorerContext = (wsName = 'ws-1', override: any = {}): any
       getTestList: jest.fn().mockReturnValue([]),
       isTestFile: jest.fn().mockReturnValue('yes'),
       getTestSuiteResult: jest.fn().mockReturnValue({}),
+      previewSnapshot: jest.fn(),
     },
     debugTests: jest.fn(),
     sessionEvents: mockJestExtEvents(),
