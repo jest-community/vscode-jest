@@ -44,6 +44,7 @@ Content
     - [How to trigger the test run?](#how-to-trigger-the-test-run)
     - [How to debug tests?](#how-to-debug-tests)
     - [How to use code coverage?](#how-to-use-code-coverage)
+    - [How to update and view snpashots?](#how-to-update-and-view-snpashots)
     - [How to use the extension with monorepo projects?](#how-to-use-the-extension-with-monorepo-projects)
     - [How to read the StatusBar?](#how-to-read-the-statusbar)
     - [How to use the Test Explorer?](#how-to-use-the-test-explorer)
@@ -83,7 +84,7 @@ Content
 * Show fails inside the problem inspector.
 * Highlights the errors next to the `expect` functions.
 * Adds syntax highlighting to snapshot files.
-* A one button update for failed snapshots.
+* Update and view snapshots at any level.
 * Show coverage information in files being tested.
 * Help debug jest tests in vscode.
 * Supports multiple test run modes (automated, manual, and hybrid onSave) to meet user's preferred development experience.
@@ -169,6 +170,8 @@ In addition to the coverage summary that is shown on the top of the file, each l
 You can customize coverage start up behavior, style and colors, see [customization](#customization) for more details.
 
 </details>
+
+### How to update and view snpashots?
 
 ### How to use the extension with monorepo projects?
 
@@ -257,10 +260,6 @@ Users can use the following settings to tailor the extension for their environme
 |**Editor**|
 |<strike>enableInlineErrorMessages</strike> :x:| Whether errors should be reported inline on a file|--|This is now deprecated in favor of `jest.testExplorer` |
 |[testExplorer](#testexplorer) |Configure jest test explorer|null|`{"showInlineError": "true"}`|
-|**Snapshot**|
-|enableSnapshotUpdateMessages|Whether snapshot update messages should show|true|`"jest.enableSnapshotUpdateMessages": false`|
-|enableSnapshotPreviews 💼|Whether snapshot previews should show|true|`"jest.enableSnapshotPreviews": false`|
-|restartJestOnSnapshotUpdate :x:| Restart Jest runner after updating the snapshots|false|This is no longer needed in v4|
 |**Coverage**|
 |showCoverageOnLoad|Show code coverage when extension starts|false|`"jest.showCoverageOnLoad": true`|
 |[coverageFormatter](#coverageFormatter)|Determine the coverage overlay style|"DefaultFormatter"|`"jest.coverageFormatter": "GutterFormatter"`|

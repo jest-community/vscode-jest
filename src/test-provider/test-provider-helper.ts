@@ -9,7 +9,7 @@ import { JestExtExplorerContext, TestItemData } from './types';
  * as well as factory functions to create TestItem and TestRun that could impact the state
  */
 
-export type TagIdType = 'run' | 'debug';
+export type TagIdType = 'run' | 'debug' | 'update-snapshot';
 
 let RunSeq = 0;
 export class JestTestProviderContext {
@@ -84,8 +84,13 @@ export class JestTestProviderContext {
   };
 
   // tags
-  getTag = (tagId: TagIdType): vscode.TestTag | undefined =>
-    this.profiles.find((p) => p.tag?.id === tagId)?.tag;
+  getTag = (tagId: TagIdType): vscode.TestTag => {
+    const tag = this.profiles.find((p) => p.tag?.id === tagId)?.tag;
+    if (!tag) {
+      throw new Error(`unrecognized tag: ${tagId}`);
+    }
+    return tag;
+  };
 }
 
 export interface JestTestRunOptions {

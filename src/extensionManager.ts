@@ -13,6 +13,7 @@ import {
   StartWizardOptions,
   WizardTaskId,
 } from './setup-wizard';
+import { ItemCommand } from './test-provider/types';
 
 export type GetJestExtByURI = (uri: vscode.Uri) => JestExt | undefined;
 
@@ -405,6 +406,13 @@ export class ExtensionManager {
         name: 'enable-login-shell',
         callback: (extension) => {
           extension.enableLoginShell();
+        },
+      }),
+      this.registerCommand({
+        type: 'workspace',
+        name: 'item-command',
+        callback: (extension, testItem: vscode.TestItem, itemCommand: ItemCommand) => {
+          extension.runItemCommand(testItem, itemCommand);
         },
       }),
 

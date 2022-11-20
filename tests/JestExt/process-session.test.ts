@@ -80,35 +80,6 @@ describe('ProcessSession', () => {
         }
       }
     );
-    it.each`
-      baseRequest                                                                                | snapshotRequest
-      ${{ type: 'watch-tests' }}                                                                 | ${{ type: 'all-tests', updateSnapshot: true }}
-      ${{ type: 'watch-all-tests' }}                                                             | ${{ type: 'all-tests', updateSnapshot: true }}
-      ${{ type: 'all-tests' }}                                                                   | ${{ type: 'all-tests', updateSnapshot: true }}
-      ${{ type: 'by-file', testFileName: 'abc' }}                                                | ${{ type: 'by-file', testFileName: 'abc', updateSnapshot: true }}
-      ${{ type: 'by-file', testFileName: 'abc', updateSnapshot: true }}                          | ${undefined}
-      ${{ type: 'by-file-pattern', testFileNamePattern: 'abc' }}                                 | ${{ type: 'by-file-pattern', testFileNamePattern: 'abc', updateSnapshot: true }}
-      ${{ type: 'by-file-test', testFileName: 'abc', testNamePattern: 'a test' }}                | ${{ type: 'by-file-test', testFileName: 'abc', testNamePattern: 'a test', updateSnapshot: true }}
-      ${{ type: 'by-file-test-pattern', testFileNamePattern: 'abc', testNamePattern: 'a test' }} | ${{ type: 'by-file-test-pattern', testFileNamePattern: 'abc', testNamePattern: 'a test', updateSnapshot: true }}
-    `(
-      'can schedule update-snapshot request: $baseRequest',
-      async ({ baseRequest, snapshotRequest }) => {
-        expect.hasAssertions();
-        const sm = createProcessSession(context);
-        expect(mockProcessManager).toHaveBeenCalledTimes(1);
-
-        sm.scheduleProcess({ type: 'update-snapshot', baseRequest });
-
-        if (snapshotRequest) {
-          expect(processManagerMock.scheduleJestProcess).toHaveBeenCalledWith(
-            expect.objectContaining(snapshotRequest)
-          );
-        } else {
-          expect(processManagerMock.scheduleJestProcess).not.toHaveBeenCalled();
-        }
-      }
-    );
-
     it.each([['not-test']])('currently does not support "%s" request scheduling', (type) => {
       expect.hasAssertions();
       const sm = createProcessSession(context);
@@ -119,13 +90,12 @@ describe('ProcessSession', () => {
       expect(processManagerMock.scheduleJestProcess).not.toHaveBeenCalled();
     });
     describe.each`
-      type                 | inputProperty                             | defaultListener
-      ${'all-tests'}       | ${undefined}                              | ${listeners.RunTestListener}
-      ${'watch-tests'}     | ${undefined}                              | ${listeners.RunTestListener}
-      ${'watch-all-tests'} | ${undefined}                              | ${listeners.RunTestListener}
-      ${'by-file'}         | ${{ testFileNamePattern: 'abc' }}         | ${listeners.RunTestListener}
-      ${'list-test-files'} | ${undefined}                              | ${listeners.ListTestFileListener}
-      ${'update-snapshot'} | ${{ baseRequest: { type: 'all-tests' } }} | ${listeners.RunTestListener}
+      type                 | inputProperty                     | defaultListener
+      ${'all-tests'}       | ${undefined}                      | ${listeners.RunTestListener}
+      ${'watch-tests'}     | ${undefined}                      | ${listeners.RunTestListener}
+      ${'watch-all-tests'} | ${undefined}                      | ${listeners.RunTestListener}
+      ${'by-file'}         | ${{ testFileNamePattern: 'abc' }} | ${listeners.RunTestListener}
+      ${'list-test-files'} | ${undefined}                      | ${listeners.ListTestFileListener}
     `('schedule $type', ({ type, inputProperty, defaultListener }) => {
       it('with default listener', () => {
         expect.hasAssertions();

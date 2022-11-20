@@ -63,3 +63,12 @@ describe('JestTestRun', () => {
     });
   });
 });
+describe('JestTestProviderContext', () => {
+  it('when try to getTag not in any profiles, throw error', () => {
+    const whatever: any = {};
+    const profile: any = { tag: { id: 'run' } };
+    const context = new JestTestProviderContext(whatever, whatever, [profile]);
+    expect(context.getTag('run')).toEqual(profile.tag);
+    expect(() => context.getTag('debug')).toThrow();
+  });
+});

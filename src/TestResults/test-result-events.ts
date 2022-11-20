@@ -17,7 +17,7 @@ export type TestSuitChangeEvent =
   | {
       type: 'test-parsed';
       file: string;
-      testContainer: ContainerNode<ItBlock>;
+      sourceContainer: ContainerNode<ItBlock>;
     };
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types

@@ -29,7 +29,7 @@ export const mockExtExplorerContext = (wsName = 'ws-1', override: any = {}): any
     loggingFactory: { create: jest.fn().mockReturnValue(jest.fn()) },
     session: { scheduleProcess: jest.fn() },
     workspace: { name: wsName, uri: { fsPath: `/${wsName}` } },
-    testResolveProvider: {
+    testResultProvider: {
       events: {
         testListUpdated: { event: jest.fn().mockReturnValue({ dispose: jest.fn() }) },
         testSuiteChanged: { event: jest.fn().mockReturnValue({ dispose: jest.fn() }) },
@@ -37,6 +37,7 @@ export const mockExtExplorerContext = (wsName = 'ws-1', override: any = {}): any
       getTestList: jest.fn().mockReturnValue([]),
       isTestFile: jest.fn().mockReturnValue('yes'),
       getTestSuiteResult: jest.fn().mockReturnValue({}),
+      previewSnapshot: jest.fn(),
     },
     debugTests: jest.fn(),
     sessionEvents: mockJestExtEvents(),
@@ -70,12 +71,12 @@ export const mockController = (): any => {
       return run;
     }),
     dispose: jest.fn(),
-    createRunProfile: jest.fn().mockImplementation((label, kind, runHandler, isDefault, tags) => ({
+    createRunProfile: jest.fn().mockImplementation((label, kind, runHandler, isDefault, tag) => ({
       label,
       kind,
       runHandler,
       isDefault,
-      tags: tags ?? [],
+      tag,
     })),
     createTestItem: jest.fn().mockImplementation((id, label, uri) => {
       const item: any = {

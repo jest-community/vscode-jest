@@ -119,7 +119,6 @@ export const getExtensionResourceSettings = (uri: vscode.Uri): PluginResourceSet
 
   return {
     autoEnable,
-    enableSnapshotUpdateMessages: config.get<boolean>('enableSnapshotUpdateMessages'),
     pathToConfig: config.get<string>('pathToConfig'),
     jestCommandLine: config.get<string>('jestCommandLine'),
     pathToJest: config.get<string>('pathToJest'),
