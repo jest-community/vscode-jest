@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { Snapshot, SnapshotBlock } from 'jest-editor-support';
+import { escapeRegExp } from '../helpers';
 
 export type SnapshotStatus = 'exists' | 'missing' | 'inline';
 
@@ -34,9 +35,7 @@ export class SnapshotProvider {
       return { testPath, blocks: [] };
     }
   }
-  public async getContent(testPath: string, testFullName: string): Promise<string | undefined> {
-    return this.snapshotSupport.getSnapshotContent(testPath, testFullName);
-  }
+
   private escapeContent = (content: string) => {
     if (content) {
       const escaped = content
@@ -49,10 +48,36 @@ export class SnapshotProvider {
     }
   };
   public async previewSnapshot(testPath: string, testFullName: string): Promise<void> {
-    const content = await this.getContent(testPath, testFullName);
-    if (!content) {
+    const content = await this.snapshotSupport.getSnapshotContent(
+      testPath,
+      new RegExp(`^${escapeRegExp(testFullName)} [0-9]+$`)
+    );
+    const noSnapshotFound = (): void => {
       vscode.window.showErrorMessage('no snapshot is found, please run test to generate first');
       return;
+    };
+    if (!content) {
+      return noSnapshotFound();
+    }
+    let contentString: string | undefined;
+    if (typeof content === 'string') {
+      contentString = this.escapeContent(content);
+    } else {
+      const entries = Object.entries(content);
+      switch (entries.length) {
+        case 0:
+          return noSnapshotFound();
+        case 1:
+          contentString = this.escapeContent(entries[0][1]);
+          break;
+        default: {
+          const strings = entries.map(
+            ([key, value]) => `<h3>${key}</h3>${this.escapeContent(value)}`
+          );
+          contentString = strings.join('<hr>');
+          break;
+        }
+      }
     }
 
     if (this.panel) {
@@ -70,7 +95,7 @@ export class SnapshotProvider {
       });
     }
 
-    this.panel.webview.html = (content && this.escapeContent(content)) || '';
+    this.panel.webview.html = contentString ?? '';
     this.panel.title = testFullName;
   }
 }

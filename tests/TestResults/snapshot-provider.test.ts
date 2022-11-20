@@ -1,4 +1,5 @@
 jest.unmock('../../src/TestResults/snapshot-provider');
+jest.unmock('../../src/helpers');
 
 import * as vscode from 'vscode';
 import { SnapshotProvider } from '../../src/TestResults/snapshot-provider';
@@ -46,38 +47,43 @@ describe('SnapshotProvider', () => {
       });
     });
   });
-  describe('getSnapshotContent', () => {
-    it.each`
-      case | impl                                  | expected
-      ${1} | ${() => Promise.resolve('something')} | ${'something'}
-      ${2} | ${() => Promise.resolve()}            | ${undefined}
-      ${3} | ${() => Promise.reject('error')}      | ${'throws'}
-    `('$case: forward call to Snapshot', async ({ impl, expected }) => {
-      mockSnapshot.getSnapshotContent.mockImplementation(impl);
-      const provider = new SnapshotProvider();
-      if (expected === 'throws') {
-        await expect(provider.getContent('whatever', 'whatever')).rejects.toEqual('error');
-      } else {
-        await expect(provider.getContent('whatever', 'whatever')).resolves.toEqual(expected);
-      }
-    });
-  });
+
   describe('previewSnapshot', () => {
-    it('display content in a WebviewPanel', async () => {
-      const content1 = '<test 1> result';
-      const content2 = '<test 2> "some quoted text"';
-      const content3 = "<test 3> 'single quote' & this";
-      mockSnapshot.getSnapshotContent
-        .mockReturnValueOnce(Promise.resolve(content1))
-        .mockReturnValueOnce(Promise.resolve(content2))
-        .mockReturnValueOnce(Promise.resolve(content3));
-      const mockPanel = {
+    let mockPanel;
+    beforeEach(() => {
+      mockPanel = {
         reveal: jest.fn(),
         onDidDispose: jest.fn(),
         webview: { html: undefined },
         title: undefined,
       };
       (vscode.window.createWebviewPanel as jest.Mocked<any>).mockReturnValue(mockPanel);
+    });
+    describe('create a regexp from test names', () => {
+      it.each`
+        testName                 | regString
+        ${'simple name'}         | ${'simple name'}
+        ${'with $name'}          | ${'with \\$name'}
+        ${'a string.with.dots*'} | ${'a string\\.with\\.dots\\*'}
+        ${'<p>title</p>'}        | ${'<p>title<\\/p>'}
+      `('$testName', async ({ testName, regString }) => {
+        mockSnapshot.getSnapshotContent.mockReturnValue(Promise.resolve(undefined));
+        const provider = new SnapshotProvider();
+        await provider.previewSnapshot('whatever', testName);
+        expect(mockSnapshot.getSnapshotContent).toHaveBeenCalledWith(
+          'whatever',
+          new RegExp(`^${regString} [0-9]+$`)
+        );
+      });
+    });
+    it('display content in a WebviewPanel', async () => {
+      const content1 = { 'some test': '<test 1> result' };
+      const content2 = '<test 2> "some quoted text"';
+      const content3 = { '3rd test': "<test 3> 'single quote' & this" };
+      mockSnapshot.getSnapshotContent
+        .mockReturnValueOnce(Promise.resolve(content1))
+        .mockReturnValueOnce(Promise.resolve(content2))
+        .mockReturnValueOnce(Promise.resolve(content3));
 
       const provider = new SnapshotProvider();
       await provider.previewSnapshot('test-file', 'some test');
@@ -111,6 +117,28 @@ describe('SnapshotProvider', () => {
       await provider.previewSnapshot('test-file', 'some test');
       expect(vscode.window.showErrorMessage).toHaveBeenCalled();
       expect(vscode.window.createWebviewPanel).not.toHaveBeenCalled();
+
+      (vscode.window.showErrorMessage as jest.Mocked<any>).mockClear();
+
+      mockSnapshot.getSnapshotContent.mockReturnValueOnce({});
+      await provider.previewSnapshot('test-file', 'some test');
+      expect(vscode.window.showErrorMessage).toHaveBeenCalled();
+      expect(vscode.window.createWebviewPanel).not.toHaveBeenCalled();
+    });
+    it('can show multiple snapshots within a test', async () => {
+      const content = {
+        'test 1': 'test 1 content',
+        'test 2': 'test 2 content',
+      };
+      mockSnapshot.getSnapshotContent.mockReturnValueOnce(Promise.resolve(content));
+      const provider = new SnapshotProvider();
+      await provider.previewSnapshot('test-file', 'some test');
+      expect(vscode.window.createWebviewPanel).toHaveBeenCalledTimes(1);
+      expect(mockPanel.onDidDispose).toHaveBeenCalled();
+      expect(mockPanel.webview.html).toMatchInlineSnapshot(
+        `"<h3>test 1</h3><pre>test 1 content</pre><hr><h3>test 2</h3><pre>test 2 content</pre>"`
+      );
+      expect(mockPanel.title).toEqual(expect.stringContaining('some test'));
     });
   });
 });
