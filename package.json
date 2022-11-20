@@ -299,6 +299,16 @@
         "command": "io.orta.jest.test-item.coverage.toggle-on",
         "title": "Toggle Coverage On",
         "icon": "$(color-mode)"
+      },
+      {
+        "command": "io.orta.jest.test-item.view-snapshot",
+        "title": "View Snapshot",
+        "icon": "$(camera)"
+      },
+      {
+        "command": "io.orta.jest.test-item.update-snapshot",
+        "title": "Update Snapshot",
+        "icon": "$(export)"
       }
     ],
     "menus": {
@@ -363,6 +373,19 @@
           "command": "io.orta.jest.test-item.coverage.toggle-on",
           "group": "inline",
           "when": "testId in jest.coverage.off"
+        },
+        {
+          "command": "io.orta.jest.test-item.update-snapshot"
+        }
+      ],
+      "testing/item/gutter": [
+        {
+          "command": "io.orta.jest.test-item.view-snapshot",
+          "when": "testId in jest.editor-view-snapshot"
+        },
+        {
+          "command": "io.orta.jest.test-item.update-snapshot",
+          "when": "testId in jest.editor-update-snapshot"
         }
       ]
     },
@@ -501,7 +524,7 @@
   "dependencies": {
     "istanbul-lib-coverage": "^3.0.0",
     "istanbul-lib-source-maps": "^4.0.0",
-    "jest-editor-support": "^30.2.1"
+    "jest-editor-support": "^30.3.1"
   },
   "devDependencies": {
     "@types/istanbul-lib-coverage": "^2.0.2",

@@ -38,7 +38,6 @@ export type NodeEnv = ProjectWorkspace['nodeEnv'];
 export type MonitorLongRun = 'off' | number;
 export interface PluginResourceSettings {
   autoEnable?: boolean;
-  enableSnapshotUpdateMessages?: boolean;
   jestCommandLine?: string;
   pathToConfig?: string;
   pathToJest?: string;

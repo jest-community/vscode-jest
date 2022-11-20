@@ -40,6 +40,7 @@ import { addFolderToDisabledWorkspaceFolders } from '../../src/extensionManager'
 import { JestOutputTerminal } from '../../src/JestExt/output-terminal';
 import { RunShell } from '../../src/JestExt/run-shell';
 import * as errors from '../../src/errors';
+import { ItemCommand } from '../../src/test-provider/types';
 
 /* eslint jest/expect-expect: ["error", { "assertFunctionNames": ["expect", "expectItTakesNoAction"] }] */
 const mockHelpers = helper as jest.Mocked<any>;
@@ -107,6 +108,7 @@ describe('JestExt', () => {
 
   const mockTestProvider: any = {
     dispose: jest.fn(),
+    runItemCommand: jest.fn(),
   };
 
   beforeEach(() => {
@@ -1226,5 +1228,15 @@ describe('JestExt', () => {
         }
       );
     });
+  });
+  it('runItemCommand will delegate operation to testProvider', () => {
+    const jestExt = newJestExt();
+    jestExt.startSession();
+    const testItem: any = {};
+    jestExt.runItemCommand(testItem, ItemCommand.updateSnapshot);
+    expect(mockTestProvider.runItemCommand).toHaveBeenCalledWith(
+      testItem,
+      ItemCommand.updateSnapshot
+    );
   });
 });

@@ -71,9 +71,7 @@ export class JestProcessManager implements TaskArrayFunctions<JestProcess> {
     const process = task.data;
 
     try {
-      this.logging('debug', 'starting process:', process);
       await process.start();
-      this.logging('debug', 'process ended:', process);
     } catch (e) {
       this.logging('error', `${queue.name}: process failed:`, process, e);
     } finally {

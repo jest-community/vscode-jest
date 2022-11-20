@@ -17,6 +17,7 @@ const window = {
   showWorkspaceFolderPick: jest.fn(),
   onDidChangeActiveTextEditor: jest.fn(),
   showInformationMessage: jest.fn(),
+  createWebviewPanel: jest.fn(),
 };
 
 const workspace = {
@@ -79,6 +80,10 @@ const TestRunProfileKind = {
   Debug: 2,
   Coverage: 3,
 };
+const ViewColumn = {
+  One: 1,
+  Tow: 2,
+};
 
 const TestMessage = jest.fn();
 const TestRunRequest = jest.fn();
@@ -112,4 +117,5 @@ export = {
   EventEmitter,
   TestMessage,
   TestRunRequest,
+  ViewColumn,
 };

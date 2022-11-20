@@ -29,7 +29,7 @@ import { extensionName, SupportedLanguageIds } from '../appGlobals';
 import { createJestExtContext, getExtensionResourceSettings, prefixWorkspace } from './helper';
 import { PluginResourceSettings } from '../Settings';
 import { WizardTaskId } from '../setup-wizard';
-import { JestExtExplorerContext } from '../test-provider/types';
+import { ItemCommand, JestExtExplorerContext } from '../test-provider/types';
 import { JestTestProvider } from '../test-provider';
 import { JestProcessInfo } from '../JestProcessManagement';
 import { addFolderToDisabledWorkspaceFolders } from '../extensionManager';
@@ -126,7 +126,7 @@ export class JestExt {
       ...this.extContext,
       sessionEvents: this.events,
       session: this.processSession,
-      testResolveProvider: this.testResultProvider,
+      testResultProvider: this.testResultProvider,
       debugTests: this.debugTests,
     };
   }
@@ -626,6 +626,9 @@ export class JestExt {
 
     // restart jest since coverage condition has changed
     this.triggerUpdateSettings(this.extContext.settings);
+  }
+  runItemCommand(testItem: vscode.TestItem, itemCommand: ItemCommand): void {
+    this.testProvider?.runItemCommand(testItem, itemCommand);
   }
   enableLoginShell(): void {
     if (this.extContext.settings.shell.useLoginShell) {

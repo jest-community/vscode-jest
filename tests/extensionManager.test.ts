@@ -72,6 +72,7 @@ const makeJestExt = (workspace: vscode.WorkspaceFolder): any => {
     toggleAutoRun: jest.fn(),
     toggleCoverageOverlay: jest.fn(),
     enableLoginShell: jest.fn(),
+    runItemCommand: jest.fn(),
     workspace,
   };
 };
@@ -669,6 +670,7 @@ describe('ExtensionManager', () => {
         ${'with-workspace.toggle-auto-run'}    | ${'toggleAutoRun'}
         ${'with-workspace.toggle-coverage'}    | ${'toggleCoverageOverlay'}
         ${'with-workspace.enable-login-shell'} | ${'enableLoginShell'}
+        ${'with-workspace.item-command'}       | ${'runItemCommand'}
       `('extension-based commands "$name"', async ({ name, extFunc }) => {
         extensionManager.register();
         const expectedName = `${extensionName}.${name}`;
