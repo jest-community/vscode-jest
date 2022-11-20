@@ -8,7 +8,7 @@ export type TestItemDataType = WorkspaceRoot | FolderData | TestDocumentRoot | T
 
 /** JestExt context exposed to the test explorer */
 export interface JestExtExplorerContext extends JestExtSessionContext {
-  readonly testResolveProvider: TestResultProvider;
+  readonly testResultProvider: TestResultProvider;
   readonly sessionEvents: JestSessionEvents;
   debugTests: DebugFunction;
 }

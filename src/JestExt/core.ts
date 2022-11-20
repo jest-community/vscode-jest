@@ -124,7 +124,7 @@ export class JestExt {
       ...this.extContext,
       sessionEvents: this.events,
       session: this.processSession,
-      testResolveProvider: this.testResultProvider,
+      testResultProvider: this.testResultProvider,
       debugTests: this.debugTests,
     };
   }

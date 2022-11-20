@@ -139,7 +139,7 @@ export class WorkspaceRoot extends TestItemDataBase {
     return { type: 'all-tests', updateSnapshot, transform };
   }
   discoverTest(run: JestTestRun): void {
-    const testList = this.context.ext.testResolveProvider.getTestList();
+    const testList = this.context.ext.testResultProvider.getTestList();
     // only trigger update when testList is not empty because it's possible test-list is not available yet,
     // in such case we should just wait for the testListUpdated event to trigger the update
     if (testList.length > 0) {
@@ -153,8 +153,8 @@ export class WorkspaceRoot extends TestItemDataBase {
   // test result event handling
   private registerEvents = (): void => {
     this.listeners = [
-      this.context.ext.testResolveProvider.events.testListUpdated.event(this.onTestListUpdated),
-      this.context.ext.testResolveProvider.events.testSuiteChanged.event(this.onTestSuiteChanged),
+      this.context.ext.testResultProvider.events.testListUpdated.event(this.onTestListUpdated),
+      this.context.ext.testResultProvider.events.testSuiteChanged.event(this.onTestSuiteChanged),
       this.context.ext.sessionEvents.onRunEvent.event(this.onRunEvent),
     ];
   };
@@ -638,7 +638,7 @@ export class TestDocumentRoot extends TestResultData {
   private createChildItems = (parsedRoot?: ContainerNode<ItBlock>): void => {
     const container =
       parsedRoot ??
-      this.context.ext.testResolveProvider.getTestSuiteResult(this.item.id)?.assertionContainer;
+      this.context.ext.testResultProvider.getTestSuiteResult(this.item.id)?.assertionContainer;
     if (!container) {
       this.item.children.replace([]);
     } else {
@@ -649,7 +649,7 @@ export class TestDocumentRoot extends TestResultData {
   };
 
   public updateResultState(run: JestTestRun): void {
-    const suiteResult = this.context.ext.testResolveProvider.getTestSuiteResult(this.item.id);
+    const suiteResult = this.context.ext.testResultProvider.getTestSuiteResult(this.item.id);
 
     // only update suite status if the assertionContainer is empty, which can occur when
     // test file has syntax error or failed to run for whatever reason.
@@ -781,7 +781,7 @@ export class TestData extends TestResultData implements Debuggable {
   }
   public viewSnapshot(): Promise<void> {
     if (this.node.attrs.snapshot === 'external') {
-      return this.context.ext.testResolveProvider.previewSnapshot(
+      return this.context.ext.testResultProvider.previewSnapshot(
         this.uri.fsPath,
         this.node.fullName
       );

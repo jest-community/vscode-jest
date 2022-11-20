@@ -29,7 +29,7 @@ export const mockExtExplorerContext = (wsName = 'ws-1', override: any = {}): any
     loggingFactory: { create: jest.fn().mockReturnValue(jest.fn()) },
     session: { scheduleProcess: jest.fn() },
     workspace: { name: wsName, uri: { fsPath: `/${wsName}` } },
-    testResolveProvider: {
+    testResultProvider: {
       events: {
         testListUpdated: { event: jest.fn().mockReturnValue({ dispose: jest.fn() }) },
         testSuiteChanged: { event: jest.fn().mockReturnValue({ dispose: jest.fn() }) },
