@@ -27,7 +27,7 @@ Happy testing!
 
 ## Releases 
 - **stable**: [v4.6.0](release-notes/release-note-v4.md#v460)
-- **pre-release**: [v5.0.2](release-notes/release-note-v5.md#v50-pre-release-roll-up)
+- **pre-release**: [v5.0.3](release-notes/release-note-v5.md#v50-pre-release-roll-up)
 
 All: [Release Notes](release-notes/release-notes.md)
 
@@ -44,6 +44,7 @@ Content
     - [How to trigger the test run?](#how-to-trigger-the-test-run)
     - [How to debug tests?](#how-to-debug-tests)
     - [How to use code coverage?](#how-to-use-code-coverage)
+    - [How to update and view snapshots](#how-to-update-and-view-snapshots)
     - [How to use the extension with monorepo projects?](#how-to-use-the-extension-with-monorepo-projects)
     - [How to read the StatusBar?](#how-to-read-the-statusbar)
     - [How to use the Test Explorer?](#how-to-use-the-test-explorer)
@@ -169,6 +170,15 @@ In addition to the coverage summary that is shown on the top of the file, each l
 You can customize coverage start up behavior, style and colors, see [customization](#customization) for more details.
 
 </details>
+
+### How to update and view snapshots
+![snapshot-menu](images/snapshot-menu.jpg)
+
+Users can update snapshot in any granularity from the context menu:
+1. in TestExplorer tree view: Update snapshot for the workspace, folder, test file or just a single test.
+2. in Editor's gutter menu: Update and view snapshot for any given test. 
+  
+Snapshots are now fully supported for parameterized (`test.each`) and template-literal named tests. 
 
 ### How to use the extension with monorepo projects?
 

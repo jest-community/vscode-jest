@@ -7,11 +7,12 @@
     - [2. automate monorepo project setup through "Setup Tool"](#2-automate-monorepo-project-setup-through-setup-tool)
     - [3. improve test run output with terminal](#3-improve-test-run-output-with-terminal)
     - [4. deep activation](#4-deep-activation)
-    - [5. no more intermittent "command not found" (auto recovery with login-shell)](#5-no-more-intermittent-command-not-found-auto-recovery-with-login-shell)
-    - [6. long run monitor](#6-long-run-monitor)
-    - [7. one-click disable non-jest folder for monorepo project](#7-one-click-disable-non-jest-folder-for-monorepo-project)
-    - [8. autoRun change](#8-autorun-change)
-    - [9. supports v8 coverage provider](#9-supports-v8-coverage-provider)
+    - [5. enhanced snapshot support](#5-enhanced-snapshot-support)
+    - [6. no more intermittent "command not found" error (auto recovery with login-shell)](#6-no-more-intermittent-command-not-found-error-auto-recovery-with-login-shell)
+    - [7. long run monitor](#7-long-run-monitor)
+    - [8. one-click disable non-jest folder for monorepo project](#8-one-click-disable-non-jest-folder-for-monorepo-project)
+    - [9. autoRun change](#9-autorun-change)
+    - [10. supports v8 coverage provider](#10-supports-v8-coverage-provider)
   - [Fixes](#fixes)
   - [Breaking Changes](#breaking-changes)
   - [Change log](#change-log)
@@ -25,6 +26,7 @@ We have also decided to make TestExplorer a preferred UI outlet instead of our c
 ### Main Features
 
 ![main-features-5.0](images/../../images/main-features-5.0.1.jpg)
+![v5-release-snapshot-menu](images/../../images/v5-release-snapshot-menu.jpg)
 
 #### 1. toggle autoRun and coverage through TestExplorer inline menu
 This allows quick one-click change of autoRun and test-coverage for runtime only. This allow users to change test-run behavior frequently to adapt to different phrases in the development cycle. Hopefully, it also help new users that experiences performance issues to be able to self-help easily.
@@ -61,7 +63,16 @@ For projects do not meet any of the existing activation events, there is now a n
 
 ([v5.0.0](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.0): [#907](https://github.com/jest-community/vscode-jest/pull/907) - @connectdotz)
 
-#### 5. no more intermittent "command not found" (auto recovery with login-shell)
+
+#### 5. enhanced snapshot support
+Snapshot support has moved from codeLens to context menu. Users can update snapshot in any granularity from the context menu:
+1. in TestExplorer tree view: Update snapshot for the workspace, folder, test file or just a single test.
+2. in Editor's gutter menu: Update and view snapshot for any given test. 
+  
+Snapshots are now fully supported for parameterized (`test.each`) and template-literal named tests. 
+
+Snapshot codeLens and related settings are, therefore, retired.
+#### 6. no more intermittent "command not found" error (auto recovery with login-shell)
 
 On non-windows platforms, vscode sometimes fails to initialize its process env upon starting up, which crashes jest run/debug with "command not found" errors (exit code 127), such as `"env: node: No such file or directory"` or `"/bin/sh: yarn: command not found"`. This has caused a lot confusion and frustration, therefore, we added the functionality to automatically retry tests with a login shell (instead of the default non-login shell) when detecting the above-mentioned errors. 
 
@@ -73,19 +84,19 @@ Please note these changes only apply to test runs; you might experience similar 
 ([v5.0.0](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.0): [#874](https://github.com/jest-community/vscode-jest/pull/874) - @connectdotz)
 ([v5.0.2](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.2): [#941](https://github.com/jest-community/vscode-jest/pull/941) - @connectdotz)
 
-#### 6. long run monitor
+#### 7. long run monitor
 
 In v5 we also added a long-run monitor to be proactive in helping users detect and potential workaround such situation. The threshold setting ["jest.monitorLongRun"](../README.md#monitorlongrun) default is 60 seconds: `"jest.monitorLongRun": 60000`, 
 
 ([v5.0.0](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.0): [#904](https://github.com/jest-community/vscode-jest/pull/904) - @connectdotz)
 
-#### 7. one-click disable non-jest folder for monorepo project
+#### 8. one-click disable non-jest folder for monorepo project
 
 Users can now easily one-click to "disable" the failed folder from the error message window. 
 
 ([v5.0.0](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.0): [#896](https://github.com/jest-community/vscode-jest/pull/896) - @jonnytest1) 
 
-#### 8. autoRun change
+#### 9. autoRun change
 
 1. Introducing [autoRun short-hand](../README.md#autorun-config) to make setting up autoRun easier 
 2. Change autoRun default to drop running all tests on start-up (this is potentially a breaking change)
@@ -101,7 +112,7 @@ If you already have the `"jest.autoRun"` in your settings.json file, nothing wil
 
 ([v5.0.0](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.0): [#906](https://github.com/jest-community/vscode-jest/pull/906) - @connectdotz)
 
-#### 9. supports v8 coverage provider
+#### 10. supports v8 coverage provider
 
 Users with jest coverageProvider `v8` should be able to see coverage like with the default `babel` coverageProvider. Please be mindful that these providers do generate slightly different coverage reports, see [facebook/jest#11188](https://github.com/facebook/jest/issues/11188) for more details.
 
@@ -123,6 +134,7 @@ Users with jest coverageProvider `v8` should be able to see coverage like with t
   - removed the "enable" and "showClassicStatus" attributes. The only valid attribute is "showInlineError".
 - `"jest.autoRun` default value has changed. see detail above.
 ### Change log
+- [v5.0.3 pre-release](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.3)
 - [v5.0.2 pre-release](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.2)
 - [v5.0.1 pre-release](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.1)
 - [v5.0.0 pre-release](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.0)
