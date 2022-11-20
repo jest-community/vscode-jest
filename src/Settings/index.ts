@@ -1,4 +1,3 @@
-import { TestState } from '../DebugCodeLens';
 import { CoverageColors } from '../Coverage/CoverageOverlay';
 import { ProjectWorkspace } from 'jest-editor-support';
 import { AutoRun } from '../JestExt/auto-run';
@@ -58,10 +57,6 @@ export interface PluginResourceSettings {
 }
 
 export interface PluginWindowSettings {
-  debugCodeLens: {
-    enabled: boolean;
-    showWhenTestStateIn: TestState[];
-  };
   enableSnapshotPreviews?: boolean;
   disabledWorkspaceFolders: string[];
 }

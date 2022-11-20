@@ -24,7 +24,6 @@ const addSubscriptions = (context: vscode.ExtensionContext): void => {
     ...registerSnapshotCodeLens(getExtensionWindowSettings()?.enableSnapshotPreviews ?? false),
     ...registerSnapshotPreview(),
     vscode.languages.registerCodeLensProvider(languages, extensionManager.coverageCodeLensProvider),
-    vscode.languages.registerCodeLensProvider(languages, extensionManager.debugCodeLensProvider),
     ...tiContextManager.registerCommands()
   );
 };
