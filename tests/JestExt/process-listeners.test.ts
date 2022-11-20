@@ -227,7 +227,6 @@ describe('jest process listeners', () => {
     });
   });
   describe('RunTestListener', () => {
-    /* eslint-disable jest/no-conditional-expect */
     beforeEach(() => {
       mockSession.context.output = {
         appendLine: jest.fn(),

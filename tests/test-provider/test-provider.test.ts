@@ -517,7 +517,6 @@ describe('JestTestProvider', () => {
           const [run] = d.scheduleTest.mock.calls[0];
           expect(run).toEqual(expect.objectContaining({ vscodeRun: controllerMock.lastRunMock() }));
 
-          /* eslint-disable jest/no-conditional-expect */
           if (idx === 1) {
             expect(run.vscodeRun.errored).toHaveBeenCalledWith(
               d.item,

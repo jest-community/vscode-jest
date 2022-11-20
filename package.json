@@ -376,7 +376,7 @@
         },
         {
           "command": "io.orta.jest.test-item.update-snapshot"
-        }  
+        }
       ],
       "testing/item/gutter": [
         {
@@ -386,7 +386,7 @@
         {
           "command": "io.orta.jest.test-item.update-snapshot",
           "when": "testId in jest.editor-update-snapshot"
-        }  
+        }
       ]
     },
     "keybindings": [

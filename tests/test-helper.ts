@@ -19,7 +19,7 @@ export const makeLocation = (pos: [number, number]): Location => ({
   line: pos[0],
   column: pos[1],
 });
-export const makePositionRange = (pos: [number, number, number, number]) => ({
+export const makePositionRange = (pos: [number, number, number, number]): any => ({
   start: makeLocation([pos[0], pos[1]]),
   end: makeLocation([pos[2], pos[3]]),
 });
@@ -146,7 +146,7 @@ export const mockProjectWorkspace = (...args: any[]): any => {
 
 export const mockWworkspaceLogging = (): any => ({ create: () => jest.fn() });
 
-export const mockEvent = () => ({
+export const mockEvent = (): any => ({
   event: jest.fn().mockReturnValue({ dispose: jest.fn() }),
   fire: jest.fn(),
   dispose: jest.fn(),
