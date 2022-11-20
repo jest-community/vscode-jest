@@ -20,7 +20,6 @@ export function getExtensionWindowSettings(): PluginWindowSettings {
   const config = vscode.workspace.getConfiguration('jest');
 
   return {
-    enableSnapshotPreviews: config.get<boolean>('enableSnapshotPreviews'),
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     disabledWorkspaceFolders: config.get<string[]>('disabledWorkspaceFolders')!,
   };

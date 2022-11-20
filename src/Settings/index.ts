@@ -41,7 +41,6 @@ export interface PluginResourceSettings {
   jestCommandLine?: string;
   pathToConfig?: string;
   pathToJest?: string;
-  restartJestOnSnapshotUpdate?: boolean;
   rootPath: string;
   runAllTestsFirst?: boolean;
   showCoverageOnLoad: boolean;
@@ -56,7 +55,6 @@ export interface PluginResourceSettings {
 }
 
 export interface PluginWindowSettings {
-  enableSnapshotPreviews?: boolean;
   disabledWorkspaceFolders: string[];
 }
 

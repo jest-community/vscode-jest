@@ -573,7 +573,6 @@ describe('ExtensionManager', () => {
     describe('getExtensionWindowSettings()', () => {
       it('should return the extension window configuration', async () => {
         expect(getExtensionWindowSettings()).toEqual({
-          enableSnapshotPreviews: true,
           disabledWorkspaceFolders: [],
         });
       });

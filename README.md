@@ -54,7 +54,6 @@ Content
       - [Details](#details)
         - [jestCommandLine](#jestcommandline)
         - [rootPath](#rootpath)
-        - [debugCodeLens.showWhenTestStateIn](#debugcodelensshowwhenteststatein)
         - [coverageFormatter](#coverageformatter)
         - [coverageColors](#coveragecolors)
         - [autoRun](#autorun)
@@ -264,9 +263,6 @@ Users can use the following settings to tailor the extension for their environme
 |showCoverageOnLoad|Show code coverage when extension starts|false|`"jest.showCoverageOnLoad": true`|
 |[coverageFormatter](#coverageFormatter)|Determine the coverage overlay style|"DefaultFormatter"|`"jest.coverageFormatter": "GutterFormatter"`|
 |[coverageColors](#coverageColors)|Coverage indicator color override|undefined|`"jest.coverageColors": { "uncovered": "rgba(255,99,71, 0.2)", "partially-covered": "rgba(255,215,0, 0.2)"}`|
-|**Debug**|
-|enableCodeLens 💼|Whether codelens for debugging should show|true|`"jest.enableCodeLens": false`|
-|[debugCodeLens.showWhenTestStateIn](#debugcodelensshowwhenteststatein) 💼|Show the debug CodeLens for the tests with the specified status. (window)|["fail", "unknown"]|`"jest.debugCodeLens.showWhenTestStateIn":["fail", "pass", "unknown"]`|
 |**Misc**|
 |debugMode|Enable debug mode to diagnose plugin issues. (see developer console)|false|`"jest.debugMode": true`|
 |disabledWorkspaceFolders 💼|Disabled workspace folders names in multiroot environment|[]|`"jest.disabledWorkspaceFolders": ["package-a", "package-b"]`|
@@ -281,10 +277,6 @@ It is recommended not to add the following options as they are managed by the ex
 ##### rootPath
 
 If your project doesn't live in the root of your repository, you may want to customize the `jest.rootPath` setting to enlighten the extension as to where to look. For instance: `"jest.rootPath": "src/client-app"` will direct the extension to use the `src/client-app` folder as the root for Jest.
-
-##### debugCodeLens.showWhenTestStateIn
-
-Possible status are: `[ "fail", "pass", "skip", "unknown"]`. Please note that this is a window level setting, i.e. its value will apply for all workspaces.
 
 ##### coverageFormatter
 
