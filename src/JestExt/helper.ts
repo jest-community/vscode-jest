@@ -122,7 +122,6 @@ export const getExtensionResourceSettings = (uri: vscode.Uri): PluginResourceSet
     pathToConfig: config.get<string>('pathToConfig'),
     jestCommandLine: config.get<string>('jestCommandLine'),
     pathToJest: config.get<string>('pathToJest'),
-    restartJestOnSnapshotUpdate: config.get<boolean>('restartJestOnSnapshotUpdate'),
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     rootPath: path.join(uri.fsPath, config.get<string>('rootPath')!),
     runAllTestsFirst,

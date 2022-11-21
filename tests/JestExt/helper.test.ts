@@ -175,7 +175,6 @@ describe('getExtensionResourceSettings()', () => {
       pathToConfig: '',
       pathToJest: null,
       jestCommandLine: undefined,
-      restartJestOnSnapshotUpdate: false,
       rootPath: 'workspaceFolder1',
       runAllTestsFirst: undefined,
       showCoverageOnLoad: false,

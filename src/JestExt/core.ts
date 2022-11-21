@@ -10,7 +10,6 @@ import {
 import { testIdString, IdStringType, escapeRegExp, emptyTestStats } from '../helpers';
 import { CoverageMapProvider, CoverageCodeLensProvider } from '../Coverage';
 import { updateDiagnostics, updateCurrentDiagnostics, resetDiagnostics } from '../diagnostics';
-import { DebugCodeLensProvider, DebugTestIdentifier } from '../DebugCodeLens';
 import { DebugConfigurationProvider } from '../DebugConfigurationProvider';
 import { TestStats } from '../types';
 import { CoverageOverlay } from '../Coverage/CoverageOverlay';
@@ -18,7 +17,13 @@ import { resultsWithoutAnsiEscapeSequence } from '../TestResults/TestResult';
 import { CoverageMapData } from 'istanbul-lib-coverage';
 import { Logging } from '../logging';
 import { createProcessSession, ProcessSession } from './process-session';
-import { JestExtContext, JestSessionEvents, JestExtSessionContext, JestRunEvent } from './types';
+import {
+  JestExtContext,
+  JestSessionEvents,
+  JestExtSessionContext,
+  JestRunEvent,
+  DebugTestIdentifier,
+} from './types';
 import * as messaging from '../messaging';
 import { extensionName, SupportedLanguageIds } from '../appGlobals';
 import { createJestExtContext, getExtensionResourceSettings, prefixWorkspace } from './helper';
@@ -43,7 +48,6 @@ export class JestExt {
   coverageOverlay: CoverageOverlay;
 
   testResultProvider: TestResultProvider;
-  debugCodeLensProvider: DebugCodeLensProvider;
   debugConfigurationProvider: DebugConfigurationProvider;
   coverageCodeLensProvider: CoverageCodeLensProvider;
 
@@ -66,7 +70,6 @@ export class JestExt {
   constructor(
     vscodeContext: vscode.ExtensionContext,
     workspaceFolder: vscode.WorkspaceFolder,
-    debugCodeLensProvider: DebugCodeLensProvider,
     debugConfigurationProvider: DebugConfigurationProvider,
     coverageCodeLensProvider: CoverageCodeLensProvider
   ) {
@@ -78,7 +81,6 @@ export class JestExt {
     this.failDiagnostics = vscode.languages.createDiagnosticCollection(
       `Jest (${workspaceFolder.name})`
     );
-    this.debugCodeLensProvider = debugCodeLensProvider;
     this.coverageCodeLensProvider = coverageCodeLensProvider;
 
     this.coverageMapProvider = new CoverageMapProvider();
@@ -313,7 +315,6 @@ export class JestExt {
       return;
     }
 
-    this.updateDecorators();
     updateCurrentDiagnostics(sortedResults.fail, this.failDiagnostics, editor);
   }
 
@@ -351,11 +352,6 @@ export class JestExt {
     if (vscode.window.activeTextEditor) {
       this.triggerUpdateActiveEditor(vscode.window.activeTextEditor);
     }
-  }
-
-  updateDecorators(): void {
-    // Debug CodeLens
-    this.debugCodeLensProvider.didChange();
   }
 
   private isSupportedDocument(document: vscode.TextDocument | undefined): boolean {

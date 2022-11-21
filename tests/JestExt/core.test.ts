@@ -6,9 +6,6 @@ jest.unmock('../../src/appGlobals');
 jest.unmock('../../src/errors');
 jest.unmock('../test-helper');
 
-jest.mock('../../src/DebugCodeLens', () => ({
-  DebugCodeLensProvider: class MockCodeLensProvider {},
-}));
 const mockPlatform = jest.fn();
 const mockRelease = jest.fn();
 mockRelease.mockReturnValue('');
@@ -66,7 +63,6 @@ describe('JestExt', () => {
   const context: any = { asAbsolutePath: (text) => text } as vscode.ExtensionContext;
   const workspaceFolder = { name: 'test-folder', uri: { fsPath: '/test-folder' } } as any;
 
-  const debugCodeLensProvider = {} as any;
   const debugConfigurationProvider = {
     provideDebugConfigurations: jest.fn(),
     prepareTestRun: jest.fn(),
@@ -99,7 +95,6 @@ describe('JestExt', () => {
     return new JestExt(
       context,
       workspaceFolder,
-      debugCodeLensProvider,
       debugConfigurationProvider,
       coverageCodeLensProvider
     );
@@ -646,7 +641,6 @@ describe('JestExt', () => {
     });
     it('should update both decorators and diagnostics for valid editor', () => {
       const sut = newJestExt();
-      sut.updateDecorators = jest.fn();
       const editor = mockEditor('file://a/b/c.ts');
 
       (sut.testResultProvider.getSortedResults as unknown as jest.Mock<{}>).mockReturnValueOnce({
@@ -657,7 +651,6 @@ describe('JestExt', () => {
       });
       sut.triggerUpdateActiveEditor(editor);
 
-      expect(sut.updateDecorators).toHaveBeenCalled();
       expect(updateCurrentDiagnostics).toHaveBeenCalled();
     });
     it.each`
@@ -681,12 +674,10 @@ describe('JestExt', () => {
     });
     it('when failed to get test result, it should report error and clear the decorators and diagnostics', () => {
       const sut = newJestExt();
-      sut.debugCodeLensProvider.didChange = jest.fn();
       const editor = mockEditor('a');
       (sut.testResultProvider.getSortedResults as jest.Mocked<any>).mockImplementation(() => {
         throw new Error('force error');
       });
-      const updateDecoratorsSpy = jest.spyOn(sut, 'updateDecorators');
 
       sut.triggerUpdateActiveEditor(editor);
       expect(mockOutputTerminal.write).toHaveBeenCalledWith(
@@ -694,7 +685,6 @@ describe('JestExt', () => {
         'error'
       );
 
-      expect(updateDecoratorsSpy).toHaveBeenCalled();
       expect(updateCurrentDiagnostics).toHaveBeenCalledWith(
         EmptySortedResult.fail,
         undefined,
@@ -703,7 +693,6 @@ describe('JestExt', () => {
     });
     describe('can skip non test-file related updates', () => {
       let sut;
-      let updateDecoratorsSpy;
       beforeEach(() => {
         sut = newJestExt();
         (sut.testResultProvider.getSortedResults as unknown as jest.Mock<{}>).mockReturnValueOnce({
@@ -712,8 +701,6 @@ describe('JestExt', () => {
           skip: [],
           unknown: [],
         });
-        updateDecoratorsSpy = jest.spyOn(sut, 'updateDecorators');
-        sut.debugCodeLensProvider.didChange = jest.fn();
       });
       it.each`
         languageId           | shouldSkip
@@ -730,17 +717,14 @@ describe('JestExt', () => {
         sut.triggerUpdateActiveEditor(editor);
         if (shouldSkip) {
           expect(updateCurrentDiagnostics).not.toHaveBeenCalled();
-          expect(updateDecoratorsSpy).not.toHaveBeenCalled();
         } else {
           expect(updateCurrentDiagnostics).toHaveBeenCalled();
-          expect(updateDecoratorsSpy).toHaveBeenCalled();
         }
       });
       it('if editor has no document', () => {
         const editor = {};
         sut.triggerUpdateActiveEditor(editor);
         expect(updateCurrentDiagnostics).not.toHaveBeenCalled();
-        expect(updateDecoratorsSpy).not.toHaveBeenCalled();
       });
       it.each`
         isTestFile   | shouldUpdate
@@ -763,10 +747,8 @@ describe('JestExt', () => {
           sut.triggerUpdateActiveEditor(editor);
           if (shouldUpdate) {
             expect(updateCurrentDiagnostics).toHaveBeenCalled();
-            expect(updateDecoratorsSpy).toHaveBeenCalled();
           } else {
             expect(updateCurrentDiagnostics).not.toHaveBeenCalled();
-            expect(updateDecoratorsSpy).not.toHaveBeenCalled();
           }
         }
       );
