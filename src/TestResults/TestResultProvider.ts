@@ -314,6 +314,13 @@ export class TestResultProvider {
       message: error,
       results: itBlocks.map((t) => match.toMatchResult(t, 'no assertion found', 'match-failed')),
     });
+
+    // file match failed event so the listeners can display the source blocks instead
+    this.events.testSuiteChanged.fire({
+      type: 'result-match-failed',
+      file: filePath,
+      sourceContainer: record.testBlocks.sourceContainer,
+    });
   }
 
   /**

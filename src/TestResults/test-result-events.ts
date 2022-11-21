@@ -15,6 +15,11 @@ export type TestSuitChangeEvent =
       file: string;
     }
   | {
+      type: 'result-match-failed';
+      file: string;
+      sourceContainer: ContainerNode<ItBlock>;
+    }
+  | {
       type: 'test-parsed';
       file: string;
       sourceContainer: ContainerNode<ItBlock>;
