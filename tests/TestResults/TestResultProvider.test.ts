@@ -97,7 +97,7 @@ const makeData = (
 
 const eventsMock: any = mockJestExtEvents();
 
-const newProviderWithData = (testData: TestData[]): TestResultProvider => {
+const newProviderWithData = (testData: TestData[], verbose?: boolean): TestResultProvider => {
   mockParse.mockImplementation((file) => {
     const data = testData.find((data) => data.file === file);
     if (data) {
@@ -120,7 +120,7 @@ const newProviderWithData = (testData: TestData[]): TestResultProvider => {
       assertions: data.assertions,
     }))
   );
-  const sut = new TestResultProvider(eventsMock);
+  const sut = new TestResultProvider(eventsMock, verbose);
   // warn up cache
   sut.updateTestResults({} as any, {} as any);
   return sut;
@@ -155,6 +155,7 @@ describe('TestResultProvider', () => {
     jest.resetAllMocks();
     jest.restoreAllMocks();
     console.warn = jest.fn();
+    console.log = jest.fn();
     mockTestReconciler.mockReturnValue(mockReconciler);
     (vscode.EventEmitter as jest.Mocked<any>) = jest.fn().mockImplementation(helper.mockEvent);
     mockSnapshotProvider = {
@@ -247,11 +248,16 @@ describe('TestResultProvider', () => {
         });
       });
     });
-    it('unmatched test will file test-parsed event instead', () => {
+    it('unmatched test will file test-parsed and result-match-failed events instead', () => {
       const sut = newProviderWithData([makeData([testBlock], null, filePath)]);
       sut.getResults(filePath);
       expect(sut.events.testSuiteChanged.fire).toHaveBeenCalledWith({
         type: 'test-parsed',
+        file: filePath,
+        sourceContainer: expect.anything(),
+      });
+      expect(sut.events.testSuiteChanged.fire).toHaveBeenCalledWith({
+        type: 'result-match-failed',
         file: filePath,
         sourceContainer: expect.anything(),
       });
@@ -624,6 +630,17 @@ describe('TestResultProvider', () => {
           }
         }
       );
+      it('parse error will output log only in verbose mode', () => {
+        let sut = newProviderWithData([makeData(itBlocks, assertions, 'whatever')], false);
+        sut.getResults('whatever');
+        forceParseError();
+        expect(console.log).not.toHaveBeenCalled();
+
+        sut = newProviderWithData([makeData(itBlocks, assertions, 'whatever')], true);
+        forceParseError();
+        sut.getResults('whatever');
+        expect(console.log).toHaveBeenCalled();
+      });
     });
   });
 

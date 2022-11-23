@@ -326,7 +326,7 @@ export class JestExt {
     this.updateTestFileEditor(editor);
   }
 
-  public triggerUpdateSettings(newSettings?: PluginResourceSettings): Promise<void> {
+  public async triggerUpdateSettings(newSettings?: PluginResourceSettings): Promise<void> {
     const updatedSettings =
       newSettings ?? getExtensionResourceSettings(this.extContext.workspace.uri);
 
@@ -348,7 +348,10 @@ export class JestExt {
 
     this.extContext = createJestExtContext(this.extContext.workspace, updatedSettings);
 
-    return this.startSession(true);
+    await this.startSession(true);
+    if (vscode.window.activeTextEditor) {
+      this.triggerUpdateActiveEditor(vscode.window.activeTextEditor);
+    }
   }
 
   private isSupportedDocument(document: vscode.TextDocument | undefined): boolean {
