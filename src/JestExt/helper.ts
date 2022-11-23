@@ -13,7 +13,6 @@ import {
   TestExplorerConfigLegacy,
   JestExtAutoRunSetting,
 } from '../Settings';
-import { pathToJest, pathToConfig, toFilePath } from '../helpers';
 import { workspaceLogging } from '../logging';
 import { JestExtContext, RunnerWorkspaceOptions } from './types';
 import { CoverageColors } from '../Coverage';
@@ -21,23 +20,10 @@ import { userInfo } from 'os';
 import { JestOutputTerminal } from './output-terminal';
 import { AutoRun } from './auto-run';
 import { RunShell } from './run-shell';
+import { toFilePath } from '../helpers';
 
 export const isWatchRequest = (request: JestProcessRequest): boolean =>
   request.type === 'watch-tests' || request.type === 'watch-all-tests';
-
-/**
- * This method retrieve a jest command line, if available, otherwise fall back to the legacy
- * settings for pathToJest and pathToConfig.
- *
- * @param settings
- */
-//TODO remove pathToJest and pathToConfig once we fully deprecated them
-const getJestCommandSettings = (settings: PluginResourceSettings): [string, string] => {
-  if (settings.jestCommandLine) {
-    return [settings.jestCommandLine, ''];
-  }
-  return [pathToJest(settings), pathToConfig(settings)];
-};
 
 const getUserIdString = (): string => {
   try {
@@ -65,11 +51,17 @@ export const createJestExtContext = (
   const createRunnerWorkspace = (options?: RunnerWorkspaceOptions) => {
     const ws = workspaceFolder.name;
     const currentJestVersion = 20;
-    const [jestCommandLine, pathToConfig] = getJestCommandSettings(settings);
+
+    if (!settings.jestCommandLine) {
+      //TODO consider throwing exception?
+      console.warn(
+        `[${workspaceFolder.name}] jestCommandLine is not set up yet, process will fail`
+      );
+    }
     return new ProjectWorkspace(
       toFilePath(settings.rootPath),
-      jestCommandLine,
-      pathToConfig,
+      settings.jestCommandLine || 'jest',
+      '',
       currentJestVersion,
       outputFileSuffix(ws, options?.outputFileSuffix),
       options?.collectCoverage ?? settings.showCoverageOnLoad,
@@ -111,6 +103,9 @@ const getTestExplorer = (config: vscode.WorkspaceConfiguration): TestExplorerCon
 
   return setting;
 };
+export const absoluteRootPath = (rootPath: string, workspaceRoot: string): string => {
+  return path.isAbsolute(rootPath) ? rootPath : path.join(workspaceRoot, rootPath);
+};
 export const getExtensionResourceSettings = (uri: vscode.Uri): PluginResourceSettings => {
   const config = vscode.workspace.getConfiguration('jest', uri);
 
@@ -122,13 +117,10 @@ export const getExtensionResourceSettings = (uri: vscode.Uri): PluginResourceSet
     pathToConfig: config.get<string>('pathToConfig'),
     jestCommandLine: config.get<string>('jestCommandLine'),
     pathToJest: config.get<string>('pathToJest'),
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    rootPath: path.join(uri.fsPath, config.get<string>('rootPath')!),
+    rootPath: absoluteRootPath(config.get<string>('rootPath') ?? '', uri.fsPath),
     runAllTestsFirst,
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    showCoverageOnLoad: config.get<boolean>('showCoverageOnLoad')!,
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    coverageFormatter: config.get<string>('coverageFormatter')!,
+    showCoverageOnLoad: config.get<boolean>('showCoverageOnLoad') ?? false,
+    coverageFormatter: config.get<string>('coverageFormatter') ?? 'DefaultFormatter',
     debugMode: config.get<boolean>('debugMode'),
     coverageColors: config.get<CoverageColors>('coverageColors'),
     testExplorer: getTestExplorer(config),

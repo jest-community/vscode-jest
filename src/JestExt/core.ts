@@ -7,7 +7,13 @@ import {
   resultsWithLowerCaseWindowsDriveLetters,
   SortedTestResults,
 } from '../TestResults';
-import { testIdString, IdStringType, escapeRegExp, emptyTestStats } from '../helpers';
+import {
+  testIdString,
+  IdStringType,
+  escapeRegExp,
+  emptyTestStats,
+  getDefaultJestCommand,
+} from '../helpers';
 import { CoverageMapProvider, CoverageCodeLensProvider } from '../Coverage';
 import { updateDiagnostics, updateCurrentDiagnostics, resetDiagnostics } from '../diagnostics';
 import { DebugConfigurationProvider } from '../DebugConfigurationProvider';
@@ -26,7 +32,12 @@ import {
 } from './types';
 import * as messaging from '../messaging';
 import { extensionName, SupportedLanguageIds } from '../appGlobals';
-import { createJestExtContext, getExtensionResourceSettings, prefixWorkspace } from './helper';
+import {
+  absoluteRootPath,
+  createJestExtContext,
+  getExtensionResourceSettings,
+  prefixWorkspace,
+} from './helper';
 import { PluginResourceSettings } from '../Settings';
 import { WizardTaskId } from '../setup-wizard';
 import { ItemCommand, JestExtExplorerContext } from '../test-provider/types';
@@ -35,12 +46,19 @@ import { JestProcessInfo } from '../JestProcessManagement';
 import { addFolderToDisabledWorkspaceFolders } from '../extensionManager';
 import { MessageAction } from '../messaging';
 import { getExitErrorDef } from '../errors';
+import { WorkspaceManager } from '../workspace-manager';
 
 interface RunTestPickItem extends vscode.QuickPickItem {
   id: DebugTestIdentifier;
 }
 
-type MessageActionType = 'help' | 'wizard' | 'disable-folder' | 'help-long-run';
+type MessageActionType =
+  | 'help'
+  | 'wizard'
+  | 'disable-folder'
+  | 'help-long-run'
+  | 'setup-cmdline'
+  | 'setup-monorepo';
 
 /** extract lines starts and end with [] */
 export class JestExt {
@@ -67,16 +85,20 @@ export class JestExt {
   private testProvider?: JestTestProvider;
   public events: JestSessionEvents;
 
+  private workspaceManager: WorkspaceManager;
+
   constructor(
     vscodeContext: vscode.ExtensionContext,
     workspaceFolder: vscode.WorkspaceFolder,
     debugConfigurationProvider: DebugConfigurationProvider,
     coverageCodeLensProvider: CoverageCodeLensProvider
   ) {
+    this.vscodeContext = vscodeContext;
     const pluginSettings = getExtensionResourceSettings(workspaceFolder.uri);
 
     this.extContext = createJestExtContext(workspaceFolder, pluginSettings);
     this.logging = this.extContext.loggingFactory.create('JestExt');
+    this.workspaceManager = new WorkspaceManager();
 
     this.failDiagnostics = vscode.languages.createDiagnosticCollection(
       `Jest (${workspaceFolder.name})`
@@ -84,7 +106,6 @@ export class JestExt {
     this.coverageCodeLensProvider = coverageCodeLensProvider;
 
     this.coverageMapProvider = new CoverageMapProvider();
-    this.vscodeContext = vscodeContext;
     this.coverageOverlay = new CoverageOverlay(
       vscodeContext,
       this.coverageMapProvider,
@@ -133,7 +154,7 @@ export class JestExt {
   private setupWizardAction(taskId?: WizardTaskId): messaging.MessageAction {
     const command = `${extensionName}.setup-extension`;
     return {
-      title: 'Run Setup Tool',
+      title: 'Fix',
       action: (): unknown =>
         vscode.commands.executeCommand(command, {
           workspace: this.extContext.workspace,
@@ -167,9 +188,6 @@ export class JestExt {
       if (event.process.request.type === 'not-test') {
         return;
       }
-      // console.log(
-      //   `[core.onRunEvent] "${this.extContext.workspace.name}" event:${event.type} process:${event.process.id}`
-      // );
       switch (event.type) {
         case 'start':
           this.updateStatusBar({ state: 'running' });
@@ -208,6 +226,12 @@ export class JestExt {
         case 'wizard':
           actions.push(this.setupWizardAction());
           break;
+        case 'setup-cmdline':
+          actions.push(this.setupWizardAction('cmdLine'));
+          break;
+        case 'setup-monorepo':
+          actions.push(this.setupWizardAction('monorepo'));
+          break;
         case 'disable-folder':
           if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 1) {
             actions.push(this.setupIgnoreAction());
@@ -240,6 +264,11 @@ export class JestExt {
    */
   public async startSession(newSession = false): Promise<void> {
     try {
+      const readyState = await this.validateJestCommandLine();
+      if (readyState !== 'pass') {
+        return;
+      }
+
       this.dirtyFiles.clear();
       this.resetStatusBar();
 
@@ -263,7 +292,7 @@ export class JestExt {
       this.extContext.output.write('Failed to start jest session', 'error');
       messaging.systemErrorMessage(
         `${msg}...`,
-        ...this.buildMessageActions(['help', 'wizard', 'disable-folder'])
+        ...this.buildMessageActions(['wizard', 'disable-folder', 'help'])
       );
     }
   }
@@ -376,6 +405,79 @@ export class JestExt {
     return true;
   }
 
+  /**
+   * validate if there is a valid jest commandline. If the simple default command line is not valid,
+   * it will take on a more
+   *
+   * @returns
+   */
+  public async validateJestCommandLine(): Promise<'pass' | 'fail' | 'restart'> {
+    const updateSettings = async (
+      jestCommandLine: string,
+      rootPath?: string
+    ): Promise<'restart'> => {
+      this.extContext.settings.jestCommandLine = jestCommandLine;
+      if (rootPath) {
+        this.extContext.settings.rootPath = rootPath;
+      }
+      await this.triggerUpdateSettings(this.extContext.settings);
+      return 'restart';
+    };
+
+    const t0 = Date.now();
+    if (this.extContext.settings.jestCommandLine) {
+      return Promise.resolve('pass');
+    }
+
+    let jestCommandLine = getDefaultJestCommand(this.extContext.settings.rootPath);
+    if (jestCommandLine) {
+      return updateSettings(jestCommandLine);
+    }
+
+    // see if we can get a valid command by examing the file system
+    let msg = 'Not able to detect a valid jest command.';
+    let actionType: MessageActionType = 'setup-cmdline';
+
+    const validWorkspaces = await this.workspaceManager.validateWorkspace(
+      this.extContext.workspace
+    );
+    const perf = Date.now() - t0;
+    if (perf > 2000) {
+      this.logging(
+        'warn',
+        `validateJestCommandLine took ${perf} msec. Might be more efficient to update user settings directly`
+      );
+    }
+
+    if (validWorkspaces.length === 1) {
+      const rootPath = absoluteRootPath(
+        validWorkspaces[0].rootPath ?? '',
+        this.extContext.workspace.uri.fsPath
+      );
+      if (rootPath !== this.extContext.settings.rootPath) {
+        jestCommandLine = getDefaultJestCommand(rootPath);
+        if (jestCommandLine) {
+          return updateSettings(jestCommandLine, rootPath);
+        }
+      }
+    } else if (validWorkspaces.length > 1) {
+      // found multiple workspaces under the current workspace
+      this.extContext.output.write(`found multiple jest roots:`, 'warn');
+      const paths = validWorkspaces.map((ws) => ws.workspace.uri.path).join('\r\n');
+      this.extContext.output.write(`${paths}\r\n`);
+
+      if (vscode.workspace.workspaceFolders?.length === 1) {
+        msg = 'Perhaps this is a multi-root monorepo?';
+        actionType = 'setup-monorepo';
+      }
+    }
+    messaging.systemErrorMessage(
+      prefixWorkspace(this.extContext, msg),
+      ...this.buildMessageActions([actionType, 'disable-folder', 'help'])
+    );
+    this.extContext.output.write(`Jest session aborted: ${msg}`, 'error');
+    return 'fail';
+  }
   public activate(): void {
     if (
       vscode.window.activeTextEditor?.document.uri &&
@@ -618,17 +720,17 @@ export class JestExt {
     this.updateTestFileList();
   }
 
-  toggleCoverageOverlay(): void {
+  toggleCoverageOverlay(): Promise<void> {
     this.coverageOverlay.toggleVisibility();
 
     // restart jest since coverage condition has changed
-    this.triggerUpdateSettings(this.extContext.settings);
+    return this.triggerUpdateSettings(this.extContext.settings);
   }
-  toggleAutoRun(): void {
+  toggleAutoRun(): Promise<void> {
     this.extContext.settings.autoRun.toggle();
 
     // restart jest since coverage condition has changed
-    this.triggerUpdateSettings(this.extContext.settings);
+    return this.triggerUpdateSettings(this.extContext.settings);
   }
   runItemCommand(testItem: vscode.TestItem, itemCommand: ItemCommand): void {
     this.testProvider?.runItemCommand(testItem, itemCommand);

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { getPackageJson } from '../../helpers';
+import { getPackageJson } from './helpers';
 
 const ActivationFilePattern = [
   '**/jest.config.{js, ts, mjs, cjs, json}',
@@ -41,19 +41,19 @@ export class WorkspaceManager {
       return Promise.reject(new Error('no workspace folder to validate'));
     }
 
-    const wsList: WorkspaceInfo[] = [];
+    const validWorkspaces: Map<string, WorkspaceInfo> = new Map();
     for (const ws of vscode.workspace.workspaceFolders) {
-      if (wsList.find((info) => isSameWorkspace(info.workspace, ws))) {
+      if (validWorkspaces.has(ws.uri.path)) {
         continue;
       }
       const list = await this.validateWorkspace(ws);
       list.forEach((info) => {
-        if (!wsList.find((i) => isSameWorkspace(i.workspace, info.workspace))) {
-          wsList.push(info);
+        if (!validWorkspaces.has(info.workspace.uri.path)) {
+          validWorkspaces.set(info.workspace.uri.path, info);
         }
       });
     }
-    return wsList;
+    return Array.from(validWorkspaces.values());
   }
 
   private toWorkspaceInfo(uri: vscode.Uri): WorkspaceInfo | undefined {

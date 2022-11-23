@@ -41,6 +41,7 @@ import { JestOutputTerminal } from '../../src/JestExt/output-terminal';
 import { RunShell } from '../../src/JestExt/run-shell';
 import * as errors from '../../src/errors';
 import { ItemCommand } from '../../src/test-provider/types';
+import { WorkspaceManager } from '../../src/workspace-manager';
 
 /* eslint jest/expect-expect: ["error", { "assertFunctionNames": ["expect", "expectItTakesNoAction"] }] */
 const mockHelpers = helper as jest.Mocked<any>;
@@ -62,6 +63,7 @@ describe('JestExt', () => {
   const getConfiguration = vscode.workspace.getConfiguration as jest.Mock<any>;
   const context: any = { asAbsolutePath: (text) => text } as vscode.ExtensionContext;
   const workspaceFolder = { name: 'test-folder', uri: { fsPath: '/test-folder' } } as any;
+  let mockSettings;
 
   const debugConfigurationProvider = {
     provideDebugConfigurations: jest.fn(),
@@ -81,14 +83,8 @@ describe('JestExt', () => {
     settings?: Partial<PluginResourceSettings>;
     coverageCodeLensProvider?: any;
   }) => {
-    const extensionSettings = {
-      debugCodeLens: {},
-      testExplorer: { enabled: true },
-      autoRun: { watch: true },
-    } as any;
-    mockGetExtensionResourceSettings.mockReturnValue(
-      override?.settings ? { ...extensionSettings, ...override.settings } : extensionSettings
-    );
+    mockSettings = { ...mockSettings, ...(override?.settings ?? {}) };
+    mockGetExtensionResourceSettings.mockReturnValue(mockSettings);
     const coverageCodeLensProvider: any = override?.coverageCodeLensProvider ?? {
       coverageChanged: jest.fn(),
     };
@@ -111,9 +107,16 @@ describe('JestExt', () => {
     runItemCommand: jest.fn(),
   };
 
+  let mockWorkspaceManager;
   beforeEach(() => {
     jest.resetAllMocks();
 
+    mockSettings = {
+      debugCodeLens: {},
+      testExplorer: { enabled: true },
+      autoRun: { watch: true },
+      jestCommandLine: 'jest',
+    };
     getConfiguration.mockReturnValue({});
 
     (createProcessSession as jest.Mocked<any>).mockReturnValue(mockProcessSession);
@@ -125,6 +128,9 @@ describe('JestExt', () => {
       return { fire: jest.fn(), event: jest.fn(), dispose: jest.fn() };
     });
     (RunShell as jest.Mocked<any>).mockImplementation(() => ({ toSetting: jest.fn() }));
+
+    mockWorkspaceManager = { validateWorkspace: jest.fn() };
+    (WorkspaceManager as jest.Mocked<any>).mockReturnValue(mockWorkspaceManager);
   });
 
   describe('debugTests()', () => {
@@ -611,7 +617,10 @@ describe('JestExt', () => {
       expect(sut.triggerUpdateSettings).toHaveBeenCalled();
     });
     it('overrides showCoverageOnLoad settings', async () => {
-      const settings = { showCoverageOnLoad: true, shell: { toSetting: jest.fn() } } as any;
+      const settings = {
+        showCoverageOnLoad: true,
+        shell: { toSetting: jest.fn() },
+      } as any;
       const sut = newJestExt({ settings });
 
       const { createRunnerWorkspace } = (createProcessSession as jest.Mocked<any>).mock.calls[0][0];
@@ -822,6 +831,17 @@ describe('JestExt', () => {
           }
         );
       });
+      it('will abort if no valid jest command is found', async () => {
+        expect.hasAssertions();
+
+        const defaultJestCommandSpy = jest.spyOn(helper, 'getDefaultJestCommand');
+        defaultJestCommandSpy.mockReturnValueOnce(undefined);
+        mockWorkspaceManager.validateWorkspace.mockReturnValue(Promise.resolve([]));
+        const sut = newJestExt({ settings: { jestCommandLine: undefined } });
+        await sut.startSession();
+
+        expect(JestTestProvider).not.toHaveBeenCalled();
+      });
     });
     describe('stopSession', () => {
       it('will fire event', async () => {
@@ -970,6 +990,7 @@ describe('JestExt', () => {
       const settings: any = {
         debugMode: true,
         autoRun: { watch: true },
+        jestCommandLine: 'jest',
       };
       await jestExt.triggerUpdateSettings(settings);
       expect(createProcessSession).toHaveBeenCalledTimes(2);
@@ -1029,11 +1050,11 @@ describe('JestExt', () => {
       expect(mockProcessSession.stop).toHaveBeenCalledTimes(1);
       expect(mockOutputTerminal.dispose).toHaveBeenCalledTimes(1);
     });
-    it('will dispose test provider if initialized', () => {
+    it('will dispose test provider if initialized', async () => {
       const sut = newJestExt();
       sut.deactivate();
       expect(mockTestProvider.dispose).not.toHaveBeenCalledTimes(1);
-      sut.startSession();
+      await sut.startSession();
       sut.deactivate();
       expect(mockTestProvider.dispose).toHaveBeenCalledTimes(1);
     });
@@ -1229,14 +1250,60 @@ describe('JestExt', () => {
       );
     });
   });
-  it('runItemCommand will delegate operation to testProvider', () => {
+  it('runItemCommand will delegate operation to testProvider', async () => {
     const jestExt = newJestExt();
-    jestExt.startSession();
+    await jestExt.startSession();
     const testItem: any = {};
     jestExt.runItemCommand(testItem, ItemCommand.updateSnapshot);
     expect(mockTestProvider.runItemCommand).toHaveBeenCalledWith(
       testItem,
       ItemCommand.updateSnapshot
+    );
+  });
+  describe('validateJestCommandLine', () => {
+    it.each`
+      case                     | jestCommandLine | defaultJestCommands     | validWorkspaces            | validationResult | updateSettings
+      ${'has jestCommandLine'} | ${'jest'}       | ${[]}                   | ${[]}                      | ${true}          | ${undefined}
+      ${'valid default'}       | ${undefined}    | ${['jest']}             | ${[]}                      | ${true}          | ${undefined}
+      ${'valid workspace'}     | ${undefined}    | ${[undefined, 'jest2']} | ${[{ rootPath: 'child' }]} | ${false}         | ${{ rootPath: '/test-folder/child', jestCommandLine: 'jest2' }}
+      ${'no workspace'}        | ${undefined}    | ${[undefined]}          | ${[]}                      | ${false}         | ${undefined}
+      ${'multiple workspaces'} | ${undefined}    | ${[undefined]}          | ${[{}, {}]}                | ${false}         | ${undefined}
+    `(
+      '$case',
+      async ({
+        jestCommandLine,
+        defaultJestCommands,
+        validWorkspaces,
+        validationResult,
+        updateSettings,
+      }) => {
+        const defaultJestCommandSpy = jest.spyOn(helper, 'getDefaultJestCommand');
+        defaultJestCommands.forEach((cmd) => {
+          defaultJestCommandSpy.mockReturnValueOnce(cmd);
+        });
+
+        mockWorkspaceManager.validateWorkspace.mockReturnValue(Promise.resolve(validWorkspaces));
+
+        const jestExt = newJestExt({ settings: { jestCommandLine } });
+        const updateSettingSpy = jest.spyOn(jestExt, 'triggerUpdateSettings');
+        updateSettingSpy.mockReturnValueOnce(Promise.resolve());
+
+        await expect(jestExt.validateJestCommandLine()).resolves.toEqual(validationResult);
+        expect(defaultJestCommandSpy).toHaveBeenCalledTimes(defaultJestCommands.length);
+
+        if (updateSettings) {
+          expect(updateSettingSpy).toHaveBeenCalledWith(expect.objectContaining(updateSettings));
+        } else {
+          expect(updateSettingSpy).not.toHaveBeenCalled();
+        }
+        if (!validationResult) {
+          if (updateSettings) {
+            expect(messaging.systemErrorMessage).not.toHaveBeenCalled();
+          } else {
+            expect(messaging.systemErrorMessage).toHaveBeenCalled();
+          }
+        }
+      }
     );
   });
 });

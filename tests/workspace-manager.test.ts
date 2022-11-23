@@ -1,15 +1,15 @@
-jest.unmock('../../../src/setup-wizard/tasks/workspace-manager');
-jest.unmock('../test-helper');
-jest.unmock('./task-test-helper');
+jest.unmock('../src/workspace-manager');
+jest.unmock('./setup-wizard/test-helper');
+jest.unmock('./setup-wizard/tasks/task-test-helper');
 
 import * as vscode from 'vscode';
 import * as path from 'path';
 
-import { WorkspaceManager } from '../../../src/setup-wizard/tasks/workspace-manager';
+import { WorkspaceManager } from '../src/workspace-manager';
 
-import { workspaceFolder } from '../test-helper';
-import { getPackageJson } from '../../../src/helpers';
-import { toUri } from './task-test-helper';
+import { workspaceFolder } from './setup-wizard/test-helper';
+import { getPackageJson } from '../src/helpers';
+import { toUri } from './setup-wizard/tasks/task-test-helper';
 
 describe('workspaceFolder', () => {
   let mockFindFiles;

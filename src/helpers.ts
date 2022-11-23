@@ -47,6 +47,7 @@ export function getTestCommand(rootPath: string): string | undefined {
     return packageJSON.scripts.test;
   }
 }
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function getPackageJson(rootPath: string): any | undefined {
   try {
@@ -78,6 +79,48 @@ function isBootstrappedWithCreateReactApp(rootPath: string): boolean {
         (binary) => getLocalPathForExecutable(rootPath, binary) !== undefined
       );
 }
+
+function checkPackageTestScript(rootPath: string): string | undefined {
+  const testCommand = getTestCommand(rootPath);
+  if (!testCommand) {
+    return;
+  }
+  if (isCreateReactAppTestCommand(testCommand) || testCommand.includes('jest')) {
+    const pm = getPM(rootPath) ?? 'npm';
+    if (pm === 'npm') {
+      return 'npm test --';
+    }
+    return 'yarn test';
+  }
+}
+
+const PMInfo: Record<string, string> = {
+  yarn: 'yarn.lock',
+  npm: 'package-lock.json',
+};
+function getPM(rootPath: string): string | undefined {
+  return Object.keys(PMInfo).find((pm) => {
+    const lockFile = PMInfo[pm];
+    const absolutePath = normalize(join(rootPath, lockFile));
+    return existsSync(absolutePath);
+  });
+}
+
+/** return verified jest command for jest or CRA apps, if found; otherwise return undefined */
+export const getDefaultJestCommand = (rootPath = '', withQuote = true): string | undefined => {
+  const _rootPath = rootPath ?? '';
+  const pmScript = checkPackageTestScript(_rootPath);
+  if (pmScript) {
+    return pmScript;
+  }
+
+  for (const binary of [...createReactAppBinaryNames, 'jest']) {
+    const cmd = getLocalPathForExecutable(rootPath, binary);
+    if (cmd) {
+      return withQuote ? `"${cmd}"` : cmd;
+    }
+  }
+};
 
 /**
  * Handles getting the jest runner, handling the OS and project specific work too
