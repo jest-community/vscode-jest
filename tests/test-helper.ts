@@ -225,6 +225,12 @@ expect.extend({
   },
 });
 
+export const makeWorkspaceFolder = (name: string): any => ({
+  uri: { fsPath: name },
+  name,
+  path: name,
+});
+
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace jest {

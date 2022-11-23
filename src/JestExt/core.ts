@@ -47,6 +47,7 @@ import { addFolderToDisabledWorkspaceFolders } from '../extensionManager';
 import { MessageAction } from '../messaging';
 import { getExitErrorDef } from '../errors';
 import { WorkspaceManager } from '../workspace-manager';
+import { ansiEsc, JestOutputTerminal } from './output-terminal';
 
 interface RunTestPickItem extends vscode.QuickPickItem {
   id: DebugTestIdentifier;
@@ -86,6 +87,7 @@ export class JestExt {
   public events: JestSessionEvents;
 
   private workspaceManager: WorkspaceManager;
+  private output: JestOutputTerminal;
 
   constructor(
     vscodeContext: vscode.ExtensionContext,
@@ -94,9 +96,10 @@ export class JestExt {
     coverageCodeLensProvider: CoverageCodeLensProvider
   ) {
     this.vscodeContext = vscodeContext;
+    this.output = new JestOutputTerminal(workspaceFolder.name);
     const pluginSettings = getExtensionResourceSettings(workspaceFolder.uri);
 
-    this.extContext = createJestExtContext(workspaceFolder, pluginSettings);
+    this.extContext = createJestExtContext(workspaceFolder, pluginSettings, this.output);
     this.logging = this.extContext.loggingFactory.create('JestExt');
     this.workspaceManager = new WorkspaceManager();
 
@@ -200,7 +203,7 @@ export class JestExt {
             this.updateStatusBar({ state: 'stopped' });
             messaging.systemErrorMessage(
               prefixWorkspace(this.extContext, event.error),
-              ...this.buildMessageActions(['help', 'wizard', 'disable-folder'])
+              ...this.buildMessageActions(['wizard', 'disable-folder', 'help'])
             );
           } else {
             this.updateStatusBar({ state: 'done' });
@@ -375,7 +378,7 @@ export class JestExt {
       updatedSettings.coverageColors
     );
 
-    this.extContext = createJestExtContext(this.extContext.workspace, updatedSettings);
+    this.extContext = createJestExtContext(this.extContext.workspace, updatedSettings, this.output);
 
     await this.startSession(true);
     if (vscode.window.activeTextEditor) {
@@ -416,10 +419,17 @@ export class JestExt {
       jestCommandLine: string,
       rootPath?: string
     ): Promise<'restart'> => {
+      this.extContext.output.write('auto config:', 'info');
+
+      const msg = [];
       this.extContext.settings.jestCommandLine = jestCommandLine;
+      msg.push(`  ${ansiEsc('bold', 'jestCommandLine')}: ${jestCommandLine}`);
       if (rootPath) {
         this.extContext.settings.rootPath = rootPath;
+        msg.push(`  ${ansiEsc('bold', 'rootPath')}: ${rootPath}`);
       }
+      this.extContext.output.write(`${msg.join('\r\n')}\r\n`, 'new-line');
+
       await this.triggerUpdateSettings(this.extContext.settings);
       return 'restart';
     };
@@ -435,13 +445,14 @@ export class JestExt {
     }
 
     // see if we can get a valid command by examing the file system
-    let msg = 'Not able to detect a valid jest command.';
+    let msg = 'Not able to detect a valid jest command';
     let actionType: MessageActionType = 'setup-cmdline';
 
     const validWorkspaces = await this.workspaceManager.validateWorkspace(
       this.extContext.workspace
     );
     const perf = Date.now() - t0;
+    /* istanbul ignore next */
     if (perf > 2000) {
       this.logging(
         'warn',
@@ -463,11 +474,12 @@ export class JestExt {
     } else if (validWorkspaces.length > 1) {
       // found multiple workspaces under the current workspace
       this.extContext.output.write(`found multiple jest roots:`, 'warn');
-      const paths = validWorkspaces.map((ws) => ws.workspace.uri.path).join('\r\n');
+      const paths = validWorkspaces.map((ws) => ws.rootPath).join('\r\n');
       this.extContext.output.write(`${paths}\r\n`);
 
       if (vscode.workspace.workspaceFolders?.length === 1) {
-        msg = 'Perhaps this is a multi-root monorepo?';
+        // multi-root monorepo in a single-root workspace?
+        msg = 'Not able to determine the jest command, perhaps this is a multi-root monorepo?';
         actionType = 'setup-monorepo';
       }
     }

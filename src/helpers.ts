@@ -1,9 +1,8 @@
 import { platform } from 'os';
 import { existsSync, readFileSync, mkdirSync, writeFileSync } from 'fs';
-import { normalize, join } from 'path';
+import { join, resolve } from 'path';
 import { ExtensionContext } from 'vscode';
 
-import { PluginResourceSettings, hasUserSetPathToJest } from './Settings';
 import { TestIdentifier } from './TestResults';
 import { TestStats } from './types';
 import { LoginShell } from 'jest-editor-support';
@@ -29,9 +28,7 @@ export const nodeBinExtension: string = platform() === 'win32' ? '.cmd' : '';
  * Returns the path if it exists, or `undefined` otherwise
  */
 function getLocalPathForExecutable(rootPath: string, executable: string): string | undefined {
-  const absolutePath = normalize(
-    join(rootPath, 'node_modules', '.bin', executable + nodeBinExtension)
-  );
+  const absolutePath = resolve(rootPath, 'node_modules', '.bin', executable + nodeBinExtension);
   return existsSync(absolutePath) ? absolutePath : undefined;
 }
 
@@ -51,7 +48,7 @@ export function getTestCommand(rootPath: string): string | undefined {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function getPackageJson(rootPath: string): any | undefined {
   try {
-    const packagePath = join(rootPath, 'package.json');
+    const packagePath = resolve(rootPath, 'package.json');
     return JSON.parse(readFileSync(packagePath, 'utf8'));
   } catch {
     return undefined;
@@ -66,18 +63,6 @@ export function isCreateReactAppTestCommand(testCommand?: string | null): boolea
     !!testCommand &&
     createReactAppBinaryNames.some((binary) => testCommand.includes(`${binary} test`))
   );
-}
-
-/**
- * Checks if the project in `rootPath` was bootstrapped by `create-react-app`.
- */
-function isBootstrappedWithCreateReactApp(rootPath: string): boolean {
-  const testCommand = getTestCommand(rootPath);
-  return testCommand
-    ? isCreateReactAppTestCommand(testCommand)
-    : createReactAppBinaryNames.some(
-        (binary) => getLocalPathForExecutable(rootPath, binary) !== undefined
-      );
 }
 
 function checkPackageTestScript(rootPath: string): string | undefined {
@@ -101,14 +86,22 @@ const PMInfo: Record<string, string> = {
 function getPM(rootPath: string): string | undefined {
   return Object.keys(PMInfo).find((pm) => {
     const lockFile = PMInfo[pm];
-    const absolutePath = normalize(join(rootPath, lockFile));
+    const absolutePath = resolve(rootPath, lockFile);
     return existsSync(absolutePath);
   });
 }
 
-/** return verified jest command for jest or CRA apps, if found; otherwise return undefined */
-export const getDefaultJestCommand = (rootPath = '', withQuote = true): string | undefined => {
-  const _rootPath = rootPath ?? '';
+/**
+ * construct a default jest command from rootPath, currently support any configurations that match any of the following:
+ * 1. a "test" script in package.json that contains CRA or "jest" command
+ * 2. a jest binary in local node_modules
+ * 3. CRA scripts in local node_modules.
+ *
+ * @param rootPath an absolute path from where the search starts.
+ * @returns the verified jest command for jest or CRA apps, if found; otherwise return undefined
+ */
+export const getDefaultJestCommand = (rootPath = ''): string | undefined => {
+  const _rootPath = resolve(rootPath);
   const pmScript = checkPackageTestScript(_rootPath);
   if (pmScript) {
     return pmScript;
@@ -117,42 +110,10 @@ export const getDefaultJestCommand = (rootPath = '', withQuote = true): string |
   for (const binary of [...createReactAppBinaryNames, 'jest']) {
     const cmd = getLocalPathForExecutable(rootPath, binary);
     if (cmd) {
-      return withQuote ? `"${cmd}"` : cmd;
+      return `"${cmd}"`;
     }
   }
 };
-
-/**
- * Handles getting the jest runner, handling the OS and project specific work too
- *
- * @returns {string}
- */
-// tslint:disable-next-line no-shadowed-variable
-export function pathToJest({ pathToJest, rootPath }: PluginResourceSettings): string {
-  if (pathToJest && hasUserSetPathToJest(pathToJest)) {
-    return normalize(pathToJest);
-  }
-
-  if (isBootstrappedWithCreateReactApp(rootPath)) {
-    return 'npm test --';
-  }
-
-  const p = getLocalPathForExecutable(rootPath, 'jest') || 'jest' + nodeBinExtension;
-  return `"${p}"`;
-}
-
-/**
- * Handles getting the path to config file
- *
- * @returns {string}
- */
-export function pathToConfig(pluginSettings: PluginResourceSettings): string {
-  if (pluginSettings.pathToConfig) {
-    return normalize(pluginSettings.pathToConfig);
-  }
-
-  return '';
-}
 
 /**
  *  Taken From https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
@@ -251,6 +212,7 @@ export const removeSurroundingQuote = (command: string): string =>
   command.replace(SurroundingQuoteRegex, '');
 
 // TestStats
+/* istanbul ignore next */
 export const emptyTestStats = (): TestStats => {
   return { success: 0, fail: 0, unknown: 0 };
 };
@@ -324,7 +286,6 @@ export const toErrorString = (e: unknown): string => {
     return e;
   }
   if (e instanceof Error) {
-    // return `${e.toString()}\r\n${e.stack}`;
     return e.stack ?? e.toString();
   }
   return JSON.stringify(e);

@@ -33,7 +33,7 @@ import { PluginResourceSettings } from '../../src/Settings';
 import * as extHelper from '../..//src/JestExt/helper';
 import { workspaceLogging } from '../../src/logging';
 import { ProjectWorkspace } from 'jest-editor-support';
-import { mockProjectWorkspace, mockWworkspaceLogging } from '../test-helper';
+import { makeWorkspaceFolder, mockProjectWorkspace, mockWworkspaceLogging } from '../test-helper';
 import { JestTestProvider } from '../../src/test-provider';
 import { MessageAction } from '../../src/messaging';
 import { addFolderToDisabledWorkspaceFolders } from '../../src/extensionManager';
@@ -1120,11 +1120,11 @@ describe('JestExt', () => {
           expect(sbUpdateMock).toHaveBeenCalledWith({ state: 'stopped' });
           expect(messaging.systemErrorMessage).toHaveBeenCalledWith(
             'something is wrong',
-            { action: expect.any(Function), title: 'Help' },
-            { action: expect.any(Function), title: 'Run Setup Tool' }
+            { action: expect.any(Function), title: 'Fix' },
+            { action: expect.any(Function), title: 'Help' }
           );
           const setupAction: MessageAction = (messaging.systemErrorMessage as jest.Mocked<any>).mock
-            .calls[0][2];
+            .calls[0][1];
 
           setupAction.action();
 
@@ -1140,13 +1140,13 @@ describe('JestExt', () => {
           expect(sbUpdateMock).toHaveBeenCalledWith({ state: 'stopped' });
           expect(messaging.systemErrorMessage).toHaveBeenCalledWith(
             '(test-folder) something is wrong',
-            { action: expect.any(Function), title: 'Help' },
-            { action: expect.any(Function), title: 'Run Setup Tool' },
-            { action: expect.any(Function), title: 'Ignore Folder' }
+            { action: expect.any(Function), title: 'Fix' },
+            { action: expect.any(Function), title: 'Ignore Folder' },
+            { action: expect.any(Function), title: 'Help' }
           );
 
           const ignoreAction: MessageAction = (messaging.systemErrorMessage as jest.Mocked<any>)
-            .mock.calls[0][3];
+            .mock.calls[0][2];
 
           ignoreAction.action();
 
@@ -1261,13 +1261,16 @@ describe('JestExt', () => {
     );
   });
   describe('validateJestCommandLine', () => {
+    const ws1 = { workspace: makeWorkspaceFolder('w1'), rootPath: 'child' };
+    const ws2 = { workspace: makeWorkspaceFolder('w2') };
     it.each`
-      case                     | jestCommandLine | defaultJestCommands     | validWorkspaces            | validationResult | updateSettings
-      ${'has jestCommandLine'} | ${'jest'}       | ${[]}                   | ${[]}                      | ${true}          | ${undefined}
-      ${'valid default'}       | ${undefined}    | ${['jest']}             | ${[]}                      | ${true}          | ${undefined}
-      ${'valid workspace'}     | ${undefined}    | ${[undefined, 'jest2']} | ${[{ rootPath: 'child' }]} | ${false}         | ${{ rootPath: '/test-folder/child', jestCommandLine: 'jest2' }}
-      ${'no workspace'}        | ${undefined}    | ${[undefined]}          | ${[]}                      | ${false}         | ${undefined}
-      ${'multiple workspaces'} | ${undefined}    | ${[undefined]}          | ${[{}, {}]}                | ${false}         | ${undefined}
+      case                     | jestCommandLine | defaultJestCommands       | validWorkspaces | validationResult | updateSettings
+      ${'has jestCommandLine'} | ${'jest'}       | ${[]}                     | ${[]}           | ${'pass'}        | ${undefined}
+      ${'valid default'}       | ${undefined}    | ${['jest']}               | ${[]}           | ${'restart'}     | ${{ jestCommandLine: 'jest' }}
+      ${'valid workspace'}     | ${undefined}    | ${[undefined, 'jest2']}   | ${[ws1]}        | ${'restart'}     | ${{ rootPath: '/test-folder/child', jestCommandLine: 'jest2' }}
+      ${'same rootPath'}       | ${undefined}    | ${[undefined, undefined]} | ${[ws2]}        | ${'fail'}        | ${undefined}
+      ${'no workspace'}        | ${undefined}    | ${[undefined]}            | ${[]}           | ${'fail'}        | ${undefined}
+      ${'multiple workspaces'} | ${undefined}    | ${[undefined]}            | ${[ws1, ws2]}   | ${'fail'}        | ${undefined}
     `(
       '$case',
       async ({
@@ -1305,5 +1308,32 @@ describe('JestExt', () => {
         }
       }
     );
+    describe('when detection failed in a monorepo', () => {
+      it.each`
+        case                     | folders       | actionId
+        ${'no workspaceFolders'} | ${undefined}  | ${'cmdLine'}
+        ${'single-root'}         | ${[ws1]}      | ${'monorepo'}
+        ${'multi-root'}          | ${[ws1, ws2]} | ${'cmdLine'}
+      `('$case', async ({ folders, actionId }) => {
+        (vscode.workspace as any).workspaceFolders = folders;
+        mockWorkspaceManager.validateWorkspace.mockReturnValue(Promise.resolve([ws1, ws2]));
+
+        const jestExt = newJestExt({ settings: { jestCommandLine: undefined } });
+        const updateSettingSpy = jest.spyOn(jestExt, 'triggerUpdateSettings');
+        updateSettingSpy.mockReturnValueOnce(Promise.resolve());
+
+        await expect(jestExt.validateJestCommandLine()).resolves.toEqual('fail');
+        expect(messaging.systemErrorMessage).toHaveBeenCalledTimes(1);
+        const fixAction = (messaging.systemErrorMessage as jest.Mocked<any>).mock.calls[0][1];
+        expect(fixAction.title).toEqual('Fix');
+        fixAction.action();
+        expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+          expect.stringContaining('setup-extension'),
+          expect.objectContaining({
+            taskId: actionId,
+          })
+        );
+      });
+    });
   });
 });

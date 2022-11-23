@@ -46,21 +46,19 @@ export const outputFileSuffix = (ws: string, extra?: string): string => {
 };
 export const createJestExtContext = (
   workspaceFolder: vscode.WorkspaceFolder,
-  settings: PluginResourceSettings
+  settings: PluginResourceSettings,
+  output: JestOutputTerminal
 ): JestExtContext => {
   const createRunnerWorkspace = (options?: RunnerWorkspaceOptions) => {
     const ws = workspaceFolder.name;
     const currentJestVersion = 20;
 
     if (!settings.jestCommandLine) {
-      //TODO consider throwing exception?
-      console.warn(
-        `[${workspaceFolder.name}] jestCommandLine is not set up yet, process will fail`
-      );
+      throw new Error(`[${workspaceFolder.name}] missing jestCommandLine`);
     }
     return new ProjectWorkspace(
       toFilePath(settings.rootPath),
-      settings.jestCommandLine || 'jest',
+      settings.jestCommandLine,
       '',
       currentJestVersion,
       outputFileSuffix(ws, options?.outputFileSuffix),
@@ -70,7 +68,6 @@ export const createJestExtContext = (
       settings.shell.toSetting()
     );
   };
-  const output = new JestOutputTerminal(workspaceFolder.name);
   return {
     workspace: workspaceFolder,
     settings,
