@@ -33,7 +33,12 @@ import { PluginResourceSettings } from '../../src/Settings';
 import * as extHelper from '../..//src/JestExt/helper';
 import { workspaceLogging } from '../../src/logging';
 import { ProjectWorkspace } from 'jest-editor-support';
-import { makeWorkspaceFolder, mockProjectWorkspace, mockWworkspaceLogging } from '../test-helper';
+import {
+  makeUri,
+  makeWorkspaceFolder,
+  mockProjectWorkspace,
+  mockWworkspaceLogging,
+} from '../test-helper';
 import { JestTestProvider } from '../../src/test-provider';
 import { MessageAction } from '../../src/messaging';
 import { addFolderToDisabledWorkspaceFolders } from '../../src/extensionManager';
@@ -129,7 +134,7 @@ describe('JestExt', () => {
     });
     (RunShell as jest.Mocked<any>).mockImplementation(() => ({ toSetting: jest.fn() }));
 
-    mockWorkspaceManager = { validateWorkspace: jest.fn() };
+    mockWorkspaceManager = { getFoldersFromFilesystem: jest.fn() };
     (WorkspaceManager as jest.Mocked<any>).mockReturnValue(mockWorkspaceManager);
   });
 
@@ -836,7 +841,7 @@ describe('JestExt', () => {
 
         const defaultJestCommandSpy = jest.spyOn(helper, 'getDefaultJestCommand');
         defaultJestCommandSpy.mockReturnValueOnce(undefined);
-        mockWorkspaceManager.validateWorkspace.mockReturnValue(Promise.resolve([]));
+        mockWorkspaceManager.getFoldersFromFilesystem.mockReturnValue(Promise.resolve([]));
         const sut = newJestExt({ settings: { jestCommandLine: undefined } });
         await sut.startSession();
 
@@ -1261,31 +1266,25 @@ describe('JestExt', () => {
     );
   });
   describe('validateJestCommandLine', () => {
-    const ws1 = { workspace: makeWorkspaceFolder('w1'), rootPath: 'child' };
-    const ws2 = { workspace: makeWorkspaceFolder('w2') };
+    const ws1 = makeUri('test-folder', 'w1', 'child');
+    const ws2 = makeUri('test-folder', 'w2');
     it.each`
-      case                     | jestCommandLine | defaultJestCommands       | validWorkspaces | validationResult | updateSettings
-      ${'has jestCommandLine'} | ${'jest'}       | ${[]}                     | ${[]}           | ${'pass'}        | ${undefined}
-      ${'valid default'}       | ${undefined}    | ${['jest']}               | ${[]}           | ${'restart'}     | ${{ jestCommandLine: 'jest' }}
-      ${'valid workspace'}     | ${undefined}    | ${[undefined, 'jest2']}   | ${[ws1]}        | ${'restart'}     | ${{ rootPath: '/test-folder/child', jestCommandLine: 'jest2' }}
-      ${'same rootPath'}       | ${undefined}    | ${[undefined, undefined]} | ${[ws2]}        | ${'fail'}        | ${undefined}
-      ${'no workspace'}        | ${undefined}    | ${[undefined]}            | ${[]}           | ${'fail'}        | ${undefined}
-      ${'multiple workspaces'} | ${undefined}    | ${[undefined]}            | ${[ws1, ws2]}   | ${'fail'}        | ${undefined}
+      case                     | jestCommandLine | defaultJestCommands              | uris          | validationResult | updateSettings
+      ${'has jestCommandLine'} | ${'jest'}       | ${[]}                            | ${[]}         | ${'pass'}        | ${undefined}
+      ${'valid default'}       | ${undefined}    | ${['jest']}                      | ${[]}         | ${'restart'}     | ${{ jestCommandLine: 'jest' }}
+      ${'valid workspace'}     | ${undefined}    | ${[undefined, 'jest2']}          | ${[ws1]}      | ${'restart'}     | ${{ rootPath: ws1.fsPath, jestCommandLine: 'jest2' }}
+      ${'same rootPath'}       | ${undefined}    | ${[undefined, undefined]}        | ${[ws2]}      | ${'fail'}        | ${undefined}
+      ${'no workspace'}        | ${undefined}    | ${[undefined]}                   | ${[]}         | ${'fail'}        | ${undefined}
+      ${'multiple workspaces'} | ${undefined}    | ${[undefined, 'jest1', 'jest2']} | ${[ws1, ws2]} | ${'fail'}        | ${undefined}
     `(
       '$case',
-      async ({
-        jestCommandLine,
-        defaultJestCommands,
-        validWorkspaces,
-        validationResult,
-        updateSettings,
-      }) => {
+      async ({ jestCommandLine, defaultJestCommands, uris, validationResult, updateSettings }) => {
         const defaultJestCommandSpy = jest.spyOn(helper, 'getDefaultJestCommand');
         defaultJestCommands.forEach((cmd) => {
           defaultJestCommandSpy.mockReturnValueOnce(cmd);
         });
 
-        mockWorkspaceManager.validateWorkspace.mockReturnValue(Promise.resolve(validWorkspaces));
+        mockWorkspaceManager.getFoldersFromFilesystem.mockReturnValue(Promise.resolve(uris));
 
         const jestExt = newJestExt({ settings: { jestCommandLine } });
         const updateSettingSpy = jest.spyOn(jestExt, 'triggerUpdateSettings');
@@ -1315,12 +1314,19 @@ describe('JestExt', () => {
         ${'single-root'}         | ${[ws1]}      | ${'monorepo'}
         ${'multi-root'}          | ${[ws1, ws2]} | ${'cmdLine'}
       `('$case', async ({ folders, actionId }) => {
-        (vscode.workspace as any).workspaceFolders = folders;
-        mockWorkspaceManager.validateWorkspace.mockReturnValue(Promise.resolve([ws1, ws2]));
+        (vscode.workspace as any).workspaceFolders = folders
+          ? folders.map(() => makeWorkspaceFolder('whatever'))
+          : undefined;
+        mockWorkspaceManager.getFoldersFromFilesystem.mockReturnValue(Promise.resolve([ws1, ws2]));
 
         const jestExt = newJestExt({ settings: { jestCommandLine: undefined } });
         const updateSettingSpy = jest.spyOn(jestExt, 'triggerUpdateSettings');
         updateSettingSpy.mockReturnValueOnce(Promise.resolve());
+        const defaultJestCommandSpy = jest.spyOn(helper, 'getDefaultJestCommand');
+        defaultJestCommandSpy
+          .mockReturnValueOnce(undefined)
+          .mockReturnValueOnce('something')
+          .mockReturnValueOnce('something');
 
         await expect(jestExt.validateJestCommandLine()).resolves.toEqual('fail');
         expect(messaging.systemErrorMessage).toHaveBeenCalledTimes(1);

@@ -32,12 +32,7 @@ import {
 } from './types';
 import * as messaging from '../messaging';
 import { extensionName, SupportedLanguageIds } from '../appGlobals';
-import {
-  absoluteRootPath,
-  createJestExtContext,
-  getExtensionResourceSettings,
-  prefixWorkspace,
-} from './helper';
+import { createJestExtContext, getExtensionResourceSettings, prefixWorkspace } from './helper';
 import { PluginResourceSettings } from '../Settings';
 import { WizardTaskId } from '../setup-wizard';
 import { ItemCommand, JestExtExplorerContext } from '../test-provider/types';
@@ -61,6 +56,10 @@ type MessageActionType =
   | 'setup-cmdline'
   | 'setup-monorepo';
 
+interface JestCommandSettings {
+  rootPath: string;
+  jestCommandLine: string;
+}
 /** extract lines starts and end with [] */
 export class JestExt {
   coverageMapProvider: CoverageMapProvider;
@@ -415,23 +414,20 @@ export class JestExt {
    * @returns
    */
   public async validateJestCommandLine(): Promise<'pass' | 'fail' | 'restart'> {
-    const updateSettings = async (
-      jestCommandLine: string,
-      rootPath?: string
-    ): Promise<'restart'> => {
-      this.extContext.output.write('auto config:', 'info');
-
-      const msg = [];
-      this.extContext.settings.jestCommandLine = jestCommandLine;
-      msg.push(`  ${ansiEsc('bold', 'jestCommandLine')}: ${jestCommandLine}`);
-      if (rootPath) {
-        this.extContext.settings.rootPath = rootPath;
-        msg.push(`  ${ansiEsc('bold', 'rootPath')}: ${rootPath}`);
-      }
-      this.extContext.output.write(`${msg.join('\r\n')}\r\n`, 'new-line');
-
+    const updateSettings = async (update: JestCommandSettings): Promise<'restart'> => {
+      this.extContext.settings.jestCommandLine = update.jestCommandLine;
+      this.extContext.settings.rootPath = update.rootPath;
       await this.triggerUpdateSettings(this.extContext.settings);
       return 'restart';
+    };
+
+    const outputSettings = (settings: JestCommandSettings) => {
+      this.extContext.output.write(
+        'found:\r\n' +
+          `  ${ansiEsc('bold', 'rootPath')}: ${settings.rootPath}\r\n` +
+          `  ${ansiEsc('bold', 'jestCommandLine')}: ${settings.jestCommandLine}\r\n`,
+        'new-line'
+      );
     };
 
     const t0 = Date.now();
@@ -439,55 +435,61 @@ export class JestExt {
       return Promise.resolve('pass');
     }
 
+    this.extContext.output.write('auto config:', 'info');
+
     let jestCommandLine = getDefaultJestCommand(this.extContext.settings.rootPath);
     if (jestCommandLine) {
-      return updateSettings(jestCommandLine);
+      const settings = { rootPath: this.extContext.settings.rootPath, jestCommandLine };
+      outputSettings(settings);
+      return updateSettings(settings);
     }
 
     // see if we can get a valid command by examing the file system
     let msg = 'Not able to detect a valid jest command';
     let actionType: MessageActionType = 'setup-cmdline';
 
-    const validWorkspaces = await this.workspaceManager.validateWorkspace(
-      this.extContext.workspace
-    );
+    const uris = await this.workspaceManager.getFoldersFromFilesystem(this.extContext.workspace);
     const perf = Date.now() - t0;
     /* istanbul ignore next */
     if (perf > 2000) {
       this.logging(
         'warn',
-        `validateJestCommandLine took ${perf} msec. Might be more efficient to update user settings directly`
+        `validateJestCommandLine took ${perf} msec. Might be more efficient to update settings directly`
       );
     }
 
-    if (validWorkspaces.length === 1) {
-      const rootPath = absoluteRootPath(
-        validWorkspaces[0].rootPath ?? '',
-        this.extContext.workspace.uri.fsPath
-      );
-      if (rootPath !== this.extContext.settings.rootPath) {
-        jestCommandLine = getDefaultJestCommand(rootPath);
-        if (jestCommandLine) {
-          return updateSettings(jestCommandLine, rootPath);
+    const found: JestCommandSettings[] = [];
+    for (const uri of uris) {
+      const rootPath = uri.fsPath;
+      if (rootPath === this.extContext.settings.rootPath) {
+        continue;
+      }
+      jestCommandLine = getDefaultJestCommand(rootPath);
+      if (jestCommandLine) {
+        const settings = { jestCommandLine, rootPath };
+        outputSettings(settings);
+        found.push(settings);
+
+        if (found.length > 1) {
+          this.extContext.output.write('Multiple candidates found, abort auto config', 'warn');
+
+          msg = 'Not able to determine the jest command: multiple candidates found.';
+          if (vscode.workspace.workspaceFolders?.length === 1) {
+            msg += ' Perhaps this is a multi-root monorepo?';
+            actionType = 'setup-monorepo';
+          }
+          break;
         }
       }
-    } else if (validWorkspaces.length > 1) {
-      // found multiple workspaces under the current workspace
-      this.extContext.output.write(`found multiple jest roots:`, 'warn');
-      const paths = validWorkspaces.map((ws) => ws.rootPath).join('\r\n');
-      this.extContext.output.write(`${paths}\r\n`);
-
-      if (vscode.workspace.workspaceFolders?.length === 1) {
-        // multi-root monorepo in a single-root workspace?
-        msg = 'Not able to determine the jest command, perhaps this is a multi-root monorepo?';
-        actionType = 'setup-monorepo';
-      }
+    }
+    if (found.length === 1) {
+      return updateSettings(found[0]);
     }
     messaging.systemErrorMessage(
       prefixWorkspace(this.extContext, msg),
       ...this.buildMessageActions([actionType, 'disable-folder', 'help'])
     );
-    this.extContext.output.write(`Jest session aborted: ${msg}`, 'error');
+    this.extContext.output.write(`Abort jest session: ${msg}`, 'error');
     return 'fail';
   }
   public activate(): void {
