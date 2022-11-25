@@ -61,7 +61,3 @@ export interface PluginWindowSettings {
 export function isDefaultPathToJest(str?: string | null): boolean {
   return str === null || str === '';
 }
-
-export function hasUserSetPathToJest(str?: string | null): boolean {
-  return !isDefaultPathToJest(str);
-}
