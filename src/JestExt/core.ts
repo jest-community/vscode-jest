@@ -445,46 +445,70 @@ export class JestExt {
     }
 
     // see if we can get a valid command by examing the file system
-    let msg = 'Not able to detect a valid jest command';
-    let actionType: MessageActionType = 'setup-cmdline';
-
     const uris = await this.workspaceManager.getFoldersFromFilesystem(this.extContext.workspace);
+
     const perf = Date.now() - t0;
     /* istanbul ignore next */
     if (perf > 2000) {
-      this.logging(
-        'warn',
-        `validateJestCommandLine took ${perf} msec. Might be more efficient to update settings directly`
+      this.extContext.output.write(
+        `auto config took ${perf} msec. Might be more efficient to update settings directly`,
+        'warn'
       );
     }
 
     const found: JestCommandSettings[] = [];
-    for (const uri of uris) {
-      const rootPath = uri.fsPath;
-      if (rootPath === this.extContext.settings.rootPath) {
-        continue;
-      }
-      jestCommandLine = getDefaultJestCommand(rootPath);
-      if (jestCommandLine) {
-        const settings = { jestCommandLine, rootPath };
-        outputSettings(settings);
-        found.push(settings);
+    if (uris.length > 0) {
+      this.extContext.output.write(
+        'examining the following package roots:\r\n' +
+          `  ${uris.map((uri) => uri.fsPath).join('\r\n  ')}`,
+        'new-line'
+      );
+      for (const uri of uris) {
+        const rootPath = uri.fsPath;
+        if (rootPath === this.extContext.settings.rootPath) {
+          continue;
+        }
+        jestCommandLine = getDefaultJestCommand(rootPath);
+        if (jestCommandLine) {
+          const settings = { jestCommandLine, rootPath };
+          outputSettings(settings);
+          found.push(settings);
 
-        if (found.length > 1) {
-          this.extContext.output.write('Multiple candidates found, abort auto config', 'warn');
-
-          msg = 'Not able to determine the jest command: multiple candidates found.';
-          if (vscode.workspace.workspaceFolders?.length === 1) {
-            msg += ' Perhaps this is a multi-root monorepo?';
-            actionType = 'setup-monorepo';
+          if (found.length > 1) {
+            this.extContext.output.write('Multiple candidates found, abort', 'warn');
+            break;
           }
-          break;
         }
       }
     }
-    if (found.length === 1) {
-      return updateSettings(found[0]);
+
+    let msg = 'Not able to auto detect a valid jest command';
+    let actionType: MessageActionType = 'setup-cmdline';
+
+    switch (found.length) {
+      case 1:
+        return updateSettings(found[0]);
+      case 0: {
+        if (uris.length > 0) {
+          this.extContext.output.write(
+            'not able to find test script or jest/CRA binary in any of the package roots',
+            'warn'
+          );
+        } else {
+          this.extContext.output.write('no package.json file found', 'warn');
+        }
+        break;
+      }
+      default: {
+        msg = `${msg}: multiple candidates found`;
+        if (vscode.workspace.workspaceFolders?.length === 1) {
+          msg += ' Perhaps this is a multi-root monorepo?';
+          actionType = 'setup-monorepo';
+        }
+        break;
+      }
     }
+
     messaging.systemErrorMessage(
       prefixWorkspace(this.extContext, msg),
       ...this.buildMessageActions([actionType, 'disable-folder', 'help'])

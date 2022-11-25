@@ -1341,5 +1341,27 @@ describe('JestExt', () => {
         );
       });
     });
+    it('when root has no jest but the sub folder did', async () => {
+      (vscode.workspace as any).workspaceFolders = [makeWorkspaceFolder('whatever')];
+      mockWorkspaceManager.getFoldersFromFilesystem.mockReturnValue(Promise.resolve([ws1, ws2]));
+
+      const jestExt = newJestExt({
+        settings: { jestCommandLine: undefined, rootPath: ws1.fsPath },
+      });
+      const updateSettingSpy = jest.spyOn(jestExt, 'triggerUpdateSettings');
+      updateSettingSpy.mockReturnValueOnce(Promise.resolve());
+      const defaultJestCommandSpy = jest.spyOn(helper, 'getDefaultJestCommand');
+      defaultJestCommandSpy.mockReturnValueOnce(undefined).mockReturnValueOnce('should be ws2');
+
+      await expect(jestExt.validateJestCommandLine()).resolves.toEqual('restart');
+      expect(defaultJestCommandSpy).toHaveBeenCalledTimes(2);
+
+      expect(updateSettingSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          rootPath: ws2.fsPath,
+          jestCommandLine: 'should be ws2',
+        })
+      );
+    });
   });
 });
