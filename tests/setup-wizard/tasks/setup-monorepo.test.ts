@@ -9,10 +9,7 @@ import {
   MonorepoSetupActionId,
   setupMonorepo,
 } from '../../../src/setup-wizard/tasks/setup-monorepo';
-import {
-  WorkspaceManager,
-  isSameWorkspace,
-} from '../../../src/setup-wizard/tasks/workspace-manager';
+import { WorkspaceManager, isSameWorkspace } from '../../../src/workspace-manager';
 
 import { createWizardContext } from './task-test-helper';
 import { mockWizardHelper, workspaceFolder } from '../test-helper';

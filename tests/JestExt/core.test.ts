@@ -33,7 +33,12 @@ import { PluginResourceSettings } from '../../src/Settings';
 import * as extHelper from '../..//src/JestExt/helper';
 import { workspaceLogging } from '../../src/logging';
 import { ProjectWorkspace } from 'jest-editor-support';
-import { mockProjectWorkspace, mockWworkspaceLogging } from '../test-helper';
+import {
+  makeUri,
+  makeWorkspaceFolder,
+  mockProjectWorkspace,
+  mockWworkspaceLogging,
+} from '../test-helper';
 import { JestTestProvider } from '../../src/test-provider';
 import { MessageAction } from '../../src/messaging';
 import { addFolderToDisabledWorkspaceFolders } from '../../src/extensionManager';
@@ -41,6 +46,7 @@ import { JestOutputTerminal } from '../../src/JestExt/output-terminal';
 import { RunShell } from '../../src/JestExt/run-shell';
 import * as errors from '../../src/errors';
 import { ItemCommand } from '../../src/test-provider/types';
+import { WorkspaceManager } from '../../src/workspace-manager';
 
 /* eslint jest/expect-expect: ["error", { "assertFunctionNames": ["expect", "expectItTakesNoAction"] }] */
 const mockHelpers = helper as jest.Mocked<any>;
@@ -62,6 +68,7 @@ describe('JestExt', () => {
   const getConfiguration = vscode.workspace.getConfiguration as jest.Mock<any>;
   const context: any = { asAbsolutePath: (text) => text } as vscode.ExtensionContext;
   const workspaceFolder = { name: 'test-folder', uri: { fsPath: '/test-folder' } } as any;
+  let mockSettings;
 
   const debugConfigurationProvider = {
     provideDebugConfigurations: jest.fn(),
@@ -81,14 +88,8 @@ describe('JestExt', () => {
     settings?: Partial<PluginResourceSettings>;
     coverageCodeLensProvider?: any;
   }) => {
-    const extensionSettings = {
-      debugCodeLens: {},
-      testExplorer: { enabled: true },
-      autoRun: { watch: true },
-    } as any;
-    mockGetExtensionResourceSettings.mockReturnValue(
-      override?.settings ? { ...extensionSettings, ...override.settings } : extensionSettings
-    );
+    mockSettings = { ...mockSettings, ...(override?.settings ?? {}) };
+    mockGetExtensionResourceSettings.mockReturnValue(mockSettings);
     const coverageCodeLensProvider: any = override?.coverageCodeLensProvider ?? {
       coverageChanged: jest.fn(),
     };
@@ -111,9 +112,16 @@ describe('JestExt', () => {
     runItemCommand: jest.fn(),
   };
 
+  let mockWorkspaceManager;
   beforeEach(() => {
     jest.resetAllMocks();
 
+    mockSettings = {
+      debugCodeLens: {},
+      testExplorer: { enabled: true },
+      autoRun: { watch: true },
+      jestCommandLine: 'jest',
+    };
     getConfiguration.mockReturnValue({});
 
     (createProcessSession as jest.Mocked<any>).mockReturnValue(mockProcessSession);
@@ -125,6 +133,9 @@ describe('JestExt', () => {
       return { fire: jest.fn(), event: jest.fn(), dispose: jest.fn() };
     });
     (RunShell as jest.Mocked<any>).mockImplementation(() => ({ toSetting: jest.fn() }));
+
+    mockWorkspaceManager = { getFoldersFromFilesystem: jest.fn() };
+    (WorkspaceManager as jest.Mocked<any>).mockReturnValue(mockWorkspaceManager);
   });
 
   describe('debugTests()', () => {
@@ -611,7 +622,10 @@ describe('JestExt', () => {
       expect(sut.triggerUpdateSettings).toHaveBeenCalled();
     });
     it('overrides showCoverageOnLoad settings', async () => {
-      const settings = { showCoverageOnLoad: true, shell: { toSetting: jest.fn() } } as any;
+      const settings = {
+        showCoverageOnLoad: true,
+        shell: { toSetting: jest.fn() },
+      } as any;
       const sut = newJestExt({ settings });
 
       const { createRunnerWorkspace } = (createProcessSession as jest.Mocked<any>).mock.calls[0][0];
@@ -822,6 +836,17 @@ describe('JestExt', () => {
           }
         );
       });
+      it('will abort if no valid jest command is found', async () => {
+        expect.hasAssertions();
+
+        const defaultJestCommandSpy = jest.spyOn(helper, 'getDefaultJestCommand');
+        defaultJestCommandSpy.mockReturnValueOnce(undefined);
+        mockWorkspaceManager.getFoldersFromFilesystem.mockReturnValue(Promise.resolve([]));
+        const sut = newJestExt({ settings: { jestCommandLine: undefined } });
+        await sut.startSession();
+
+        expect(JestTestProvider).not.toHaveBeenCalled();
+      });
     });
     describe('stopSession', () => {
       it('will fire event', async () => {
@@ -970,6 +995,7 @@ describe('JestExt', () => {
       const settings: any = {
         debugMode: true,
         autoRun: { watch: true },
+        jestCommandLine: 'jest',
       };
       await jestExt.triggerUpdateSettings(settings);
       expect(createProcessSession).toHaveBeenCalledTimes(2);
@@ -1029,11 +1055,11 @@ describe('JestExt', () => {
       expect(mockProcessSession.stop).toHaveBeenCalledTimes(1);
       expect(mockOutputTerminal.dispose).toHaveBeenCalledTimes(1);
     });
-    it('will dispose test provider if initialized', () => {
+    it('will dispose test provider if initialized', async () => {
       const sut = newJestExt();
       sut.deactivate();
       expect(mockTestProvider.dispose).not.toHaveBeenCalledTimes(1);
-      sut.startSession();
+      await sut.startSession();
       sut.deactivate();
       expect(mockTestProvider.dispose).toHaveBeenCalledTimes(1);
     });
@@ -1099,11 +1125,11 @@ describe('JestExt', () => {
           expect(sbUpdateMock).toHaveBeenCalledWith({ state: 'stopped' });
           expect(messaging.systemErrorMessage).toHaveBeenCalledWith(
             'something is wrong',
-            { action: expect.any(Function), title: 'Help' },
-            { action: expect.any(Function), title: 'Run Setup Tool' }
+            { action: expect.any(Function), title: 'Fix' },
+            { action: expect.any(Function), title: 'Help' }
           );
           const setupAction: MessageAction = (messaging.systemErrorMessage as jest.Mocked<any>).mock
-            .calls[0][2];
+            .calls[0][1];
 
           setupAction.action();
 
@@ -1119,13 +1145,13 @@ describe('JestExt', () => {
           expect(sbUpdateMock).toHaveBeenCalledWith({ state: 'stopped' });
           expect(messaging.systemErrorMessage).toHaveBeenCalledWith(
             '(test-folder) something is wrong',
-            { action: expect.any(Function), title: 'Help' },
-            { action: expect.any(Function), title: 'Run Setup Tool' },
-            { action: expect.any(Function), title: 'Ignore Folder' }
+            { action: expect.any(Function), title: 'Fix' },
+            { action: expect.any(Function), title: 'Ignore Folder' },
+            { action: expect.any(Function), title: 'Help' }
           );
 
           const ignoreAction: MessageAction = (messaging.systemErrorMessage as jest.Mocked<any>)
-            .mock.calls[0][3];
+            .mock.calls[0][2];
 
           ignoreAction.action();
 
@@ -1229,14 +1255,113 @@ describe('JestExt', () => {
       );
     });
   });
-  it('runItemCommand will delegate operation to testProvider', () => {
+  it('runItemCommand will delegate operation to testProvider', async () => {
     const jestExt = newJestExt();
-    jestExt.startSession();
+    await jestExt.startSession();
     const testItem: any = {};
     jestExt.runItemCommand(testItem, ItemCommand.updateSnapshot);
     expect(mockTestProvider.runItemCommand).toHaveBeenCalledWith(
       testItem,
       ItemCommand.updateSnapshot
     );
+  });
+  describe('validateJestCommandLine', () => {
+    const ws1 = makeUri('test-folder', 'w1', 'child');
+    const ws2 = makeUri('test-folder', 'w2');
+    it.each`
+      case                     | jestCommandLine | defaultJestCommands              | uris          | validationResult | updateSettings
+      ${'has jestCommandLine'} | ${'jest'}       | ${[]}                            | ${[]}         | ${'pass'}        | ${undefined}
+      ${'valid default'}       | ${undefined}    | ${['jest']}                      | ${[]}         | ${'restart'}     | ${{ jestCommandLine: 'jest' }}
+      ${'valid workspace'}     | ${undefined}    | ${[undefined, 'jest2']}          | ${[ws1]}      | ${'restart'}     | ${{ rootPath: ws1.fsPath, jestCommandLine: 'jest2' }}
+      ${'same rootPath'}       | ${undefined}    | ${[undefined, undefined]}        | ${[ws2]}      | ${'fail'}        | ${undefined}
+      ${'no workspace'}        | ${undefined}    | ${[undefined]}                   | ${[]}         | ${'fail'}        | ${undefined}
+      ${'multiple workspaces'} | ${undefined}    | ${[undefined, 'jest1', 'jest2']} | ${[ws1, ws2]} | ${'fail'}        | ${undefined}
+    `(
+      '$case',
+      async ({ jestCommandLine, defaultJestCommands, uris, validationResult, updateSettings }) => {
+        const defaultJestCommandSpy = jest.spyOn(helper, 'getDefaultJestCommand');
+        defaultJestCommands.forEach((cmd) => {
+          defaultJestCommandSpy.mockReturnValueOnce(cmd);
+        });
+
+        mockWorkspaceManager.getFoldersFromFilesystem.mockReturnValue(Promise.resolve(uris));
+
+        const jestExt = newJestExt({ settings: { jestCommandLine } });
+        const updateSettingSpy = jest.spyOn(jestExt, 'triggerUpdateSettings');
+        updateSettingSpy.mockReturnValueOnce(Promise.resolve());
+
+        await expect(jestExt.validateJestCommandLine()).resolves.toEqual(validationResult);
+        expect(defaultJestCommandSpy).toHaveBeenCalledTimes(defaultJestCommands.length);
+
+        if (updateSettings) {
+          expect(updateSettingSpy).toHaveBeenCalledWith(expect.objectContaining(updateSettings));
+        } else {
+          expect(updateSettingSpy).not.toHaveBeenCalled();
+        }
+        if (!validationResult) {
+          if (updateSettings) {
+            expect(messaging.systemErrorMessage).not.toHaveBeenCalled();
+          } else {
+            expect(messaging.systemErrorMessage).toHaveBeenCalled();
+          }
+        }
+      }
+    );
+    describe('when detection failed in a monorepo', () => {
+      it.each`
+        case                     | folders       | actionId
+        ${'no workspaceFolders'} | ${undefined}  | ${'cmdLine'}
+        ${'single-root'}         | ${[ws1]}      | ${'monorepo'}
+        ${'multi-root'}          | ${[ws1, ws2]} | ${'cmdLine'}
+      `('$case', async ({ folders, actionId }) => {
+        (vscode.workspace as any).workspaceFolders = folders
+          ? folders.map(() => makeWorkspaceFolder('whatever'))
+          : undefined;
+        mockWorkspaceManager.getFoldersFromFilesystem.mockReturnValue(Promise.resolve([ws1, ws2]));
+
+        const jestExt = newJestExt({ settings: { jestCommandLine: undefined } });
+        const updateSettingSpy = jest.spyOn(jestExt, 'triggerUpdateSettings');
+        updateSettingSpy.mockReturnValueOnce(Promise.resolve());
+        const defaultJestCommandSpy = jest.spyOn(helper, 'getDefaultJestCommand');
+        defaultJestCommandSpy
+          .mockReturnValueOnce(undefined)
+          .mockReturnValueOnce('something')
+          .mockReturnValueOnce('something');
+
+        await expect(jestExt.validateJestCommandLine()).resolves.toEqual('fail');
+        expect(messaging.systemErrorMessage).toHaveBeenCalledTimes(1);
+        const fixAction = (messaging.systemErrorMessage as jest.Mocked<any>).mock.calls[0][1];
+        expect(fixAction.title).toEqual('Fix');
+        fixAction.action();
+        expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+          expect.stringContaining('setup-extension'),
+          expect.objectContaining({
+            taskId: actionId,
+          })
+        );
+      });
+    });
+    it('when root has no jest but the sub folder did', async () => {
+      (vscode.workspace as any).workspaceFolders = [makeWorkspaceFolder('whatever')];
+      mockWorkspaceManager.getFoldersFromFilesystem.mockReturnValue(Promise.resolve([ws1, ws2]));
+
+      const jestExt = newJestExt({
+        settings: { jestCommandLine: undefined, rootPath: ws1.fsPath },
+      });
+      const updateSettingSpy = jest.spyOn(jestExt, 'triggerUpdateSettings');
+      updateSettingSpy.mockReturnValueOnce(Promise.resolve());
+      const defaultJestCommandSpy = jest.spyOn(helper, 'getDefaultJestCommand');
+      defaultJestCommandSpy.mockReturnValueOnce(undefined).mockReturnValueOnce('should be ws2');
+
+      await expect(jestExt.validateJestCommandLine()).resolves.toEqual('restart');
+      expect(defaultJestCommandSpy).toHaveBeenCalledTimes(2);
+
+      expect(updateSettingSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          rootPath: ws2.fsPath,
+          jestCommandLine: 'should be ws2',
+        })
+      );
+    });
   });
 });

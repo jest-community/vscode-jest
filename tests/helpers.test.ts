@@ -17,15 +17,17 @@ jest.mock('os', () => ({ platform: mockPlatform }));
 
 const mockJoin = jest.fn();
 const mockNormalize = jest.fn();
+const mockResolve = jest.fn();
 jest.mock('path', () => ({
   join: mockJoin,
   normalize: mockNormalize,
+  resolve: mockResolve,
 }));
 
+import { resolve } from 'path';
 import * as vscode from 'vscode';
 import {
   isCreateReactAppTestCommand,
-  pathToJest,
   nodeBinExtension,
   cleanAnsi,
   prepareIconFile,
@@ -39,6 +41,7 @@ import {
   toErrorString,
   getPackageJson,
   getTestCommand,
+  getDefaultJestCommand,
 } from '../src/helpers';
 
 // Manually (forcefully) set the executable's file extension to test its addition independendly of the operating system.
@@ -81,80 +84,6 @@ describe('ModuleHelpers', () => {
 
     it('should return false for other scripts with cross-env', () => {
       expect(isCreateReactAppTestCommand('cross-env CI=true custom-script')).toBe(false);
-    });
-  });
-
-  describe('pathToJest', () => {
-    const defaultSettings: any = {
-      pathToJest: null,
-      rootPath: '',
-    };
-
-    beforeEach(() => {
-      mockJoin.mockImplementation(jest.requireActual('path').join);
-      mockNormalize.mockImplementation(jest.requireActual('path').normalize);
-      mockExistsSync.mockImplementation(jest.requireActual('path').existsSync);
-    });
-
-    it('returns "npm test --" when bootstrapped with create-react-app', () => {
-      mockReadFileSync.mockReturnValueOnce(
-        JSON.stringify({
-          scripts: {
-            test: 'react-scripts test',
-          },
-        })
-      );
-
-      expect(pathToJest(defaultSettings)).toBe('npm test --');
-    });
-
-    it('returns the normalized "pathToJest" setting when set by the user', () => {
-      const expected = {};
-      mockNormalize.mockReturnValueOnce(expected);
-
-      const settings: any = {
-        pathToJest: expected,
-        rootPath: '',
-      };
-
-      expect(pathToJest(settings)).toBe(expected);
-      expect(mockNormalize).toHaveBeenCalledWith(settings.pathToJest);
-    });
-    it('defaults to "node_modules/.bin/jest" when Jest is locally installed', () => {
-      const expected = 'node_modules/.bin/jest.TEST';
-
-      mockJoin.mockImplementation(jest.requireActual('path').posix.join);
-      mockNormalize.mockImplementation((arg) => arg);
-      mockExistsSync.mockImplementation((path) => path === expected);
-
-      expect(pathToJest(defaultSettings)).toBe(`"${expected}"`);
-    });
-    it('default jestToPath path can preserve special characters', () => {
-      mockJoin.mockImplementation(jest.requireActual('path').posix.join);
-      mockNormalize.mockImplementation((arg) => arg);
-
-      const testPaths = [
-        '/root/my dir/space',
-        '/root/my dir/escape-space',
-        '/root/👍/emoji',
-        '/root/外國人/unicode',
-        '/root/\\space/double-escape',
-      ];
-      testPaths.forEach((p) => {
-        const settings = { ...defaultSettings, rootPath: p };
-        const expected = `${p}/node_modules/.bin/jest.TEST`;
-        mockExistsSync.mockImplementation((path) => path === expected);
-        expect(pathToJest(settings)).toBe(`"${expected}"`);
-      });
-    });
-    it('defaults to "jest" when Jest is not locally installed', () => {
-      const expected = '"jest.TEST"';
-
-      mockJoin.mockImplementation(jest.requireActual('path').posix.join);
-      mockNormalize.mockImplementation((arg) => arg);
-      mockExistsSync.mockImplementation(() => false);
-
-      expect(pathToJest(defaultSettings)).toBe(expected);
     });
   });
 
@@ -357,14 +286,14 @@ describe('get info from Package.json', () => {
     },
   };
   beforeEach(() => {
-    mockJoin.mockImplementation((...parts) => parts);
+    mockResolve.mockImplementation(jest.requireActual('path').resolve);
   });
   describe('getPackageJson', () => {
     it('can read package.json from file system', () => {
       mockReadFileSync.mockReturnValueOnce(JSON.stringify(packageWithTest));
       expect(getPackageJson('root')).toEqual(packageWithTest);
       expect(mockReadFileSync).toHaveBeenCalledWith(
-        expect.arrayContaining(['root', 'package.json']),
+        resolve('root', 'package.json'),
         expect.anything()
       );
     });
@@ -391,5 +320,38 @@ describe('get info from Package.json', () => {
       mockReadFileSync.mockImplementation(impl);
       expect(getTestCommand('root')).toBeUndefined();
     });
+  });
+});
+
+describe('getDefaultJestCommand', () => {
+  it.each`
+    case | packageTestScript                   | pmLockFile             | binary                    | expected
+    ${1} | ${'react-scripts test'}             | ${'yarn.lock'}         | ${'react-scripts'}        | ${'yarn test'}
+    ${2} | ${'react-scripts test'}             | ${'package-lock.json'} | ${'react-scripts'}        | ${'npm test --'}
+    ${3} | ${'some other test'}                | ${'yarn.lock'}         | ${'jest'}                 | ${'binary'}
+    ${4} | ${'some other test'}                | ${'package-lock.json'} | ${'react-native-scripts'} | ${'binary'}
+    ${5} | ${'some other test'}                | ${'package-lock.json'} | ${undefined}              | ${undefined}
+    ${6} | ${'jest'}                           | ${'package-lock.json'} | ${undefined}              | ${'npm test --'}
+    ${7} | ${undefined}                        | ${'package-lock.json'} | ${'jest'}                 | ${'binary'}
+    ${8} | ${'something with jest --someFlag'} | ${undefined}           | ${'jest'}                 | ${'npm test --'}
+  `('case $case => $expected', ({ packageTestScript, pmLockFile, binary, expected }) => {
+    const packageFile = {
+      scripts: {
+        test: packageTestScript,
+      },
+    };
+    mockReadFileSync.mockReturnValueOnce(JSON.stringify(packageFile));
+    mockResolve.mockImplementation(jest.requireActual('path').resolve);
+
+    const binaryFile = `${binary}.TEST`;
+    mockExistsSync.mockImplementation((p) => p.endsWith(pmLockFile) || p.endsWith(binaryFile));
+
+    const defaultCmd = getDefaultJestCommand();
+    if (expected === 'binary') {
+      const pattern = new RegExp(`${binaryFile}"$`);
+      expect(defaultCmd).toMatch(pattern);
+    } else {
+      expect(defaultCmd).toEqual(expected);
+    }
   });
 });

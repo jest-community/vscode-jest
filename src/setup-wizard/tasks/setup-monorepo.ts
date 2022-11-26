@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 
 import { actionItem, createSaveConfig, getConfirmation, showActionMenu } from '../wizard-helper';
 import { WizardStatus, WizardContext, SetupTask, WIZARD_HELP_URL } from '../types';
-import { isSameWorkspace, WorkspaceInfo, WorkspaceManager } from './workspace-manager';
+import { isSameWorkspace, WorkspaceInfo, WorkspaceManager } from '../../workspace-manager';
 import { toErrorString } from '../../helpers';
 import { PendingSetupTaskKey } from '../start-wizard';
 import { setupJestCmdLine } from './setup-jest-cmdline';
