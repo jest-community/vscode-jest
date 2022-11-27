@@ -94,6 +94,11 @@ const EventEmitter = jest.fn().mockImplementation(() => {
   };
 });
 
+const QuickPickItemKind = {
+  Separator: -1,
+  Default: 0,
+};
+
 export = {
   CodeLens,
   languages,
@@ -118,4 +123,5 @@ export = {
   TestMessage,
   TestRunRequest,
   ViewColumn,
+  QuickPickItemKind,
 };

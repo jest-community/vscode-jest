@@ -1,27 +1,27 @@
-import * as path from 'path';
+/**
+ * setup rootPath and jestCommandLine
+ */
+import * as vscode from 'vscode';
 
 import {
   showActionInputBox,
-  showActionMessage,
-  getConfirmation,
   showActionMenu,
-  jsonOut,
-  actionItem,
   getWizardSettings,
   createSaveConfig,
   validateCommandLine,
   selectWorkspace,
+  toActionButton,
+  validateRootPath,
 } from '../wizard-helper';
 import { WizardStatus, ActionableMenuItem, SetupTask, WizardContext } from '../types';
-import { ansiEsc } from '../../JestExt/output-terminal';
 
 export const CLSetupActionId = {
-  acceptExisting: 0,
-  edit: 1,
-  upgrade: 2,
-  info: 3,
-  editInvalidCmdLine: 4,
-  acceptInvalidCmdLine: 5,
+  jestCommandLine: 0,
+  rootPath: 1,
+  editJestCommandLine: 2,
+  editRootPath: 3,
+  saveSettings: 4,
+  separator: 10,
 };
 
 export const setupJestCmdLine: SetupTask = async (
@@ -37,156 +37,114 @@ export const setupJestCmdLine: SetupTask = async (
   const saveConfig = createSaveConfig(context);
   const settings = getWizardSettings(workspace);
 
-  const handleInvalidCmdLine = async (
-    cmdLine: string,
-    msg: string,
-    editAction: (value: string) => Promise<WizardStatus>,
-    acceptAction: (value: string) => Promise<WizardStatus>
-  ): Promise<WizardStatus> => {
-    message(`found invalid command line: "${cmdLine}"`);
-    return showActionMessage(
-      'warning',
-      msg,
-      {
-        id: CLSetupActionId.editInvalidCmdLine,
-        title: 'Yes',
-        isCloseAffordance: true,
-        action: () => editAction(cmdLine),
-      },
-      {
-        id: CLSetupActionId.acceptInvalidCmdLine,
-        title: 'No',
-        isCloseAffordance: false,
-        action: () => acceptAction(cmdLine),
-      }
-    );
-  };
-  const save = async (cmdLine: string): Promise<WizardStatus> => {
+  const save = async (): Promise<WizardStatus> => {
     await saveConfig({
       name: `jest.jestCommandLine`,
-      value: path.normalize(cmdLine),
+      value: settings.jestCommandLine,
     });
+    message(`jestCommandLine saved: ${settings.jestCommand}`);
+    await saveConfig({
+      name: `jest.rootPath`,
+      value: settings.rootPath,
+    });
+    message(`rootPath saved: ${settings.rootPath}`);
 
-    message(`settings updated: jestCommandLine=${cmdLine}`);
-
-    return 'success';
+    return 'exit';
   };
 
-  const edit = async (cmdLine?: string): Promise<WizardStatus> => {
-    let editedValue = await showActionInputBox({
+  const editJestCmdLine = async (): Promise<WizardStatus> => {
+    const editedValue = await showActionInputBox<string>({
       title: 'Enter Jest Command Line',
-      value: cmdLine,
+      value: settings.jestCommandLine,
       prompt: 'Note: the command line should match how you run jest tests in terminal ',
       enableBackButton: true,
       verbose: context.verbose,
     });
-    editedValue = editedValue?.trim();
-    if (!editedValue) {
-      message(
-        `jest command line did not change: jest.jestCommandLine = ${
-          settings.jestCommandLine ? `"${settings.jestCommandLine}"` : settings.jestCommandLine
-        }`
-      );
-      return 'abort';
-    }
-    const error = validateCommandLine(editedValue);
-    if (error) {
-      return handleInvalidCmdLine(
-        editedValue,
-        `Invalid command line:\n"${error}"\n\nDo you want to change it?`,
-        edit,
-        save
-      );
-    }
-    message(`=> jest command line updated: "${editedValue}"`);
-    return save(editedValue);
+    settings.jestCommandLine = editedValue;
+    return 'success';
+  };
+  const editRootPath = async (): Promise<WizardStatus> => {
+    const editedValue = await showActionInputBox<string>({
+      title: 'Enter Root Path (if different from workspace root)',
+      value: settings.rootPath,
+      prompt: 'the directory to start jest command',
+      enableBackButton: true,
+      verbose: context.verbose,
+    });
+    settings.rootPath = editedValue;
+    return 'success';
   };
 
-  const withExistingSettings = async (): Promise<WizardStatus> => {
-    message(`found existing setting:\n${jsonOut(settings)}\n`);
-
+  const editJestCmdLineButton = toActionButton(
+    CLSetupActionId.editJestCommandLine,
+    'edit',
+    'edit jestCommandLine',
+    () => editJestCmdLine()
+  );
+  const editRootPathButton = toActionButton(
+    CLSetupActionId.editRootPath,
+    'edit',
+    'edit rootPath',
+    () => editRootPath()
+  );
+  const showMenu = async (): Promise<WizardStatus> => {
     const menuItems: ActionableMenuItem<WizardStatus>[] = [];
-    let placeholder: string;
 
     if (settings.jestCommandLine) {
       const error = validateCommandLine(settings.jestCommandLine);
       if (error) {
-        return handleInvalidCmdLine(
-          settings.jestCommandLine,
-          `Existing jestCommandLine might be invalid: "${error}".\n\nDo you want to change it?`,
-          edit,
-          () => Promise.resolve('success')
+        message(
+          `jestCommandLine "${settings.jestCommandLine}" is not valid:\r\n  ${error}`,
+          'error'
         );
+        settings.jestCommandLine = undefined;
       }
-      const value = settings.jestCommandLine;
-      placeholder = 'found existing "jestCommandLine"';
-      menuItems.push(
-        actionItem(
-          CLSetupActionId.acceptExisting,
-          '$(check) Use current jestCommandLine',
-          `jest.jestCommandLine=${value}`,
-          () => Promise.resolve('success')
-        ),
-        actionItem(
-          CLSetupActionId.edit,
-          '$(edit) Edit command line',
-          `manually change the command line "${value}"`,
-          () => edit(value)
-        )
-      );
-    } else if (settings.pathToJest) {
-      const configPath = settings['pathToConfig'];
-      const configArg = configPath ? ` --config ${configPath}` : '';
-      const settingName = configPath ? 'jest.pathToJest, jest.pathToConfig' : 'jest.pathToJest';
-      const value = `${settings['pathToJest']}${configArg}`;
-      placeholder = `upgrade deprecated ${settingName} to jestCommandLine`;
-      message(
-        ansiEsc(
-          'warn',
-          '!!! "jestToPath" and "pathToConfig" are deprecated, it is replaced by "jest.jestCommandLine"'
-        ),
-        'new-line'
-      );
-      menuItems.push(
-        actionItem(
-          CLSetupActionId.upgrade,
-          `Upgrade existing ${settingName}`,
-          `set jest.jestCommandLine="${value}"`,
-          () => edit(value)
-        )
-      );
-    } else {
-      console.error('no expected settings found in ', settings);
-      throw new Error('no expected settings found, should not be here');
+    }
+    if (settings.rootPath) {
+      if (!validateRootPath(workspace, settings.rootPath)) {
+        message(`rootPath "${settings.rootPath}" is not valid:\r\n`, 'error');
+        settings.rootPath = undefined;
+      }
     }
 
-    return showActionMenu<WizardStatus>(menuItems, {
-      title: 'Set up Jest Command Line',
-      placeholder,
+    menuItems.push(
+      {
+        id: CLSetupActionId.jestCommandLine,
+        label: `${settings.rootPath}`,
+        detail: 'rootPath: the directory to start jest test from, if differ from workspace root',
+        buttons: [editRootPathButton],
+      },
+      {
+        id: CLSetupActionId.jestCommandLine,
+        label: `${settings.jestCommandLine}`,
+        detail: 'jestCommandLine: the command to start jest test',
+        buttons: [editJestCmdLineButton],
+      },
+      {
+        id: CLSetupActionId.separator,
+        kind: vscode.QuickPickItemKind.Separator,
+        label: '',
+      },
+      {
+        id: CLSetupActionId.saveSettings,
+        label: `$(settings-gear) Save Settings`,
+        detail: 'save the settings above and exit',
+        action: save,
+      }
+    );
+
+    const menuStatus = await showActionMenu<WizardStatus>(menuItems, {
+      title: 'Set up Jest Command Line and Root Path',
+      placeholder: 'update rootPath and jestCommandLine settings below',
       enableBackButton: true,
       verbose: context.verbose,
+      allowNoAction: true,
     });
-  };
-  const withoutExistingSettings = async (): Promise<WizardStatus> => {
-    const canRun = await getConfirmation(
-      'info',
-      'Are you able to run jest tests from the terminal ?',
-      'Yes',
-      'No',
-      'no'
-    );
-    if (!canRun) {
-      // abort the wizard
-      const msg =
-        'Looks like you are not able to run jest tests from terminal...\r\n\r\n' +
-        'Please note a working jest test env is a prerequisite for vscode-jest. Feel free to relaunch the setup-tool when you are ready';
-      message(msg, 'error');
-      return 'abort';
+    if (menuStatus !== 'success') {
+      return menuStatus;
     }
-    return edit();
+    return showMenu();
   };
 
-  return settings.jestCommandLine || settings.pathToJest
-    ? withExistingSettings()
-    : withoutExistingSettings();
+  return showMenu();
 };

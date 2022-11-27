@@ -30,6 +30,11 @@ describe('QuickInput Proxy', () => {
     const callBack = mockOnDidTriggerButton.mock.calls[0][0];
     await callBack(button);
   };
+  const mockOnDidTriggerItemButton = jest.fn();
+  // const triggerItemButton = async (button: any) => {
+  //   const callBack = mockOnDidTriggerItemButton.mock.calls[0][0];
+  //   await callBack(button);
+  // };
 
   const mockButton = (action?: () => Promise<WizardStatus>): any => ({
     iconPath: {},
@@ -60,6 +65,7 @@ describe('QuickInput Proxy', () => {
           handleSelection = callback;
         },
         onDidTriggerButton: mockOnDidTriggerButton,
+        onDidTriggerItemButton: mockOnDidTriggerItemButton,
       };
       vscode.window.createQuickPick = jest.fn().mockReturnValue(mockQuickPick);
     });
@@ -91,18 +97,22 @@ describe('QuickInput Proxy', () => {
       ${() => Promise.resolve('success')}              | ${'success'}
       ${() => Promise.resolve({ value: 'an object' })} | ${{ value: 'an object' }}
       ${() => Promise.resolve(1)}                      | ${1}
-      ${undefined}                                     | ${undefined}
+      ${undefined}                                     | ${'throw'}
     `('will return resolved action item: $expected', async ({ action, expected }) => {
       expect.hasAssertions();
 
       const p = showActionMenu([]);
 
       // trigger selection
-      const item = action ? mockItem('selected-item', action) : [];
+      const item = mockItem('selected-item', action);
       await triggerSelection(item);
       const result = await p;
 
-      expect(result).toEqual(expected);
+      if (expected === 'throw') {
+        expect(result).rejects.toThrow();
+      } else {
+        expect(result).toEqual(expected);
+      }
       expect(mockDispose).toHaveBeenCalledTimes(1);
     });
 

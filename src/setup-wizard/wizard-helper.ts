@@ -22,6 +22,8 @@ import {
   isActionableButton,
   WizardContext,
 } from './types';
+import { JestExtAutoRunSetting } from '../Settings';
+import { existsSync } from 'fs';
 
 export const jsonOut = (json: unknown): string => JSON.stringify(json, undefined, 4);
 
@@ -36,6 +38,20 @@ export const actionItem = <T = WizardStatus>(
   detail,
   action,
 });
+
+export const toActionButton = <T = WizardStatus>(
+  id: number,
+  iconId: string,
+  tooltip?: string,
+  action?: WizardAction<T>
+): ActionableButton<T> => {
+  return {
+    id,
+    iconPath: new vscode.ThemeIcon(iconId),
+    tooltip,
+    action,
+  };
+};
 
 /**
  * methods to handle button click in vscode UI
@@ -82,10 +98,29 @@ export const showActionMenu = async <T = WizardStatus>(
     : undefined;
   try {
     const input = await new Promise<ActionMenuInput<T>>((resolve) => {
-      quickPick.onDidChangeSelection((selectedItems) =>
-        selectedItems.length === 1 ? resolve(selectedItems[0]) : resolve(undefined)
-      );
+      quickPick.onDidChangeSelection((selectedItems) => {
+        if (selectedItems.length !== 1) {
+          throw new Error(`expect 1 selected item but got: ${selectedItems.length}`);
+        }
+        if (selectedItems[0].action) {
+          return resolve(selectedItems[0]);
+        }
+        if (!options.allowNoAction) {
+          console.error('item has no action:', selectedItems[0]);
+          return resolve(undefined);
+        }
+      });
       quickPick.onDidTriggerButton((button) => resolve(handleButtonClick(button)));
+      quickPick.onDidTriggerItemButton((event) => {
+        if (isActionableButton(event.button)) {
+          return resolve(event.button as ActionableButton<T>);
+        }
+        // no action, do nothing
+        if (!options.allowNoAction) {
+          console.error('button has no action:', event.button);
+          return resolve(undefined);
+        }
+      });
 
       quickPick.show();
       if (
@@ -105,7 +140,7 @@ export const showActionMenu = async <T = WizardStatus>(
       return undefined;
     }
     logging?.(`"${isActionableButton(input) ? `button ${input.id}` : input.label}" is selected`);
-    return input.action();
+    return input.action?.();
   } catch (e) {
     return Promise.reject(e);
   } finally {
@@ -153,7 +188,7 @@ export const showActionInputBox = async <T = WizardStatus>(
     }
     if (isActionableButton(input)) {
       logging?.(`button ${input.id} is clicked: `);
-      return input.action();
+      return input.action?.();
     }
     logging?.(`input box received "${input}"`);
     return input;
@@ -181,7 +216,7 @@ export const showActionMessage = async <T = WizardStatus>(
       button = await vscode.window.showErrorMessage(message, { modal: true }, ...buttons);
       break;
   }
-  return await button?.action();
+  return await button?.action?.();
 };
 
 export const getConfirmation = async (
@@ -335,6 +370,8 @@ export const getWizardSettings = (workspace: vscode.WorkspaceFolder): WizardSett
     }
   });
 
+  wsSettings.autoRun = jestSettings.get<JestExtAutoRunSetting>('autoRun');
+
   // populate debug config settings
   const value = vscode.workspace
     .getConfiguration('launch', workspace.uri)
@@ -343,6 +380,13 @@ export const getWizardSettings = (workspace: vscode.WorkspaceFolder): WizardSett
     wsSettings['configurations'] = value;
   }
   return wsSettings;
+};
+
+export const validateRootPath = (workspace: vscode.WorkspaceFolder, rootPath: string): boolean => {
+  const _rootPath = cleanupCommand(rootPath);
+  return existsSync(
+    path.isAbsolute(_rootPath) ? _rootPath : path.resolve(workspace.uri.fsPath, _rootPath)
+  );
 };
 
 export const createSaveConfig =

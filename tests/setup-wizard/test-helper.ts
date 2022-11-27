@@ -3,9 +3,17 @@ import { ActionMessageType } from '../../src/setup-wizard/types';
 export const mockWizardHelper = (mockHelper: jest.Mocked<any>): any => {
   const mockShowActionMenu = (...ids: number[]) => {
     ids.forEach((id) => {
-      mockHelper.showActionMenu.mockImplementationOnce((items) =>
-        items.find((item) => item.id === id)?.action()
-      );
+      mockHelper.showActionMenu.mockImplementationOnce((items) => {
+        for (const item of items) {
+          if (item.id === id) {
+            return item.action();
+          }
+          const found = item.buttons?.find((b) => b?.id === id);
+          if (found) {
+            return found.action();
+          }
+        }
+      });
     });
   };
 
