@@ -178,7 +178,7 @@ export class WorkspaceRoot extends TestItemDataBase {
 
   private createRun = (options?: JestTestRunOptions): JestTestRun => {
     const item = options?.item ?? this.item;
-    const request = options?.request ?? new vscode.TestRunRequest([item]);
+    const request = new vscode.TestRunRequest([item]);
     return this.context.createTestRun(request, {
       ...options,
       name: options?.name ?? item.id,
