@@ -27,6 +27,7 @@ import { existsSync } from 'fs';
 
 export const jsonOut = (json: unknown): string => JSON.stringify(json, undefined, 4);
 
+/* istanbul ignore next */
 export const actionItem = <T = WizardStatus>(
   id: number,
   label: string,
@@ -135,10 +136,6 @@ export const showActionMenu = async <T = WizardStatus>(
       logging?.('no selection is made');
       return undefined;
     }
-    if (input === vscode.QuickInputButtons.Back) {
-      logging?.('back button is clicked');
-      return undefined;
-    }
     logging?.(`"${isActionableButton(input) ? `button ${input.id}` : input.label}" is selected`);
     return input.action?.();
   } catch (e) {
@@ -180,10 +177,6 @@ export const showActionInputBox = async <T = WizardStatus>(
     });
     if (!input) {
       logging?.(`no input received`);
-      return undefined;
-    }
-    if (input === vscode.QuickInputButtons.Back) {
-      logging?.(`back button is clicked`);
       return undefined;
     }
     if (isActionableButton(input)) {
