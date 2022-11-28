@@ -352,7 +352,6 @@ export class WorkspaceRoot extends TestItemDataBase {
       name,
       item,
       onEnd: () => this.cachedRun.delete(event.process.id),
-      // request,
     });
 
     this.cachedRun.set(event.process.id, run);
