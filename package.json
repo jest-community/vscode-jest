@@ -68,37 +68,10 @@
       "type": "object",
       "title": "Jest",
       "properties": {
-        "jest.showTerminalOnLaunch": {
-          "description": "(deprecated) Automatically open test explorer's terminal upon launch",
-          "type": "boolean",
-          "default": true,
-          "scope": "window"
-        },
-        "jest.autoEnable": {
-          "description": "Automatically start Jest for this project",
-          "type": "boolean",
-          "default": true,
-          "scope": "resource",
-          "markdownDeprecationMessage": "**Deprecated**: please use `#jest.autoRun#` instead."
-        },
         "jest.jestCommandLine": {
           "description": "The command line to start jest tests. It should be the same command line users run jest tests from a terminal/shell, with ability to append extra arguments (by the extension at runtime)",
           "type": "string",
           "scope": "resource"
-        },
-        "jest.pathToJest": {
-          "description": "(deprecated) The path to the Jest binary, or an npm command to run tests suffixed with `--` e.g. `node_modules/.bin/jest` or `npm test --`",
-          "type": "string",
-          "default": null,
-          "scope": "resource",
-          "markdownDeprecationMessage": "**Deprecated**: please use `#jest.jestCommandLine#` instead."
-        },
-        "jest.pathToConfig": {
-          "description": "(deprecated) The path to your Jest configuration file",
-          "type": "string",
-          "default": "",
-          "scope": "resource",
-          "markdownDeprecationMessage": "**Deprecated**: please use `#jest.jestCommandLine#` instead."
         },
         "jest.rootPath": {
           "description": "The path to your frontend src folder",
@@ -121,19 +94,6 @@
           "default": null,
           "scope": "resource"
         },
-        "jest.enableSnapshotUpdateMessages": {
-          "description": "Whether snapshot update messages should show",
-          "type": "boolean",
-          "default": true,
-          "scope": "resource"
-        },
-        "jest.runAllTestsFirst": {
-          "description": "Run all tests before starting Jest in watch mode",
-          "type": "boolean",
-          "default": null,
-          "scope": "resource",
-          "markdownDeprecationMessage": "**Deprecated**: in favor of `#jest.autoRun#`"
-        },
         "jest.showCoverageOnLoad": {
           "description": "Show code coverage when extension starts (if collected)",
           "type": "boolean",
@@ -155,42 +115,6 @@
           "type": "object",
           "default": null,
           "scope": "resource"
-        },
-        "jest.enableCodeLens": {
-          "description": "Whether codelens for debugging should show",
-          "type": "boolean",
-          "default": true,
-          "scope": "window"
-        },
-        "jest.debugCodeLens.showWhenTestStateIn": {
-          "description": "Show the debug CodeLens when the it/test block state is in this collection",
-          "type": "array",
-          "items": {
-            "enum": [
-              "fail",
-              "pass",
-              "skip",
-              "unknown"
-            ]
-          },
-          "default": [
-            "fail",
-            "unknown"
-          ],
-          "scope": "window"
-        },
-        "jest.enableSnapshotPreviews": {
-          "description": "Whether snapshot previews should show",
-          "type": "boolean",
-          "default": true,
-          "scope": "window"
-        },
-        "jest.restartJestOnSnapshotUpdate": {
-          "description": "Restart Jest runner after updating the snapshots",
-          "type": "boolean",
-          "default": false,
-          "scope": "resource",
-          "markdownDeprecationMessage": "**Deprecated**: no need to restart jest after snapshot update"
         },
         "jest.debugMode": {
           "description": "Enable debug mode to diagnose plugin issues. (see developer console)",
