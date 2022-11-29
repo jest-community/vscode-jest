@@ -1,6 +1,12 @@
 jest.unmock('../../src/setup-wizard/wizard-helper');
 jest.unmock('../../src/setup-wizard/types');
 jest.unmock('./test-helper');
+jest.unmock('../test-helper');
+
+const mockExistsSync = jest.fn();
+jest.mock('fs', () => ({
+  existsSync: mockExistsSync,
+}));
 
 import * as vscode from 'vscode';
 
@@ -20,15 +26,22 @@ import {
   showActionMessage,
   validateCommandLine,
   selectWorkspace,
+  validateRootPath,
 } from '../../src/setup-wizard/wizard-helper';
 import { ActionMessageType, WizardStatus } from '../../src/setup-wizard/types';
 import { throwError, workspaceFolder } from './test-helper';
+import { makeWorkspaceFolder } from '../test-helper';
 
 describe('QuickInput Proxy', () => {
   const mockOnDidTriggerButton = jest.fn();
   const triggerButton = async (button: any) => {
     const callBack = mockOnDidTriggerButton.mock.calls[0][0];
     await callBack(button);
+  };
+  const mockOnDidTriggerItemButton = jest.fn();
+  const triggerItemButton = async (button: any) => {
+    const callBack = mockOnDidTriggerItemButton.mock.calls[0][0];
+    await callBack({ button });
   };
 
   const mockButton = (action?: () => Promise<WizardStatus>): any => ({
@@ -60,6 +73,7 @@ describe('QuickInput Proxy', () => {
           handleSelection = callback;
         },
         onDidTriggerButton: mockOnDidTriggerButton,
+        onDidTriggerItemButton: mockOnDidTriggerItemButton,
       };
       vscode.window.createQuickPick = jest.fn().mockReturnValue(mockQuickPick);
     });
@@ -98,14 +112,28 @@ describe('QuickInput Proxy', () => {
       const p = showActionMenu([]);
 
       // trigger selection
-      const item = action ? mockItem('selected-item', action) : [];
+      const item = mockItem('selected-item', action);
       await triggerSelection(item);
       const result = await p;
 
       expect(result).toEqual(expected);
       expect(mockDispose).toHaveBeenCalledTimes(1);
     });
+    it('can only select 1 item', async () => {
+      expect.hasAssertions();
 
+      const p = showActionMenu([]);
+
+      // trigger incorrect selection
+      const item1 = mockItem('selected-item-1', jest.fn());
+      const item2 = mockItem('selected-item-2', jest.fn());
+      await expect(triggerSelection([item1, item2])).rejects.toThrow();
+
+      // trigger correct selection
+      await triggerSelection([item1]);
+      await p;
+      expect(mockDispose).toHaveBeenCalledTimes(1);
+    });
     it.each`
       action                                   | expected
       ${() => throwError('item throws')}       | ${new Error('item throws')}
@@ -175,6 +203,69 @@ describe('QuickInput Proxy', () => {
         await expect(p).rejects.toEqual(expected);
         expect(mockDispose).toHaveBeenCalledTimes(1);
       });
+    });
+    describe('allowNoAction', () => {
+      it('no action button', async () => {
+        expect.hasAssertions();
+
+        const button1 = mockButton();
+        const button2 = mockButton();
+        button2.action = undefined;
+        const items = [{ id: 1, label: 'item-1', buttons: [button1, button2] }];
+
+        // without allowNoAction, throw exception
+        let p = showActionMenu(items);
+        await triggerItemButton(button2);
+        await expect(p).resolves.toBeUndefined();
+
+        mockOnDidTriggerItemButton.mockClear();
+
+        // works with allowNoAction
+        p = showActionMenu(items, { allowNoAction: true });
+        // no ops
+        await triggerItemButton(button2);
+        // triggr button1 to exit
+        await triggerItemButton(button1);
+
+        await expect(p).resolves.toEqual('success');
+      });
+      it('no action item', async () => {
+        expect.hasAssertions();
+
+        const exitButton = mockButton();
+        const item = { id: 1, label: 'item-1', buttons: [exitButton] };
+
+        // without allowNoAction, throw exception
+        let p = showActionMenu([item]);
+        await triggerSelection(item);
+        await expect(p).resolves.toBeUndefined();
+
+        mockOnDidTriggerItemButton.mockClear();
+
+        // works with allowNoAction
+        p = showActionMenu([item], { allowNoAction: true });
+        // no ops
+        await triggerSelection(item);
+        // triggr button1 to exit
+        await triggerItemButton(exitButton);
+        await expect(p).resolves.toEqual('success');
+      });
+    });
+
+    it('can have item action button', async () => {
+      expect.hasAssertions();
+
+      const bAction = jest.fn().mockReturnValue('success');
+      const button = mockButton(bAction);
+      const items = [{ id: 1, label: 'item-1', buttons: [button] }];
+      const p = showActionMenu(items, { allowNoAction: true });
+
+      expect(mockShow).toHaveBeenCalledTimes(1);
+      await triggerItemButton(button);
+      const result = await p;
+
+      expect(result).toEqual('success');
+      expect(mockDispose).toHaveBeenCalledTimes(1);
     });
     it.each`
       selectItemIdx | isValidIndex
@@ -881,5 +972,22 @@ describe('selectWorkspace', () => {
     (vscode.workspace as any).workspaceFolders = workspaceFolders;
     await selectWorkspace();
     expect(vscode.window.showWorkspaceFolderPick).toHaveBeenCalledTimes(callCount);
+  });
+});
+
+describe('validateRootPath', () => {
+  const workspace = makeWorkspaceFolder('ws1');
+  beforeEach(() => {
+    jest.resetAllMocks();
+  });
+  it.each`
+    case | rootPath              | expectedPath
+    ${1} | ${'sub-folder'}       | ${path.resolve(workspace.uri.fsPath, 'sub-folder')}
+    ${2} | ${'"sub folder"'}     | ${path.resolve(workspace.uri.fsPath, 'sub folder')}
+    ${3} | ${'/root/sub-folder'} | ${'/root/sub-folder'}
+    ${4} | ${''}                 | ${path.resolve(workspace.uri.fsPath)}
+  `('case $case', ({ rootPath, expectedPath }) => {
+    validateRootPath(workspace, rootPath);
+    expect(mockExistsSync).toHaveBeenCalledWith(expectedPath);
   });
 });
