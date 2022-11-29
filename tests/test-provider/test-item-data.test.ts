@@ -485,65 +485,58 @@ describe('test-item-data', () => {
           });
         });
         describe('testSuiteChanged events when not able to show assertions', () => {
-          it.each`
-            event
-            ${'test-parsed'}
-            ${'result-match-failed'}
-          `(
-            '$event: test items will be added and snapshot context updated accordingly',
-            ({ event }) => {
-              // assertion should be discovered prior
-              context.ext.testResultProvider.getTestList.mockReturnValueOnce(['/ws-1/a.test.ts']);
+          it('result-match-failed: test items will be added and snapshot context updated accordingly', () => {
+            // assertion should be discovered prior
+            context.ext.testResultProvider.getTestList.mockReturnValueOnce(['/ws-1/a.test.ts']);
 
-              const t1 = helper.makeItBlock('test-1', [1, 1, 5, 1]);
-              const t2 = helper.makeItBlock('test-2', [6, 1, 7, 1]);
-              const sourceRoot = helper.makeRoot([t2, t1]);
-              const sourceContainer = buildSourceContainer(sourceRoot);
-              const node1 = sourceContainer.childData.find((child) => child.fullName === 'test-1');
-              const node2 = sourceContainer.childData.find((child) => child.fullName === 'test-2');
-              node1.attrs = { ...node1.attrs, snapshot: 'external' };
-              node2.attrs = { ...node2.attrs, snapshot: 'external', nonLiteralName: true };
+            const t1 = helper.makeItBlock('test-1', [1, 1, 5, 1]);
+            const t2 = helper.makeItBlock('test-2', [6, 1, 7, 1]);
+            const sourceRoot = helper.makeRoot([t2, t1]);
+            const sourceContainer = buildSourceContainer(sourceRoot);
+            const node1 = sourceContainer.childData.find((child) => child.fullName === 'test-1');
+            const node2 = sourceContainer.childData.find((child) => child.fullName === 'test-2');
+            node1.attrs = { ...node1.attrs, snapshot: 'external' };
+            node2.attrs = { ...node2.attrs, snapshot: 'external', nonLiteralName: true };
 
-              const wsRoot = new WorkspaceRoot(context);
-              wsRoot.discoverTest(jestRun);
-              expect(context.ext.testResultProvider.getTestSuiteResult).toHaveBeenCalledTimes(1);
+            const wsRoot = new WorkspaceRoot(context);
+            wsRoot.discoverTest(jestRun);
+            expect(context.ext.testResultProvider.getTestSuiteResult).toHaveBeenCalledTimes(1);
 
-              expect(wsRoot.item.children.size).toBe(1);
-              const docItem = getChildItem(wsRoot.item, 'a.test.ts');
-              expect(docItem.children.size).toEqual(0);
-              controllerMock.createTestRun.mockClear();
-              context.ext.testResultProvider.getTestSuiteResult.mockClear();
+            expect(wsRoot.item.children.size).toBe(1);
+            const docItem = getChildItem(wsRoot.item, 'a.test.ts');
+            expect(docItem.children.size).toEqual(0);
+            controllerMock.createTestRun.mockClear();
+            context.ext.testResultProvider.getTestSuiteResult.mockClear();
 
-              context.ext.testResultProvider.events.testSuiteChanged.event.mock.calls[0][0]({
-                type: event,
-                file: '/ws-1/a.test.ts',
-                sourceContainer,
-              });
-              expect(docItem.children.size).toEqual(2);
-              const dItem1 = getChildItem(docItem, 'test-1');
-              expect(dItem1.range).toEqual({ args: [0, 0, 4, 0] });
-              const dItem2 = getChildItem(docItem, 'test-2');
-              expect(dItem2.range).toEqual({ args: [5, 0, 6, 0] });
+            context.ext.testResultProvider.events.testSuiteChanged.event.mock.calls[0][0]({
+              type: 'result-match-failed',
+              file: '/ws-1/a.test.ts',
+              sourceContainer,
+            });
+            expect(docItem.children.size).toEqual(2);
+            const dItem1 = getChildItem(docItem, 'test-1');
+            expect(dItem1.range).toEqual({ args: [0, 0, 4, 0] });
+            const dItem2 = getChildItem(docItem, 'test-2');
+            expect(dItem2.range).toEqual({ args: [5, 0, 6, 0] });
 
-              expect(context.ext.testResultProvider.getTestSuiteResult).toHaveBeenCalledTimes(1);
-              expect(controllerMock.createTestRun).not.toHaveBeenCalled();
+            expect(context.ext.testResultProvider.getTestSuiteResult).toHaveBeenCalledTimes(1);
+            expect(controllerMock.createTestRun).not.toHaveBeenCalled();
 
-              // snapshot menu context is populated for "test-1" only
-              expect(tiContextManager.setItemContext).toHaveBeenCalledTimes(2);
-              expect(tiContextManager.setItemContext).toHaveBeenCalledWith(
-                expect.objectContaining({
-                  key: 'jest.editor-view-snapshot',
-                  itemIds: [dItem1.id],
-                })
-              );
-              expect(tiContextManager.setItemContext).toHaveBeenCalledWith(
-                expect.objectContaining({
-                  key: 'jest.editor-update-snapshot',
-                  itemIds: [dItem1.id],
-                })
-              );
-            }
-          );
+            // snapshot menu context is populated for "test-1" only
+            expect(tiContextManager.setItemContext).toHaveBeenCalledTimes(2);
+            expect(tiContextManager.setItemContext).toHaveBeenCalledWith(
+              expect.objectContaining({
+                key: 'jest.editor-view-snapshot',
+                itemIds: [dItem1.id],
+              })
+            );
+            expect(tiContextManager.setItemContext).toHaveBeenCalledWith(
+              expect.objectContaining({
+                key: 'jest.editor-update-snapshot',
+                itemIds: [dItem1.id],
+              })
+            );
+          });
         });
       });
       it('can preserve parse-result occurred before discover', () => {
@@ -555,7 +548,7 @@ describe('test-item-data', () => {
         const sourceRoot = helper.makeRoot([t2, t1]);
         const sourceContainer = buildSourceContainer(sourceRoot);
         context.ext.testResultProvider.events.testSuiteChanged.event.mock.calls[0][0]({
-          type: 'test-parsed',
+          type: 'result-match-failed',
           file: '/ws-1/a.test.ts',
           sourceContainer,
         });

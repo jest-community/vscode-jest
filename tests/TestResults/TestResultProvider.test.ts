@@ -248,15 +248,9 @@ describe('TestResultProvider', () => {
         });
       });
     });
-    it('unmatched test will only file result-match-failed events instead', () => {
+    it('unmatched test will file result-match-failed events', () => {
       const sut = newProviderWithData([makeData([testBlock], null, filePath)]);
       sut.getResults(filePath);
-      expect(sut.events.testSuiteChanged.fire).not.toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'test-parsed',
-          file: filePath,
-        })
-      );
       expect(sut.events.testSuiteChanged.fire).toHaveBeenCalledWith({
         type: 'result-match-failed',
         file: filePath,

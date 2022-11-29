@@ -288,8 +288,7 @@ export class WorkspaceRoot extends TestItemDataBase {
         break;
       }
 
-      case 'result-match-failed':
-      case 'test-parsed': {
+      case 'result-match-failed': {
         const snapshotItems: SnapshotItemCollection = {
           viewable: [],
           updatable: [],
