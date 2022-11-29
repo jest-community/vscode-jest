@@ -525,7 +525,7 @@ describe('test-item-data', () => {
               const dItem2 = getChildItem(docItem, 'test-2');
               expect(dItem2.range).toEqual({ args: [5, 0, 6, 0] });
 
-              expect(context.ext.testResultProvider.getTestSuiteResult).not.toHaveBeenCalled();
+              expect(context.ext.testResultProvider.getTestSuiteResult).toHaveBeenCalledTimes(1);
               expect(controllerMock.createTestRun).not.toHaveBeenCalled();
 
               // snapshot menu context is populated for "test-1" only
@@ -693,6 +693,23 @@ describe('test-item-data', () => {
 
         expect(request.run).toBe(jestRun);
         expect(request.run.item).toBe(folderData.item);
+      });
+      it('if test name is not resolved, it will execute the resolved parent test block', () => {
+        const { doc } = createAllTestItems();
+        const descNode: any = {
+          fullName: 'a $describe',
+          attrs: { nonLiteralName: true },
+          data: {},
+        };
+        const testNode: any = { fullName: 'a test', attrs: { isGroup: 'yes' }, data: {} };
+        const descItem = new TestData(context, doc.uri, descNode, doc.item);
+        const testItem = new TestData(context, doc.uri, testNode, descItem.item);
+
+        testItem.scheduleTest(jestRun);
+        const request = context.ext.session.scheduleProcess.mock.calls[0][0];
+        expect(request.run).toBe(jestRun);
+        expect(request.run.item.id).toBe(doc.item.id);
+        // try
       });
       describe('can update snapshot based on runProfile', () => {
         let wsRoot, folder, doc, testItem;
@@ -1429,7 +1446,7 @@ describe('test-item-data', () => {
         expect(createTestRunSpy).toHaveBeenCalledTimes(1);
         const aRequest = createTestRunSpy.mock.calls[0][0];
         const option = createTestRunSpy.mock.calls[0][1];
-        expect(aRequest).toBe(runRequest);
+        expect(aRequest).not.toBe(runRequest);
         expect(option.item.id).toEqual(item.id);
       });
       it('run explicit test block will not hang run with or without result', () => {

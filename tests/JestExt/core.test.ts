@@ -787,6 +787,22 @@ describe('JestExt', () => {
           expect.objectContaining({ session: mockProcessSession })
         );
       });
+      it('will refresh the active editor, if any', async () => {
+        const sut = createJestExt();
+        const spy = jest.spyOn(sut, 'triggerUpdateActiveEditor').mockImplementation(() => {});
+
+        // if no activeTextEditor
+        vscode.window.activeTextEditor = undefined;
+        await sut.startSession();
+        expect(spy).not.toHaveBeenCalled();
+
+        // with activeTextEditor
+        (vscode.window.activeTextEditor as any) = {
+          document: { uri: 'whatever' },
+        };
+        await sut.startSession();
+        expect(spy).toHaveBeenCalled();
+      });
       it('if failed to start session, show error', async () => {
         mockProcessSession.start.mockReturnValueOnce(Promise.reject('forced error'));
         const sut = createJestExt();
@@ -1071,24 +1087,7 @@ describe('JestExt', () => {
       expect(sut.events.onTestSessionStopped.dispose).toHaveBeenCalled();
     });
   });
-  describe('activate', () => {
-    it('will invoke onDidChangeActiveTextEditor for activeTextEditor', () => {
-      const sut = newJestExt();
-      const spy = jest.spyOn(sut, 'onDidChangeActiveTextEditor').mockImplementation(() => {});
-      vscode.window.activeTextEditor = undefined;
 
-      sut.activate();
-      expect(spy).not.toHaveBeenCalled();
-
-      (vscode.window.activeTextEditor as any) = {
-        document: { uri: 'whatever' },
-      };
-      (vscode.workspace.getWorkspaceFolder as jest.Mocked<any>).mockReturnValue(workspaceFolder);
-
-      sut.activate();
-      expect(spy).toHaveBeenCalled();
-    });
-  });
   describe('runEvents', () => {
     let sut, onRunEvent, process;
     beforeEach(() => {

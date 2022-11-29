@@ -517,6 +517,7 @@ export class JestExt {
     this.extContext.output.write(`Abort jest session: ${msg}`, 'error');
     return 'fail';
   }
+  /* istanbul ignore next */
   public activate(): void {
     // do nothing
   }
