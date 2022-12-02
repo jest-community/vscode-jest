@@ -45,10 +45,11 @@ The tool provides 3 main setup tasks:
 3. [Setup Monorepo Project](#debug-config): to assist the monorepo projects adapting to the vscode environment.
    
 ### Setup Jest Command
-The extension starts the jest test process by issuing the same jest command users run in the terminal. The tool will examine the existing settings, looking for `"jest.jestCommandLine"` or the deprecated `"jest.pathToJest"` and `"jest.pathToConfig"`. If found, it will help users [migrate](#note-1)/edit it; if not found, it will ask the user to input the command line manually.
+The extension starts jest test processes by issuing the same jest command users run in the terminal. The tool provides a quick way for users to update and examine `"jest.jestCommandLine"` and `"jest.rootPath` settings, which can also be manually updated via vscode settings. After editing the settings, click on the `"Save Settings"` to save then restart the extension.
 
-Please be aware that all relative paths in the settings are resolved against the `rootPath`, which, by default, is the current workspace folder unless you customize it with `"jest.rootPath"`.
+![setup-jest-command](images/setup-tool/setup-jest-command.png)
 
+Note: if the `"jest.jestCommandLine"` is executed from the workspace root, there is no need to configure `"jest.rootPath"`
 
 While users can pass any jest CLI options in the `"jest.jestCommandLine"`, it is recommended NOT to pass the following:
 - the watch options (--watch, --watchAll): the extension will append a watch flag when appropriate. 

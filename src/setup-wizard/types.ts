@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { JestExtOutput } from '../JestExt/output-terminal';
+import { JestExtAutoRunSetting } from '../Settings';
 
 export interface WizardContext {
   debugConfigProvider: vscode.DebugConfigurationProvider;
@@ -13,7 +14,7 @@ export type WizardStatus = 'success' | 'error' | 'abort' | 'exit' | undefined;
 export type WizardAction<T> = () => Promise<T>;
 interface ActionableComp<T> {
   id: number;
-  action: WizardAction<T>;
+  action?: WizardAction<T>;
 }
 export type ActionableMenuItem<T = WizardStatus> = vscode.QuickPickItem & ActionableComp<T>;
 export type ActionableButton<T = WizardStatus> = vscode.QuickInputButton & ActionableComp<T>;
@@ -37,6 +38,8 @@ export interface ActionMenuOptions<T = WizardStatus> extends AllowBackButton, Ve
   value?: string;
   rightButtons?: ActionableButton<T>[];
   selectItemIdx?: number;
+  // if true, treat action item/button without action as no-op; otherwise exit with "undefined"
+  allowNoAction?: boolean;
 }
 
 // actionable input box
@@ -58,6 +61,7 @@ type JestSettingKey = typeof JestSettings[number];
 // prettier-ignore
 export type WizardSettings = 
   { [key in JestSettingKey]?: string } & 
+  { ['autoRun']?: JestExtAutoRunSetting} &
   { ['configurations']?: vscode.DebugConfiguration[] } & 
   { ['absoluteRootPath']?: string };
 
