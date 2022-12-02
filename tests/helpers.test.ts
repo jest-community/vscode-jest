@@ -420,7 +420,7 @@ describe('toAbsoluteRootPath', () => {
   it.each`
     case | rootPath                         | expected
     ${1} | ${''}                            | ${ws.uri.fsPath}
-    ${2} | ${'folder'}                      | ${path.join(ws.uri.fsPath, 'folder')}
+    ${2} | ${'folder'}                      | ${path.resolve(ws.uri.fsPath, 'folder')}
     ${3} | ${path.join(path.sep, 'folder')} | ${path.join(path.sep, 'folder')}
   `('case $case', ({ rootPath, expected }) => {
     expect(toAbsoluteRootPath(ws, rootPath)).toEqual(expected);
