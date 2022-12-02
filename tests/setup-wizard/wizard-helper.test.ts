@@ -644,16 +644,13 @@ describe('getWizardSettings', () => {
     expect(vscode.workspace.getConfiguration).toHaveBeenNthCalledWith(2, 'launch', workspace.uri);
   });
   it.each`
-    seq  | settings                                                     | expectedSettings
-    ${1} | ${{}}                                                        | ${{}}
-    ${2} | ${{ pathToJest: 'jest', debugMode: true }}                   | ${{ pathToJest: 'jest' }}
-    ${3} | ${{ pathToJest: '' }}                                        | ${{}}
-    ${4} | ${{ pathToJest: 'jest ' }}                                   | ${{ pathToJest: 'jest' }}
-    ${5} | ${{ jestCommandLine: ' ' }}                                  | ${{}}
-    ${6} | ${{ jestCommandLine: 'jest', pathToConfig: '../config.js' }} | ${{ jestCommandLine: 'jest', pathToConfig: '../config.js' }}
-    ${7} | ${{ jestCommandLine: '"../dir with space" --whatever' }}     | ${{ jestCommandLine: '"../dir with space" --whatever' }}
-    ${8} | ${{ configurations: [] }}                                    | ${{ configurations: [] }}
-    ${9} | ${{ configurations: undefined }}                             | ${{}}
+    seq  | settings                                                 | expectedSettings
+    ${1} | ${{}}                                                    | ${{}}
+    ${5} | ${{ jestCommandLine: ' ' }}                              | ${{}}
+    ${6} | ${{ jestCommandLine: 'jest' }}                           | ${{ jestCommandLine: 'jest' }}
+    ${7} | ${{ jestCommandLine: '"../dir with space" --whatever' }} | ${{ jestCommandLine: '"../dir with space" --whatever' }}
+    ${8} | ${{ configurations: [] }}                                | ${{ configurations: [] }}
+    ${9} | ${{ configurations: undefined }}                         | ${{}}
   `('extract settings - $seq', ({ settings, expectedSettings }) => {
     vscodeSettings = settings;
     expect(getWizardSettings(workspace)).toEqual(expectedSettings);

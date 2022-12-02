@@ -58,7 +58,7 @@ export interface ActionInputBoxOptions<T> extends AllowBackButton, Verbose {
 export type SetupTask = (context: WizardContext) => Promise<WizardStatus>;
 
 // settings
-export const JestSettings = ['pathToJest', 'pathToConfig', 'jestCommandLine', 'rootPath'];
+export const JestSettings = ['jestCommandLine', 'rootPath'];
 type JestSettingKey = typeof JestSettings[number];
 
 // prettier-ignore

@@ -232,7 +232,7 @@ Users can use the following settings to tailor the extension for their environme
 |**Process**|
 |[jestCommandLine](#jestCommandLine)|The command line to start jest tests|undefined|`"jest.jestCommandLine": "npm test -"` or `"jest.jestCommandLine": "yarn test"` or `"jest.jestCommandLine": "node_modules/.bin/jest --config custom-config.js"`|
 |nodeEnv|Add additional env variables to spawned jest process|null|`"jest.nodeEnv": {"PORT": "9800", "BAR":"true"}` |
-|shell|Custom shell (path or LoginShell) for executing jest|null|`"jest.shell": "/bin/bash"` or `"jest.shell": "powershell"` or `"jest.shell": {"path": "/bin/bash"; args: ["--login"]}`  |
+|[shell](#shell) shell (path or LoginShell) for executing jest|null|`"jest.shell": "/bin/bash"` or `"jest.shell": "powershell"` or `"jest.shell": {"path": "/bin/bash"; args: ["--login"]}`  |
 |[autoRun](#autorun)|Controls when and what tests should be run|undefined|`"jest.autoRun": "off"` or `"jest.autoRun": "watch"` or `"jest.autoRun": {"watch": false, "onSave":"test-only"}`|
 |[rootPath](#rootPath)|The path to your frontend src folder|""|`"jest.rootPath":"packages/app"` or `"jest.rootPath":"/apps/my-app"`|
 |[monitorLongRun](#monitorlongrun)| monitor long running tests based on given threshold in ms|60000|`"jest.monitorLongRun": 120000`|
@@ -374,12 +374,6 @@ There are 2 ways to change autoRun:
     ```
 
 </details>
-
-Note: migration rule for default autoRun:
-
-  - if `"jest.autoEnabled" = false` => manual mode: `"jest.autoRun": "off"`
-  - if `"jest.runAllTestsFirst" = true` => `"jest.autoRun": {"watch": true, "onStartup": ["all-tests"] }`
-  - if no customization of the 2 settings and no `"jest.autoRun"` found => `"jest.autoRun": "watch"`
 
 ##### testExplorer
   ```ts

@@ -106,16 +106,9 @@ export const absoluteRootPath = (rootPath: string, workspaceRoot: string): strin
 export const getExtensionResourceSettings = (uri: vscode.Uri): PluginResourceSettings => {
   const config = vscode.workspace.getConfiguration('jest', uri);
 
-  const autoEnable = config.get<boolean>('autoEnable');
-  const runAllTestsFirst = config.get<boolean>('runAllTestsFirst') ?? undefined;
-
   return {
-    autoEnable,
-    pathToConfig: config.get<string>('pathToConfig'),
     jestCommandLine: config.get<string>('jestCommandLine'),
-    pathToJest: config.get<string>('pathToJest'),
     rootPath: absoluteRootPath(config.get<string>('rootPath') ?? '', uri.fsPath),
-    runAllTestsFirst,
     showCoverageOnLoad: config.get<boolean>('showCoverageOnLoad') ?? false,
     coverageFormatter: config.get<string>('coverageFormatter') ?? 'DefaultFormatter',
     debugMode: config.get<boolean>('debugMode'),
@@ -124,11 +117,7 @@ export const getExtensionResourceSettings = (uri: vscode.Uri): PluginResourceSet
     nodeEnv: config.get<NodeEnv | null>('nodeEnv') ?? undefined,
     shell: new RunShell(config.get<string | LoginShell>('shell')),
     monitorLongRun: config.get<MonitorLongRun>('monitorLongRun') ?? undefined,
-    autoRun: new AutoRun(
-      config.get<JestExtAutoRunSetting | null>('autoRun'),
-      autoEnable,
-      runAllTestsFirst
-    ),
+    autoRun: new AutoRun(config.get<JestExtAutoRunSetting | null>('autoRun')),
   };
 };
 

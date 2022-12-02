@@ -151,13 +151,9 @@ describe('getExtensionResourceSettings()', () => {
     (RunShell as jest.Mocked<any>).mockImplementation(() => mockShell);
     const uri: any = { fsPath: 'workspaceFolder1' };
     expect(getExtensionResourceSettings(uri)).toEqual({
-      autoEnable: true,
       coverageFormatter: 'DefaultFormatter',
-      pathToConfig: '',
-      pathToJest: null,
       jestCommandLine: undefined,
       rootPath: 'workspaceFolder1',
-      runAllTestsFirst: undefined,
       showCoverageOnLoad: false,
       debugMode: false,
       coverageColors: null,
