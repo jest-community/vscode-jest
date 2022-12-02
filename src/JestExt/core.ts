@@ -12,7 +12,7 @@ import {
   IdStringType,
   escapeRegExp,
   emptyTestStats,
-  getDefaultJestCommand,
+  getValidJestCommand,
 } from '../helpers';
 import { CoverageMapProvider, CoverageCodeLensProvider } from '../Coverage';
 import { updateDiagnostics, updateCurrentDiagnostics, resetDiagnostics } from '../diagnostics';
@@ -87,6 +87,7 @@ export class JestExt {
 
   private workspaceManager: WorkspaceManager;
   private output: JestOutputTerminal;
+  private deubgConfig?: vscode.DebugConfiguration;
 
   constructor(
     vscodeContext: vscode.ExtensionContext,
@@ -378,6 +379,7 @@ export class JestExt {
     );
 
     this.extContext = createJestExtContext(this.extContext.workspace, updatedSettings, this.output);
+    this.deubgConfig = undefined;
 
     await this.startSession(true);
     if (vscode.window.activeTextEditor) {
@@ -414,6 +416,10 @@ export class JestExt {
    * @returns
    */
   public async validateJestCommandLine(): Promise<'pass' | 'fail' | 'restart'> {
+    if (this.extContext.settings.jestCommandLine) {
+      return Promise.resolve('pass');
+    }
+
     const updateSettings = async (update: JestCommandSettings): Promise<'restart'> => {
       this.extContext.settings.jestCommandLine = update.jestCommandLine;
       this.extContext.settings.rootPath = update.rootPath;
@@ -431,22 +437,12 @@ export class JestExt {
     };
 
     const t0 = Date.now();
-    if (this.extContext.settings.jestCommandLine) {
-      return Promise.resolve('pass');
-    }
-
     this.extContext.output.write('auto config:', 'info');
-
-    let jestCommandLine = getDefaultJestCommand(this.extContext.settings.rootPath);
-    if (jestCommandLine) {
-      const settings = { rootPath: this.extContext.settings.rootPath, jestCommandLine };
-      outputSettings(settings);
-      return updateSettings(settings);
-    }
-
-    // see if we can get a valid command by examing the file system
-    const uris = await this.workspaceManager.getFoldersFromFilesystem(this.extContext.workspace);
-
+    const result = await getValidJestCommand(
+      this.extContext.workspace,
+      this.workspaceManager,
+      this.extContext.settings.rootPath
+    );
     const perf = Date.now() - t0;
     /* istanbul ignore next */
     if (perf > 2000) {
@@ -456,40 +452,24 @@ export class JestExt {
       );
     }
 
-    const found: JestCommandSettings[] = [];
-    if (uris.length > 0) {
+    const foundPackage = result.uris && result.uris.length > 0;
+    if (foundPackage) {
       this.extContext.output.write(
         'examining the following package roots:\r\n' +
-          `  ${uris.map((uri) => uri.fsPath).join('\r\n  ')}`,
+          `  ${result.uris?.map((uri) => uri.fsPath).join('\r\n  ')}`,
         'new-line'
       );
-      for (const uri of uris) {
-        const rootPath = uri.fsPath;
-        if (rootPath === this.extContext.settings.rootPath) {
-          continue;
-        }
-        jestCommandLine = getDefaultJestCommand(rootPath);
-        if (jestCommandLine) {
-          const settings = { jestCommandLine, rootPath };
-          outputSettings(settings);
-          found.push(settings);
-
-          if (found.length > 1) {
-            this.extContext.output.write('Multiple candidates found, abort', 'warn');
-            break;
-          }
-        }
-      }
     }
 
     let msg = 'Not able to auto detect a valid jest command';
     let actionType: MessageActionType = 'setup-cmdline';
 
-    switch (found.length) {
+    switch (result.validSettings.length) {
       case 1:
-        return updateSettings(found[0]);
+        outputSettings(result.validSettings[0]);
+        return updateSettings(result.validSettings[0]);
       case 0: {
-        if (uris.length > 0) {
+        if (foundPackage) {
           this.extContext.output.write(
             'not able to find test script or jest/CRA binary in any of the package roots',
             'warn'
@@ -590,18 +570,31 @@ export class JestExt {
       testId ? escapeRegExp(idString('full-name', testId)) : '.*'
     );
 
-    let debugConfig = getDebugConfig(this.extContext.workspace) ?? getDebugConfig();
+    let debugConfig =
+      getDebugConfig(this.extContext.workspace) ?? getDebugConfig() ?? this.deubgConfig;
 
     if (!debugConfig) {
       this.logging(
         'debug',
         'No debug config named "vscode-jest-tests.v2" or "vscode-jest-tests" found in launch.json, will use a default config.'
       );
-      debugConfig = this.debugConfigurationProvider.provideDebugConfigurations(
-        this.extContext.workspace
-      )[0];
+      if (this.extContext.settings.jestCommandLine) {
+        debugConfig = this.debugConfigurationProvider.withCommandLine(
+          this.extContext.workspace,
+          this.extContext.settings.jestCommandLine,
+          this.extContext.settings.rootPath
+        );
+      } else {
+        debugConfig = this.debugConfigurationProvider.provideDebugConfigurations(
+          this.extContext.workspace
+        )[0];
+      }
+
+      this.deubgConfig = debugConfig;
+      this.extContext.output.write('auto config debug config:', 'info');
+      this.extContext.output.write(JSON.stringify(debugConfig, undefined, '  '), 'new-line');
     }
-    vscode.debug.startDebugging(this.extContext.workspace, debugConfig);
+    await vscode.debug.startDebugging(this.extContext.workspace, debugConfig);
   };
   public runAllTests(editor?: vscode.TextEditor): void {
     if (!editor) {

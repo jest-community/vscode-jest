@@ -4,6 +4,10 @@ import * as path from 'path';
 
 export const createWizardContext = (debugConfigProvider: any, wsName?: string): any => ({
   debugConfigProvider,
+  wsManager: {
+    getValidWorkspaces: jest.fn(),
+    getFoldersFromFilesystem: jest.fn(),
+  },
   vscodeContext: {
     globalState: {
       get: jest.fn(),

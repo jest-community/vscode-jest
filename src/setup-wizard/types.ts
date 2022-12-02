@@ -1,9 +1,12 @@
 import * as vscode from 'vscode';
+import { DebugConfigurationProvider } from '../DebugConfigurationProvider';
 import { JestExtOutput } from '../JestExt/output-terminal';
 import { JestExtAutoRunSetting } from '../Settings';
+import { WorkspaceManager } from '../workspace-manager';
 
 export interface WizardContext {
-  debugConfigProvider: vscode.DebugConfigurationProvider;
+  debugConfigProvider: DebugConfigurationProvider;
+  wsManager: WorkspaceManager;
   vscodeContext: vscode.ExtensionContext;
   workspace?: vscode.WorkspaceFolder;
   message: JestExtOutput['write'];

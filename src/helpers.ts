@@ -1,11 +1,13 @@
+import * as vscode from 'vscode';
 import { platform } from 'os';
 import { existsSync, readFileSync, mkdirSync, writeFileSync } from 'fs';
-import { join, resolve } from 'path';
+import { join, resolve, normalize, isAbsolute } from 'path';
 import { ExtensionContext } from 'vscode';
 
 import { TestIdentifier } from './TestResults';
 import { TestStats } from './types';
 import { LoginShell } from 'jest-editor-support';
+import { WorkspaceManager } from './workspace-manager';
 
 /**
  * Known binary names of `react-scripts` forks
@@ -289,4 +291,74 @@ export const toErrorString = (e: unknown): string => {
     return e.stack ?? e.toString();
   }
   return JSON.stringify(e);
+};
+
+// regex that match single, double quotes and "\" escape char"
+const cmdSplitRegex = /"([^"\\]*(?:\\.[^"\\]*)*)"|'([^'\\]*(?:\\.[^'\\]*)*)'|([^\s'"]+)/g;
+export const parseCmdLine = (cmdLine: string): string[] => {
+  const parts = cmdLine.match(cmdSplitRegex) || [];
+  // clean up command
+  if (parts.length > 0) {
+    parts[0] = removeSurroundingQuote(normalize(parts[0]));
+  }
+  return parts;
+};
+
+export const toAbsoluteRootPath = (
+  workspace: vscode.WorkspaceFolder,
+  rootPath?: string
+): string => {
+  if (!rootPath) {
+    return workspace.uri.fsPath;
+  }
+  return isAbsolute(rootPath) ? rootPath : resolve(workspace.uri.fsPath, rootPath);
+};
+
+export interface JestCommandSettings {
+  rootPath: string;
+  jestCommandLine: string;
+}
+export interface JestCommandResult {
+  uris?: vscode.Uri[];
+  validSettings: JestCommandSettings[];
+}
+
+/**
+ * generate a valid jest command settings beyond the static "defaultJestCommand" by doing a deep search from the workspace-root/rootPath down
+ * @param workspace
+ * @param workspaceManager
+ * @param rootPath
+ * @returns
+ */
+export const getValidJestCommand = async (
+  workspace: vscode.WorkspaceFolder,
+  workspaceManager: WorkspaceManager,
+  rootPath?: string
+): Promise<JestCommandResult> => {
+  const absoluteRootPath = toAbsoluteRootPath(workspace, rootPath);
+  let jestCommandLine = getDefaultJestCommand(absoluteRootPath);
+  if (jestCommandLine) {
+    return Promise.resolve({ validSettings: [{ rootPath: absoluteRootPath, jestCommandLine }] });
+  }
+
+  // see if we can get a valid command by examing the file system
+  const uris = await workspaceManager.getFoldersFromFilesystem(workspace);
+
+  const validSettings: JestCommandSettings[] = [];
+  for (const uri of uris) {
+    const p = uri.fsPath;
+    if (p === absoluteRootPath) {
+      continue;
+    }
+    jestCommandLine = getDefaultJestCommand(p);
+    if (jestCommandLine) {
+      const settings = { jestCommandLine, rootPath: p };
+      validSettings.push(settings);
+
+      if (validSettings.length > 1) {
+        break;
+      }
+    }
+  }
+  return { uris, validSettings };
 };
