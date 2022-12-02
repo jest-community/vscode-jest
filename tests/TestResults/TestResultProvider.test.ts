@@ -248,14 +248,9 @@ describe('TestResultProvider', () => {
         });
       });
     });
-    it('unmatched test will file test-parsed and result-match-failed events instead', () => {
+    it('unmatched test will file result-match-failed events', () => {
       const sut = newProviderWithData([makeData([testBlock], null, filePath)]);
       sut.getResults(filePath);
-      expect(sut.events.testSuiteChanged.fire).toHaveBeenCalledWith({
-        type: 'test-parsed',
-        file: filePath,
-        sourceContainer: expect.anything(),
-      });
       expect(sut.events.testSuiteChanged.fire).toHaveBeenCalledWith({
         type: 'result-match-failed',
         file: filePath,
@@ -573,22 +568,25 @@ describe('TestResultProvider', () => {
         ]);
       });
     });
-    describe('when no assertions returned => all tests are marked unknown', () => {
+    describe('when no assertions returned', () => {
       let sut: TestResultProvider;
       const tBlock = helper.makeItBlock('a test', [8, 0, 20, 20]);
       beforeEach(() => {
         sut = new TestResultProvider(eventsMock);
         setupMockParse([tBlock]);
       });
-      it.each([[[]], [undefined]])('for assertions = %s', (assertions) => {
-        mockReconciler.assertionsForTestFile.mockReturnValueOnce(assertions);
-        const actual = sut.getResults(filePath);
-        expect(actual).toHaveLength(1);
-        const { name, status, sourceHistory } = actual[0];
-        expect(name).toEqual(tBlock.name);
-        expect(status).toEqual('Unknown');
-        expect(sourceHistory).toEqual(['match-failed']);
-      });
+      it.each([[[]], [undefined]])(
+        'all tests are marked unknown, assertions = %s',
+        (assertions) => {
+          mockReconciler.assertionsForTestFile.mockReturnValueOnce(assertions);
+          const actual = sut.getResults(filePath);
+          expect(actual).toHaveLength(1);
+          const { name, status, sourceHistory } = actual[0];
+          expect(name).toEqual(tBlock.name);
+          expect(status).toEqual('Unknown');
+          expect(sourceHistory).toEqual(['match-failed']);
+        }
+      );
     });
     describe('error handling', () => {
       let itBlocks, assertions;
@@ -973,33 +971,36 @@ describe('TestResultProvider', () => {
       });
       itBlocks[0] = dBlock0;
       itBlocks[4] = dBlock4;
+      assertions[0].ancestorTitles = ['describe-test-1'];
+      assertions[4].ancestorTitles = ['describe-test-5'];
 
       mockSnapshotProvider.parse.mockImplementation((testPath: string) => ({
         testPath,
         blocks: snapshotBlocks,
       }));
     });
-    it('parsing test file should fire event for testBlocks with snapshot info', () => {
+    it('matched result should contain snapshot info', () => {
       const sut = newProviderWithData([makeData(itBlocks, assertions, testPath)]);
       sut.getResults(testPath);
-      const testParsedCall = (sut.events.testSuiteChanged.fire as jest.Mocked<any>).mock.calls.find(
-        (call) => call[0].type === 'test-parsed'
+      const call = (sut.events.testSuiteChanged.fire as jest.Mocked<any>).mock.calls.find(
+        (call) => call[0].type === 'result-matched'
       );
-      expect(testParsedCall).not.toBeUndefined();
-      const sourceContainer = testParsedCall[0].sourceContainer;
+      expect(call).not.toBeUndefined();
+      const container = sut.getTestSuiteResult(testPath)?.assertionContainer;
+      expect(container).not.toBeUndefined();
+
       let matchCount = 0;
-      [
-        ...sourceContainer.childContainers.flatMap((c) => c.childData),
-        ...sourceContainer.childData,
-      ].forEach((child) => {
-        const sBlock = snapshotBlocks.find((block) => block.marker === child.name);
-        if (sBlock) {
-          expect(child.attrs.snapshot).toEqual(sBlock.isInline ? 'inline' : 'external');
-          matchCount += 1;
-        } else {
-          expect(child.attrs.snapshot).toBeUndefined();
+      [...container.childContainers.flatMap((c) => c.childData), ...container.childData].forEach(
+        (child) => {
+          const sBlock = snapshotBlocks.find((block) => block.marker === child.name);
+          if (sBlock) {
+            expect(child.attrs.snapshot).toEqual(sBlock.isInline ? 'inline' : 'external');
+            matchCount += 1;
+          } else {
+            expect(child.attrs.snapshot).toBeUndefined();
+          }
         }
-      });
+      );
       expect(matchCount).toEqual(2);
     });
     it('forward previewSnapshot to the snapshot provider', async () => {

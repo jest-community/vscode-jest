@@ -9,17 +9,12 @@ import {
   MonorepoSetupActionId,
   setupMonorepo,
 } from '../../../src/setup-wizard/tasks/setup-monorepo';
-import { WorkspaceManager, isSameWorkspace } from '../../../src/workspace-manager';
+import { isSameWorkspace } from '../../../src/workspace-manager';
 
 import { createWizardContext } from './task-test-helper';
 import { mockWizardHelper, workspaceFolder } from '../test-helper';
 import { PendingSetupTaskKey } from '../../../src/setup-wizard/start-wizard';
 import { setupJestCmdLine } from '../../../src/setup-wizard/tasks/setup-jest-cmdline';
-
-const mockWorkspaceManager = {
-  getValidWorkspaces: jest.fn(),
-  getFoldersFromFilesystem: jest.fn(),
-};
 
 const mockHelper = helper as jest.Mocked<any>;
 const { mockShowActionMenu, mockHelperSetup } = mockWizardHelper(mockHelper);
@@ -43,9 +38,8 @@ describe('setupMonorepo', () => {
     (isSameWorkspace as jest.Mocked<any>).mockImplementation(
       (ws1, ws2) => ws1.uri.path === ws2.uri.path
     ),
-      (WorkspaceManager as jest.Mocked<any>).mockImplementation(() => mockWorkspaceManager);
-    // default helper function
-    mockSaveConfig.mockImplementation(() => Promise.resolve());
+      // default helper function
+      mockSaveConfig.mockImplementation(() => Promise.resolve());
 
     mockHelper.getWizardSettings.mockImplementation(() => wizardSettings);
     mockHelper.createSaveConfig.mockReturnValue(mockSaveConfig);
@@ -133,13 +127,13 @@ describe('setupMonorepo', () => {
         `('case $case', async ({ paths, isError }) => {
           expect.hasAssertions();
           const folderUris = paths?.map((p) => ({ fsPath: p, path: p }));
-          mockWorkspaceManager.getFoldersFromFilesystem.mockImplementation(() => {
+          context.wsManager.getFoldersFromFilesystem.mockImplementation(() => {
             if (folderUris) {
               return Promise.resolve(folderUris);
             }
             return Promise.reject(new Error('failed'));
           });
-          mockWorkspaceManager.getValidWorkspaces.mockReturnValue(Promise.resolve([]));
+          context.wsManager.getValidWorkspaces.mockReturnValue(Promise.resolve([]));
           (vscode.workspace.updateWorkspaceFolders as jest.Mocked<any>).mockReturnValue(true);
 
           await expect(setupMonorepo(context)).resolves.toEqual(isError ? 'abort' : 'success');
@@ -161,10 +155,10 @@ describe('setupMonorepo', () => {
         it('only validate workspace if updateWorkspaceFolders succeeds', async () => {
           expect.hasAssertions();
           const folderUris = [{ fsPath: 'whatever', path: 'whatever' }];
-          mockWorkspaceManager.getFoldersFromFilesystem.mockImplementation(() => {
+          context.wsManager.getFoldersFromFilesystem.mockImplementation(() => {
             return Promise.resolve(folderUris);
           });
-          mockWorkspaceManager.getValidWorkspaces.mockReturnValue(Promise.resolve([]));
+          context.wsManager.getValidWorkspaces.mockReturnValue(Promise.resolve([]));
           (vscode.workspace.updateWorkspaceFolders as jest.Mocked<any>).mockReturnValue(false);
 
           await expect(setupMonorepo(context)).rejects.toThrow();
@@ -192,9 +186,7 @@ describe('setupMonorepo', () => {
           const validWorkspaceInfo = wsNames
             .filter((n) => !invalid.includes(n))
             .map((vn) => wsInfo(vn));
-          mockWorkspaceManager.getValidWorkspaces.mockReturnValue(
-            Promise.resolve(validWorkspaceInfo)
-          );
+          context.wsManager.getValidWorkspaces.mockReturnValue(Promise.resolve(validWorkspaceInfo));
 
           await expect(setupMonorepo(context)).resolves.toEqual('success');
           if (updateSetting) {
@@ -211,7 +203,7 @@ describe('setupMonorepo', () => {
       describe('can adjust rootPath', () => {
         beforeEach(() => {
           const validWorkspaceInfo = [wsInfo('folder-2', 'src'), wsInfo('folder-3')];
-          mockWorkspaceManager.getValidWorkspaces.mockReturnValue(validWorkspaceInfo);
+          context.wsManager.getValidWorkspaces.mockReturnValue(validWorkspaceInfo);
         });
         it('if no rootPath is defined, will automatically update', async () => {
           expect.hasAssertions();
