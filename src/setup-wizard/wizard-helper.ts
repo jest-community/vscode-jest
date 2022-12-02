@@ -24,6 +24,7 @@ import {
 } from './types';
 import { JestExtAutoRunSetting } from '../Settings';
 import { existsSync } from 'fs';
+import { parseCmdLine, removeSurroundingQuote } from '../helpers';
 
 export const jsonOut = (json: unknown): string => JSON.stringify(json, undefined, 4);
 
@@ -40,6 +41,7 @@ export const actionItem = <T = WizardStatus>(
   action,
 });
 
+/* istanbul ignore next */
 export const toActionButton = <T = WizardStatus>(
   id: number,
   iconId: string,
@@ -239,39 +241,6 @@ export const getConfirmation = async (
   return choice ?? onCancel === 'yes' ? true : false;
 };
 
-export const DEBUG_CONFIG_PLATFORMS = ['windows', 'linux', 'osx'];
-
-const getRuntimeExecutable = (
-  cmd: string,
-  args: string[]
-): Partial<vscode.DebugConfiguration | undefined> => {
-  const commonConfig = {
-    program: undefined,
-  };
-  if (cmd === 'npm') {
-    const extraArgs = args.includes('--') ? [] : ['--'];
-    return { runtimeExecutable: 'npm', args: extraArgs, ...commonConfig };
-  }
-  if (cmd === 'yarn') {
-    return { runtimeExecutable: 'yarn', args: [], ...commonConfig };
-  }
-};
-
-// regex to match surrounding quotes
-const cmdQuotesRegex = /^["']+|["']+$/g;
-export const cleanupCommand = (command: string): string => command.replace(cmdQuotesRegex, '');
-
-// regex that match single, double quotes and "\" escape char"
-const cmdSplitRegex = /"([^"\\]*(?:\\.[^"\\]*)*)"|'([^'\\]*(?:\\.[^'\\]*)*)'|([^\s'"]+)/g;
-export const parseCmdLine = (cmdLine: string): string[] => {
-  const parts = cmdLine.match(cmdSplitRegex) || [];
-  // clean up command
-  if (parts.length > 0) {
-    parts[0] = cleanupCommand(path.normalize(parts[0]));
-  }
-  return parts;
-};
-
 /**
  * perform cmdLine validation check:
  * 1. for npm script, make sure there is a '--' argument
@@ -292,55 +261,6 @@ export const validateCommandLine = (cmdLine: string): string | undefined => {
 };
 
 /**
- * create new debug config by merging the given command line and root-path accordingly.
- * @param config
- * @param cmdLine t
- * @param absoluteRootPath if given, will be used as "cwd" of the debug config. If the commandLine uses relative path, it will be converted to
- * absolute path based on this root path; otherwise it will be converted relative to the "${workspaceFolder}"
- * @param preservePlatformSections
- */
-export const mergeDebugConfigWithCmdLine = (
-  config: vscode.DebugConfiguration,
-  cmdLine: string,
-  absoluteRootPath?: string,
-  preservePlatformSections = false
-): vscode.DebugConfiguration => {
-  const [cmd, ...cmdArgs] = parseCmdLine(cmdLine);
-  if (!cmd) {
-    throw new Error(`invalid cmdLine: ${cmdLine}`);
-  }
-
-  let finalConfig: vscode.DebugConfiguration;
-
-  const { cwd, args: configArgs, ...restConfig } = config;
-  const _cwd = absoluteRootPath ? absoluteRootPath : cwd;
-
-  const rteConfig = getRuntimeExecutable(cmd, cmdArgs);
-  if (rteConfig) {
-    const { args: rteConfigArgs = [], ...restRteConfig } = rteConfig;
-    finalConfig = {
-      ...restConfig,
-      cwd: _cwd,
-      ...restRteConfig,
-      args: [...cmdArgs, ...rteConfigArgs, ...configArgs],
-    };
-  } else {
-    // convert the cmd to absolute path
-    const p = path.isAbsolute(cmd)
-      ? cmd
-      : absoluteRootPath
-      ? path.join(absoluteRootPath, cmd)
-      : ['${workspaceFolder}', cmd].join(path.sep);
-    finalConfig = { ...restConfig, cwd: _cwd, program: p, args: [...cmdArgs, ...configArgs] };
-  }
-
-  if (!preservePlatformSections) {
-    DEBUG_CONFIG_PLATFORMS.forEach((p) => delete finalConfig[p]);
-  }
-  return finalConfig;
-};
-
-/**
  * get releveant settings from vscode config (settings.json and launch.json) of the given workspace
  * @param workspace
  */
@@ -356,7 +276,7 @@ export const getWizardSettings = (workspace: vscode.WorkspaceFolder): WizardSett
     }
     wsSettings[name] = value;
     if (name === 'rootPath' && value) {
-      const rootPath = cleanupCommand(value);
+      const rootPath = removeSurroundingQuote(value);
       wsSettings['absoluteRootPath'] = path.normalize(
         path.isAbsolute(rootPath) ? rootPath : path.join(workspace.uri.fsPath, rootPath)
       );
@@ -376,7 +296,7 @@ export const getWizardSettings = (workspace: vscode.WorkspaceFolder): WizardSett
 };
 
 export const validateRootPath = (workspace: vscode.WorkspaceFolder, rootPath: string): boolean => {
-  const _rootPath = cleanupCommand(rootPath);
+  const _rootPath = removeSurroundingQuote(rootPath);
   return existsSync(
     path.isAbsolute(_rootPath) ? _rootPath : path.resolve(workspace.uri.fsPath, _rootPath)
   );

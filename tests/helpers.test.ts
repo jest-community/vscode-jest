@@ -1,5 +1,6 @@
 jest.unmock('../src/helpers');
 jest.unmock('../src/Settings');
+jest.unmock('./test-helper');
 
 const mockExistsSync = jest.fn();
 const mockReadFileSync = jest.fn();
@@ -15,17 +16,11 @@ jest.mock('fs', () => ({
 const mockPlatform = jest.fn();
 jest.mock('os', () => ({ platform: mockPlatform }));
 
-const mockJoin = jest.fn();
-const mockNormalize = jest.fn();
-const mockResolve = jest.fn();
-jest.mock('path', () => ({
-  join: mockJoin,
-  normalize: mockNormalize,
-  resolve: mockResolve,
-}));
-
 import { resolve } from 'path';
 import * as vscode from 'vscode';
+import * as os from 'os';
+import * as path from 'path';
+
 import {
   isCreateReactAppTestCommand,
   nodeBinExtension,
@@ -42,7 +37,11 @@ import {
   getPackageJson,
   getTestCommand,
   getDefaultJestCommand,
+  parseCmdLine,
+  toAbsoluteRootPath,
 } from '../src/helpers';
+import * as helper from '../src/helpers';
+import { makeUri, makeWorkspaceFolder } from './test-helper';
 
 // Manually (forcefully) set the executable's file extension to test its addition independendly of the operating system.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -114,7 +113,7 @@ describe('ModuleHelpers', () => {
 
       prepareIconFile(context, 'state', '<svg />');
       expect(mockWriteFileSync).toHaveBeenCalledWith(
-        mockJoin('generated-icons', 'state.svg'),
+        path.join('generated-icons', 'state.svg'),
         '<svg />'
       );
       expect(mockMkdirSync).toHaveBeenCalled();
@@ -285,9 +284,7 @@ describe('get info from Package.json', () => {
       test: 'react-scripts test',
     },
   };
-  beforeEach(() => {
-    mockResolve.mockImplementation(jest.requireActual('path').resolve);
-  });
+
   describe('getPackageJson', () => {
     it('can read package.json from file system', () => {
       mockReadFileSync.mockReturnValueOnce(JSON.stringify(packageWithTest));
@@ -341,7 +338,6 @@ describe('getDefaultJestCommand', () => {
       },
     };
     mockReadFileSync.mockReturnValueOnce(JSON.stringify(packageFile));
-    mockResolve.mockImplementation(jest.requireActual('path').resolve);
 
     const binaryFile = `${binary}.TEST`;
     mockExistsSync.mockImplementation((p) => p.endsWith(pmLockFile) || p.endsWith(binaryFile));
@@ -353,5 +349,131 @@ describe('getDefaultJestCommand', () => {
     } else {
       expect(defaultCmd).toEqual(expected);
     }
+  });
+});
+
+describe('plateform specific tests', () => {
+  const canRunTest = (isWin32: boolean) =>
+    (isWin32 && os.platform() === 'win32') || (!isWin32 && os.platform() !== 'win32');
+
+  beforeAll(() => {
+    mockPlatform.mockImplementation(jest.requireActual('os').platform);
+  });
+
+  describe('parseCmdLine', () => {
+    it.each`
+      isWin32  | cmdLine                                                       | expected
+      ${false} | ${'jest'}                                                     | ${{ cmd: 'jest', args: [], program: '${workspaceFolder}/jest' }}
+      ${false} | ${'./node_modules/.bin/jest'}                                 | ${{ cmd: 'node_modules/.bin/jest', args: [], program: '${workspaceFolder}/node_modules/.bin/jest' }}
+      ${false} | ${'./node_modules/.bin/..//jest'}                             | ${{ cmd: 'node_modules/jest', args: [], program: '${workspaceFolder}/node_modules/jest' }}
+      ${false} | ${'../jest --config ../jest-config.json'}                     | ${{ cmd: '../jest', args: ['--config', '../jest-config.json'], program: '${workspaceFolder}/../jest' }}
+      ${false} | ${'../jest --config "../jest-config.json"'}                   | ${{ cmd: '../jest', args: ['--config', '"../jest-config.json"'], program: '${workspaceFolder}/../jest' }}
+      ${false} | ${'../jest --config=../jest-config.json'}                     | ${{ cmd: '../jest', args: ['--config=../jest-config.json'], program: '${workspaceFolder}/../jest' }}
+      ${false} | ${'../jest --config="../jest-config.json"'}                   | ${{ cmd: '../jest', args: ['--config=', '"../jest-config.json"'], program: '${workspaceFolder}/../jest' }}
+      ${false} | ${'../jest --config "a dir/jest-config.json" --coverage'}     | ${{ cmd: '../jest', args: ['--config', '"a dir/jest-config.json"', '--coverage'], program: '${workspaceFolder}/../jest' }}
+      ${false} | ${'jest --config "../dir with space/jest-config.json"'}       | ${{ cmd: 'jest', args: ['--config', '"../dir with space/jest-config.json"'], program: '${workspaceFolder}/jest' }}
+      ${false} | ${'/absolute/jest --runInBand'}                               | ${{ cmd: '/absolute/jest', args: ['--runInBand'], program: '/absolute/jest' }}
+      ${false} | ${'"dir with space/jest" --arg1=1 --arg2 2 "some string"'}    | ${{ cmd: 'dir with space/jest', args: ['--arg1=1', '--arg2', '2', '"some string"'], program: '${workspaceFolder}/dir with space/jest' }}
+      ${false} | ${'"/dir with space/jest" --arg1=1 --arg2 2 "some string"'}   | ${{ cmd: '/dir with space/jest', args: ['--arg1=1', '--arg2', '2', '"some string"'], program: '/dir with space/jest' }}
+      ${false} | ${"'/dir with space/jest' --arg1=1 --arg2 2 'some string'"}   | ${{ cmd: '/dir with space/jest', args: ['--arg1=1', '--arg2', '2', "'some string'"], program: '/dir with space/jest' }}
+      ${false} | ${'jest --arg1 "escaped \\"this\\" string" --arg2 2'}         | ${{ cmd: 'jest', args: ['--arg1', '"escaped \\"this\\" string"', '--arg2', '2'], program: '${workspaceFolder}/jest' }}
+      ${true}  | ${'.\\node_modules\\.bin\\jest'}                              | ${{ cmd: 'node_modules\\.bin\\jest', args: [], program: '${workspaceFolder}\\node_modules\\.bin\\jest' }}
+      ${true}  | ${'..\\jest --config="..\\jest-config.json"'}                 | ${{ cmd: '..\\jest', args: ['--config=', '"..\\jest-config.json"'], program: '${workspaceFolder}\\..\\jest' }}
+      ${true}  | ${'jest --config "..\\dir with space\\jest-config.json"'}     | ${{ cmd: 'jest', args: ['--config', '"..\\dir with space\\jest-config.json"'], program: '${workspaceFolder}\\jest' }}
+      ${true}  | ${'\\absolute\\jest --runInBand'}                             | ${{ cmd: '\\absolute\\jest', args: ['--runInBand'], program: '\\absolute\\jest' }}
+      ${true}  | ${'"\\dir with space\\jest" --arg1=1 --arg2 2 "some string"'} | ${{ cmd: '\\dir with space\\jest', args: ['--arg1=1', '--arg2', '2', '"some string"'], program: '\\dir with space\\jest' }}
+      ${true}  | ${'c:\\jest --arg1 "escaped \\"this\\" string" --arg2 2'}     | ${{ cmd: 'c:\\jest', args: ['--arg1', '"escaped \\"this\\" string"', '--arg2', '2'], program: 'c:\\jest' }}
+    `('$cmdLine', ({ cmdLine, expected, isWin32 }) => {
+      if (!canRunTest(isWin32)) {
+        return;
+      }
+      const [actualCmd, ...actualArgs] = parseCmdLine(cmdLine);
+      expect(actualCmd).toEqual(expected.cmd);
+      expect(actualArgs).toEqual(expected.args);
+    });
+    describe('will remove surrounding quotes', () => {
+      it.each`
+        command                                      | expected
+        ${'cleanCmd'}                                | ${'cleanCmd'}
+        ${'"with double quote"'}                     | ${'with double quote'}
+        ${"'with single quote'"}                     | ${'with single quote'}
+        ${'"with quotes "in the middle" is fine"'}   | ${'with quotes "in the middle" is fine'}
+        ${"'with quotes 'in the middle' is fine'"}   | ${"with quotes 'in the middle' is fine"}
+        ${'with quotes "in the middle" is fine'}     | ${'with quotes "in the middle" is fine'}
+        ${'with escape "in the \'middle\'" is fine'} | ${'with escape "in the \'middle\'" is fine'}
+        ${'with escape "in the "middle"" is fine'}   | ${'with escape "in the "middle"" is fine'}
+        ${"'c:\\quoted root\\window\\command'"}      | ${'c:\\quoted root\\window\\command'}
+        ${"'\\quoted root\\window\\command'"}        | ${'\\quoted root\\window\\command'}
+      `(
+        'uses cleanupCommand to remove surrouding quotes for command: $command',
+        ({ command, expected }) => {
+          expect(removeSurroundingQuote(command)).toEqual(expected);
+        }
+      );
+    });
+  });
+});
+describe('toAbsoluteRootPath', () => {
+  const ws = makeWorkspaceFolder('ws1');
+  ws.uri.fsPath = path.join(path.sep, 'ws1');
+
+  it.each`
+    case | rootPath                         | expected
+    ${1} | ${''}                            | ${ws.uri.fsPath}
+    ${2} | ${'folder'}                      | ${path.resolve(ws.uri.fsPath, 'folder')}
+    ${3} | ${path.join(path.sep, 'folder')} | ${path.join(path.sep, 'folder')}
+  `('case $case', ({ rootPath, expected }) => {
+    expect(toAbsoluteRootPath(ws, rootPath)).toEqual(expected);
+  });
+});
+
+describe('getValidJestCommand', () => {
+  const workspace = makeWorkspaceFolder('test-folder');
+  const ws1 = makeUri('', 'test-folder', 'w1', 'child');
+  const ws2 = makeUri('', 'test-folder', 'w2');
+  const mockWorkspaceManager: any = {
+    getFoldersFromFilesystem: jest.fn(),
+  };
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+  it.each`
+    case                     | defaultJestCommands              | uris          | validSettings
+    ${'valid default'}       | ${['jest']}                      | ${undefined}  | ${[{ jestCommandLine: 'jest', rootPath: workspace.uri.fsPath }]}
+    ${'valid workspace'}     | ${[undefined, 'jest2']}          | ${[ws1]}      | ${[{ rootPath: ws1.fsPath, jestCommandLine: 'jest2' }]}
+    ${'same rootPath'}       | ${[undefined, undefined]}        | ${[ws2]}      | ${undefined}
+    ${'no workspace'}        | ${[undefined]}                   | ${[]}         | ${undefined}
+    ${'multiple workspaces'} | ${[undefined, 'jest1', 'jest2']} | ${[ws1, ws2]} | ${[{ rootPath: ws1.fsPath, jestCommandLine: 'jest1' }, { rootPath: ws2.fsPath, jestCommandLine: 'jest2' }]}
+  `('$case', async ({ defaultJestCommands, uris, validSettings }) => {
+    const defaultJestCommandSpy = jest.spyOn(helper, 'getDefaultJestCommand');
+    defaultJestCommands.forEach((cmd) => {
+      defaultJestCommandSpy.mockReturnValueOnce(cmd);
+    });
+
+    mockWorkspaceManager.getFoldersFromFilesystem.mockReturnValue(Promise.resolve(uris));
+
+    const result = await helper.getValidJestCommand(workspace, mockWorkspaceManager);
+    expect(result.uris).toEqual(uris);
+    if (!validSettings) {
+      expect(result.validSettings).toHaveLength(0);
+    } else {
+      expect(result.validSettings).toHaveLength(validSettings.length);
+      validSettings.forEach((setting) => expect(result.validSettings).toContainEqual(setting));
+    }
+  });
+
+  it('when root has no jest but the sub folder did', async () => {
+    (vscode.workspace as any).workspaceFolders = [makeWorkspaceFolder('whatever')];
+    mockWorkspaceManager.getFoldersFromFilesystem.mockReturnValue(Promise.resolve([ws1, ws2]));
+
+    const defaultJestCommandSpy = jest.spyOn(helper, 'getDefaultJestCommand');
+    defaultJestCommandSpy.mockReturnValueOnce(undefined).mockReturnValueOnce('should be ws2');
+
+    const result = await helper.getValidJestCommand(workspace, mockWorkspaceManager, ws1.fsPath);
+    expect(defaultJestCommandSpy).toHaveBeenCalledTimes(2);
+
+    expect(result.validSettings).toEqual([
+      { rootPath: ws2.fsPath, jestCommandLine: 'should be ws2' },
+    ]);
   });
 });

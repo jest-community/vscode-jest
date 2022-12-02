@@ -25,7 +25,6 @@ describe('wizard-tasks', () => {
     jest.resetAllMocks();
 
     vscode.workspace.getConfiguration = jest.fn().mockReturnValue({
-      // get: mockConfigGet,
       update: mockSaveConfig,
     });
 
@@ -49,9 +48,6 @@ describe('wizard-tasks', () => {
   });
 
   describe('setupJestCmdLine', () => {
-    // const validateConfigUpdate = (callBack?: (value?: string) => void) =>
-    //   validateTaskConfigUpdate(mockSaveConfig, 'jest.jestCommandLine', callBack);
-
     let context;
     beforeEach(() => {
       context = createWizardContext(debugConfigProvider);
@@ -138,16 +134,13 @@ describe('wizard-tasks', () => {
           mockSelectWorkspace('ws-1');
 
           // simulate user editing setting
-          mockShowActionMenu(taskId);
-          mockShowActionMenu(CLSetupActionId.saveSettings);
+          mockShowActionMenu(taskId, CLSetupActionId.saveSettings);
 
           // simulate user typing new value
           const newValue = 'new setting';
           mockHelper.showActionInputBox = jest.fn().mockReturnValue(Promise.resolve(newValue));
 
           // simulate exit the menu to end
-          // mockHelper.showActionMenu.mockReturnValueOnce(Promise.resolve('exit'));
-
           await expect(setupJestCmdLine(context)).resolves.toEqual('exit');
           expect(mockHelper.showActionMenu).toHaveBeenCalledTimes(2);
           expect(mockHelper.showActionInputBox).toHaveBeenCalledTimes(1);
