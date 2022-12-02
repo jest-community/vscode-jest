@@ -289,6 +289,10 @@ export class JestExt {
       this.events.onTestSessionStarted.fire({ ...this.extContext, session: this.processSession });
 
       this.updateTestFileList();
+
+      if (vscode.window.activeTextEditor) {
+        this.triggerUpdateActiveEditor(vscode.window.activeTextEditor);
+      }
     } catch (e) {
       const msg = prefixWorkspace(this.extContext, 'Failed to start jest session');
       this.logging('error', `${msg}:`, e);
@@ -382,9 +386,6 @@ export class JestExt {
     this.deubgConfig = undefined;
 
     await this.startSession(true);
-    if (vscode.window.activeTextEditor) {
-      this.triggerUpdateActiveEditor(vscode.window.activeTextEditor);
-    }
   }
 
   private isSupportedDocument(document: vscode.TextDocument | undefined): boolean {
@@ -496,14 +497,9 @@ export class JestExt {
     this.extContext.output.write(`Abort jest session: ${msg}`, 'error');
     return 'fail';
   }
+  /* istanbul ignore next */
   public activate(): void {
-    if (
-      vscode.window.activeTextEditor?.document.uri &&
-      vscode.workspace.getWorkspaceFolder(vscode.window.activeTextEditor.document.uri) ===
-        this.extContext.workspace
-    ) {
-      this.onDidChangeActiveTextEditor(vscode.window.activeTextEditor);
-    }
+    // do nothing
   }
   public deactivate(): void {
     this.stopSession();
