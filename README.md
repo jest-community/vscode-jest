@@ -60,7 +60,7 @@ Content
         - [testExplorer](#testexplorer)
         - [shell](#shell)
     - [Debug Config](#debug-config)
-    - [Debug Config v2](#debug-config-v2)
+      - [Debug Config v2](#debug-config-v2)
     - [monitorLongRun](#monitorlongrun)
   - [Commands](#commands)
   - [Menu](#menu)
@@ -97,15 +97,15 @@ For detailed releases and migration help, please see [releases](https://github.c
 ## How To?
 ### How to set up the extension?
 
-Hopefully you don't have to do anything. If you can run jest from the terminal, you should be able to use this extension. 
+Hopefully, you don't have to do anything. If you can run jest from the terminal, you should be able to use this extension.
 
-The extension will try auto config a jest command and debug config when needed. If it fails to detect one, an error panel should be presented with a `"Fix"` option to help you fix the settings when needed.
+The extension will try to auto-config a jest command and debug config when needed. If the auto-config fails, users should see an error panel with the `"Fix"` option to help them fix the settings.
 
-A few known issues to mention:
-- pnp without node_modules or a "test" script in package.json will need to setup `jest.jestCommandLine` explicitly.
-- multi-root monorepo project in a single-root workspace will need to be converted to multi-root project first. From v5, you can quickly perform this with the [monorepo setup tool](setup-wizard.md#setup-monorepo-project).
+A few known failure scenarios:
+- PNP without node_modules nor a "test" script in package.json will need to set up jest.jestCommandLine explicitly.
+- Multi-root monorepo project in a single-root workspace will need to be converted to a multi-root project first. From v5, you can quickly perform this with the [monorepo setup tool](setup-wizard.md#setup-monorepo-project).
 
-See more details in the [setup too](setup-wizard.md). Complete customization options can be found in [settings](#settings).
+For more details see the [setup too](setup-wizard.md) and the complete customization options in [settings](#settings).
 
 ### How to trigger the test run?
 
@@ -113,22 +113,22 @@ By default, the extension uses jest watch mode that automatically runs tests upo
 
 <img src="images/run-test.png" alt="run-test" width="800"/>
 
-1. trigger test run via gutter menu in from of each test and describe block.
-2. trigger test run via test tree inline menu.
-3. trigger test run via command palette, such as `Jest: Run All Tests`
-4. trigger test run via editor context menu: `Jest: Run Related Tests`
+1. trigger test runs via the gutter menu of each test and describe blocks.
+2. trigger test runs via the test tree inline menu.
+3. trigger test runs via command palette, such as `Jest: Run All Tests`
+4. trigger test runs via the editor context menu: `Jest: Run Related Tests`
 
-The extension will try to auto config, an error panel will be presented with a `Fix` button to customize the settings. see [how to setup the extension](#how-to-set-up-the-extension)
+The extension will try to auto-config a jest runner, if it fails, you can try the `"Fix"` button in the error panel or checkout the [troubleshooting](#troubleshooting).
 ### How to debug tests?
 
-There are 2 ways to debug a specific test
+There are 2 ways to debug a specific test:
 
 <img src="images/run-debug.png" alt="run-debug" width="800"/>
 
-1. via gutter context menu from test status icon
-2. via test tree item inline menu
+1. via the editor gutter context menu
+2. via the test tree item inline menu
 
-The extension will try to generate a debug config, but if you encountered a debug error or simply want to change the configuration, please see [Customization - Debug Config](#debug-config).
+The extension will try to generate a debug config, but if you encounter a debug error or want to change the configuration, please see [Customization - Debug Config](#debug-config).
 
 ### How to use code coverage?
 
@@ -163,11 +163,11 @@ You can customize coverage start up behavior, style and colors, see [customizati
 
 <img src="images/snapshot-menu.png" alt="snapshot-menu" width="800"/>
 
-Users can update snapshot in any granularity from the context menu:
-1. in TestExplorer tree view: Update snapshot for the workspace, folder, test file or just a single test.
-2. in Editor's gutter menu: Update and view snapshot for any given test. 
+Users can update snapshots in any granularity from the context menu:
+1. in the TestExplorer tree view: Update snapshot for the workspace, folder, test file, or just a single test.
+2. in the Editor's gutter menu: Update and view the snapshot for a test block. 
   
-Snapshots are now fully supported for parameterized (`test.each`) and template-literal named tests. 
+Snapshots are now fully supported for parameterized (`test.each`) and template-literal named tests.
 
 ### How to use the extension with monorepo projects?
 
@@ -223,9 +223,10 @@ You can further customize the explorer with [jest.testExplorer](#testexplorer) i
 
 ### How to see more debug info (self-diagnosis)?
 
-It is sometimes helpful to see the actual command and shell environment the extension spawned and internal debug message to diagnosis issues:
+It is sometimes helpful to see the actual command and shell environment spawned, as well as internal debug messages, to diagnose issues:
+
 1. Turn on the debug mode: set `"jest.debugMode": true` in `.vscode/settings.json`
-2. Open the developer console (via `Help > Toggle Developer Tools` menu), for example to examine the PATH environment variables: look for the "spawn" log, expand the "options" object, expand "env" property, all env variables (inherited from vscode process) should be there (view [animation](https://github.com/jest-community/vscode-jest/blob/master/images/vscode-jest-env-log.gif)).
+2. Open the developer console (via `Help > Toggle Developer Tools` menu), for example, to examine the PATH environment variables: look for the "spawn" log, expand the "options" object, expand the "env" property, all env variables (inherited from vscode process) should be there (view [animation](https://github.com/jest-community/vscode-jest/blob/master/images/vscode-jest-env-log.gif)).
 
 ## Customization
 ### Settings
@@ -399,30 +400,28 @@ interface LoginShell
   args: string[];
 }
 ```
-By default, jest command is executed in default shell ('cmd' for windows, '/bin/sh' for non-windows). Users can use the `"jest.shell"` setting to either pass the path of another shell (e.g. "/bin/zsh") or a LoginShell config, basically a shell path and login arguments (e.g. `{"path": "/bin/bash", "args": ["--login"]}`)
+By default, jest command is executed in default shell ('cmd' for windows, '/bin/sh' for non-windows). Users can use the `"jest.shell"` setting to either pass the path of another shell (e.g. "/bin/zsh") or a LoginShell config, e.g. `{"path": "/bin/bash", "args": ["--login"]}`)
 
 Note the LoginShell is only applicable for non-windows platform and could cause a bit more overhead.
 
 <a id="auto-recovery-login-shell"></a>
-_Note_: If detected shell env issue, such as `node: command not found` or `npm: no such file or directory`, the extension will fallback to a login shell to ensure tests can run correctly. If will try to auto generate a login shell configuration based on the `jest.shell` setting, otherwise, it will use the default `bash` login-shell. Currently supported auto-fallback shells are `bash`, `zsh`, `fish`.
+_Note_: Since v5, if detected shell env issue, such as `node: command not found` or `npm: no such file or directory`, the extension will fallback to a login shell to ensure tests can run correctly. If will try to auto generate a login shell configuration based on the `jest.shell` setting, otherwise, it will use the default `bash` login-shell. Currently supported auto-fallback shells are `bash`, `zsh`, `fish`.
+
 ### Debug Config
 
 This extension looks for jest specific debug config (`"vscode-jest-tests"` or `"vscode-jest-tests.v2"`) in the following order:
 1. workspace folder `.vscode/launch.json`. 
 2. workspace `xxx.code-workspace`, if exists
-3. generated default config
+3. if none found, generated a debug config
   
-The default config should work for most standard jest or projects bootstrapped by `create-react-app`, however it might fall short for more sophisticated projects. Please use the [setup tool](setup-wizard.md) to help you configure or edit the `launch.json` file manually. 
-
-If you choose to edit the `launch.json` manually, you can use the jest templates, such as "Jest: Default jest configuration" or "Jest: create-react-app", as a starting point. See more detail on how to add debug config in vscode [Debugging](https://code.visualstudio.com/docs/editor/debugging#_launch-configurations).
-
+The generated config should work for most standard jest or projects bootstrapped by `create-react-app`, however it might fall short for more sophisticated projects. Please use the [setup tool](setup-wizard.md) to help you configure or edit the `launch.json` file manually. 
 
 There are many information online about how to setup vscode debug config for specific environments/frameworks, you might find the following helpful:
   - [vscode debug config properties](https://code.visualstudio.com/docs/nodejs/nodejs-debugging#_launch-configuration-properties)
   - [Launch configurations for common scenarios](https://code.visualstudio.com/docs/nodejs/nodejs-debugging#_launch-configurations-for-common-scenarios)
   - [vscode-recipes for debug jest tests](https://github.com/microsoft/vscode-recipes/tree/master/debugging-jest-tests)
 
-### Debug Config v2
+#### Debug Config v2
 
 v4.3 introduces a "variable substitution" based config with name `"vscode-jest-tests.v2"`. The extension will merely substitute the jest variables in the config, without adding/removing anything else. 
 
