@@ -13,15 +13,10 @@ export class AutoRun {
   private readonly onConfig: JestExtAutoRunConfig;
   private readonly offConfig: JestExtAutoRunConfig;
 
-  constructor(
-    setting: JestExtAutoRunSetting | null | undefined,
-    autoEnable?: boolean,
-    runAllTestsFirst?: boolean
-  ) {
+  constructor(setting: JestExtAutoRunSetting | null | undefined) {
     let config: JestExtAutoRunConfig;
     if (!setting) {
-      config =
-        this.autoRunFromLegacySettings(autoEnable, runAllTestsFirst) ?? this.toAutoRun('default');
+      config = this.toAutoRun('default');
     } else if (typeof setting === 'string') {
       config = this.toAutoRun(setting);
     } else {
@@ -83,20 +78,6 @@ export class AutoRun {
     return 'auto-run-off';
   }
 
-  /**
-   * create a backward compatible runMode from the the legacy settings
-   */
-  private autoRunFromLegacySettings(
-    autoEnable?: boolean,
-    runAllTestsFirst?: boolean
-  ): JestExtAutoRunConfig | undefined {
-    if (autoEnable === false) {
-      return this.toAutoRun('off');
-    }
-    if (runAllTestsFirst === true) {
-      return this.toAutoRun('legacy');
-    }
-  }
   private toAutoRun(shortHand: JestExtAutoRunShortHand): JestExtAutoRunConfig {
     switch (shortHand) {
       case 'legacy':

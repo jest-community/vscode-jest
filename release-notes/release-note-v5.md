@@ -117,15 +117,27 @@ Users with jest coverageProvider `v8` should be able to see coverage like with t
 - various document updates
 
 ### Breaking Changes
-- `"jest.showTerminalOnLaunch"` is deprecated. 
+- Debug and Snapshot-Preview CodeLens are replaced by the gutter context menu
+  The codeLens can sometimes interfering with code formatting during editing and it is not as versatile as the context menu especially for parameterized tests. Therefore, we are removing the codeLens and moving and expanding the functionality into the editor gutter menu instead.  
+- The following settings are removed:
+  - `"jest.runAllTestsFirst"`
+  - `"jest.showTerminalOnLaunch"` 
+  - `"jest.pathToJest"`
+  - `"jest.pathToConfig"`
+  - snapshot codeLens
+    - `"jest.enableSnapshotUpdateMessages"`
+    - `"jest.restartJestOnSnapshotUpdate"`
+    - `"jest.enableSnapshotPreviews"`
+  - debug codeLens
+    - `"jest.enableCodeLens"`
+    - `"jest.debugCodeLens.showWhenTestStateIn"`
+  
 - ["jest.textExplorer"](../README.md#testexplorer): 
   - can not be turned off any more. 
   - removed the "enable" and "showClassicStatus" attributes. The only valid attribute is "showInlineError".
 - `"jest.autoRun` default value has changed. see detail above.
-- Snapshot changes:
-  - Snapshot codeLenses are gone and replaced with commands in test status and test explorer tree menu.
-  - No more snapshot update messaging when running tests but users can update any snapshot any time they want.
-  - Retired the following snapshot related settings: `jest.enableSnapshotPreviews`, `jest.enableSnapshotUpdateMessages`, `restartJestOnSnapshotUpdate`.
+- No auto update (all) snapshots messaging any more, instead users can manually update and view any snapshot tests at any level and any time.
+
 ### Change log
 - [v5.0.2 pre-release](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.2)
 - [v5.0.1 pre-release](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.1)

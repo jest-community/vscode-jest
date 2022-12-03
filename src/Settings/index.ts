@@ -37,12 +37,8 @@ export interface TestExplorerConfig {
 export type NodeEnv = ProjectWorkspace['nodeEnv'];
 export type MonitorLongRun = 'off' | number;
 export interface PluginResourceSettings {
-  autoEnable?: boolean;
   jestCommandLine?: string;
-  pathToConfig?: string;
-  pathToJest?: string;
   rootPath: string;
-  runAllTestsFirst?: boolean;
   showCoverageOnLoad: boolean;
   coverageFormatter: string;
   debugMode?: boolean;
@@ -56,8 +52,4 @@ export interface PluginResourceSettings {
 
 export interface PluginWindowSettings {
   disabledWorkspaceFolders: string[];
-}
-
-export function isDefaultPathToJest(str?: string | null): boolean {
-  return str === null || str === '';
 }

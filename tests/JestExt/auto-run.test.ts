@@ -6,10 +6,7 @@ import { AutoRun } from '../../src/JestExt/auto-run';
 describe('AutoRun', () => {
   it.each`
     case  | pluginSettings                                             | expectedConfig
-    ${1}  | ${{ autoEnable: false }}                                   | ${{ watch: false }}
-    ${2}  | ${{ autoEnable: true, runAllTestsFirst: true }}            | ${{ watch: true, onStartup: ['all-tests'] }}
-    ${3}  | ${{ autoEnable: true, runAllTestsFirst: false }}           | ${{ watch: true }}
-    ${4}  | ${{ autoEnable: true, autoRun: { watch: false } }}         | ${{ watch: false }}
+    ${4}  | ${{ autoRun: { watch: false } }}                           | ${{ watch: false }}
     ${5}  | ${{ autoRun: 'default' }}                                  | ${{ watch: true }}
     ${6}  | ${{ autoRun: 'off' }}                                      | ${{ watch: false }}
     ${7}  | ${{ autoRun: 'watch' }}                                    | ${{ watch: true }}
@@ -18,8 +15,8 @@ describe('AutoRun', () => {
     ${10} | ${{ autoRun: 'bad-string' }}                               | ${{ watch: true }}
     ${11} | ${{ autoRun: { watch: false, onStartup: ['all-tests'] } }} | ${{ watch: false, onStartup: ['all-tests'] }}
   `('construct AutoRun from user settings: $case', ({ pluginSettings, expectedConfig }) => {
-    const { autoRun, autoEnable, runAllTestsFirst } = pluginSettings;
-    const ar = new AutoRun(autoRun, autoEnable, runAllTestsFirst);
+    const { autoRun } = pluginSettings;
+    const ar = new AutoRun(autoRun);
     expect(ar.config).toEqual(expectedConfig);
   });
 

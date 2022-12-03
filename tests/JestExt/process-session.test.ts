@@ -155,7 +155,6 @@ describe('ProcessSession', () => {
   describe('stop', () => {
     it('will stop all processes in the queues', async () => {
       expect.hasAssertions();
-      context.pluginSettings = { autoEnable: true };
       processManagerMock.numberOfProcesses.mockReturnValue(1);
       const session = createProcessSession(context);
       await session.stop();
