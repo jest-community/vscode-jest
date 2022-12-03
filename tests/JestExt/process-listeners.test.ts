@@ -227,7 +227,6 @@ describe('jest process listeners', () => {
     });
   });
   describe('RunTestListener', () => {
-    /* eslint-disable jest/no-conditional-expect */
     beforeEach(() => {
       mockSession.context.output = {
         appendLine: jest.fn(),
@@ -445,88 +444,6 @@ describe('jest process listeners', () => {
         listener.onEvent(mockProcess, 'executableStdErr', 'onRunStart: numTotalTestSuites: 70');
         expect(setTimeout).toHaveBeenCalledTimes(2);
         expect(clearTimeout).toHaveBeenCalledTimes(1);
-      });
-    });
-    describe('when snapshot test failed', () => {
-      it.each`
-        seq  | output                            | enableSnapshotUpdateMessages | expectUpdateSnapshot
-        ${1} | ${'Snapshot test failed'}         | ${true}                      | ${true}
-        ${2} | ${'Snapshot test failed'}         | ${false}                     | ${false}
-        ${3} | ${'Snapshot failed'}              | ${true}                      | ${true}
-        ${4} | ${'Snapshots failed'}             | ${true}                      | ${true}
-        ${5} | ${'Failed for some other reason'} | ${true}                      | ${false}
-      `(
-        'can detect snapshot failure: #$seq',
-        async ({ output, enableSnapshotUpdateMessages, expectUpdateSnapshot }) => {
-          expect.hasAssertions();
-          mockSession.context.settings.enableSnapshotUpdateMessages = enableSnapshotUpdateMessages;
-          (vscode.window.showInformationMessage as jest.Mocked<any>).mockReturnValue(
-            Promise.resolve('something')
-          );
-
-          const listener = new RunTestListener(mockSession);
-
-          await listener.onEvent(mockProcess, 'executableStdErr', Buffer.from(output));
-          if (expectUpdateSnapshot) {
-            expect(vscode.window.showInformationMessage).toHaveBeenCalledTimes(1);
-            expect(mockSession.scheduleProcess).toHaveBeenCalledWith({
-              type: 'update-snapshot',
-              baseRequest: mockProcess.request,
-            });
-          } else {
-            expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
-            expect(mockSession.scheduleProcess).not.toHaveBeenCalled();
-          }
-        }
-      );
-      it('will abort auto update snapshot if no user action is taken', async () => {
-        expect.hasAssertions();
-        mockSession.context.settings.enableSnapshotUpdateMessages = true;
-        (vscode.window.showInformationMessage as jest.Mocked<any>).mockReturnValue(
-          Promise.resolve(undefined)
-        );
-
-        const listener = new RunTestListener(mockSession);
-
-        await listener.onEvent(
-          mockProcess,
-          'executableStdErr',
-          Buffer.from('Snapshot test failed')
-        );
-        expect(vscode.window.showInformationMessage).toHaveBeenCalledTimes(1);
-        expect(mockSession.scheduleProcess).not.toHaveBeenCalled();
-      });
-      it('auto update snapsot only apply for runs not already updating snapshots', async () => {
-        expect.hasAssertions();
-        mockSession.context.settings.enableSnapshotUpdateMessages = true;
-        (vscode.window.showInformationMessage as jest.Mocked<any>).mockReturnValue(
-          Promise.resolve('something')
-        );
-
-        const listener = new RunTestListener(mockSession);
-
-        await listener.onEvent(
-          mockProcess,
-          'executableStdErr',
-          Buffer.from('Snapshot test failed')
-        );
-        expect(vscode.window.showInformationMessage).toHaveBeenCalledTimes(1);
-        expect(mockSession.scheduleProcess).toHaveBeenCalledWith({
-          type: 'update-snapshot',
-          baseRequest: mockProcess.request,
-        });
-
-        // for a process already with updateSnapshot flag: do nothing
-        (vscode.window.showInformationMessage as jest.Mocked<any>).mockClear();
-        mockSession.scheduleProcess.mockClear();
-        mockProcess.request.updateSnapshot = true;
-        await listener.onEvent(
-          mockProcess,
-          'executableStdErr',
-          Buffer.from('Snapshot test failed')
-        );
-        expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
-        expect(mockSession.scheduleProcess).not.toHaveBeenCalled();
       });
     });
 

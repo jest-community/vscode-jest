@@ -6,6 +6,7 @@ import { JestProcessRequest } from '../src/JestProcessManagement';
 import { JestTestProcessType } from '../src/Settings';
 import { MatchEvent } from '../src/TestResults/match-node';
 import { AutoRun } from '../src/JestExt';
+import * as path from 'path';
 
 export const EmptyLocation = {
   line: 0,
@@ -19,7 +20,7 @@ export const makeLocation = (pos: [number, number]): Location => ({
   line: pos[0],
   column: pos[1],
 });
-export const makePositionRange = (pos: [number, number, number, number]) => ({
+export const makePositionRange = (pos: [number, number, number, number]): any => ({
   start: makeLocation([pos[0], pos[1]]),
   end: makeLocation([pos[2], pos[3]]),
 });
@@ -38,6 +39,16 @@ export const findResultForTest = (results: TestResult[], itBlock: ItBlock): Test
 };
 
 // factory method
+export const makeSnapshotBlock = (marker?: string, isInline?: boolean, line?: number): any => {
+  const loc = line ? makePositionRange([line, 0, line, 0]) : EmptyLocationRange;
+  return {
+    marker,
+    isInline: isInline ?? false,
+    node: { name: 'node', loc },
+    parents: [],
+  };
+};
+
 export const makeItBlock = (
   name?: string,
   pos?: [number, number, number, number],
@@ -136,7 +147,7 @@ export const mockProjectWorkspace = (...args: any[]): any => {
 
 export const mockWworkspaceLogging = (): any => ({ create: () => jest.fn() });
 
-export const mockEvent = () => ({
+export const mockEvent = (): any => ({
   event: jest.fn().mockReturnValue({ dispose: jest.fn() }),
   fire: jest.fn(),
   dispose: jest.fn(),
@@ -213,6 +224,16 @@ expect.extend({
       };
     }
   },
+});
+
+export const makeWorkspaceFolder = (name: string): any => ({
+  uri: makeUri(name),
+  name,
+  path: name,
+});
+export const makeUri = (...parts: string[]): any => ({
+  fsPath: parts.join(path.sep),
+  path: parts.join('/'),
 });
 
 declare global {

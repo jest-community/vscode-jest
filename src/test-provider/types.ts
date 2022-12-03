@@ -8,7 +8,7 @@ export type TestItemDataType = WorkspaceRoot | FolderData | TestDocumentRoot | T
 
 /** JestExt context exposed to the test explorer */
 export interface JestExtExplorerContext extends JestExtSessionContext {
-  readonly testResolveProvider: TestResultProvider;
+  readonly testResultProvider: TestResultProvider;
   readonly sessionEvents: JestSessionEvents;
   debugTests: DebugFunction;
 }
@@ -18,9 +18,20 @@ export interface TestItemData {
   readonly uri: vscode.Uri;
   context: JestTestProviderContext;
   discoverTest?: (run: JestTestRun) => void;
-  scheduleTest: (run: JestTestRun) => void;
+  scheduleTest: (run: JestTestRun, itemCommand?: ItemCommand) => void;
+  runItemCommand: (command: ItemCommand) => void;
 }
 
 export interface Debuggable {
   getDebugInfo: () => { fileName: string; testNamePattern?: string };
+}
+
+export enum TestTagId {
+  Run = 'run',
+  Debug = 'debug',
+}
+
+export enum ItemCommand {
+  updateSnapshot = 'update-snapshot',
+  viewSnapshot = 'view-snapshot',
 }

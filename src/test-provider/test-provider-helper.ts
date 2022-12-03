@@ -9,7 +9,7 @@ import { JestExtExplorerContext, TestItemData } from './types';
  * as well as factory functions to create TestItem and TestRun that could impact the state
  */
 
-export type TagIdType = 'run' | 'debug';
+export type TagIdType = 'run' | 'debug' | 'update-snapshot';
 
 let RunSeq = 0;
 export class JestTestProviderContext {
@@ -78,20 +78,24 @@ export class JestTestProviderContext {
 
   createTestRun = (request: vscode.TestRunRequest, options?: JestTestRunOptions): JestTestRun => {
     const name = options?.name ?? `run-${RunSeq++}`;
-    const opt = { ...(options ?? {}), request, name };
+    const opt = { ...(options ?? {}), name };
     const vscodeRun = this.controller.createTestRun(request, name);
     return new JestTestRun(this, vscodeRun, opt);
   };
 
   // tags
-  getTag = (tagId: TagIdType): vscode.TestTag | undefined =>
-    this.profiles.find((p) => p.tag?.id === tagId)?.tag;
+  getTag = (tagId: TagIdType): vscode.TestTag => {
+    const tag = this.profiles.find((p) => p.tag?.id === tagId)?.tag;
+    if (!tag) {
+      throw new Error(`unrecognized tag: ${tagId}`);
+    }
+    return tag;
+  };
 }
 
 export interface JestTestRunOptions {
   name?: string;
   item?: vscode.TestItem;
-  request?: vscode.TestRunRequest;
 
   // in addition to the regular end() method
   onEnd?: () => void;
@@ -108,7 +112,6 @@ export type ParentRun = vscode.TestRun | JestTestRun;
 const isVscodeRun = (arg: ParentRun | undefined): arg is vscode.TestRun =>
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   arg != null && typeof (arg as any).appendOutput === 'function';
-const isJestTestRun = (arg: ParentRun | undefined): arg is JestTestRun => !isVscodeRun(arg);
 
 /** a wrapper for vscode.TestRun or another JestTestRun */
 export class JestTestRun implements JestExtOutput, TestRunProtocol {
@@ -144,11 +147,6 @@ export class JestTestRun implements JestExtOutput, TestRunProtocol {
 
   isClosed(): boolean {
     return this.vscodeRun === undefined;
-  }
-  get request(): vscode.TestRunRequest | undefined {
-    return (
-      this.options?.request ?? (isJestTestRun(this.parentRun) ? this.parentRun.request : undefined)
-    );
   }
 
   private updateState = (f: (pRun: ParentRun) => void): void => {

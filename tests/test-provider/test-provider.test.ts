@@ -10,6 +10,7 @@ import { JestTestProviderContext } from '../../src/test-provider/test-provider-h
 import { extensionId } from '../../src/appGlobals';
 import { mockController, mockExtExplorerContext } from './test-helper';
 import { tiContextManager } from '../../src/test-provider/test-item-context-manager';
+import { ItemCommand } from '../../src/test-provider/types';
 
 const throwError = () => {
   throw new Error('debug error');
@@ -20,6 +21,7 @@ describe('JestTestProvider', () => {
     const data: any = {
       discoverTest: jest.fn(),
       scheduleTest: jest.fn(),
+      runItemCommand: jest.fn(),
       dispose: jest.fn(),
     };
     if (debuggable) {
@@ -80,43 +82,23 @@ describe('JestTestProvider', () => {
       );
       expect(controllerMock.createRunProfile).toHaveBeenCalledTimes(2);
       [
-        [vscode.TestRunProfileKind.Run, 'run'],
-        [vscode.TestRunProfileKind.Debug, 'debug'],
-      ].forEach(([kind, id]) => {
+        [vscode.TestRunProfileKind.Run, 'run', true],
+        [vscode.TestRunProfileKind.Debug, 'debug', true],
+      ].forEach(([kind, id, isDefault]) => {
         expect(controllerMock.createRunProfile).toHaveBeenCalledWith(
           expect.anything(),
           kind,
           expect.anything(),
-          true,
+          isDefault,
           expect.objectContaining({ id })
         );
       });
 
       expect(WorkspaceRoot).toHaveBeenCalled();
     });
-    it.each`
-      isWatchMode
-      ${true}
-      ${false}
-    `('will create Profiles regardless isWatchMode=$isWatchMode', ({ isWatchMode }) => {
-      extExplorerContextMock.settings.autoRun.isWatch = isWatchMode;
-      new JestTestProvider(extExplorerContextMock);
-      const kinds = [vscode.TestRunProfileKind.Debug, vscode.TestRunProfileKind.Run];
-
-      expect(controllerMock.createRunProfile).toHaveBeenCalledTimes(kinds.length);
-      kinds.forEach((kind) => {
-        expect(controllerMock.createRunProfile).toHaveBeenCalledWith(
-          expect.anything(),
-          kind,
-          expect.anything(),
-          true,
-          expect.anything()
-        );
-      });
-    });
   });
 
-  describe('can  discover tests', () => {
+  describe('can discover tests', () => {
     it('should only discover items with canResolveChildren = true', () => {
       new JestTestProvider(extExplorerContextMock);
       const data = setupTestItemData('whatever', true, workspaceRootMock.context);
@@ -535,7 +517,6 @@ describe('JestTestProvider', () => {
           const [run] = d.scheduleTest.mock.calls[0];
           expect(run).toEqual(expect.objectContaining({ vscodeRun: controllerMock.lastRunMock() }));
 
-          /* eslint-disable jest/no-conditional-expect */
           if (idx === 1) {
             expect(run.vscodeRun.errored).toHaveBeenCalledWith(
               d.item,
@@ -610,5 +591,10 @@ describe('JestTestProvider', () => {
         })
       );
     });
+  });
+  it('supports runItemCommand', () => {
+    const provider = new JestTestProvider(extExplorerContextMock);
+    provider.runItemCommand(workspaceRootMock.item, ItemCommand.updateSnapshot);
+    expect(workspaceRootMock.runItemCommand).toHaveBeenCalled();
   });
 });

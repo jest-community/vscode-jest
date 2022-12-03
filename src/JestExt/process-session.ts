@@ -4,7 +4,6 @@ import {
   JestProcessRequestBase,
   ScheduleStrategy,
   requestString,
-  QueueType,
   JestProcessInfo,
   JestProcessRequestTransform,
 } from '../JestProcessManagement';
@@ -12,21 +11,16 @@ import { JestTestProcessType } from '../Settings';
 import { RunTestListener, ListTestFileListener } from './process-listeners';
 import { JestExtProcessContext } from './types';
 
-type InternalProcessType = 'list-test-files' | 'update-snapshot';
+type InternalProcessType = 'list-test-files';
 export type ListTestFilesCallback = (
   fileNames?: string[],
   error?: string,
   exitCode?: number
 ) => void;
-export type InternalRequestBase =
-  | {
-      type: Extract<InternalProcessType, 'list-test-files'>;
-      onResult: ListTestFilesCallback;
-    }
-  | {
-      type: Extract<InternalProcessType, 'update-snapshot'>;
-      baseRequest: JestProcessRequest;
-    };
+export type InternalRequestBase = {
+  type: Extract<InternalProcessType, 'list-test-files'>;
+  onResult: ListTestFilesCallback;
+};
 
 export type JestExtRequestType = JestProcessRequestBase | InternalRequestBase;
 const isJestProcessRequestBase = (request: JestExtRequestType): request is JestProcessRequestBase =>
@@ -122,32 +116,6 @@ export const createProcessSession = (context: JestExtProcessContext): ProcessSes
   };
   const listenerSession: ListenerSession = { context, scheduleProcess };
 
-  /**
-   * returns an update-snapshot process-request base on the current process
-   * @param process
-   * @returns undefined if the process already is updating snapshot
-   */
-  const createSnapshotRequest = (baseRequest: JestProcessRequest): JestProcessRequestBase => {
-    switch (baseRequest.type) {
-      case 'watch-tests':
-      case 'watch-all-tests':
-        return { type: 'all-tests', updateSnapshot: true };
-      case 'all-tests':
-      case 'by-file':
-      case 'by-file-pattern':
-      case 'by-file-test':
-      case 'by-file-test-pattern':
-        if (baseRequest.updateSnapshot) {
-          throw new Error(
-            'schedule a update-snapshot run within an update-snapshot run is not supported'
-          );
-        }
-        return { ...baseRequest, updateSnapshot: true };
-      default:
-        throw new Error(`unexpeted baseRequest type for snapshot run: ${baseRequest.toString()}`);
-    }
-  };
-
   const createProcessRequest = (request: JestExtRequestType): JestProcessRequest => {
     const transform = (pRequest: JestProcessRequest): JestProcessRequest => {
       const t = getTransform(request);
@@ -166,19 +134,6 @@ export const createProcessSession = (context: JestExtProcessContext): ProcessSes
         const schedule = ProcessScheduleStrategy[request.type];
         return transform({
           ...request,
-          listener: new RunTestListener(lSession),
-          schedule,
-        });
-      }
-      case 'update-snapshot': {
-        const snapshotRequest = createSnapshotRequest(request.baseRequest);
-        const schedule = {
-          ...ProcessScheduleStrategy[snapshotRequest.type],
-          queue: 'non-blocking' as QueueType,
-        };
-
-        return transform({
-          ...snapshotRequest,
           listener: new RunTestListener(lSession),
           schedule,
         });

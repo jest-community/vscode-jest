@@ -15,9 +15,9 @@ export type TestSuitChangeEvent =
       file: string;
     }
   | {
-      type: 'test-parsed';
+      type: 'result-match-failed';
       file: string;
-      testContainer: ContainerNode<ItBlock>;
+      sourceContainer: ContainerNode<ItBlock>;
     };
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types

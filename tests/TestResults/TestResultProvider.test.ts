@@ -17,8 +17,8 @@ const mockParse = jest.fn();
 jest.mock('jest-editor-support', () => {
   const TestReconciler = mockTestReconciler;
   const parse = mockParse;
-
-  return { TestReconciler, parse };
+  const ParsedNodeTypes = [];
+  return { TestReconciler, parse, ParsedNodeTypes };
 });
 
 const pathProperties = {
@@ -41,15 +41,17 @@ import * as helper from '../test-helper';
 import { ItBlock, TestAssertionStatus, TestReconcilationState } from 'jest-editor-support';
 import * as match from '../../src/TestResults/match-by-context';
 import { mockJestExtEvents } from '../test-helper';
+import { ExtSnapshotBlock, SnapshotProvider } from '../../src/TestResults/snapshot-provider';
 
 const setupMockParse = (itBlocks: ItBlock[]) => {
   mockParse.mockReturnValue({
     root: helper.makeRoot(itBlocks),
     itBlocks,
+    describeBlocks: [],
   });
 };
 
-const createDataSet = (): [ItBlock[], TestAssertionStatus[]] => {
+const createDataSet = (): [ItBlock[], TestAssertionStatus[], ExtSnapshotBlock[]] => {
   const testBlocks = [
     helper.makeItBlock('test 1', [2, 3, 4, 5]),
     helper.makeItBlock('test 2', [12, 13, 14, 15]),
@@ -64,7 +66,11 @@ const createDataSet = (): [ItBlock[], TestAssertionStatus[]] => {
     helper.makeAssertion('test 4', TestReconciliationState.Unknown, undefined, [32, 0]),
     helper.makeAssertion('test 5', TestReconciliationState.KnownSuccess, undefined, [42, 0]),
   ];
-  return [testBlocks, assertions];
+  const snapshots = [
+    helper.makeSnapshotBlock('test 2', false, 13),
+    helper.makeSnapshotBlock('test 5', true, 43),
+  ];
+  return [testBlocks, assertions, snapshots];
 };
 
 interface TestData {
@@ -91,13 +97,14 @@ const makeData = (
 
 const eventsMock: any = mockJestExtEvents();
 
-const newProviderWithData = (testData: TestData[]): TestResultProvider => {
+const newProviderWithData = (testData: TestData[], verbose?: boolean): TestResultProvider => {
   mockParse.mockImplementation((file) => {
     const data = testData.find((data) => data.file === file);
     if (data) {
       return {
         root: helper.makeRoot(data.itBlocks),
         itBlocks: data.itBlocks,
+        describeBlocks: [],
       };
     }
   });
@@ -113,7 +120,7 @@ const newProviderWithData = (testData: TestData[]): TestResultProvider => {
       assertions: data.assertions,
     }))
   );
-  const sut = new TestResultProvider(eventsMock);
+  const sut = new TestResultProvider(eventsMock, verbose);
   // warn up cache
   sut.updateTestResults({} as any, {} as any);
   return sut;
@@ -142,17 +149,20 @@ describe('TestResultProvider', () => {
       throw new Error('forced error');
     });
   };
-  const forceMatchResultError = (sut: any) => {
-    sut.matchResults = jest.fn(() => {
-      throw new Error('forced error');
-    });
-  };
+
+  let mockSnapshotProvider;
   beforeEach(() => {
     jest.resetAllMocks();
     jest.restoreAllMocks();
     console.warn = jest.fn();
+    console.log = jest.fn();
     mockTestReconciler.mockReturnValue(mockReconciler);
     (vscode.EventEmitter as jest.Mocked<any>) = jest.fn().mockImplementation(helper.mockEvent);
+    mockSnapshotProvider = {
+      parse: jest.fn().mockReturnValue({ blocks: [] }),
+      previewSnapshot: jest.fn().mockReturnValue(Promise.resolve()),
+    };
+    (SnapshotProvider as jest.Mocked<any>).mockReturnValue(mockSnapshotProvider);
   });
 
   describe('getResults()', () => {
@@ -220,21 +230,31 @@ describe('TestResultProvider', () => {
       expect(actual[0].terseMessage).toBeUndefined();
     });
 
-    it('fire testSuiteChanged event for newly matched result', () => {
-      const sut = newProviderWithData([makeData([testBlock], [], filePath)]);
-      sut.getResults(filePath);
-      expect(sut.events.testSuiteChanged.fire).toHaveBeenCalledWith({
-        type: 'result-matched',
-        file: filePath,
+    describe('fire "result-matched" event', () => {
+      it('fire testSuiteChanged event for newly matched result', () => {
+        const sut = newProviderWithData([makeData([testBlock], [assertion], filePath)]);
+        sut.getResults(filePath);
+        expect(sut.events.testSuiteChanged.fire).toHaveBeenCalledWith({
+          type: 'result-matched',
+          file: filePath,
+        });
+      });
+      it('will not fire if no assertion to match', () => {
+        const sut = newProviderWithData([makeData([testBlock], [], filePath)]);
+        sut.getResults(filePath);
+        expect(sut.events.testSuiteChanged.fire).not.toHaveBeenCalledWith({
+          type: 'result-matched',
+          file: filePath,
+        });
       });
     });
-    it('unmatched test will file test-parsed event instead', () => {
+    it('unmatched test will file result-match-failed events', () => {
       const sut = newProviderWithData([makeData([testBlock], null, filePath)]);
       sut.getResults(filePath);
       expect(sut.events.testSuiteChanged.fire).toHaveBeenCalledWith({
-        type: 'test-parsed',
+        type: 'result-match-failed',
         file: filePath,
-        testContainer: expect.anything(),
+        sourceContainer: expect.anything(),
       });
     });
 
@@ -548,22 +568,25 @@ describe('TestResultProvider', () => {
         ]);
       });
     });
-    describe('when no assertions returned => all tests are marked unknown', () => {
+    describe('when no assertions returned', () => {
       let sut: TestResultProvider;
       const tBlock = helper.makeItBlock('a test', [8, 0, 20, 20]);
       beforeEach(() => {
         sut = new TestResultProvider(eventsMock);
         setupMockParse([tBlock]);
       });
-      it.each([[[]], [undefined]])('for assertions = %s', (assertions) => {
-        mockReconciler.assertionsForTestFile.mockReturnValueOnce(assertions);
-        const actual = sut.getResults(filePath);
-        expect(actual).toHaveLength(1);
-        const { name, status, sourceHistory } = actual[0];
-        expect(name).toEqual(tBlock.name);
-        expect(status).toEqual('Unknown');
-        expect(sourceHistory).toEqual(['match-failed']);
-      });
+      it.each([[[]], [undefined]])(
+        'all tests are marked unknown, assertions = %s',
+        (assertions) => {
+          mockReconciler.assertionsForTestFile.mockReturnValueOnce(assertions);
+          const actual = sut.getResults(filePath);
+          expect(actual).toHaveLength(1);
+          const { name, status, sourceHistory } = actual[0];
+          expect(name).toEqual(tBlock.name);
+          expect(status).toEqual('Unknown');
+          expect(sourceHistory).toEqual(['match-failed']);
+        }
+      );
     });
     describe('error handling', () => {
       let itBlocks, assertions;
@@ -573,23 +596,23 @@ describe('TestResultProvider', () => {
 
       const setupForNonTest = (sut: any) => {
         sut.updateTestFileList(['test-file']);
+        itBlocks = [];
       };
       it.each`
-        desc                         | setup                    | expectedResults  | statsChange
-        ${'parse failed'}            | ${forceParseError}       | ${'throw error'} | ${'fail'}
-        ${'matchResult failed'}      | ${forceMatchResultError} | ${'throw error'} | ${'fail'}
-        ${'match failed'}            | ${forceMatchError}       | ${'Unknown'}     | ${'unknown'}
-        ${'file is not a test file'} | ${setupForNonTest}       | ${undefined}     | ${undefined}
+        desc                         | setup              | itBlockOverride | expectedResults | statsChange
+        ${'parse failed'}            | ${forceParseError} | ${undefined}    | ${[]}           | ${'fail'}
+        ${'match failed'}            | ${forceMatchError} | ${undefined}    | ${'Unknown'}    | ${'fail'}
+        ${'file is not a test file'} | ${setupForNonTest} | ${[]}           | ${undefined}    | ${'no change'}
       `(
         'when $desc => returns $expectedResults, stats changed: $statsChange',
-        ({ setup, expectedResults, statsChange }) => {
-          const sut = newProviderWithData([makeData(itBlocks, assertions, 'whatever')]);
+        ({ setup, itBlockOverride, expectedResults, statsChange }) => {
+          const sut = newProviderWithData([
+            makeData(itBlockOverride ?? itBlocks, assertions, 'whatever'),
+          ]);
           setup(sut);
 
           const stats = sut.getTestSuiteStats();
-          if (expectedResults === 'throw error') {
-            expect(() => sut.getResults('whatever')).toThrow();
-          } else if (expectedResults === 'Unknown') {
+          if (expectedResults === 'Unknown') {
             expect(
               sut.getResults('whatever').every((r) => r.status === expectedResults)
             ).toBeTruthy();
@@ -605,11 +628,28 @@ describe('TestResultProvider', () => {
           }
         }
       );
+      it('parse error will output log only in verbose mode', () => {
+        let sut = newProviderWithData([makeData(itBlocks, assertions, 'whatever')], false);
+        sut.getResults('whatever');
+        forceParseError();
+        expect(console.log).not.toHaveBeenCalled();
+
+        sut = newProviderWithData([makeData(itBlocks, assertions, 'whatever')], true);
+        forceParseError();
+        sut.getResults('whatever');
+        expect(console.log).toHaveBeenCalled();
+      });
     });
   });
 
   describe('getSortedResults()', () => {
     const filePath = 'file.js';
+    const emptyResult = {
+      fail: [],
+      skip: [],
+      success: [],
+      unknown: [],
+    };
     let sut;
     beforeEach(() => {
       const [itBlocks, assertions] = createDataSet();
@@ -644,17 +684,9 @@ describe('TestResultProvider', () => {
       sut.updateTestFileList(['test-file']);
       expect(sut.getSortedResults('test-file')).toBeUndefined();
     });
-    it('can throw for internal error for once', () => {
+    it('internal error cause empty result', () => {
       forceParseError();
-      expect(() => sut.getSortedResults(filePath)).toThrow();
-
-      //2nd time will just return empty result
-      expect(sut.getSortedResults(filePath)).toEqual({
-        fail: [],
-        skip: [],
-        success: [],
-        unknown: [],
-      });
+      expect(sut.getSortedResults(filePath)).toEqual(emptyResult);
     });
   });
 
@@ -672,12 +704,15 @@ describe('TestResultProvider', () => {
       const results2 = sut.getResults('file 2');
       expect(results1).toHaveLength(5);
       expect(results2).toHaveLength(5);
+      expect(mockReconciler.assertionsForTestFile).toHaveBeenCalledTimes(2);
 
       // now let's update "file 1"
       mockReconciler.updateFileWithJestStatus.mockReturnValueOnce([
         { file: 'file 1', status: 'KnownSuceess' },
       ]);
       sut.updateTestResults({} as any, {} as any);
+
+      mockReconciler.assertionsForTestFile.mockClear();
 
       // to get result from "file 1" should trigger mockReconciler.assertionsForTestFile
       const r1 = sut.getResults('file 1');
@@ -896,8 +931,8 @@ describe('TestResultProvider', () => {
     });
     it.each`
       testFiles               | testResults   | expected
-      ${undefined}            | ${undefined}  | ${'unknown'}
-      ${undefined}            | ${['file-2']} | ${'unknown'}
+      ${undefined}            | ${undefined}  | ${'maybe'}
+      ${undefined}            | ${['file-2']} | ${'maybe'}
       ${[]}                   | ${[]}         | ${'no'}
       ${[]}                   | ${['file-1']} | ${'yes'}
       ${[]}                   | ${['file-2']} | ${'no'}
@@ -919,6 +954,62 @@ describe('TestResultProvider', () => {
       }
 
       expect(sut.isTestFile(target)).toEqual(expected);
+    });
+  });
+  describe('snapshot', () => {
+    const testPath = 'test-file';
+    let itBlocks, assertions, snapshotBlocks;
+    beforeEach(() => {
+      [itBlocks, assertions, snapshotBlocks] = createDataSet();
+      const dBlock0 = helper.makeDescribeBlock('describe-test-1', [itBlocks[0]], {
+        start: itBlocks[0].start,
+        end: itBlocks[0].end,
+      });
+      const dBlock4 = helper.makeDescribeBlock('describe-test-5', [itBlocks[4]], {
+        start: itBlocks[4].start,
+        end: itBlocks[4].end,
+      });
+      itBlocks[0] = dBlock0;
+      itBlocks[4] = dBlock4;
+      assertions[0].ancestorTitles = ['describe-test-1'];
+      assertions[4].ancestorTitles = ['describe-test-5'];
+
+      mockSnapshotProvider.parse.mockImplementation((testPath: string) => ({
+        testPath,
+        blocks: snapshotBlocks,
+      }));
+    });
+    it('matched result should contain snapshot info', () => {
+      const sut = newProviderWithData([makeData(itBlocks, assertions, testPath)]);
+      sut.getResults(testPath);
+      const call = (sut.events.testSuiteChanged.fire as jest.Mocked<any>).mock.calls.find(
+        (call) => call[0].type === 'result-matched'
+      );
+      expect(call).not.toBeUndefined();
+      const container = sut.getTestSuiteResult(testPath)?.assertionContainer;
+      expect(container).not.toBeUndefined();
+
+      let matchCount = 0;
+      [...container.childContainers.flatMap((c) => c.childData), ...container.childData].forEach(
+        (child) => {
+          const sBlock = snapshotBlocks.find((block) => block.marker === child.name);
+          if (sBlock) {
+            expect(child.attrs.snapshot).toEqual(sBlock.isInline ? 'inline' : 'external');
+            matchCount += 1;
+          } else {
+            expect(child.attrs.snapshot).toBeUndefined();
+          }
+        }
+      );
+      expect(matchCount).toEqual(2);
+    });
+    it('forward previewSnapshot to the snapshot provider', async () => {
+      const sut = newProviderWithData([makeData([], [], '')]);
+      await sut.previewSnapshot('whatever', 'full test name');
+      expect(mockSnapshotProvider.previewSnapshot).toHaveBeenCalledWith(
+        'whatever',
+        'full test name'
+      );
     });
   });
 });

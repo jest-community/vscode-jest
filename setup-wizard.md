@@ -38,17 +38,18 @@ in v4.0, there are multiple ways to activate the setup tool:
 
 The tool provides 3 main setup tasks:
 
-![images/setup-tool/main-menu](images/setup-tool/main-menu.png)
+<img src="images/setup-tool/main-menu.png" alt="setup-tool/main-menu.png" width="800"/>
 
 1. [Setup Jest Command](#jest-command-line): used by the extension to kick off a jest test run on behave of users. 
 2. [Setup Jest Debug Config](#debug-config): to enable debugging individual jest tests via the debug codeLens.
 3. [Setup Monorepo Project](#debug-config): to assist the monorepo projects adapting to the vscode environment.
    
 ### Setup Jest Command
-The extension starts the jest test process by issuing the same jest command users run in the terminal. The tool will examine the existing settings, looking for `"jest.jestCommandLine"` or the deprecated `"jest.pathToJest"` and `"jest.pathToConfig"`. If found, it will help users [migrate](#note-1)/edit it; if not found, it will ask the user to input the command line manually.
+The extension starts jest test processes by issuing the same jest command users run in the terminal. The tool provides a quick way for users to update and examine `"jest.jestCommandLine"` and `"jest.rootPath` settings, which can also be manually updated via vscode settings. After editing the settings, click on the `"Save Settings"` to save then restart the extension.
 
-Please be aware that all relative paths in the settings are resolved against the `rootPath`, which, by default, is the current workspace folder unless you customize it with `"jest.rootPath"`.
+<img src="images/setup-tool/setup-jest-command.png" alt="setup-tool/setup-jest-command.png" width="800"/>
 
+Note: if the `"jest.jestCommandLine"` is executed from the workspace root, there is no need to configure `"jest.rootPath"`
 
 While users can pass any jest CLI options in the `"jest.jestCommandLine"`, it is recommended NOT to pass the following:
 - the watch options (--watch, --watchAll): the extension will append a watch flag when appropriate. 
@@ -59,15 +60,13 @@ Because the extension appends additional options to the jestCommandLine at run t
 **Note: the "jest.jestCommandLine"` setting is required to configure the debug config below.**
 
 ### Setup Jest Debug Config
-When clicked on the debug codeLens, the extension will look for a debug config named `"vscode-jest-tests.v2"` or `"vscode-jest-tests"`, and translate the jest specific information when launching the debugger.
+The extension can generate debug config based on users' settings. However, while this should work for most projects, it does not cover all project settings. This tool provides a convenient way to adjust the debug config  from a reasonable baseline.
 
-If there is no existing `"jest.jestCommandLine"`, it will suggest setting one up before proceeding. After all, a working jest environment is the prerequisite of this extension.
+<img src="images/setup-tool/setup-debug-config.png" alt="setup-tool/setup-debug-config.png" width="800"/>
 
-The tool will examine `launch.json` for the existing config. If found, users can choose to use it as it is, replace (rename the old one and generate a new one), or manually edit it; if not found, the tool will try to [generate](#note-2) a new one. 
+Note, if no valid jest command line is detected, users will be prompted to [setup the jest command](#setup-jest-command) first before resuming the setup.
 
-The debug config is saved in `launch.json` under the workspace folder. If the user chooses to "replace" the existing config, the old configure will be renamed to `vscode-jest-tests.v2-xxxxx` for reference purposes only, which can be safely deleted if not needed.
-
-The generated config probably works fine for most projects but could require further adjustment for projects including but not limited to the following:
+It will rename the existing jest debug config, if any, and put the newly configured config in the `launch.json` for further adjustment. The adjustment including but not limited to the following:
 - projects use different jest config between debug and regular test run
 - projects with [platform specific properties](#note-3). 
 
@@ -75,18 +74,17 @@ Check out [here](#note-4) if you encountered problems running vscode-jest debug.
 
 ### Setup Monorepo Project
 
-
 #### Single-Root Workspace
 
 If the current workspace is a single-root workspace:
 
-![monorepo-menu](images/setup-tool/monorepo-menu.png)
+<img src="images/setup-tool/monorepo-menu.png" alt="setup-tool/monorepo-menu.png" width="800"/>
 
 - **There is a centralized jest config for all tests**
 If a project can run all its tests with this centralized jest config - it can use a regular single-root workspace for the monorepo project. If the project cannot run tests in this situation, it might need to customize the jest command line. Choose this action to set up `"jest.jestCommandLine"` setting. 
 
  - **There is an individual jest config for each package**
-If each monorepo package has its separate jest config and runs tests either by going to its local root, via jest's `"projects"`, or via 3rd party tools like `lerna` - the project will need to convert to a multi-root workspace. Choose this action to let the tool perform the conversion, followed by the [multi-root workspace](#multi-root-workspace) setup below. 
+If each monorepo package has its separate jest config and runs tests either by going to its local root, via jest's `"projects"`, or via 3rd party tools like `lerna` - the project will need to convert to a multi-root workspace. Choose this action to let the tool perform the conversion and set up [multi-root workspace](#multi-root-workspace) automatically. (This conversion is not intrusive and can be reverted at any time)
 
  - **Not configured or not working in terminal yet**
 If the project has not completed the jest configuration, i.e., not able to run jest tests in the terminal - Sorry, but it will need to finish the jest configuration first before resuming the setup. Choose this to abort. 

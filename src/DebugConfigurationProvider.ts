@@ -1,6 +1,15 @@
 import * as vscode from 'vscode';
-import { toFilePath, getTestCommand, isCreateReactAppTestCommand, escapeRegExp } from './helpers';
+import * as path from 'path';
 
+import {
+  toFilePath,
+  getTestCommand,
+  isCreateReactAppTestCommand,
+  escapeRegExp,
+  parseCmdLine,
+} from './helpers';
+
+export const DEBUG_CONFIG_PLATFORMS = ['windows', 'linux', 'osx'];
 const testNamePatternRegex = /\$\{jest.testNamePattern\}/g;
 const testFileRegex = /\$\{jest.testFile\}/g;
 const testFilePatternRegex = /\$\{jest.testFilePattern\}/g;
@@ -142,5 +151,71 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     }
 
     return [debugConfiguration];
+  }
+
+  /** return a config if cmd is a package-manager */
+  private usePM(cmd: string, args: string[]): Partial<vscode.DebugConfiguration | undefined> {
+    const commonConfig = {
+      program: undefined,
+    };
+
+    if (cmd === 'npm') {
+      const extraArgs = args.includes('--') ? [] : ['--'];
+      return { runtimeExecutable: 'npm', args: extraArgs, ...commonConfig };
+    }
+    if (cmd === 'yarn') {
+      return { runtimeExecutable: 'yarn', args: [], ...commonConfig };
+    }
+  }
+
+  /**
+   * generate a debug config incorperating commandLine and rootPath. Throw exception if error.
+   * @param cmdLine
+   * @param rootPath
+   * @returns a debug config.
+   */
+  withCommandLine(
+    workspace: vscode.WorkspaceFolder,
+    cmdLine: string,
+    rootPath?: string
+  ): vscode.DebugConfiguration {
+    const config = this.provideDebugConfigurations(workspace)[0];
+    const [cmd, ...cmdArgs] = parseCmdLine(cmdLine);
+    if (!cmd) {
+      throw new Error(`invalid cmdLine: ${cmdLine}`);
+    }
+
+    const absoluteRootPath =
+      rootPath &&
+      (path.isAbsolute(rootPath) ? rootPath : path.resolve(workspace.uri.fsPath, rootPath));
+
+    let finalConfig: vscode.DebugConfiguration = { ...config };
+
+    const cwd = absoluteRootPath ? absoluteRootPath : config.cwd;
+
+    const pmConfig = this.usePM(cmd, cmdArgs);
+    if (pmConfig) {
+      const args = [...cmdArgs, ...pmConfig.args, ...config.args];
+      finalConfig = {
+        ...finalConfig,
+        ...pmConfig,
+        cwd,
+        args,
+      };
+    } else {
+      // convert the cmd to absolute path
+      const program = path.isAbsolute(cmd)
+        ? cmd
+        : absoluteRootPath
+        ? path.resolve(absoluteRootPath, cmd)
+        : ['${workspaceFolder}', cmd].join(path.sep);
+      const args = [...cmdArgs, ...config.args];
+      finalConfig = { ...finalConfig, cwd, program, args };
+    }
+
+    // delete platform specific settings since we did not convert them
+    DEBUG_CONFIG_PLATFORMS.forEach((p) => delete finalConfig[p]);
+
+    return finalConfig;
   }
 }

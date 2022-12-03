@@ -7,7 +7,6 @@ import {
   ExtensionManager,
   getExtensionWindowSettings,
 } from '../src/extensionManager';
-import { DebugCodeLensProvider, TestState } from '../src/DebugCodeLens';
 import { readFileSync } from 'fs';
 import { PluginWindowSettings } from '../src/Settings';
 import { extensionName } from '../src/appGlobals';
@@ -73,6 +72,7 @@ const makeJestExt = (workspace: vscode.WorkspaceFolder): any => {
     toggleAutoRun: jest.fn(),
     toggleCoverageOverlay: jest.fn(),
     enableLoginShell: jest.fn(),
+    runItemCommand: jest.fn(),
     workspace,
   };
 };
@@ -128,7 +128,6 @@ describe('ExtensionManager', () => {
     it('should created the components shared across of all workspaces', () => {
       new ExtensionManager(context);
       expect(DebugConfigurationProvider).toHaveBeenCalled();
-      expect(DebugCodeLensProvider).toHaveBeenCalled();
       expect(CoverageCodeLensProvider).toHaveBeenCalled();
     });
   });
@@ -169,27 +168,10 @@ describe('ExtensionManager', () => {
     describe('applySettings()', () => {
       it('should save settings to instance', () => {
         const newSettings: PluginWindowSettings = {
-          debugCodeLens: {
-            enabled: true,
-            showWhenTestStateIn: [],
-          },
           disabledWorkspaceFolders: [],
         };
         extensionManager.applySettings(newSettings);
         expect((extensionManager as any).commonPluginSettings).toEqual(newSettings);
-      });
-      it('should update debugCodeLensProvider instance', () => {
-        const newSettings: PluginWindowSettings = {
-          debugCodeLens: {
-            enabled: true,
-            showWhenTestStateIn: [TestState.Fail],
-          },
-          disabledWorkspaceFolders: ['workspaceFolder1'],
-        };
-        extensionManager.applySettings(newSettings);
-        expect((extensionManager as any).debugCodeLensProvider.showWhenTestStateIn).toEqual(
-          newSettings.debugCodeLens.showWhenTestStateIn
-        );
       });
 
       it('should respect disabledWorkspaceFolders', () => {
@@ -197,10 +179,6 @@ describe('ExtensionManager', () => {
         expect(extensionManager.getByName('workspaceFolder1')).toBeDefined();
         expect(extensionManager.getByName('workspaceFolder2')).toBeDefined();
         const newSettings: PluginWindowSettings = {
-          debugCodeLens: {
-            enabled: true,
-            showWhenTestStateIn: [],
-          },
           disabledWorkspaceFolders: ['workspaceFolder1'],
         };
         extensionManager.applySettings(newSettings);
@@ -211,10 +189,6 @@ describe('ExtensionManager', () => {
         expect(extensionManager.getByName('workspaceFolder1')).not.toBeUndefined();
 
         const newSettings: PluginWindowSettings = {
-          debugCodeLens: {
-            enabled: true,
-            showWhenTestStateIn: [],
-          },
           disabledWorkspaceFolders: ['workspaceFolder1'],
         };
         extensionManager.applySettings(newSettings);
@@ -599,11 +573,6 @@ describe('ExtensionManager', () => {
     describe('getExtensionWindowSettings()', () => {
       it('should return the extension window configuration', async () => {
         expect(getExtensionWindowSettings()).toEqual({
-          debugCodeLens: {
-            enabled: true,
-            showWhenTestStateIn: [TestState.Fail, TestState.Unknown],
-          },
-          enableSnapshotPreviews: true,
           disabledWorkspaceFolders: [],
         });
       });
@@ -700,6 +669,7 @@ describe('ExtensionManager', () => {
         ${'with-workspace.toggle-auto-run'}    | ${'toggleAutoRun'}
         ${'with-workspace.toggle-coverage'}    | ${'toggleCoverageOverlay'}
         ${'with-workspace.enable-login-shell'} | ${'enableLoginShell'}
+        ${'with-workspace.item-command'}       | ${'runItemCommand'}
       `('extension-based commands "$name"', async ({ name, extFunc }) => {
         extensionManager.register();
         const expectedName = `${extensionName}.${name}`;

@@ -17,6 +17,7 @@ const window = {
   showWorkspaceFolderPick: jest.fn(),
   onDidChangeActiveTextEditor: jest.fn(),
   showInformationMessage: jest.fn(),
+  createWebviewPanel: jest.fn(),
 };
 
 const workspace = {
@@ -79,6 +80,10 @@ const TestRunProfileKind = {
   Debug: 2,
   Coverage: 3,
 };
+const ViewColumn = {
+  One: 1,
+  Tow: 2,
+};
 
 const TestMessage = jest.fn();
 const TestRunRequest = jest.fn();
@@ -88,6 +93,11 @@ const EventEmitter = jest.fn().mockImplementation(() => {
     fire: jest.fn(),
   };
 });
+
+const QuickPickItemKind = {
+  Separator: -1,
+  Default: 0,
+};
 
 export = {
   CodeLens,
@@ -112,4 +122,6 @@ export = {
   EventEmitter,
   TestMessage,
   TestRunRequest,
+  ViewColumn,
+  QuickPickItemKind,
 };

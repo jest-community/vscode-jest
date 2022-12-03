@@ -40,7 +40,7 @@ Content
   - [Features](#features)
   - [Installation](#installation)
   - [How To?](#how-to)
-    - [How to set up the jest command?](#how-to-set-up-the-jest-command)
+    - [How to set up the extension?](#how-to-set-up-the-extension)
     - [How to trigger the test run?](#how-to-trigger-the-test-run)
     - [How to debug tests?](#how-to-debug-tests)
     - [How to use code coverage?](#how-to-use-code-coverage)
@@ -54,7 +54,6 @@ Content
       - [Details](#details)
         - [jestCommandLine](#jestcommandline)
         - [rootPath](#rootpath)
-        - [debugCodeLens.showWhenTestStateIn](#debugcodelensshowwhenteststatein)
         - [coverageFormatter](#coverageformatter)
         - [coverageColors](#coveragecolors)
         - [autoRun](#autorun)
@@ -72,22 +71,20 @@ Content
     - [I don't see "Jest" in the bottom status bar](#i-dont-see-jest-in-the-bottom-status-bar)
     - [What to do with "Long Running Tests Warning"](#what-to-do-with-long-running-tests-warning)
     - [The tests and status do not match or some tests showing question marks unexpectedly?](#the-tests-and-status-do-not-match-or-some-tests-showing-question-marks-unexpectedly)
-    - [Why doesn't vscode debugger use my `jest.jestCommandLine`?](#why-doesnt-vscode-debugger-use-my-jestjestcommandline)
   - [Want to Contribute?](#want-to-contribute)
   - [License](#license)
 
 ---
 ## Features
 
-* Starts Jest automatically when you're in a root folder project with Jest installed.
-* Show individual fail / passes inline.
-* Show fails inside the problem inspector.
-* Highlights the errors next to the `expect` functions.
-* Adds syntax highlighting to snapshot files.
-* A one button update for failed snapshots.
-* Show coverage information in files being tested.
+* Starts Jest automatically for most projects with runnable jest configurations.
+* Fully integrated with the vscode TestExplorer.
+* Supports both automatic and manual test runs at any level, and easy-switch via UI.
+* Show individual fail / passes as well as the whole test suites.
+* Show fails inline of the `expect` function, as well as in the problem inspector.
+* View and update snapshots interactively. 
 * Help debug jest tests in vscode.
-* Supports multiple test run modes (automated, manual, and hybrid onSave) to meet user's preferred development experience.
+* Show coverage information in files being tested.
 * Track and shows overall workspace/project test stats
 
 ## Installation
@@ -98,23 +95,21 @@ Alternatively open Visual Studio Code, go to the extension view and search for "
 For detailed releases and migration help, please see [releases](https://github.com/jest-community/vscode-jest/releases).
 
 ## How To?
-### How to set up the jest command?
+### How to set up the extension?
 
-The extension starts jest on behave of the user, therefore a valid Jest command is the minimal required info. 
+Hopefully you don't have to do anything. If you can run jest from the terminal, you should be able to use this extension. 
 
-- default jest command
-  <a id="default-jest-command"></a>This extension can automatically start the jest process without any custom configuration if:
+The extension will try auto config a jest command and debug config when needed. If it fails to detect one, an error panel should be presented with a `"Fix"` option to help you fix the settings when needed.
 
-  - it finds Jest installed in the workspace: `node_modules/.bin/jest`
-  - it finds the workspace has been bootstrapped with create-react-app: `node_modules/react-scripts/node_modules/.bin/jest` or `node_modules/react-native-scripts`
-- custom jest command
-  - if no default jest command is found, the extension will fail unless a custom jest command is configured.
-  - user can set custom jest command with [jest.jestCommandLine](#jestcommandline) setting, for example  `"jest.jestCommandLine": "yarn test"` .  
-  - or to use the [Extension Setup Tool](setup-wizard.md) via command `"Jest: Setup Extension"`.
+A few known issues to mention:
+- pnp without node_modules or a "test" script in package.json will need to setup `jest.jestCommandLine` explicitly.
+- multi-root monorepo project in a single-root workspace will need to be converted to multi-root project first. From v5, you can quickly perform this with the [monorepo setup tool](setup-wizard.md#setup-monorepo-project).
+
+See more details in the [setup too](setup-wizard.md). Complete customization options can be found in [settings](#settings).
 
 ### How to trigger the test run?
 
-vscode-jest provided various on-demand test execution, as well as automated test runs:
+By default, the extension uses jest watch mode that automatically runs tests upon related file changes. In addition, users can also trigger individual tests/suites interactively:
 
 <img src="images/run-test.jpg" alt="run-test.jpg" width="800"/>
 
@@ -122,25 +117,18 @@ vscode-jest provided various on-demand test execution, as well as automated test
 2. trigger test run via test tree inline menu.
 3. trigger test run via command palette, such as `Jest: Run All Tests`
 4. trigger test run via editor context menu: `Jest: Run Related Tests`
-5. use [autoRun](#autorun) to automatically trigger test runs when changes are detected
-   1. use watchman to run related tests upon file save. (`watch`)
-   2. use editor save event to trigger test run for the changed file. (`on-save`)
-   3. or create a custom [autoRun](#autorun)
 
-By default, users need not do anything. The default autoRun `"watch"` will run all related tests and populate the test tree. However, the convenience doesn't go without cost - it could sometimes trigger test runs unnecessarily. Please check the [tuning tips](#performance-issue) if you encounter performance-related issues. 
-
+The extension will try to auto config, an error panel will be presented with a `Fix` button to customize the settings. see [how to setup the extension](#how-to-set-up-the-extension)
 ### How to debug tests?
 
-There are 3 ways to debug a specific test
+There are 2 ways to debug a specific test
 
 <img src="images/run-debug.jpg" alt="run-debug" width="800"/>
 
 1. via gutter context menu from test status icon
 2. via test tree item inline menu
-3. via debug codeLens (_to be deprecated ( [poll :speech_balloon: ](https://github.com/jest-community/vscode-jest/discussions/936)_))
 
-
-If you have problem debugging, see [Customization - Debug Config](#debug-config).
+The extension will try to generate a debug config, but if you encountered a debug error or simply want to change the configuration, please see [Customization - Debug Config](#debug-config).
 
 ### How to use code coverage?
 
@@ -215,7 +203,7 @@ shows the autoRun will be triggered by either test or source file changes.
 </details>
 
 ### How to use the Test Explorer?
-Users with `vscode` v1.59 and `vscode-jest` v4.1 and up will start to see tests appearing in the test explorer automatically. Test explorer provides a "test-centric" view, allows users to run/debug tests directly from the explorer (in addition to the inline debug codeLens), and provides a native terminal output experience (with colors!):
+Users with `vscode` v1.59 and `vscode-jest` v4.1 and up will start to see tests appearing in the test explorer automatically. Test explorer provides a "test-centric" view, allows users to run/debug tests directly from the explorer, and provides a native terminal output experience (with colors!):
 
 ![TestExplorer-5.1.jpg](images/testExplorer-5.1.jpg)
 
@@ -234,14 +222,9 @@ You can further customize the explorer with [jest.testExplorer](#testexplorer) i
 
 ### How to see more debug info (self-diagnosis)?
 
-It is usually helpful to see the actual command and shell environment the extension spawned for your project. You can see them in the developer console (via `Help > Toggle Developer Tools` menu), for example to examine the PATH environment variables: look for the "spawn" log, expand the "options" object, expand "env" property, all env variables (inherited from vscode process) should be there (view [animation](https://github.com/jest-community/vscode-jest/blob/master/images/vscode-jest-env-log.gif)).
-
-You can also see process output in the following methods:  
-  - The color coded process output terminal from TestExplorer. If it is not open or not updated, you can manually open it from TestExplore view (the square arrow icon on the top of the Explorer View)  
-  - Otherwise you can see the output in "OUTPUT" channel, which is usually named after the workspace folder, such as `Jest (your-workspace-name)`. Or you can click on `Jest` label on status bar to show Jest Output window. This will show you the jest run output and the errors.
-
-You can also turn on the debug mode to see more internal debugging message in the developer console:
-  - set `"jest.debugMode": true` in `.vscode/settings.json`
+It is sometimes helpful to see the actual command and shell environment the extension spawned and internal debug message to diagnosis issues:
+1. Turn on the debug mode: set `"jest.debugMode": true` in `.vscode/settings.json`
+2. Open the developer console (via `Help > Toggle Developer Tools` menu), for example to examine the PATH environment variables: look for the "spawn" log, expand the "options" object, expand "env" property, all env variables (inherited from vscode process) should be there (view [animation](https://github.com/jest-community/vscode-jest/blob/master/images/vscode-jest-env-log.gif)).
 
 ## Customization
 ### Settings
@@ -254,34 +237,21 @@ Users can use the following settings to tailor the extension for their environme
 |setting|description|default|example/notes|
 |---|---|---|---|
 |**Process**|
-|<strike>autoEnable</strike> :x:|Automatically start Jest for this project|true|Please use [autoRun](#autorun) instead|
 |[jestCommandLine](#jestCommandLine)|The command line to start jest tests|undefined|`"jest.jestCommandLine": "npm test -"` or `"jest.jestCommandLine": "yarn test"` or `"jest.jestCommandLine": "node_modules/.bin/jest --config custom-config.js"`|
 |nodeEnv|Add additional env variables to spawned jest process|null|`"jest.nodeEnv": {"PORT": "9800", "BAR":"true"}` |
-|shell|Custom shell (path or LoginShell) for executing jest|null|`"jest.shell": "/bin/bash"` or `"jest.shell": "powershell"` or `"jest.shell": {"path": "/bin/bash"; args: ["--login"]}`  |
+|[shell](#shell) shell (path or LoginShell) for executing jest|null|`"jest.shell": "/bin/bash"` or `"jest.shell": "powershell"` or `"jest.shell": {"path": "/bin/bash"; args: ["--login"]}`  |
 |[autoRun](#autorun)|Controls when and what tests should be run|undefined|`"jest.autoRun": "off"` or `"jest.autoRun": "watch"` or `"jest.autoRun": {"watch": false, "onSave":"test-only"}`|
 |[rootPath](#rootPath)|The path to your frontend src folder|""|`"jest.rootPath":"packages/app"` or `"jest.rootPath":"/apps/my-app"`|
 |[monitorLongRun](#monitorlongrun)| monitor long running tests based on given threshold in ms|60000|`"jest.monitorLongRun": 120000`|
-|pathToJest :x:|The path to the Jest binary, or an npm/yarn command to run tests|undefined|Please use `jestCommandLine` instead|
-|pathToConfig :x:|The path to your Jest configuration file"|""|Please use `jestCommandLine` instead|
-|runAllTestsFirst :x:| Run all tests before starting Jest in watch mode|undefined|Please use `autoRun` instead|
 |**Editor**|
-|<strike>enableInlineErrorMessages</strike> :x:| Whether errors should be reported inline on a file|--|This is now deprecated in favor of `jest.testExplorer` |
 |[testExplorer](#testexplorer) |Configure jest test explorer|null|`{"showInlineError": "true"}`|
-|**Snapshot**|
-|enableSnapshotUpdateMessages|Whether snapshot update messages should show|true|`"jest.enableSnapshotUpdateMessages": false`|
-|enableSnapshotPreviews 💼|Whether snapshot previews should show|true|`"jest.enableSnapshotPreviews": false`|
-|restartJestOnSnapshotUpdate :x:| Restart Jest runner after updating the snapshots|false|This is no longer needed in v4|
 |**Coverage**|
 |showCoverageOnLoad|Show code coverage when extension starts|false|`"jest.showCoverageOnLoad": true`|
 |[coverageFormatter](#coverageFormatter)|Determine the coverage overlay style|"DefaultFormatter"|`"jest.coverageFormatter": "GutterFormatter"`|
 |[coverageColors](#coverageColors)|Coverage indicator color override|undefined|`"jest.coverageColors": { "uncovered": "rgba(255,99,71, 0.2)", "partially-covered": "rgba(255,215,0, 0.2)"}`|
-|**Debug**|
-|enableCodeLens 💼|Whether codelens for debugging should show|true|`"jest.enableCodeLens": false`|
-|[debugCodeLens.showWhenTestStateIn](#debugcodelensshowwhenteststatein) 💼|Show the debug CodeLens for the tests with the specified status. (window)|["fail", "unknown"]|`"jest.debugCodeLens.showWhenTestStateIn":["fail", "pass", "unknown"]`|
 |**Misc**|
 |debugMode|Enable debug mode to diagnose plugin issues. (see developer console)|false|`"jest.debugMode": true`|
 |disabledWorkspaceFolders 💼|Disabled workspace folders names in multiroot environment|[]|`"jest.disabledWorkspaceFolders": ["package-a", "package-b"]`|
-|<a id="showTerminalOnLaunch"></a>showTerminalOnLaunch 💼|automatically open test explorer terminal on launch (>= v4.5)|true|`"jest.showTerminalOnLaunch": false`|
 
 #### Details
 ##### jestCommandLine
@@ -292,10 +262,6 @@ It is recommended not to add the following options as they are managed by the ex
 ##### rootPath
 
 If your project doesn't live in the root of your repository, you may want to customize the `jest.rootPath` setting to enlighten the extension as to where to look. For instance: `"jest.rootPath": "src/client-app"` will direct the extension to use the `src/client-app` folder as the root for Jest.
-
-##### debugCodeLens.showWhenTestStateIn
-
-Possible status are: `[ "fail", "pass", "skip", "unknown"]`. Please note that this is a window level setting, i.e. its value will apply for all workspaces.
 
 ##### coverageFormatter
 
@@ -415,12 +381,6 @@ There are 2 ways to change autoRun:
     ```
 
 </details>
-
-Note: migration rule for default autoRun:
-
-  - if `"jest.autoEnabled" = false` => manual mode: `"jest.autoRun": "off"`
-  - if `"jest.runAllTestsFirst" = true` => `"jest.autoRun": {"watch": true, "onStartup": ["all-tests"] }`
-  - if no customization of the 2 settings and no `"jest.autoRun"` found => `"jest.autoRun": "watch"`
 
 ##### testExplorer
   ```ts
@@ -649,10 +609,6 @@ You can also turn off the monitor or change the threshold with ["jest.monitorLon
 If your test file happen to have parameterized tests, i.e. `test.each` variations, please make sure you have jest version >= 26.5.
 
 If the above did not resolve your issue, please see the [self-diagnosis](#how-to-see-more-debug-info-self-diagnosis) to show more insight of why the test and result could not be matched.
-
-### Why doesn't vscode debugger use my `jest.jestCommandLine`?
-
-vscode debug scheme is through the debug config in `launch.json`, which is different from the regular jest test runs that we control the jest process command (via `jest.jestCommandLine`). Therefore, we are experimenting with a [setup tool](setup-wizard.m) to bridge the gap: take the user's `jest.jestCommandLine` and generate a `launch.json` entry accordingly. But given the wide variety of user environments, it might not cover all cases, thus always encourage users to experiment and fix what is not working, and feel free to let us know so we can improve the wizard for future usage.
 
 ## Want to Contribute?
 
