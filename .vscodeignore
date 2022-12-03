@@ -25,4 +25,6 @@ images/**
 node_modules
 webpack.config.js
 generated-icons/
+release-notes/
+setup-wizard.md
 *.zip
