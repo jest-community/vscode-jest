@@ -111,7 +111,7 @@ See more details in the [setup too](setup-wizard.md). Complete customization opt
 
 By default, the extension uses jest watch mode that automatically runs tests upon related file changes. In addition, users can also trigger individual tests/suites interactively:
 
-<img src="images/run-test.jpg" alt="run-test.jpg" width="800"/>
+<img src="images/run-test.png" alt="run-test" width="800"/>
 
 1. trigger test run via gutter menu in from of each test and describe block.
 2. trigger test run via test tree inline menu.
@@ -123,7 +123,7 @@ The extension will try to auto config, an error panel will be presented with a `
 
 There are 2 ways to debug a specific test
 
-<img src="images/run-debug.jpg" alt="run-debug" width="800"/>
+<img src="images/run-debug.png" alt="run-debug" width="800"/>
 
 1. via gutter context menu from test status icon
 2. via test tree item inline menu
@@ -138,7 +138,7 @@ Code coverage can be triggered via
   
 The coverage state is reflected in test tree toggle menu, as well as  StatusBar:
 
-![status-bar-modes](images/status-bar-watch-coverage.png)
+<img src="images/status-bar-watch-coverage.png" alt="status-bar-modes" width="500"/>
 
 This extension supports both `babel` and `v8` coverageProviders. However, please note the coverage might not be exactly the same, see [facebook/jest#11188](https://github.com/facebook/jest/issues/11188) for more details.
 
@@ -160,7 +160,8 @@ You can customize coverage start up behavior, style and colors, see [customizati
 </details>
 
 ### How to update and view snapshots
-![snapshot-menu](images/snapshot-menu.jpg)
+
+<img src="images/snapshot-menu.png" alt="snapshot-menu" width="800"/>
 
 Users can update snapshot in any granularity from the context menu:
 1. in TestExplorer tree view: Update snapshot for the workspace, folder, test file or just a single test.
@@ -205,7 +206,7 @@ shows the autoRun will be triggered by either test or source file changes.
 ### How to use the Test Explorer?
 Users with `vscode` v1.59 and `vscode-jest` v4.1 and up will start to see tests appearing in the test explorer automatically. Test explorer provides a "test-centric" view, allows users to run/debug tests directly from the explorer, and provides a native terminal output experience (with colors!):
 
-![TestExplorer-5.1.jpg](images/testExplorer-5.1.jpg)
+<img src="images/testExplorer.png" alt="testExplorer.png" width="800"/>
 
 <a id='how-to-toggle-auto-run'>**How to toggle autoRun for the workspace?**</a>
 - In TestExplorer, click on the root of the test tree, i.e. the one with the workspace name and the current autoRun mode. You will see a list of buttons to its right.
@@ -239,7 +240,7 @@ Users can use the following settings to tailor the extension for their environme
 |**Process**|
 |[jestCommandLine](#jestCommandLine)|The command line to start jest tests|undefined|`"jest.jestCommandLine": "npm test -"` or `"jest.jestCommandLine": "yarn test"` or `"jest.jestCommandLine": "node_modules/.bin/jest --config custom-config.js"`|
 |nodeEnv|Add additional env variables to spawned jest process|null|`"jest.nodeEnv": {"PORT": "9800", "BAR":"true"}` |
-|[shell](#shell) shell (path or LoginShell) for executing jest|null|`"jest.shell": "/bin/bash"` or `"jest.shell": "powershell"` or `"jest.shell": {"path": "/bin/bash"; args: ["--login"]}`  |
+|[shell](#shell)|shell (path or LoginShell) for executing jest|null|`"jest.shell": "/bin/bash"` or `"jest.shell": "powershell"` or `"jest.shell": {"path": "/bin/bash"; args: ["--login"]}`  |
 |[autoRun](#autorun)|Controls when and what tests should be run|undefined|`"jest.autoRun": "off"` or `"jest.autoRun": "watch"` or `"jest.autoRun": {"watch": false, "onSave":"test-only"}`|
 |[rootPath](#rootPath)|The path to your frontend src folder|""|`"jest.rootPath":"packages/app"` or `"jest.rootPath":"/apps/my-app"`|
 |[monitorLongRun](#monitorlongrun)| monitor long running tests based on given threshold in ms|60000|`"jest.monitorLongRun": 120000`|
@@ -309,7 +310,7 @@ for example:
 
 Performance and automation/completeness are often a trade-off. autoRun is the tool to fine-tune the balance, which is unique for every project and user. 
 
-![autoRun-tradeoff.jpg](images/autoRun-tradeoff.jpg)
+<img src="images/autoRun-tradeoff.jpg" alt="autoRun-tradeoff" width="600"/>
 
 Performance and automation are self-explanatory, "completeness" might not: 
 1. test coverage might not be complete as it only includes the tests that ran.
