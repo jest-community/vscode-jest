@@ -10,6 +10,11 @@ const statusBar = {
 };
 jest.mock('../src/StatusBar', () => ({ statusBar }));
 
+const languageProvider = {
+  register: jest.fn(() => []),
+};
+jest.mock('../src/language-provider', () => languageProvider);
+
 jest.mock('../src/Coverage', () => ({
   registerCoverageCodeLens: jest.fn().mockReturnValue([]),
   CoverageCodeLensProvider: jest.fn().mockReturnValue({}),
@@ -26,19 +31,19 @@ const extensionManager = {
 };
 
 // tslint:disable-next-line: variable-name
-const ExtensionManager = jest.fn();
-
-jest.mock('../src/extensionManager', () => ({
-  ExtensionManager,
+const mockExtensionManager = {
+  ExtensionManager: jest.fn(() => extensionManager),
   getExtensionWindowSettings: jest.fn(() => ({})),
-}));
+};
+
+jest.mock('../src/extensionManager', () => mockExtensionManager);
 
 import { activate, deactivate } from '../src/extension';
 
 describe('Extension', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    ExtensionManager.mockImplementation(() => extensionManager);
+    // ExtensionManager.mockImplementation(() => extensionManager);
   });
   describe('activate()', () => {
     const context: any = {
@@ -53,13 +58,17 @@ describe('Extension', () => {
 
     it('should instantiate ExtensionManager', () => {
       activate(context);
-      expect(ExtensionManager).toHaveBeenCalledTimes(1);
+      expect(mockExtensionManager.ExtensionManager).toHaveBeenCalledTimes(1);
     });
 
     it('should register statusBar', () => {
       statusBar.register.mockClear();
       activate(context);
       expect(statusBar.register).toHaveBeenCalled();
+    });
+    it('should register language provider', () => {
+      activate(context);
+      expect(languageProvider.register).toHaveBeenCalledTimes(1);
     });
   });
 

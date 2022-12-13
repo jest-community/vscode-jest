@@ -80,12 +80,13 @@ Content
 * Starts Jest automatically for most projects with runnable jest configurations.
 * Fully integrated with the vscode TestExplorer.
 * Supports both automatic and manual test runs at any level, and easy-switch via UI.
-* Show individual fail / passes as well as the whole test suites.
+* Supports additional IntelliSense for jest methods.
 * Show fails inline of the `expect` function, as well as in the problem inspector.
 * View and update snapshots interactively. 
 * Help debug jest tests in vscode.
 * Show coverage information in files being tested.
-* Track and shows overall workspace/project test stats
+* Supports monorepo, react, react-native, vue and various configurations/platforms.
+* active community support.
 
 ## Installation
 
