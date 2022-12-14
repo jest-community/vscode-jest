@@ -66,9 +66,8 @@ describe('LocalFileCompletionItemProvider', () => {
         expect(items).not.toBeUndefined();
         // resolve relative directory correctly
         expect(vscodeMock.Uri.file).toHaveBeenCalledTimes(1);
-        expect(vscodeMock.Uri.file).toHaveBeenCalledWith(
-          expect.stringMatching(new RegExp(`${srcPath}$`))
-        );
+        const targetFolder = (vscodeMock.Uri.file as jest.Mocked<any>).mock.calls[0][0];
+        expect(targetFolder.endsWith(srcPath)).toBeTruthy();
       }
     });
   });
