@@ -15,6 +15,7 @@
     - [10. autoRun simplification](#10-autorun-simplification)
     - [11. supports v8 coverage provider](#11-supports-v8-coverage-provider)
     - [12. supports running unresolved parameterized tests directly](#12-supports-running-unresolved-parameterized-tests-directly)
+    - [13. added auto-completion for jest module methods](#13-added-auto-completion-for-jest-module-methods)
   - [Fixes](#fixes)
   - [Breaking Changes](#breaking-changes)
   - [Change log](#change-log)
@@ -129,7 +130,7 @@ If you already have the `"jest.autoRun"` in your settings.json file, nothing wil
 
 Users with jest coverageProvider `v8` should be able to see coverage like with the default `babel` coverageProvider. Please be mindful that these providers do generate slightly different coverage reports, see [facebook/jest#11188](https://github.com/facebook/jest/issues/11188) for more details.
 
-([v5.0.2](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.0): [#943](https://github.com/jest-community/vscode-jest/pull/943) - @connectdotz)
+([v5.0.2](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.2): [#943](https://github.com/jest-community/vscode-jest/pull/943) - @connectdotz)
 
 #### 12. supports running unresolved parameterized tests directly
 
@@ -137,7 +138,17 @@ For developers prefer running test manually, the initial run usually failed with
 
 Now the extension will fallback to the parent block automatically when detecting unresolved dynamic names.
 
-([v5.0.3](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.0): [#959](https://github.com/jest-community/vscode-jest/pull/959) - @connectdotz)
+([v5.0.3](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.3): [#959](https://github.com/jest-community/vscode-jest/pull/959) - @connectdotz)
+
+#### 13. added auto-completion for jest module methods
+
+![auto-complete](../images/auto-complete.gif)
+
+Enhanced IntelliSense to suggest local module path for jest methods, such as `jest.mock`, `jest.unmock`, `jest.doMock` etc.
+
+([v5.0.4](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.4): [#963](https://github.com/jest-community/vscode-jest/pull/963) - @connectdotz)
+
+
 ### Fixes
 - add user id/name to output file name to resolve permission conflict in shared computers. ([#938](https://github.com/jest-community/vscode-jest/pull/938)) 
 - support look up debug config from workspace file `.code-workspace`. ([#937](https://github.com/jest-community/vscode-jest/pull/937))  
