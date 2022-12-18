@@ -298,7 +298,7 @@ const cmdSplitRegex = /"([^"\\]*(?:\\.[^"\\]*)*)"|'([^'\\]*(?:\\.[^'\\]*)*)'|([^
 export const parseCmdLine = (cmdLine: string): string[] => {
   const parts = cmdLine.match(cmdSplitRegex) || [];
   // clean up command
-  if (parts.length > 0) {
+  if (parts.length > 0 && parts[0]) {
     parts[0] = removeSurroundingQuote(normalize(parts[0]));
   }
   return parts;

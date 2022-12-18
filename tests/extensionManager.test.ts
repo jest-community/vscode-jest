@@ -8,7 +8,7 @@ import {
   getExtensionWindowSettings,
 } from '../src/extensionManager';
 import { readFileSync } from 'fs';
-import { PluginWindowSettings } from '../src/Settings';
+import { type PluginWindowSettings } from '../src/Settings';
 import { extensionName } from '../src/appGlobals';
 import { JestExt } from '../src/JestExt';
 import { DebugConfigurationProvider } from '../src/DebugConfigurationProvider';

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { JestExt } from './JestExt';
 import { DebugConfigurationProvider } from './DebugConfigurationProvider';
-import { PluginWindowSettings } from './Settings';
+import { type PluginWindowSettings } from './Settings';
 import { statusBar } from './StatusBar';
 import { CoverageCodeLensProvider } from './Coverage';
 import { extensionId, extensionName } from './appGlobals';
