@@ -26,9 +26,9 @@ You can see the full [features](#features) and learn more details in the [How-To
 Happy testing!
 
 ## Releases 
-- **stable** ([v4.6.0](https://github.com/jest-community/vscode-jest/releases/tag/v4.6.0)): [release note](release-notes/release-note-v4.md#v460)
-- **pre-release** ([v5.0.4](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.4)): [release note](release-notes/release-note-v5.md#v50-pre-release-roll-up)
-- 
+- **stable** ([v5.1.0](https://github.com/jest-community/vscode-jest/releases/tag/v5.1.0)): [release note](release-notes/release-note-v5.1.md#v510)
+- **previous** ([v4.6.0](https://github.com/jest-community/vscode-jest/releases/tag/v4.6.0)): [release note](release-notes/release-note-v4.md#v460)
+ 
 All: [Release Notes](release-notes/release-notes.md)
 
 ---
