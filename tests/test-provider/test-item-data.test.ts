@@ -396,7 +396,8 @@ describe('test-item-data', () => {
             context.ext.testResultProvider.getTestList.mockReturnValueOnce(['/ws-1/a.test.ts']);
 
             const a1 = helper.makeAssertion('test-a', 'KnownFail', ['desc-1'], [1, 0]);
-            const assertionContainer = buildAssertionContainer([a1]);
+            const b1 = helper.makeAssertion('test-b', 'KnownSuccess', ['desc-1'], [5, 0]);
+            const assertionContainer = buildAssertionContainer([a1, b1]);
             context.ext.testResultProvider.getTestSuiteResult.mockReturnValue({
               status: 'KnownFail',
               assertionContainer,
@@ -419,8 +420,10 @@ describe('test-item-data', () => {
             expect(docItem.children.size).toEqual(1);
             const dItem = getChildItem(docItem, 'desc-1');
             expect(dItem.range).toEqual({ args: [1, 0, 1, 0] });
-            const tItem = getChildItem(dItem, 'test-a');
-            expect(tItem.range).toEqual({ args: [1, 0, 1, 0] });
+            const aItem = getChildItem(dItem, 'test-a');
+            expect(aItem.range).toEqual({ args: [1, 0, 1, 0] });
+            const bItem = getChildItem(dItem, 'test-b');
+            expect(bItem.range).toEqual({ args: [5, 0, 5, 0] });
 
             expect(context.ext.testResultProvider.getTestSuiteResult).toHaveBeenCalled();
             controllerMock.createTestRun.mockClear();
@@ -432,13 +435,21 @@ describe('test-item-data', () => {
               start: { line: 1, column: 2 },
               end: { line: 13, column: 4 },
             };
-            const testNode = descNode.childData[0];
-            testNode.attrs.range = {
+            const test_a = descNode.childData[0];
+            test_a.attrs.range = {
               start: { line: 2, column: 2 },
-              end: { line: 10, column: 4 },
+              end: { line: 5, column: 5 },
             };
             // add snapshot marker
-            testNode.attrs.snapshot = 'inline';
+            test_a.attrs.snapshot = 'inline';
+
+            const test_b = descNode.childData[1];
+            test_b.attrs.range = {
+              start: { line: 6, column: 6 },
+              end: { line: 10, column: 10 },
+            };
+            // add snapshot marker
+            test_b.attrs.snapshot = 'inline';
 
             // triggers testSuiteChanged event listener
             context.ext.testResultProvider.events.testSuiteChanged.event.mock.calls[0][0]({
@@ -459,12 +470,20 @@ describe('test-item-data', () => {
                 descNode.attrs.range.end.column,
               ],
             });
-            expect(tItem.range).toEqual({
+            expect(aItem.range).toEqual({
               args: [
-                testNode.attrs.range.start.line,
-                testNode.attrs.range.start.column,
-                testNode.attrs.range.end.line,
-                testNode.attrs.range.end.column,
+                test_a.attrs.range.start.line,
+                test_a.attrs.range.start.column,
+                test_a.attrs.range.end.line,
+                test_a.attrs.range.end.column,
+              ],
+            });
+            expect(bItem.range).toEqual({
+              args: [
+                test_b.attrs.range.start.line,
+                test_b.attrs.range.start.column,
+                test_b.attrs.range.end.line,
+                test_b.attrs.range.end.column,
               ],
             });
 
@@ -473,7 +492,7 @@ describe('test-item-data', () => {
             expect(tiContextManager.setItemContext).toHaveBeenCalledWith(
               expect.objectContaining({
                 key: 'jest.editor-update-snapshot',
-                itemIds: [tItem.id],
+                itemIds: [aItem.id, dItem.id, docItem.id, wsRoot.item.id, bItem.id],
               })
             );
             expect(tiContextManager.setItemContext).toHaveBeenCalledWith(
@@ -514,10 +533,10 @@ describe('test-item-data', () => {
               sourceContainer,
             });
             expect(docItem.children.size).toEqual(2);
-            const dItem1 = getChildItem(docItem, 'test-1');
-            expect(dItem1.range).toEqual({ args: [0, 0, 4, 0] });
-            const dItem2 = getChildItem(docItem, 'test-2');
-            expect(dItem2.range).toEqual({ args: [5, 0, 6, 0] });
+            const tItem1 = getChildItem(docItem, 'test-1');
+            expect(tItem1.range).toEqual({ args: [0, 0, 4, 0] });
+            const tItem2 = getChildItem(docItem, 'test-2');
+            expect(tItem2.range).toEqual({ args: [5, 0, 6, 0] });
 
             expect(context.ext.testResultProvider.getTestSuiteResult).toHaveBeenCalledTimes(1);
             expect(controllerMock.createTestRun).not.toHaveBeenCalled();
@@ -527,13 +546,13 @@ describe('test-item-data', () => {
             expect(tiContextManager.setItemContext).toHaveBeenCalledWith(
               expect.objectContaining({
                 key: 'jest.editor-view-snapshot',
-                itemIds: [dItem1.id],
+                itemIds: [tItem1.id],
               })
             );
             expect(tiContextManager.setItemContext).toHaveBeenCalledWith(
               expect.objectContaining({
                 key: 'jest.editor-update-snapshot',
-                itemIds: [dItem1.id],
+                itemIds: [tItem1.id, docItem.id, wsRoot.item.id],
               })
             );
           });
