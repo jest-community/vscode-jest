@@ -1,12 +1,35 @@
-<!--
 
-Please add your own contribution below inside the Master section 
+**Note: CHANGELOG has been moved to Github [releases](https://github.com/jest-community/vscode-jest/releases) with separate release notes**
 
-## Master
-* brief change description - @author
-* expose test file parse result to TestExplorer so the status indicators and test item menu are accessible for all run modes. - @connectdotz
-* added `jest.nodeEnv` and `jest.shell` settings to override default jest process env/shell - @connectdotz
--->
+## Releases
+### 5.1.0
+  - [CHANGELOG](https://github.com/jest-community/vscode-jest/releases/tag/v5.1.0)
+  - [release note](https://github.com/jest-community/vscode-jest/blob/master/release-notes/release-note-v5.1.md#v510)
+### _5.0.4 (pre-release)_
+  - [CHANGELOG](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.4)
+  - [release note](https://github.com/jest-community/vscode-jest/blob/master/release-notes/release-note-v5.md#v50-pre-release-roll-up)
+
+### _5.0.3 (pre-release)_
+  - [CHANGELOG](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.3)
+  - [release note](https://github.com/jest-community/vscode-jest/blob/master/release-notes/release-note-v5.md#v50-pre-release-roll-up)
+  
+### _5.0.2 (pre-release)_
+  - [CHANGELOG](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.2)
+  - [release note](https://github.com/jest-community/vscode-jest/blob/master/release-notes/release-note-v5.md#v50-pre-release-roll-up)
+
+### _5.0.1 (pre-release)_
+  - [CHANGELOG](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.1)
+  - [release note](https://github.com/jest-community/vscode-jest/blob/master/release-notes/release-note-v5.md#v50-pre-release-roll-up)
+  
+### _5.0.0 (pre-release)_
+  - [CHANGELOG](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.0)
+  - [release note](https://github.com/jest-community/vscode-jest/blob/master/release-notes/release-note-v5.md#v50-pre-release-roll-up)
+
+### 4.6.0
+  - [CHANGELOG](https://github.com/jest-community/vscode-jest/releases/tag/v4.6.0)
+  - [release note](https://github.com/jest-community/vscode-jest/blob/master/release-notes/release-note-v4.md#v460)
+----
+## Previous Releases
 
 ### 4.1.2
 * remove release message - @connectdotz (#763)

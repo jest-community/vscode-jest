@@ -308,10 +308,21 @@ export class WorkspaceRoot extends TestItemDataBase {
       key: 'jest.editor-view-snapshot',
       itemIds: snapshotItems.viewable.map((item) => item.id),
     });
+    const getAllIds = (item: vscode.TestItem, allIds: Set<string>): void => {
+      if (allIds.has(item.id)) {
+        return;
+      }
+      allIds.add(item.id);
+      if (item.parent) {
+        getAllIds(item.parent, allIds);
+      }
+    };
+    const allIds = new Set<string>();
+    snapshotItems.updatable.forEach((item) => getAllIds(item, allIds));
     tiContextManager.setItemContext({
       workspace: this.context.ext.workspace,
       key: 'jest.editor-update-snapshot',
-      itemIds: snapshotItems.updatable.map((item) => item.id),
+      itemIds: [...allIds],
     });
   }
 

@@ -222,6 +222,25 @@ describe('TestItemContextManager', () => {
           itemCommand
         );
       });
+      it('can updateSnapshot for any test item even without itemContext', () => {
+        const manager = new TestItemContextManager();
+        manager.registerCommands();
+        const updateSnapshotCommand = (
+          vscode.commands.registerCommand as jest.Mocked<any>
+        ).mock.calls.find((call) => call[0] === `${extensionName}.test-item.update-snapshot`)[1];
+
+        const testItem = { id: 'a', uri: {} };
+        const workspace: any = { name: 'ws-a' };
+        (vscode.workspace.getWorkspaceFolder as jest.Mocked<any>).mockReturnValue(workspace);
+        updateSnapshotCommand(testItem);
+        const extCmd = `${extensionName}.with-workspace.item-command`;
+        expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+          extCmd,
+          workspace,
+          testItem,
+          ItemCommand.updateSnapshot
+        );
+      });
     });
   });
 });
