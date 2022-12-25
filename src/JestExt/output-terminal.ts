@@ -11,20 +11,20 @@ export interface JestExtOutput {
 
 /**
  * simple class to manage the pending data before the terminal is
- * visible. 
+ * visible.
  * The default is to keep max 100 output batch (each push counts 1), when exceeding
  * it will remove the first 10 batches. We could make this configurable
  * if needed.
  */
 export class PendingOutput {
-  private pendingOutput: string[]
-  constructor(private maxLength = 100){
+  private pendingOutput: string[];
+  constructor(private maxLength = 100) {
     this.pendingOutput = [];
   }
   push(output: string): void {
-    if(this.pendingOutput.length >= this.maxLength){
+    if (this.pendingOutput.length >= this.maxLength) {
       // truncate the first few blocks to make room for the new output
-      const cutoff = Math.max(Math.floor(this.maxLength/10), 1);
+      const cutoff = Math.max(Math.floor(this.maxLength / 10), 1);
       this.pendingOutput = this.pendingOutput.slice(cutoff);
     }
     this.pendingOutput.push(output);
@@ -33,7 +33,7 @@ export class PendingOutput {
     this.pendingOutput = [];
   }
   toString(): string {
-    return this.pendingOutput.join(''); 
+    return this.pendingOutput.join('');
   }
 }
 
@@ -69,19 +69,19 @@ export class ExtOutputTerminal implements JestExtOutput {
   }
 
   /**
-   * indicate the terminal can be revealed if needed. 
+   * indicate the terminal can be revealed if needed.
    * This allows the terminal to be created in a "background" mode, i.e. it will not force the terminal to be shown if the panels are hidden or
    * if there are other active terminal
-   * @returns 
+   * @returns
    */
-  reveal() {
-    if(this.canReveal){
+  reveal(): void {
+    if (this.canReveal) {
       return;
     }
     this.canReveal = true;
-    this.createTerminalIfNeeded(); 
+    this.createTerminalIfNeeded();
   }
-  
+
   /** delay creating terminal until we are actually running the tests */
   private createTerminalIfNeeded() {
     if (!this.canReveal || this._terminal) {
@@ -130,7 +130,7 @@ export class ExtOutputTerminal implements JestExtOutput {
   }
 }
 export class JestOutputTerminal extends ExtOutputTerminal {
-  constructor(workspaceName: string, visible?: boolean ) {
+  constructor(workspaceName: string, visible?: boolean) {
     super(`Jest (${workspaceName})`, visible);
   }
 }

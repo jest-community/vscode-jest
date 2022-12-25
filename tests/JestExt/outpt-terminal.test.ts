@@ -2,7 +2,13 @@ jest.unmock('../../src/JestExt/output-terminal');
 jest.unmock('../../src/errors');
 
 import * as vscode from 'vscode';
-import { ansiEsc, AnsiSeq, JestOutputTerminal, PendingOutput, toAnsi } from '../../src/JestExt/output-terminal';
+import {
+  ansiEsc,
+  AnsiSeq,
+  JestOutputTerminal,
+  PendingOutput,
+  toAnsi,
+} from '../../src/JestExt/output-terminal';
 import * as errors from '../../src/errors';
 
 describe('JestOutputTerminal', () => {
@@ -148,7 +154,7 @@ describe('text format utility function', () => {
 describe('PendingOutput', () => {
   it('can limit output not to exceed max size', () => {
     const pOut = new PendingOutput(3);
-    ['1', '2', '3'].forEach(s => pOut.push(s));
+    ['1', '2', '3'].forEach((s) => pOut.push(s));
     expect(pOut.toString()).toEqual('123');
     pOut.push('4');
     expect(pOut.toString()).toEqual('234');

@@ -1393,9 +1393,9 @@ describe('JestExt', () => {
         const process = { id: 'a process id', request: { type: 'watch' } };
         onRunEvent({ type: 'start', process });
         if (shouldReveal) {
-          expect(mockOutputTerminal.reveal).toBeCalled();
+          expect(mockOutputTerminal.reveal).toHaveBeenCalled();
         } else {
-          expect(mockOutputTerminal.reveal).not.toBeCalled();
+          expect(mockOutputTerminal.reveal).not.toHaveBeenCalled();
         }
       }
     );
