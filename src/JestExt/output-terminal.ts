@@ -9,35 +9,82 @@ export interface JestExtOutput {
   write: (msg: string, opt?: OutputOptions) => string;
 }
 
+/**
+ * simple class to manage the pending data before the terminal is
+ * visible. 
+ * The default is to keep max 100 output batch (each push counts 1), when exceeding
+ * it will remove the first 10 batches. We could make this configurable
+ * if needed.
+ */
+export class PendingOutput {
+  private pendingOutput: string[]
+  constructor(private maxLength = 100){
+    this.pendingOutput = [];
+  }
+  push(output: string): void {
+    if(this.pendingOutput.length >= this.maxLength){
+      // truncate the first few blocks to make room for the new output
+      const cutoff = Math.max(Math.floor(this.maxLength/10), 1);
+      this.pendingOutput = this.pendingOutput.slice(cutoff);
+    }
+    this.pendingOutput.push(output);
+  }
+  clear(): void {
+    this.pendingOutput = [];
+  }
+  toString(): string {
+    return this.pendingOutput.join(''); 
+  }
+}
+
 /** termerinal per workspace */
 export class ExtOutputTerminal implements JestExtOutput {
-  private pendingMessages: string[];
+  private pendingMessages: PendingOutput;
   private ptyIsOpen: boolean;
   private writeEmitter = new vscode.EventEmitter<string>();
+  private _terminal?: vscode.Terminal;
+  private canReveal: boolean;
+
   private pty: vscode.Pseudoterminal = {
     onDidWrite: this.writeEmitter.event,
     open: () => {
       this.writeEmitter.fire(`${this.name}\r\n`);
-      if (this.pendingMessages.length > 0) {
-        this.writeEmitter.fire(this.pendingMessages.join(''));
-        this.pendingMessages = [];
+      const pending = this.pendingMessages.toString();
+      if (pending) {
+        this.writeEmitter.fire(pending);
+        this.pendingMessages.clear();
       }
       this.ptyIsOpen = true;
     },
     close: () => {
-      this._terminal?.dispose();
+      this.ptyIsOpen = false;
+      this.canReveal = false;
       this._terminal = undefined;
     },
   };
-  private _terminal?: vscode.Terminal;
-  constructor(private name: string) {
+  constructor(private name: string, visibile?: boolean) {
     this.ptyIsOpen = false;
-    this.pendingMessages = [];
+    this.pendingMessages = new PendingOutput();
+    this.canReveal = visibile ?? false;
   }
 
+  /**
+   * indicate the terminal can be revealed if needed. 
+   * This allows the terminal to be created in a "background" mode, i.e. it will not force the terminal to be shown if the panels are hidden or
+   * if there are other active terminal
+   * @returns 
+   */
+  reveal() {
+    if(this.canReveal){
+      return;
+    }
+    this.canReveal = true;
+    this.createTerminalIfNeeded(); 
+  }
+  
   /** delay creating terminal until we are actually running the tests */
   private createTerminalIfNeeded() {
-    if (this._terminal) {
+    if (!this.canReveal || this._terminal) {
       return;
     }
     vscode.window.terminals.forEach((t) => {
@@ -74,6 +121,7 @@ export class ExtOutputTerminal implements JestExtOutput {
     return text;
   }
   show(): void {
+    this.reveal();
     this._terminal?.show(true);
   }
   dispose(): void {
@@ -82,8 +130,8 @@ export class ExtOutputTerminal implements JestExtOutput {
   }
 }
 export class JestOutputTerminal extends ExtOutputTerminal {
-  constructor(workspaceName: string) {
-    super(`Jest (${workspaceName})`);
+  constructor(workspaceName: string, visible?: boolean ) {
+    super(`Jest (${workspaceName})`, visible);
   }
 }
 

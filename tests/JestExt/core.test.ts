@@ -53,6 +53,7 @@ const mockHelpers = helper as jest.Mocked<any>;
 const mockOutputTerminal = {
   write: jest.fn(),
   show: jest.fn(),
+  reveal: jest.fn(),
   dispose: jest.fn(),
 };
 
@@ -1378,5 +1379,25 @@ describe('JestExt', () => {
         );
       });
     });
+  });
+  describe('revealOutput', () => {
+    it.each`
+      revealOutput | shouldReveal
+      ${'on-run'}  | ${true}
+      ${'silent'}  | ${false}
+    `(
+      'revealOutput = $revealOutput, shouldReveal = $shouldReveal',
+      ({ revealOutput, shouldReveal }) => {
+        const sut = newJestExt({ settings: { revealOutput } });
+        const onRunEvent = (sut.events.onRunEvent.event as jest.Mocked<any>).mock.calls[0][0];
+        const process = { id: 'a process id', request: { type: 'watch' } };
+        onRunEvent({ type: 'start', process });
+        if (shouldReveal) {
+          expect(mockOutputTerminal.reveal).toBeCalled();
+        } else {
+          expect(mockOutputTerminal.reveal).not.toBeCalled();
+        }
+      }
+    );
   });
 });

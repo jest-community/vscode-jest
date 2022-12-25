@@ -152,7 +152,18 @@
           ],
           "default": 60000,
           "scope": "resource"
-        }
+        },
+        "jest.revealOutput": {
+          "description": "Review jest output terminal",
+          "type": "string",
+          "default": "on-run",
+          "enum": ["on-run", "silent"],
+          "enumDescriptions": [
+            "show output when test run starts",
+            "will not show test output unless explicitly requsted or encountered a fatal error"
+          ],
+          "scope": "resource"
+        } 
       }
     },
     "commands": [

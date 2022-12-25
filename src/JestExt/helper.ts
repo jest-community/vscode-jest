@@ -12,6 +12,7 @@ import {
   MonitorLongRun,
   TestExplorerConfigLegacy,
   JestExtAutoRunSetting,
+  RevealOutputType,
 } from '../Settings';
 import { workspaceLogging } from '../logging';
 import { JestExtContext, RunnerWorkspaceOptions } from './types';
@@ -118,6 +119,7 @@ export const getExtensionResourceSettings = (uri: vscode.Uri): PluginResourceSet
     shell: new RunShell(config.get<string | LoginShell>('shell')),
     monitorLongRun: config.get<MonitorLongRun>('monitorLongRun') ?? undefined,
     autoRun: new AutoRun(config.get<JestExtAutoRunSetting | null>('autoRun')),
+    revealOutput: config.get<RevealOutputType>('revealOutput') ?? 'on-run',
   };
 };
 

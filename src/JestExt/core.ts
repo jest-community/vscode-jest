@@ -192,9 +192,13 @@ export class JestExt {
         return;
       }
       switch (event.type) {
-        case 'start':
+        case 'start': {
+          if(this.extContext.settings.revealOutput === 'on-run'){
+            this.output.reveal();
+          }
           this.updateStatusBar({ state: 'running' });
           break;
+        }
         case 'end':
           this.updateStatusBar({ state: 'done' });
           break;
