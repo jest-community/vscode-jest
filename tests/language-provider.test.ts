@@ -112,7 +112,9 @@ describe('register', () => {
     expect(vscodeMock.languages.registerCompletionItemProvider).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({ language: 'javascript' }),
+        expect.objectContaining({ language: 'javascriptreact' }),
         expect.objectContaining({ language: 'typescript' }),
+        expect.objectContaining({ language: 'typescriptreact' }),
       ]),
       expect.any(LocalFileCompletionItemProvider),
       '/'
