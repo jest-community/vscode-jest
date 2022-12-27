@@ -71,7 +71,7 @@ describe('LocalFileCompletionItemProvider', () => {
       }
     });
   });
-  describe('will only return the vallid file/directories completion items', () => {
+  describe('will only return the valid file/directories completion items', () => {
     it.each`
       case  | fileInfo                                    | completionItem
       ${1}  | ${['file.ts', vscode.FileType.File]}        | ${{ label: 'file', kind: vscode.CompletionItemKind.File }}
