@@ -51,8 +51,10 @@ import { WorkspaceManager } from '../../src/workspace-manager';
 /* eslint jest/expect-expect: ["error", { "assertFunctionNames": ["expect", "expectItTakesNoAction"] }] */
 const mockHelpers = helper as jest.Mocked<any>;
 const mockOutputTerminal = {
+  revealOnError: true,
   write: jest.fn(),
   show: jest.fn(),
+  close: jest.fn(),
   reveal: jest.fn(),
   dispose: jest.fn(),
 };
@@ -1380,15 +1382,16 @@ describe('JestExt', () => {
       });
     });
   });
-  describe('revealOutput', () => {
+  describe('autoRevealOutput', () => {
     it.each`
-      revealOutput | shouldReveal
-      ${'on-run'}  | ${true}
-      ${'silent'}  | ${false}
+      autoRevealOutput   | shouldReveal | revealOnError
+      ${'on-run'}        | ${true}      | ${true}
+      ${'on-exec-error'} | ${false}     | ${true}
+      ${'off'}           | ${false}     | ${false}
     `(
-      'revealOutput = $revealOutput, shouldReveal = $shouldReveal',
-      ({ revealOutput, shouldReveal }) => {
-        const sut = newJestExt({ settings: { revealOutput } });
+      'autoRevealOutput = $autoRevealOutput, shouldReveal = $shouldReveal',
+      ({ autoRevealOutput, shouldReveal, revealOnError }) => {
+        const sut = newJestExt({ settings: { autoRevealOutput } });
         const onRunEvent = (sut.events.onRunEvent.event as jest.Mocked<any>).mock.calls[0][0];
         const process = { id: 'a process id', request: { type: 'watch' } };
         onRunEvent({ type: 'start', process });
@@ -1397,7 +1400,14 @@ describe('JestExt', () => {
         } else {
           expect(mockOutputTerminal.reveal).not.toHaveBeenCalled();
         }
+        expect(mockOutputTerminal.revealOnError).toEqual(revealOnError);
       }
     );
+    it('when setting changed, output setting will change accordingly', () => {
+      const sut = newJestExt({ settings: { autoRevealOutput: 'on-exec-error' } });
+      expect(mockOutputTerminal.revealOnError).toEqual(true);
+      sut.triggerUpdateSettings({ autoRevealOutput: 'off' } as any);
+      expect(mockOutputTerminal.revealOnError).toEqual(false);
+    });
   });
 });

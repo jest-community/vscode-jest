@@ -98,6 +98,17 @@ describe('JestOutputTerminal', () => {
     output.write('2', errors.GENERIC_ERROR);
     expect(mockTerminal.show).toHaveBeenCalledTimes(2);
   });
+  it('will not show terminal when writing error messages if revalOnError is false', () => {
+    const output = new JestOutputTerminal('a');
+    output.revealOnError = false;
+
+    output.write('an error', 'error');
+    expect(mockTerminal.show).not.toHaveBeenCalled();
+
+    output.revealOnError = true;
+    output.write('an error', 'error');
+    expect(mockTerminal.show).toHaveBeenCalledTimes(1);
+  });
   it('will properly dispose terminal and emitter', () => {
     const output = new JestOutputTerminal('a');
     output.reveal();
@@ -105,6 +116,14 @@ describe('JestOutputTerminal', () => {
     output.dispose();
     expect(mockTerminal.dispose).toHaveBeenCalled();
     expect(mockEmitter.dispose).toHaveBeenCalled();
+  });
+  it('can close the terminal', () => {
+    const output = new JestOutputTerminal('a');
+    output.reveal();
+    output.write('1');
+    output.close();
+    expect(mockTerminal.dispose).toHaveBeenCalled();
+    expect(mockEmitter.dispose).not.toHaveBeenCalled();
   });
   describe('can write output with options', () => {
     it.each`

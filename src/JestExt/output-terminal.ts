@@ -44,6 +44,7 @@ export class ExtOutputTerminal implements JestExtOutput {
   private writeEmitter = new vscode.EventEmitter<string>();
   private _terminal?: vscode.Terminal;
   private canReveal: boolean;
+  public revealOnError: boolean;
 
   private pty: vscode.Pseudoterminal = {
     onDidWrite: this.writeEmitter.event,
@@ -66,6 +67,7 @@ export class ExtOutputTerminal implements JestExtOutput {
     this.ptyIsOpen = false;
     this.pendingMessages = new PendingOutput();
     this.canReveal = visibile ?? false;
+    this.revealOnError = true;
   }
 
   /**
@@ -115,7 +117,7 @@ export class ExtOutputTerminal implements JestExtOutput {
     const text = toAnsi(msg, opt);
     this.appendRaw(text);
 
-    if (isErrorOutputType(opt)) {
+    if (isErrorOutputType(opt) && this.revealOnError) {
       this.show();
     }
     return text;
@@ -123,6 +125,9 @@ export class ExtOutputTerminal implements JestExtOutput {
   show(): void {
     this.reveal();
     this._terminal?.show(true);
+  }
+  close(): void {
+    this._terminal?.dispose();
   }
   dispose(): void {
     this.writeEmitter.dispose();

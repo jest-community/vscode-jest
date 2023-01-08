@@ -153,17 +153,19 @@
           "default": 60000,
           "scope": "resource"
         },
-        "jest.revealOutput": {
+        "jest.autoRevealOutput": {
           "description": "Review jest output terminal",
           "type": "string",
           "default": "on-run",
           "enum": [
             "on-run",
-            "silent"
+            "on-exec-error",
+            "off"
           ],
           "enumDescriptions": [
-            "show output when test run starts",
-            "will not show test output unless explicitly requsted or encountered a fatal error"
+            "auto show output when test run starts",
+            "auto show test output when execution error occurred",
+            "disable auto show test output"
           ],
           "scope": "resource"
         }
