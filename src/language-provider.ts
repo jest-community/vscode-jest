@@ -58,8 +58,10 @@ export class LocalFileCompletionItemProvider
 
 export function register(): vscode.Disposable[] {
   const selector = [
-    { scheme: 'file', language: 'typescript' },
     { scheme: 'file', language: 'javascript' },
+    { scheme: 'file', language: 'javascriptreact' },
+    { scheme: 'file', language: 'typescript' },
+    { scheme: 'file', language: 'typescriptreact' },
   ];
   return [
     vscode.languages.registerCompletionItemProvider(

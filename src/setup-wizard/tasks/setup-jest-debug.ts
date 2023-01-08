@@ -111,7 +111,7 @@ export const setupJestDebug: SetupTask = async (context: WizardContext): Promise
     await save(debugConfig);
     await showConfig();
 
-    message('please review and edit the launch.json accorodingly', 'new-line');
+    message('please review and edit the launch.json accordingly', 'new-line');
     mode = 'done';
     return 'success';
   };
