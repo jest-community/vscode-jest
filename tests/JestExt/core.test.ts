@@ -896,6 +896,19 @@ describe('JestExt', () => {
           }
         });
       });
+      it('will update statusBar', async () => {
+        expect.hasAssertions();
+
+        const sut = newJestExt();
+        sut.coverageOverlay.enabled = true;
+        await sut.startSession();
+        expect(sbUpdateMock).toHaveBeenCalledWith(
+          expect.objectContaining({
+            state: 'initial',
+            mode: expect.arrayContaining(['coverage']),
+          })
+        );
+      });
     });
     describe('stopSession', () => {
       it('will fire event', async () => {
@@ -1408,6 +1421,7 @@ describe('JestExt', () => {
       expect(mockOutputTerminal.revealOnError).toEqual(true);
       sut.triggerUpdateSettings({ autoRevealOutput: 'off' } as any);
       expect(mockOutputTerminal.revealOnError).toEqual(false);
+      expect(mockOutputTerminal.close).toHaveBeenCalled();
     });
   });
 });

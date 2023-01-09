@@ -11,7 +11,7 @@ This extension supports full [jest](https://jestjs.io/) features in vscode envir
 2. [install](#installation) **"Jest"** extension in vscode.
 3. reload or restart vscode 
 
-If the extension can find the [jest command](#how-to-set-up-the-jest-command), by default it will automatically run and monitor all tests in watch mode upon launch, and you should see tests, status, errors, coverage (if enabled) in TestExplorer and editors like this:
+If the extension can find the jest command, by default it will automatically run and monitor all tests in watch mode upon launch, and you should see tests, status, errors, coverage (if enabled) in TestExplorer and editors like this:
 
 ![image](images/v5-output-terminals.png)
 
@@ -62,6 +62,7 @@ Content
     - [Debug Config](#debug-config)
       - [Debug Config v2](#debug-config-v2)
     - [monitorLongRun](#monitorlongrun)
+        - [autoRevealOutput](#autorevealoutput)
   - [Commands](#commands)
   - [Menu](#menu)
   - [Troubleshooting](#troubleshooting)
@@ -185,7 +186,7 @@ Please note, a working jest environment is a prerequisite for this extension. If
 StatusBar shows 2 kinds of information:
 `Jest` shows the mode and state of the "active" workspace folder.
 `Jest-WS` shows the total test suite stats for the whole workspace.
-Clicking on each of these button will reveal the OUTPUT channel with more details.
+Clicking on each of these button will reveal the corresponding output window with more details.
 
 <details>
 <summary>Illustration</summary>
@@ -202,6 +203,10 @@ shows the active workspace has onSave for test file only, and that the workspace
 <img src='images/status-bar-save-all.png' width="600" />
 
 shows the autoRun will be triggered by either test or source file changes.
+
+<img src='images/status-bar-error.png' width="600" />
+
+shows active workspace has an execution error.
 </details>
 
 ### How to use the Test Explorer?
@@ -219,6 +224,11 @@ Users with `vscode` v1.59 and `vscode-jest` v4.1 and up will start to see tests 
 - In TestExplorer, click on the root of the test tree, i.e. the one with the workspace name and the current autoRun mode. You will see a list of buttons to its right.
 - Click on the coverage button (see image above) to toggle on or off.
   - The next test run (auto or manual) will start reporting test coverage.
+
+<a id='how-to-reveal-output'>**How to reveal test output for the workspace?**</a>
+- In TestExplorer, click on the root of the test tree, i.e. the one with the workspace name and the current autoRun mode. You will see a list of buttons to its right.
+- Click on the terminal button (see image above) to reveal the test output terminal.
+
 
 You can further customize the explorer with [jest.testExplorer](#testexplorer) in [settings](#settings).
 
@@ -255,6 +265,7 @@ Users can use the following settings to tailor the extension for their environme
 |**Misc**|
 |debugMode|Enable debug mode to diagnose plugin issues. (see developer console)|false|`"jest.debugMode": true`|
 |disabledWorkspaceFolders 💼|Disabled workspace folders names in multiroot environment|[]|`"jest.disabledWorkspaceFolders": ["package-a", "package-b"]`|
+|[autoRevealOutput](#autoRevealOutput)|Determine when to show test output|"on-run"|`"jest.autoRevealOutput": "on-exec-error"`|
 
 #### Details
 ##### jestCommandLine
@@ -491,6 +502,15 @@ monitorLongRun = number | 'off'
 - specify "off" to disable long-run process monitoring
 
 Default is `"jest.monitorLongRun":60000` (1 minute)
+
+##### autoRevealOutput
+```ts
+autoRevealOutput = "on-run" | "on-exec-error" | "off"
+```
+- `on-run`: reveal test run output when test run started.
+- `on-exec-error`: reveal test run output only when execution error (note, not test error) occurred.
+- `off`: no auto reveal test output. Note this could mask critical error, check status bar status for detail.
+
 ## Commands
 
 This extension contributes the following commands and can be accessed via [Command Palette](https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette):
