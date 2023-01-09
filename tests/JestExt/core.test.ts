@@ -1146,6 +1146,16 @@ describe('JestExt', () => {
       it('end event: notify status bar', () => {
         onRunEvent({ type: 'end', process });
         expect(sbUpdateMock).toHaveBeenCalledWith({ state: 'done' });
+
+        onRunEvent({ type: 'end', process, error: 'whatever' });
+        expect(sbUpdateMock).toHaveBeenCalledWith({ state: 'exec-error' });
+      });
+      it('data event: notify status bar if error', () => {
+        onRunEvent({ type: 'data', process, isError: false });
+        expect(sbUpdateMock).not.toHaveBeenCalled();
+
+        onRunEvent({ type: 'data', process, isError: true });
+        expect(sbUpdateMock).toHaveBeenCalledWith({ state: 'exec-error' });
       });
       describe('exit event: notify status bar', () => {
         it('if no error: status bar done', () => {
@@ -1154,7 +1164,7 @@ describe('JestExt', () => {
         });
         it('if error: status bar stopped and show error', () => {
           onRunEvent({ type: 'exit', error: 'something is wrong', process });
-          expect(sbUpdateMock).toHaveBeenCalledWith({ state: 'stopped' });
+          expect(sbUpdateMock).toHaveBeenCalledWith({ state: 'exec-error' });
           expect(messaging.systemErrorMessage).toHaveBeenCalledWith(
             'something is wrong',
             { action: expect.any(Function), title: 'Fix' },
@@ -1174,7 +1184,7 @@ describe('JestExt', () => {
           (vscode.workspace.workspaceFolders as any) = ['testfolder1', 'testfolder'];
 
           onRunEvent({ type: 'exit', error: 'something is wrong', process });
-          expect(sbUpdateMock).toHaveBeenCalledWith({ state: 'stopped' });
+          expect(sbUpdateMock).toHaveBeenCalledWith({ state: 'exec-error' });
           expect(messaging.systemErrorMessage).toHaveBeenCalledWith(
             '(test-folder) something is wrong',
             { action: expect.any(Function), title: 'Fix' },

@@ -241,6 +241,11 @@
         "icon": "$(color-mode)"
       },
       {
+        "command": "io.orta.jest.test-item.reveal-output",
+        "title": "Reveal Test Output",
+        "icon": "$(terminal)"
+      },
+      {
         "command": "io.orta.jest.test-item.view-snapshot",
         "title": "View Snapshot",
         "icon": "$(camera)"
@@ -296,23 +301,28 @@
       "testing/item/context": [
         {
           "command": "io.orta.jest.test-item.auto-run.toggle-off",
-          "group": "inline",
+          "group": "inline@1",
           "when": "testId in jest.autoRun.on"
         },
         {
           "command": "io.orta.jest.test-item.auto-run.toggle-on",
-          "group": "inline",
+          "group": "inline@1",
           "when": "testId in jest.autoRun.off"
         },
         {
           "command": "io.orta.jest.test-item.coverage.toggle-off",
-          "group": "inline",
+          "group": "inline@2",
           "when": "testId in jest.coverage.on"
         },
         {
           "command": "io.orta.jest.test-item.coverage.toggle-on",
-          "group": "inline",
+          "group": "inline@2",
           "when": "testId in jest.coverage.off"
+        },
+        {
+          "command": "io.orta.jest.test-item.reveal-output",
+          "group": "inline@3",
+          "when": "testId in jest.workspaceRoot"
         },
         {
           "command": "io.orta.jest.test-item.update-snapshot"

@@ -46,6 +46,11 @@ export class JestTestProvider {
       value: withConverage,
       itemIds: [this.workspaceRoot.item.id],
     });
+    tiContextManager.setItemContext({
+      workspace: this.context.ext.workspace,
+      key: 'jest.workspaceRoot',
+      itemIds: [this.workspaceRoot.item.id],
+    });
   }
 
   private createController = (wsFolder: vscode.WorkspaceFolder): vscode.TestController => {

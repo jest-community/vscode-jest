@@ -200,12 +200,14 @@ export class JestExt {
           this.updateStatusBar({ state: 'running' });
           break;
         }
-        case 'end':
-          this.updateStatusBar({ state: 'done' });
+        case 'end': {
+          const state = event.error ? 'exec-error' : 'done';
+          this.updateStatusBar({ state });
           break;
+        }
         case 'exit':
           if (event.error) {
-            this.updateStatusBar({ state: 'stopped' });
+            this.updateStatusBar({ state: 'exec-error' });
             messaging.systemErrorMessage(
               prefixWorkspace(this.extContext, event.error),
               ...this.buildMessageActions(['wizard', 'disable-folder', 'help'])
@@ -214,6 +216,12 @@ export class JestExt {
             this.updateStatusBar({ state: 'done' });
           }
           break;
+        case 'data': {
+          if (event.isError) {
+            this.updateStatusBar({ state: 'exec-error' });
+          }
+          break;
+        }
         case 'long-run': {
           const msg = prefixWorkspace(this.extContext, this.longRunMessage(event));
           messaging.systemWarningMessage(msg, ...this.buildMessageActions(['help-long-run']));
