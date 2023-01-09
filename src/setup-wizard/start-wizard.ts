@@ -47,7 +47,7 @@ export const startWizard = (
 ): Promise<WizardStatus> => {
   const { workspace, taskId, verbose } = options;
 
-  const terminal = new ExtOutputTerminal('vscode-jest Setup Tool');
+  const terminal = new ExtOutputTerminal('vscode-jest Setup Tool', true);
 
   const message = (msg: string, opt?: OutputOptions): string => {
     const str = terminal.write(`${msg}${opt ? '' : '\r\n'}`, opt);

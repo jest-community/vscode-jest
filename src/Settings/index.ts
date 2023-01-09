@@ -36,6 +36,7 @@ export interface TestExplorerConfig {
 
 export type NodeEnv = ProjectWorkspace['nodeEnv'];
 export type MonitorLongRun = 'off' | number;
+export type AutoRevealOutputType = 'on-run' | 'on-exec-error' | 'off';
 export interface PluginResourceSettings {
   jestCommandLine?: string;
   rootPath: string;
@@ -48,6 +49,7 @@ export interface PluginResourceSettings {
   nodeEnv?: NodeEnv;
   shell: RunShell;
   monitorLongRun?: MonitorLongRun;
+  autoRevealOutput: AutoRevealOutputType;
 }
 
 export interface PluginWindowSettings {

@@ -96,8 +96,9 @@ export class JestExt {
     coverageCodeLensProvider: CoverageCodeLensProvider
   ) {
     this.vscodeContext = vscodeContext;
-    this.output = new JestOutputTerminal(workspaceFolder.name);
     const pluginSettings = getExtensionResourceSettings(workspaceFolder.uri);
+    this.output = new JestOutputTerminal(workspaceFolder.name);
+    this.updateOutputSetting(pluginSettings);
 
     this.extContext = createJestExtContext(workspaceFolder, pluginSettings, this.output);
     this.logging = this.extContext.loggingFactory.create('JestExt');
@@ -192,9 +193,13 @@ export class JestExt {
         return;
       }
       switch (event.type) {
-        case 'start':
+        case 'start': {
+          if (this.extContext.settings.autoRevealOutput === 'on-run') {
+            this.output.reveal();
+          }
           this.updateStatusBar({ state: 'running' });
           break;
+        }
         case 'end':
           this.updateStatusBar({ state: 'done' });
           break;
@@ -362,9 +367,18 @@ export class JestExt {
     this.updateTestFileEditor(editor);
   }
 
+  private updateOutputSetting(settings: PluginResourceSettings): void {
+    this.output.revealOnError = settings.autoRevealOutput !== 'off';
+    this.output.close();
+  }
   public async triggerUpdateSettings(newSettings?: PluginResourceSettings): Promise<void> {
     const updatedSettings =
       newSettings ?? getExtensionResourceSettings(this.extContext.workspace.uri);
+
+    // output
+    if (this.extContext.settings.autoRevealOutput !== updatedSettings.autoRevealOutput) {
+      this.updateOutputSetting(updatedSettings);
+    }
 
     // debug
     this.testResultProvider.verbose = updatedSettings.debugMode ?? false;

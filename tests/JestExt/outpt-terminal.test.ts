@@ -2,7 +2,13 @@ jest.unmock('../../src/JestExt/output-terminal');
 jest.unmock('../../src/errors');
 
 import * as vscode from 'vscode';
-import { ansiEsc, AnsiSeq, JestOutputTerminal, toAnsi } from '../../src/JestExt/output-terminal';
+import {
+  ansiEsc,
+  AnsiSeq,
+  JestOutputTerminal,
+  PendingOutput,
+  toAnsi,
+} from '../../src/JestExt/output-terminal';
 import * as errors from '../../src/errors';
 
 describe('JestOutputTerminal', () => {
@@ -22,9 +28,15 @@ describe('JestOutputTerminal', () => {
     mockEmitter = { fire: jest.fn(), event: jest.fn(), dispose: jest.fn() };
     (vscode.EventEmitter as jest.Mocked<any>).mockImplementation(() => mockEmitter);
   });
-  it('delay creating terminal until the actual write occurs', () => {
+  it('will not create terminal until it is revealed', () => {
     const output = new JestOutputTerminal('workspace');
+    output.write('abc');
     expect(vscode.window.createTerminal).not.toHaveBeenCalled();
+    output.reveal();
+    expect(vscode.window.createTerminal).toHaveBeenCalled();
+  });
+  it('can be create with revealed by default', () => {
+    const output = new JestOutputTerminal('workspace', true);
     output.write('abc');
     expect(vscode.window.createTerminal).toHaveBeenCalled();
   });
@@ -36,14 +48,16 @@ describe('JestOutputTerminal', () => {
     expect(vscode.window.createTerminal).not.toHaveBeenCalled();
     expect(a.dispose).not.toHaveBeenCalled();
 
+    t.reveal();
     t.write('something');
     expect(vscode.window.createTerminal).toHaveBeenCalled();
     expect(a.dispose).toHaveBeenCalled();
     expect(b.dispose).not.toHaveBeenCalled();
   });
-  it('can buffer output until open', () => {
+  it('can buffer output until terminal opened', () => {
     const output = new JestOutputTerminal('a');
     output.write('text 1');
+    output.reveal();
     expect(mockEmitter.fire).not.toHaveBeenCalled();
 
     // after open, the buffered text should be sent again
@@ -56,16 +70,17 @@ describe('JestOutputTerminal', () => {
   });
   it('if user close the terminal, it will be reopened on the next write', () => {
     const output = new JestOutputTerminal('a');
+    output.reveal();
     output.write('1');
     expect(vscode.window.createTerminal).toHaveBeenCalledTimes(1);
     const { pty } = (vscode.window.createTerminal as jest.Mocked<any>).mock.calls[0][0];
 
     // simulate users close the terminal
     pty.close();
-    expect(mockTerminal.dispose).toHaveBeenCalled();
 
     // user writes again
     output.write('1');
+    output.reveal();
     // terminal should be opened again with the same pty
     expect(vscode.window.createTerminal).toHaveBeenCalledTimes(2);
     const { pty: pty2 } = (vscode.window.createTerminal as jest.Mocked<any>).mock.calls[1][0];
@@ -83,12 +98,32 @@ describe('JestOutputTerminal', () => {
     output.write('2', errors.GENERIC_ERROR);
     expect(mockTerminal.show).toHaveBeenCalledTimes(2);
   });
+  it('will not show terminal when writing error messages if revalOnError is false', () => {
+    const output = new JestOutputTerminal('a');
+    output.revealOnError = false;
+
+    output.write('an error', 'error');
+    expect(mockTerminal.show).not.toHaveBeenCalled();
+
+    output.revealOnError = true;
+    output.write('an error', 'error');
+    expect(mockTerminal.show).toHaveBeenCalledTimes(1);
+  });
   it('will properly dispose terminal and emitter', () => {
     const output = new JestOutputTerminal('a');
+    output.reveal();
     output.write('1');
     output.dispose();
     expect(mockTerminal.dispose).toHaveBeenCalled();
     expect(mockEmitter.dispose).toHaveBeenCalled();
+  });
+  it('can close the terminal', () => {
+    const output = new JestOutputTerminal('a');
+    output.reveal();
+    output.write('1');
+    output.close();
+    expect(mockTerminal.dispose).toHaveBeenCalled();
+    expect(mockEmitter.dispose).not.toHaveBeenCalled();
   });
   describe('can write output with options', () => {
     it.each`
@@ -132,5 +167,15 @@ describe('text format utility function', () => {
     ${'lf'}      | ${AnsiSeq.lf}
   `('ansiEsc: format by ANSI escape sequence: $desc', ({ escSeq }) => {
     expect(ansiEsc(escSeq, 'whatever')).toMatchSnapshot();
+  });
+});
+
+describe('PendingOutput', () => {
+  it('can limit output not to exceed max size', () => {
+    const pOut = new PendingOutput(3);
+    ['1', '2', '3'].forEach((s) => pOut.push(s));
+    expect(pOut.toString()).toEqual('123');
+    pOut.push('4');
+    expect(pOut.toString()).toEqual('234');
   });
 });
