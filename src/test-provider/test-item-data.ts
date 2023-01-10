@@ -18,6 +18,7 @@ import { tiContextManager } from './test-item-context-manager';
 interface JestRunable {
   getJestRunRequest: () => JestExtRequestType;
 }
+
 interface WithUri {
   uri: vscode.Uri;
 }
@@ -53,7 +54,19 @@ abstract class TestItemDataBase implements TestItemData, JestRunable, WithUri {
     item.children.forEach((child) => this.deepItemState(child, setState));
   }
 
+  isTestNameResolved() {
+    return true;
+  }
+
   scheduleTest(run: JestTestRun, itemCommand?: ItemCommand): void {
+    if (!this.isTestNameResolved()) {
+      const parent = this.item.parent && this.context.getData(this.item.parent);
+      if (parent) {
+        return parent.scheduleTest(run, itemCommand);
+      }
+      this.context.output.write(`running an unresolvled parameterized test might fail`, 'warn');
+    }
+
     const jestRequest = this.getJestRunRequest(itemCommand);
     run.item = this.item;
 
@@ -165,7 +178,7 @@ export class WorkspaceRoot extends TestItemDataBase {
 
   private createRun = (options?: JestTestRunOptions): JestTestRun => {
     const item = options?.item ?? this.item;
-    const request = options?.request ?? new vscode.TestRunRequest([item]);
+    const request = new vscode.TestRunRequest([item]);
     return this.context.createTestRun(request, {
       ...options,
       name: options?.name ?? item.id,
@@ -274,7 +287,8 @@ export class WorkspaceRoot extends TestItemDataBase {
         this.updateSnapshotContext(snapshotItems);
         break;
       }
-      case 'test-parsed': {
+
+      case 'result-match-failed': {
         const snapshotItems: SnapshotItemCollection = {
           viewable: [],
           updatable: [],
@@ -294,10 +308,21 @@ export class WorkspaceRoot extends TestItemDataBase {
       key: 'jest.editor-view-snapshot',
       itemIds: snapshotItems.viewable.map((item) => item.id),
     });
+    const getAllIds = (item: vscode.TestItem, allIds: Set<string>): void => {
+      if (allIds.has(item.id)) {
+        return;
+      }
+      allIds.add(item.id);
+      if (item.parent) {
+        getAllIds(item.parent, allIds);
+      }
+    };
+    const allIds = new Set<string>();
+    snapshotItems.updatable.forEach((item) => getAllIds(item, allIds));
     tiContextManager.setItemContext({
       workspace: this.context.ext.workspace,
       key: 'jest.editor-update-snapshot',
-      itemIds: snapshotItems.updatable.map((item) => item.id),
+      itemIds: [...allIds],
     });
   }
 
@@ -330,14 +355,13 @@ export class WorkspaceRoot extends TestItemDataBase {
 
   private createRunForEvent = (event: TypedRunEvent): JestTestRun => {
     const item = this.getItemFromProcess(event.process) ?? this.item;
-    const [request, name] = isJestTestRunRequest(event.process.request)
-      ? [event.process.request.run.request, event.process.request.run.name]
-      : [];
+    const name = isJestTestRunRequest(event.process.request)
+      ? event.process.request.run.name
+      : `${event.type}:${event.process.id}`;
     const run = this.createRun({
-      name: name ?? `${event.type}:${event.process.id}`,
+      name,
       item,
       onEnd: () => this.cachedRun.delete(event.process.id),
-      request,
     });
 
     this.cachedRun.set(event.process.id, run);
@@ -637,8 +661,8 @@ export class TestDocumentRoot extends TestResultData {
 
   private createChildItems = (parsedRoot?: ContainerNode<ItBlock>): void => {
     const container =
-      parsedRoot ??
-      this.context.ext.testResultProvider.getTestSuiteResult(this.item.id)?.assertionContainer;
+      this.context.ext.testResultProvider.getTestSuiteResult(this.item.id)?.assertionContainer ??
+      parsedRoot;
     if (!container) {
       this.item.children.replace([]);
     } else {
@@ -751,7 +775,7 @@ export class TestData extends TestResultData implements Debuggable {
    * determine if a test contains dynamic content, such as template-literal or "test.each" variables from the node info.
    * Once the test is run, the node should reflect the resolved names.
    */
-  private isTestNameResolved(): boolean {
+  isTestNameResolved(): boolean {
     //isGroup = true means "test.each"
     return !(this.node.attrs.isGroup === 'yes' || this.node.attrs.nonLiteralName === true);
   }

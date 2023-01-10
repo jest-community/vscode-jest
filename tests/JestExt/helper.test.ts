@@ -17,7 +17,6 @@ import {
 } from '../../src/JestExt/helper';
 import { ProjectWorkspace } from 'jest-editor-support';
 import { workspaceLogging } from '../../src/logging';
-import { pathToJest, pathToConfig } from '../../src/helpers';
 import { mockProjectWorkspace } from '../test-helper';
 
 import { toFilePath } from '../../src/helpers';
@@ -31,8 +30,13 @@ describe('createJestExtContext', () => {
     console.error = jest.fn();
     console.warn = jest.fn();
   });
-  const baseSettings = { autoRun: { watch: true }, shell: { toSetting: jest.fn() } };
+  const baseSettings = {
+    autoRun: { watch: true },
+    shell: { toSetting: jest.fn() },
+    jestCommandLine: 'jest',
+  };
   const workspaceFolder: any = { name: 'workspace' };
+  const output: any = jest.fn();
 
   describe('runnerWorkspace', () => {
     it('will return runnerWorkspace factory method', () => {
@@ -43,7 +47,7 @@ describe('createJestExtContext', () => {
       const mockRunnerWorkspace = { rootPath };
       (ProjectWorkspace as jest.Mocked<any>).mockReturnValue(mockRunnerWorkspace);
 
-      const context = createJestExtContext(workspaceFolder, settings);
+      const context = createJestExtContext(workspaceFolder, settings, output);
       expect(typeof context.createRunnerWorkspace).toEqual('function');
       expect(ProjectWorkspace).not.toHaveBeenCalled();
 
@@ -58,7 +62,7 @@ describe('createJestExtContext', () => {
 
         jest.clearAllMocks();
 
-        const { createRunnerWorkspace } = createJestExtContext(workspaceFolder, settings);
+        const { createRunnerWorkspace } = createJestExtContext(workspaceFolder, settings, output);
 
         let options: RunnerWorkspaceOptions = { outputFileSuffix: 'extra' };
         createRunnerWorkspace(options);
@@ -89,44 +93,21 @@ describe('createJestExtContext', () => {
         expect(outputFileSuffix(ws, extra)).toEqual(`${ws}_${expected}`);
       });
     });
+    it('if no jestCommandLine defined, throw exception', () => {
+      jest.clearAllMocks();
+      (ProjectWorkspace as jest.Mocked<any>).mockImplementation(mockProjectWorkspace);
+
+      const settings: any = { ...baseSettings, jestCommandLine: '' };
+      const context = createJestExtContext(workspaceFolder, settings, output);
+      expect(() => context.createRunnerWorkspace()).toThrow();
+    });
   });
   it('will create logging factory', () => {
     const settings: any = { ...baseSettings };
     (workspaceLogging as jest.Mocked<any>).mockReturnValue({});
-    const context = createJestExtContext(workspaceFolder, settings);
+    const context = createJestExtContext(workspaceFolder, settings, output);
     expect(workspaceLogging).toHaveBeenCalled();
     expect(context.loggingFactory).toEqual({});
-  });
-  describe('jestCommandSettings', () => {
-    beforeEach(() => {
-      (ProjectWorkspace as jest.Mocked<any>).mockImplementation(mockProjectWorkspace);
-      (pathToJest as jest.Mocked<any>).mockReturnValue('path-to-jest');
-      (pathToConfig as jest.Mocked<any>).mockReturnValue('path-to-config');
-    });
-    it('without jestCommandLine, returns pathToJest and pathToConfig', () => {
-      const settings: any = {
-        ...baseSettings,
-        pathToJest: 'abc',
-        pathToConfig: 'whatever',
-        rootPath: '',
-      };
-      const { createRunnerWorkspace } = createJestExtContext(workspaceFolder, settings);
-      const runnerWorkspace = createRunnerWorkspace();
-      expect(runnerWorkspace.jestCommandLine).toEqual('path-to-jest');
-      expect(runnerWorkspace.pathToConfig).toEqual('path-to-config');
-    });
-    it('with jestCommandLine, ignore both pathToJest and pathToConfig', () => {
-      const settings: any = {
-        ...baseSettings,
-        jestCommandLine: 'jest --coverage',
-        pathToJest: 'abc',
-        pathToConfig: 'whatever',
-      };
-      const { createRunnerWorkspace } = createJestExtContext(workspaceFolder, settings);
-      const runnerWorkspace = createRunnerWorkspace();
-      expect(runnerWorkspace.jestCommandLine).toEqual(settings.jestCommandLine);
-      expect(runnerWorkspace.pathToConfig).toEqual('');
-    });
   });
 });
 
@@ -170,14 +151,9 @@ describe('getExtensionResourceSettings()', () => {
     (RunShell as jest.Mocked<any>).mockImplementation(() => mockShell);
     const uri: any = { fsPath: 'workspaceFolder1' };
     expect(getExtensionResourceSettings(uri)).toEqual({
-      autoEnable: true,
       coverageFormatter: 'DefaultFormatter',
-      pathToConfig: '',
-      pathToJest: null,
       jestCommandLine: undefined,
-      restartJestOnSnapshotUpdate: false,
       rootPath: 'workspaceFolder1',
-      runAllTestsFirst: undefined,
       showCoverageOnLoad: false,
       debugMode: false,
       coverageColors: null,
@@ -185,6 +161,7 @@ describe('getExtensionResourceSettings()', () => {
       testExplorer: {},
       monitorLongRun: 60000,
       shell: mockShell,
+      autoRevealOutput: 'on-run',
     });
   });
 

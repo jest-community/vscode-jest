@@ -4,9 +4,9 @@ import * as vscode from 'vscode';
 import { LoggingFactory } from '../logging';
 import { PluginResourceSettings } from '../Settings';
 import { ProcessSession } from './process-session';
-import { DebugTestIdentifier } from '../DebugCodeLens';
 import { JestProcessInfo } from '../JestProcessManagement';
 import { JestOutputTerminal } from './output-terminal';
+import { TestIdentifier } from '../TestResults';
 
 export enum WatchMode {
   None = 'none',
@@ -52,6 +52,7 @@ export interface JestExtProcessContextRaw extends JestExtContext {
 }
 export type JestExtProcessContext = Readonly<JestExtProcessContextRaw>;
 
+export type DebugTestIdentifier = string | TestIdentifier;
 export type DebugFunction = (
   document: vscode.TextDocument | string,
   ...ids: DebugTestIdentifier[]

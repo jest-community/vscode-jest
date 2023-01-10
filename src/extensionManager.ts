@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import { JestExt } from './JestExt';
-import { DebugCodeLensProvider, TestState } from './DebugCodeLens';
 import { DebugConfigurationProvider } from './DebugConfigurationProvider';
 import { PluginWindowSettings } from './Settings';
 import { statusBar } from './StatusBar';
@@ -21,13 +20,6 @@ export function getExtensionWindowSettings(): PluginWindowSettings {
   const config = vscode.workspace.getConfiguration('jest');
 
   return {
-    debugCodeLens: {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      enabled: config.get<boolean>('enableCodeLens')!,
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      showWhenTestStateIn: config.get<TestState[]>('debugCodeLens.showWhenTestStateIn')!,
-    },
-    enableSnapshotPreviews: config.get<boolean>('enableSnapshotPreviews'),
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     disabledWorkspaceFolders: config.get<string[]>('disabledWorkspaceFolders')!,
   };
@@ -75,7 +67,6 @@ const CommandPrefix: Record<CommandType, string> = {
 };
 export type StartWizardFunc = (options?: StartWizardOptions) => ReturnType<typeof startWizard>;
 export class ExtensionManager {
-  debugCodeLensProvider: DebugCodeLensProvider;
   debugConfigurationProvider: DebugConfigurationProvider;
   coverageCodeLensProvider: CoverageCodeLensProvider;
   startWizard: StartWizardFunc;
@@ -90,7 +81,6 @@ export class ExtensionManager {
     this.commonPluginSettings = getExtensionWindowSettings();
 
     this.debugConfigurationProvider = new DebugConfigurationProvider();
-    this.debugCodeLensProvider = new DebugCodeLensProvider(this.getByDocUri);
     this.coverageCodeLensProvider = new CoverageCodeLensProvider(this.getByDocUri);
     this.startWizard = (options?: StartWizardOptions) =>
       startWizard(this.debugConfigurationProvider, context, options);
@@ -116,10 +106,6 @@ export class ExtensionManager {
       return;
     }
     this.commonPluginSettings = settings;
-    const { debugCodeLens } = settings;
-    this.debugCodeLensProvider.showWhenTestStateIn = debugCodeLens.enabled
-      ? debugCodeLens.showWhenTestStateIn
-      : [];
     settings.disabledWorkspaceFolders.forEach(this.unregisterWorkspaceByName, this);
 
     //register workspace folder not in the disable list
@@ -137,7 +123,6 @@ export class ExtensionManager {
     const jestExt = new JestExt(
       this.context,
       workspaceFolder,
-      this.debugCodeLensProvider,
       this.debugConfigurationProvider,
       this.coverageCodeLensProvider
     );
@@ -478,6 +463,9 @@ export class ExtensionManager {
 
 const ReleaseNoteBase = 'https://github.com/jest-community/vscode-jest/blob/master/release-notes';
 const ReleaseNotes: Record<string, string> = {
+  '5.1.0': `${ReleaseNoteBase}/release-note-v5.1.md#v510`,
+  '5.0.4': `${ReleaseNoteBase}/release-note-v5.md#v50-pre-release-roll-up`,
+  '5.0.3': `${ReleaseNoteBase}/release-note-v5.md#v50-pre-release-roll-up`,
   '5.0.2': `${ReleaseNoteBase}/release-note-v5.md#v50-pre-release-roll-up`,
   '5.0.1': `${ReleaseNoteBase}/release-note-v5.md#v50-pre-release-roll-up`,
   '5.0.0': `${ReleaseNoteBase}/release-note-v5.md#v50-pre-release-roll-up`,

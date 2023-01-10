@@ -1,4 +1,3 @@
-import { TestState } from '../DebugCodeLens';
 import { CoverageColors } from '../Coverage/CoverageOverlay';
 import { ProjectWorkspace } from 'jest-editor-support';
 import { AutoRun } from '../JestExt/auto-run';
@@ -37,14 +36,10 @@ export interface TestExplorerConfig {
 
 export type NodeEnv = ProjectWorkspace['nodeEnv'];
 export type MonitorLongRun = 'off' | number;
+export type AutoRevealOutputType = 'on-run' | 'on-exec-error' | 'off';
 export interface PluginResourceSettings {
-  autoEnable?: boolean;
   jestCommandLine?: string;
-  pathToConfig?: string;
-  pathToJest?: string;
-  restartJestOnSnapshotUpdate?: boolean;
   rootPath: string;
-  runAllTestsFirst?: boolean;
   showCoverageOnLoad: boolean;
   coverageFormatter: string;
   debugMode?: boolean;
@@ -54,21 +49,9 @@ export interface PluginResourceSettings {
   nodeEnv?: NodeEnv;
   shell: RunShell;
   monitorLongRun?: MonitorLongRun;
+  autoRevealOutput: AutoRevealOutputType;
 }
 
 export interface PluginWindowSettings {
-  debugCodeLens: {
-    enabled: boolean;
-    showWhenTestStateIn: TestState[];
-  };
-  enableSnapshotPreviews?: boolean;
   disabledWorkspaceFolders: string[];
-}
-
-export function isDefaultPathToJest(str?: string | null): boolean {
-  return str === null || str === '';
-}
-
-export function hasUserSetPathToJest(str?: string | null): boolean {
-  return !isDefaultPathToJest(str);
 }

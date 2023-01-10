@@ -34,20 +34,16 @@ describe('JestTestRun', () => {
     expect(() => jestRun.passed(item)).toThrow();
   });
   describe('can chain JestTestRun backed by a single vscode Run', () => {
-    let jestRun1, jestRun2, request;
+    let jestRun1, jestRun2;
     beforeEach(() => {
-      request = {};
-      jestRun1 = new JestTestRun(context, vRun, { request });
+      jestRun1 = new JestTestRun(context, vRun);
       jestRun2 = new JestTestRun(context, jestRun1);
     });
 
     it('both are backed by the same vscode.TestRun', () => {
       expect(jestRun1.vscodeRun).toBe(jestRun2.vscodeRun);
     });
-    it('request attribute is a deep attribute', () => {
-      expect(jestRun1.request).toBe(request);
-      expect(jestRun2.request).toBe(request);
-    });
+
     it('close the top of the chain will close the underlying vscodeRun and mark isClose() state', () => {
       jestRun2.end();
 
@@ -55,11 +51,6 @@ describe('JestTestRun', () => {
       expect(jestRun1.isClosed()).toBeTruthy();
       expect(jestRun2.vscodeRun).toBeUndefined();
       expect(jestRun1.vscodeRun).toBeUndefined();
-    });
-    it('after close other attributes are still accessible', () => {
-      jestRun2.end();
-      expect(jestRun1.request).toBe(request);
-      expect(jestRun2.request).toBe(request);
     });
   });
 });

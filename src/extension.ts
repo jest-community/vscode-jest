@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import { statusBar } from './StatusBar';
 import { ExtensionManager } from './extensionManager';
 import { tiContextManager } from './test-provider/test-item-context-manager';
+import * as languageProvider from './language-provider';
 
 let extensionManager: ExtensionManager;
 
@@ -21,8 +22,8 @@ const addSubscriptions = (context: vscode.ExtensionContext): void => {
     ...statusBar.register((folder: string) => extensionManager.getByName(folder)),
     ...extensionManager.register(),
     vscode.languages.registerCodeLensProvider(languages, extensionManager.coverageCodeLensProvider),
-    vscode.languages.registerCodeLensProvider(languages, extensionManager.debugCodeLensProvider),
-    ...tiContextManager.registerCommands()
+    ...tiContextManager.registerCommands(),
+    ...languageProvider.register()
   );
 };
 

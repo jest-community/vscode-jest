@@ -15,7 +15,7 @@ export type TestSuitChangeEvent =
       file: string;
     }
   | {
-      type: 'test-parsed';
+      type: 'result-match-failed';
       file: string;
       sourceContainer: ContainerNode<ItBlock>;
     };

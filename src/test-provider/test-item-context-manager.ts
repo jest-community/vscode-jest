@@ -111,7 +111,9 @@ export class TestItemContextManager {
     const updateSnapshotCommand = vscode.commands.registerCommand(
       `${extensionName}.test-item.update-snapshot`,
       (testItem: vscode.TestItem) => {
-        const workspace = this.getItemContext('jest.editor-update-snapshot', testItem)?.workspace;
+        const workspace =
+          (testItem.uri && vscode.workspace.getWorkspaceFolder(testItem.uri)) ||
+          this.getItemContext('jest.editor-update-snapshot', testItem)?.workspace;
         if (workspace) {
           vscode.commands.executeCommand(
             `${extensionName}.with-workspace.item-command`,

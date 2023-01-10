@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { getPackageJson } from '../../helpers';
+import { getPackageJson } from './helpers';
 
 const ActivationFilePattern = [
   '**/jest.config.{js, ts, mjs, cjs, json}',
@@ -41,19 +41,19 @@ export class WorkspaceManager {
       return Promise.reject(new Error('no workspace folder to validate'));
     }
 
-    const wsList: WorkspaceInfo[] = [];
+    const validWorkspaces: Map<string, WorkspaceInfo> = new Map();
     for (const ws of vscode.workspace.workspaceFolders) {
-      if (wsList.find((info) => isSameWorkspace(info.workspace, ws))) {
+      if (validWorkspaces.has(ws.uri.path)) {
         continue;
       }
       const list = await this.validateWorkspace(ws);
       list.forEach((info) => {
-        if (!wsList.find((i) => isSameWorkspace(i.workspace, info.workspace))) {
-          wsList.push(info);
+        if (!validWorkspaces.has(info.workspace.uri.path)) {
+          validWorkspaces.set(info.workspace.uri.path, info);
         }
       });
     }
-    return wsList;
+    return Array.from(validWorkspaces.values());
   }
 
   private toWorkspaceInfo(uri: vscode.Uri): WorkspaceInfo | undefined {
@@ -149,13 +149,13 @@ export class WorkspaceManager {
    * 2. otherwise, get all the folders with "package.json"
    * @returns list of uri of the folders found, throw exception if none can be found.
    */
-  async getFoldersFromFilesystem(): Promise<vscode.Uri[]> {
+  public async getFoldersFromFilesystem(workspace?: vscode.WorkspaceFolder): Promise<vscode.Uri[]> {
     for (const [index, f] of [
       this.getFoldersByPackageWorkspaces,
       this.getFoldersByPackageFile,
     ].entries()) {
       try {
-        const uris = await f();
+        const uris = await f(workspace);
         if (uris.length > 0) {
           return uris;
         }
@@ -164,29 +164,43 @@ export class WorkspaceManager {
       }
     }
 
-    throw new Error('failed to get monorepo workspaces info from file system');
+    // no monorepo workspaces found in file system
+    return [];
   }
   private toDirUri = (uri: vscode.Uri): vscode.Uri => {
     const dir = path.dirname(uri.fsPath);
     return vscode.Uri.file(dir);
   };
-  private getFoldersByPackageFile = async (): Promise<vscode.Uri[]> => {
-    const results = await vscode.workspace.findFiles('**/package.json', '**/node_modules/**');
-    return results.map((uri) => this.toDirUri(uri));
-  };
-  private getFoldersByPackageWorkspaces = async (): Promise<vscode.Uri[]> => {
-    if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length <= 0) {
-      throw new Error('no workspace folder is open yet');
-    }
-    const root = vscode.workspace.workspaceFolders[0];
-    const workspaces = getPackageJson(root.uri.fsPath)?.workspaces;
-    if (!workspaces || !Array.isArray(workspaces)) {
-      throw new Error(`No package.json or no "workspaces" config in package.json`);
+  public getFoldersByPackageFile = async (
+    workspace?: vscode.WorkspaceFolder
+  ): Promise<vscode.Uri[]> => {
+    const root = workspace ?? vscode.workspace.workspaceFolders?.[0];
+    if (!root) {
+      return Promise.resolve([]);
     }
 
-    const promises = workspaces.flatMap((ws) =>
+    const results = await vscode.workspace.findFiles(
+      new vscode.RelativePattern(root, '**/package.json'),
+      '**/node_modules/**'
+    );
+    return results.map((uri) => this.toDirUri(uri));
+  };
+  private getFoldersByPackageWorkspaces = async (
+    workspace?: vscode.WorkspaceFolder
+  ): Promise<vscode.Uri[]> => {
+    const root = workspace ?? vscode.workspace.workspaceFolders?.[0];
+    if (!root) {
+      return Promise.resolve([]);
+    }
+    const pmWorkspaces = getPackageJson(root.uri.fsPath)?.workspaces;
+    if (!pmWorkspaces || !Array.isArray(pmWorkspaces)) {
+      // No package.json or no "workspaces" config in package.json
+      return Promise.resolve([]);
+    }
+
+    const promises = pmWorkspaces.flatMap((ws) =>
       vscode.workspace.findFiles(
-        new vscode.RelativePattern(root, `${ws}/package.json`),
+        new vscode.RelativePattern(root, `${ws}/**/package.json`),
         '**/node_modules/**',
         100
       )

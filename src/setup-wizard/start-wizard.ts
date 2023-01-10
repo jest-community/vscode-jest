@@ -10,6 +10,8 @@ import { jsonOut, actionItem, showActionMenu } from './wizard-helper';
 import { setupJestCmdLine, setupJestDebug, setupMonorepo } from './tasks';
 import { ExtOutputTerminal, OutputOptions } from '../JestExt/output-terminal';
 import { toErrorString } from '../helpers';
+import { WorkspaceManager } from '../workspace-manager';
+import { DebugConfigurationProvider } from '../DebugConfigurationProvider';
 
 // wizard tasks - right now only 2, could easily add more
 export type WizardTaskId = 'cmdLine' | 'debugConfig' | 'monorepo';
@@ -39,13 +41,13 @@ export interface StartWizardOptions {
   verbose?: boolean;
 }
 export const startWizard = (
-  debugConfigProvider: vscode.DebugConfigurationProvider,
+  debugConfigProvider: DebugConfigurationProvider,
   vscodeContext: vscode.ExtensionContext,
   options: StartWizardOptions = {}
 ): Promise<WizardStatus> => {
   const { workspace, taskId, verbose } = options;
 
-  const terminal = new ExtOutputTerminal('vscode-jest Setup Tool');
+  const terminal = new ExtOutputTerminal('vscode-jest Setup Tool', true);
 
   const message = (msg: string, opt?: OutputOptions): string => {
     const str = terminal.write(`${msg}${opt ? '' : '\r\n'}`, opt);
@@ -116,6 +118,7 @@ export const startWizard = (
 
     const context: WizardContext = {
       debugConfigProvider,
+      wsManager: new WorkspaceManager(),
       vscodeContext,
       workspace,
       message,

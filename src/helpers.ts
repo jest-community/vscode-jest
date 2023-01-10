@@ -1,12 +1,13 @@
+import * as vscode from 'vscode';
 import { platform } from 'os';
 import { existsSync, readFileSync, mkdirSync, writeFileSync } from 'fs';
-import { normalize, join } from 'path';
+import { join, resolve, normalize, isAbsolute } from 'path';
 import { ExtensionContext } from 'vscode';
 
-import { PluginResourceSettings, hasUserSetPathToJest } from './Settings';
 import { TestIdentifier } from './TestResults';
 import { TestStats } from './types';
 import { LoginShell } from 'jest-editor-support';
+import { WorkspaceManager } from './workspace-manager';
 
 /**
  * Known binary names of `react-scripts` forks
@@ -29,9 +30,7 @@ export const nodeBinExtension: string = platform() === 'win32' ? '.cmd' : '';
  * Returns the path if it exists, or `undefined` otherwise
  */
 function getLocalPathForExecutable(rootPath: string, executable: string): string | undefined {
-  const absolutePath = normalize(
-    join(rootPath, 'node_modules', '.bin', executable + nodeBinExtension)
-  );
+  const absolutePath = resolve(rootPath, 'node_modules', '.bin', executable + nodeBinExtension);
   return existsSync(absolutePath) ? absolutePath : undefined;
 }
 
@@ -47,10 +46,11 @@ export function getTestCommand(rootPath: string): string | undefined {
     return packageJSON.scripts.test;
   }
 }
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function getPackageJson(rootPath: string): any | undefined {
   try {
-    const packagePath = join(rootPath, 'package.json');
+    const packagePath = resolve(rootPath, 'package.json');
     return JSON.parse(readFileSync(packagePath, 'utf8'));
   } catch {
     return undefined;
@@ -67,49 +67,55 @@ export function isCreateReactAppTestCommand(testCommand?: string | null): boolea
   );
 }
 
-/**
- * Checks if the project in `rootPath` was bootstrapped by `create-react-app`.
- */
-function isBootstrappedWithCreateReactApp(rootPath: string): boolean {
+function checkPackageTestScript(rootPath: string): string | undefined {
   const testCommand = getTestCommand(rootPath);
-  return testCommand
-    ? isCreateReactAppTestCommand(testCommand)
-    : createReactAppBinaryNames.some(
-        (binary) => getLocalPathForExecutable(rootPath, binary) !== undefined
-      );
+  if (!testCommand) {
+    return;
+  }
+  if (isCreateReactAppTestCommand(testCommand) || testCommand.includes('jest')) {
+    const pm = getPM(rootPath) ?? 'npm';
+    if (pm === 'npm') {
+      return 'npm test --';
+    }
+    return 'yarn test';
+  }
+}
+
+const PMInfo: Record<string, string> = {
+  yarn: 'yarn.lock',
+  npm: 'package-lock.json',
+};
+function getPM(rootPath: string): string | undefined {
+  return Object.keys(PMInfo).find((pm) => {
+    const lockFile = PMInfo[pm];
+    const absolutePath = resolve(rootPath, lockFile);
+    return existsSync(absolutePath);
+  });
 }
 
 /**
- * Handles getting the jest runner, handling the OS and project specific work too
+ * construct a default jest command from rootPath, currently support any configurations that match any of the following:
+ * 1. a "test" script in package.json that contains CRA or "jest" command
+ * 2. a jest binary in local node_modules
+ * 3. CRA scripts in local node_modules.
  *
- * @returns {string}
+ * @param rootPath an absolute path from where the search starts.
+ * @returns the verified jest command for jest or CRA apps, if found; otherwise return undefined
  */
-// tslint:disable-next-line no-shadowed-variable
-export function pathToJest({ pathToJest, rootPath }: PluginResourceSettings): string {
-  if (pathToJest && hasUserSetPathToJest(pathToJest)) {
-    return normalize(pathToJest);
+export const getDefaultJestCommand = (rootPath = ''): string | undefined => {
+  const _rootPath = resolve(rootPath);
+  const pmScript = checkPackageTestScript(_rootPath);
+  if (pmScript) {
+    return pmScript;
   }
 
-  if (isBootstrappedWithCreateReactApp(rootPath)) {
-    return 'npm test --';
+  for (const binary of [...createReactAppBinaryNames, 'jest']) {
+    const cmd = getLocalPathForExecutable(rootPath, binary);
+    if (cmd) {
+      return `"${cmd}"`;
+    }
   }
-
-  const p = getLocalPathForExecutable(rootPath, 'jest') || 'jest' + nodeBinExtension;
-  return `"${p}"`;
-}
-
-/**
- * Handles getting the path to config file
- *
- * @returns {string}
- */
-export function pathToConfig(pluginSettings: PluginResourceSettings): string {
-  if (pluginSettings.pathToConfig) {
-    return normalize(pluginSettings.pathToConfig);
-  }
-
-  return '';
-}
+};
 
 /**
  *  Taken From https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
@@ -208,6 +214,7 @@ export const removeSurroundingQuote = (command: string): string =>
   command.replace(SurroundingQuoteRegex, '');
 
 // TestStats
+/* istanbul ignore next */
 export const emptyTestStats = (): TestStats => {
   return { success: 0, fail: 0, unknown: 0 };
 };
@@ -281,8 +288,77 @@ export const toErrorString = (e: unknown): string => {
     return e;
   }
   if (e instanceof Error) {
-    // return `${e.toString()}\r\n${e.stack}`;
     return e.stack ?? e.toString();
   }
   return JSON.stringify(e);
+};
+
+// regex that match single, double quotes and "\" escape char"
+const cmdSplitRegex = /"([^"\\]*(?:\\.[^"\\]*)*)"|'([^'\\]*(?:\\.[^'\\]*)*)'|([^\s'"]+)/g;
+export const parseCmdLine = (cmdLine: string): string[] => {
+  const parts = cmdLine.match(cmdSplitRegex) || [];
+  // clean up command
+  if (parts.length > 0 && parts[0]) {
+    parts[0] = removeSurroundingQuote(normalize(parts[0]));
+  }
+  return parts;
+};
+
+export const toAbsoluteRootPath = (
+  workspace: vscode.WorkspaceFolder,
+  rootPath?: string
+): string => {
+  if (!rootPath) {
+    return workspace.uri.fsPath;
+  }
+  return isAbsolute(rootPath) ? rootPath : resolve(workspace.uri.fsPath, rootPath);
+};
+
+export interface JestCommandSettings {
+  rootPath: string;
+  jestCommandLine: string;
+}
+export interface JestCommandResult {
+  uris?: vscode.Uri[];
+  validSettings: JestCommandSettings[];
+}
+
+/**
+ * generate a valid jest command settings beyond the static "defaultJestCommand" by doing a deep search from the workspace-root/rootPath down
+ * @param workspace
+ * @param workspaceManager
+ * @param rootPath
+ * @returns
+ */
+export const getValidJestCommand = async (
+  workspace: vscode.WorkspaceFolder,
+  workspaceManager: WorkspaceManager,
+  rootPath?: string
+): Promise<JestCommandResult> => {
+  const absoluteRootPath = toAbsoluteRootPath(workspace, rootPath);
+  let jestCommandLine = getDefaultJestCommand(absoluteRootPath);
+  if (jestCommandLine) {
+    return Promise.resolve({ validSettings: [{ rootPath: absoluteRootPath, jestCommandLine }] });
+  }
+
+  // see if we can get a valid command by examing the file system
+  const uris = await workspaceManager.getFoldersFromFilesystem(workspace);
+
+  const validSettings: JestCommandSettings[] = [];
+  for (const uri of uris) {
+    const p = uri.fsPath;
+    if (p === absoluteRootPath) {
+      continue;
+    }
+    jestCommandLine = getDefaultJestCommand(p);
+    if (jestCommandLine) {
+      const settings = { jestCommandLine, rootPath: p };
+      validSettings.push(settings);
+
+      if (validSettings.length > 1) {
+        break;
+      }
+    }
+  }
+  return { uris, validSettings };
 };

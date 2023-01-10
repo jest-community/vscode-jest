@@ -6,6 +6,7 @@ import { JestProcessRequest } from '../src/JestProcessManagement';
 import { JestTestProcessType } from '../src/Settings';
 import { MatchEvent } from '../src/TestResults/match-node';
 import { AutoRun } from '../src/JestExt';
+import * as path from 'path';
 
 export const EmptyLocation = {
   line: 0,
@@ -223,6 +224,16 @@ expect.extend({
       };
     }
   },
+});
+
+export const makeWorkspaceFolder = (name: string): any => ({
+  uri: makeUri(name),
+  name,
+  path: name,
+});
+export const makeUri = (...parts: string[]): any => ({
+  fsPath: parts.join(path.sep),
+  path: parts.join('/'),
 });
 
 declare global {

@@ -1,27 +1,28 @@
-# vscode-jest v5 Releases <!-- omit in toc --> 
+# vscode-jest v5.1 Releases <!-- omit in toc --> 
+
+## v5.1.0 <!-- omit in toc --> 
 
 ---
-- [v5.0 (pre-release) (roll-up)](#v50-pre-release-roll-up)
-  - [Main Features](#main-features)
-    - [1. toggle autoRun and coverage through TestExplorer inline menu](#1-toggle-autorun-and-coverage-through-testexplorer-inline-menu)
-    - [2. automate monorepo project setup through "Setup Tool"](#2-automate-monorepo-project-setup-through-setup-tool)
-    - [3. improve test run output with terminal](#3-improve-test-run-output-with-terminal)
-    - [4. deep activation](#4-deep-activation)
-    - [5. enhanced snapshot support](#5-enhanced-snapshot-support)
-    - [6. smarter auto-config for jest command and test debugging](#6-smarter-auto-config-for-jest-command-and-test-debugging)
-    - [7. no more intermittent "command not found" error (auto recovery with login-shell)](#7-no-more-intermittent-command-not-found-error-auto-recovery-with-login-shell)
-    - [8. long run monitor](#8-long-run-monitor)
-    - [9. one-click disable non-jest folder for monorepo project](#9-one-click-disable-non-jest-folder-for-monorepo-project)
-    - [10. autoRun simplification](#10-autorun-simplification)
-    - [11. supports v8 coverage provider](#11-supports-v8-coverage-provider)
-    - [12. supports running unresolved parameterized tests directly](#12-supports-running-unresolved-parameterized-tests-directly)
-    - [13. added auto-completion for jest module methods](#13-added-auto-completion-for-jest-module-methods)
-  - [Fixes](#fixes)
-  - [Breaking Changes](#breaking-changes)
-  - [Change log](#change-log)
+- [Main Features](#main-features)
+  - [1. toggle autoRun and coverage through TestExplorer inline menu](#1-toggle-autorun-and-coverage-through-testexplorer-inline-menu)
+  - [2. automate monorepo project setup through "Setup Tool"](#2-automate-monorepo-project-setup-through-setup-tool)
+  - [3. improve test run output with terminal](#3-improve-test-run-output-with-terminal)
+  - [4. deep activation](#4-deep-activation)
+  - [5. enhanced snapshot support](#5-enhanced-snapshot-support)
+  - [6. smarter auto-config for jest command and test debugging](#6-smarter-auto-config-for-jest-command-and-test-debugging)
+  - [7. no more intermittent "command not found" error (auto recovery with login-shell)](#7-no-more-intermittent-command-not-found-error-auto-recovery-with-login-shell)
+  - [8. long run monitor](#8-long-run-monitor)
+  - [9. one-click disable non-jest folder for monorepo project](#9-one-click-disable-non-jest-folder-for-monorepo-project)
+  - [10. autoRun simplification](#10-autorun-simplification)
+  - [11. supports v8 coverage provider](#11-supports-v8-coverage-provider)
+  - [12. supports running unresolved parameterized tests directly](#12-supports-running-unresolved-parameterized-tests-directly)
+  - [13. added auto-completion for jest module methods](#13-added-auto-completion-for-jest-module-methods)
+- [Fixes](#fixes)
+- [Breaking Changes](#breaking-changes)
+- [CHANGELOG](#changelog)
 
 ---
-## v5.0 (pre-release) (roll-up)
+
 
 v5 mainly focuses on addressing performance, stablity and ease of use. The goal is to help new and experienced users fully utilize the extension features to make testing a fun experience.
 
@@ -160,8 +161,8 @@ Enhanced IntelliSense to suggest local module path for jest methods, such as `je
 - various document updates
 
 ### Breaking Changes
-- Debug and Snapshot-Preview CodeLens are replaced by the gutter context menu
-  The codeLens can sometimes interfering with code formatting during editing and it is not as versatile as the context menu especially for parameterized tests. Therefore, we are removing the codeLens and moving and expanding the functionality into the editor gutter menu instead.  
+- Debug and Snapshot-Preview CodeLens are replaced by the gutter context menu.
+  The codeLens can sometimes interfering with code formatting during editing and it is not as versatile nor complete as the context menu especially for parameterized tests. Therefore, we are removing the codeLens and moving and expanding the functionality into the editor gutter menu instead.  
 - The following settings are removed:
   - `"jest.runAllTestsFirst"`
   - `"jest.showTerminalOnLaunch"` 
@@ -181,9 +182,7 @@ Enhanced IntelliSense to suggest local module path for jest methods, such as `je
 - `"jest.autoRun` default value has changed. see detail above.
 - No auto update (all) snapshots messaging any more, instead users can manually update and view any snapshot tests at any level and any time.
 
-### Change log
-- [v5.0.3 pre-release](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.3)
-- [v5.0.2 pre-release](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.2)
-- [v5.0.1 pre-release](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.1)
-- [v5.0.0 pre-release](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.0)
+### CHANGELOG 
+- [v5.1.0](https://github.com/jest-community/vscode-jest/releases/tag/v5.1.0)
+
 

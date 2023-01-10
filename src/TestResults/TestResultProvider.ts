@@ -24,7 +24,6 @@ interface TestSuiteParseResultRaw {
   testBlocks: TestBlocks | 'failed';
 }
 interface TestSuiteResultRaw {
-  // test result
   status: TestReconciliationStateType;
   message: string;
   assertionContainer?: ContainerNode<TestAssertionStatus>;
@@ -60,13 +59,11 @@ export class TestSuiteRecord implements TestSuiteUpdatable {
   private _isTestFile?: boolean;
 
   private _testBlocks?: TestBlocks | 'failed';
-  // private _snapshotBlocks?: ExtSnapshotBlock[] | 'failed';
   private _assertionContainer?: ContainerNode<TestAssertionStatus>;
 
   constructor(
     public testFile: string,
     private snapshotProvider: SnapshotProvider,
-    private events: TestResultEvents,
     private reconciler: TestReconciler,
     private verbose = false
   ) {
@@ -89,6 +86,10 @@ export class TestSuiteRecord implements TestSuiteUpdatable {
     return this._isTestFile;
   }
 
+  /**
+   * parse test file and create sourceContainer, if needed.
+   * @returns TestBlocks | 'failed'
+   */
   public get testBlocks(): TestBlocks | 'failed' {
     if (!this._testBlocks) {
       try {
@@ -104,12 +105,6 @@ export class TestSuiteRecord implements TestSuiteUpdatable {
         if (snapshotBlocks.length > 0) {
           this.updateSnapshotAttr(sourceContainer, snapshotBlocks);
         }
-
-        this.events.testSuiteChanged.fire({
-          type: 'test-parsed',
-          file: this.testFile,
-          sourceContainer: sourceContainer,
-        });
       } catch (e) {
         // normal to fail, for example when source file has syntax error
         if (this.verbose) {
@@ -166,7 +161,6 @@ export class TestSuiteRecord implements TestSuiteUpdatable {
     this._isTestFile = 'isTestFile' in change ? change.isTestFile : this._isTestFile;
     this._results = 'results' in change ? change.results : this._results;
     this._sorted = 'sorted' in change ? change.sorted : this._sorted;
-    this._testBlocks = 'testBlocks' in change ? change.testBlocks : this._testBlocks;
     this._assertionContainer =
       'assertionContainer' in change ? change.assertionContainer : this._assertionContainer;
   }
@@ -197,7 +191,6 @@ export class TestResultProvider {
     const record = new TestSuiteRecord(
       testFile,
       this.snapshotProvider,
-      this.events,
       this.reconciler,
       this.verbose
     );
@@ -277,18 +270,20 @@ export class TestResultProvider {
    **/
   private updateMatchedResults(filePath: string, record: TestSuiteRecord): void {
     let error: string | undefined;
-    if (record.testBlocks === 'failed') {
+    // make sure we do not fire changeEvent since that will be proceeded with match or unmatch event anyway
+    const testBlocks = record.testBlocks;
+    if (testBlocks === 'failed') {
       record.update({ status: 'KnownFail', message: 'test file parse error', results: [] });
       return;
     }
 
-    const { itBlocks } = record.testBlocks;
+    const { itBlocks } = testBlocks;
     if (record.assertionContainer) {
       try {
         const results = this.groupByRange(
           match.matchTestAssertions(
             filePath,
-            record.testBlocks.sourceContainer,
+            testBlocks.sourceContainer,
             record.assertionContainer,
             this.verbose
           )
@@ -313,6 +308,13 @@ export class TestResultProvider {
       status: 'KnownFail',
       message: error,
       results: itBlocks.map((t) => match.toMatchResult(t, 'no assertion found', 'match-failed')),
+    });
+
+    // file match failed event so the listeners can display the source blocks instead
+    this.events.testSuiteChanged.fire({
+      type: 'result-match-failed',
+      file: filePath,
+      sourceContainer: testBlocks.sourceContainer,
     });
   }
 

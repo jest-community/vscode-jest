@@ -1,15 +1,15 @@
-jest.unmock('../../../src/setup-wizard/tasks/workspace-manager');
-jest.unmock('../test-helper');
-jest.unmock('./task-test-helper');
+jest.unmock('../src/workspace-manager');
+jest.unmock('./setup-wizard/test-helper');
+jest.unmock('./setup-wizard/tasks/task-test-helper');
 
 import * as vscode from 'vscode';
 import * as path from 'path';
 
-import { WorkspaceManager } from '../../../src/setup-wizard/tasks/workspace-manager';
+import { WorkspaceManager } from '../src/workspace-manager';
 
-import { workspaceFolder } from '../test-helper';
-import { getPackageJson } from '../../../src/helpers';
-import { toUri } from './task-test-helper';
+import { workspaceFolder } from './setup-wizard/test-helper';
+import { getPackageJson } from '../src/helpers';
+import { toUri } from './setup-wizard/tasks/task-test-helper';
 
 describe('workspaceFolder', () => {
   let mockFindFiles;
@@ -22,8 +22,9 @@ describe('workspaceFolder', () => {
   });
 
   describe('getFoldersFromFilesystem: find workspace folders', () => {
+    const root = workspaceFolder('root');
     beforeEach(() => {
-      (vscode.workspace as any).workspaceFolders = [workspaceFolder('root')];
+      (vscode.workspace as any).workspaceFolders = [root];
     });
     it('error if no workspace folder', async () => {
       expect.hasAssertions();
@@ -32,51 +33,58 @@ describe('workspaceFolder', () => {
       const wsManager = new WorkspaceManager();
       await expect(wsManager.getFoldersFromFilesystem).rejects.toThrow();
     });
-    it('from workspaces property in package.json', async () => {
-      expect.hasAssertions();
+    describe('can check for any workspace', () => {
+      const w1 = workspaceFolder('w1');
+      describe.each`
+        desc                    | workspace    | rootWorkspace
+        ${'from project root'}  | ${undefined} | ${root}
+        ${'from sub workspace'} | ${w1}        | ${w1}
+      `('$desc', ({ workspace, rootWorkspace }) => {
+        it('from workspaces property in package.json', async () => {
+          expect.hasAssertions();
 
-      (getPackageJson as jest.Mocked<any>).mockReturnValue({ workspaces: ['folder-1'] });
+          (getPackageJson as jest.Mocked<any>).mockReturnValue({ workspaces: ['folder-1'] });
 
-      mockFindFiles.mockReturnValue(Promise.resolve([{ fsPath: 'folder-1/package.json' }]));
-      const wsManager = new WorkspaceManager();
-      const uris = await wsManager.getFoldersFromFilesystem();
+          mockFindFiles.mockReturnValue(Promise.resolve([{ fsPath: 'folder-1/package.json' }]));
+          const wsManager = new WorkspaceManager();
+          const uris = await wsManager.getFoldersFromFilesystem(workspace);
 
-      expect(vscode.workspace.findFiles).toHaveBeenCalledTimes(1);
-      expect(vscode.RelativePattern).toHaveBeenCalledWith(
-        expect.anything(),
-        'folder-1/package.json'
-      );
-      expect(uris).toHaveLength(1);
-      expect(uris.map((uri) => uri.fsPath)).toEqual(['folder-1']);
+          expect(vscode.workspace.findFiles).toHaveBeenCalledTimes(1);
+          expect(vscode.RelativePattern).toHaveBeenCalledWith(
+            rootWorkspace,
+            'folder-1/**/package.json'
+          );
+          expect(uris).toHaveLength(1);
+          expect(uris.map((uri) => uri.fsPath)).toEqual(['folder-1']);
+        });
+        it('from directory contains package.json', async () => {
+          expect.hasAssertions();
+
+          // package.json did not contain workspaces
+          (getPackageJson as jest.Mocked<any>).mockReturnValue({});
+
+          mockFindFiles.mockReturnValue(
+            Promise.resolve([
+              { fsPath: path.join('folder-1', 'package.json') },
+              { fsPath: path.join('folder-2', 'package.json') },
+            ])
+          );
+          const wsManager = new WorkspaceManager();
+          const uris = await wsManager.getFoldersFromFilesystem(workspace);
+
+          expect(vscode.workspace.findFiles).toHaveBeenCalledTimes(1);
+          expect(vscode.RelativePattern).toHaveBeenCalledWith(rootWorkspace, '**/package.json');
+
+          expect(uris).toHaveLength(2);
+          expect(uris.map((uri) => uri.fsPath)).toEqual(['folder-1', 'folder-2']);
+        });
+      });
     });
-    it('from directory contains package.json', async () => {
-      expect.hasAssertions();
-
-      // package.json did not contain workspaces
-      (getPackageJson as jest.Mocked<any>).mockReturnValue({});
-
-      mockFindFiles.mockReturnValue(
-        Promise.resolve([
-          { fsPath: path.join('folder-1', 'package.json') },
-          { fsPath: path.join('folder-2', 'package.json') },
-        ])
-      );
-      const wsManager = new WorkspaceManager();
-      const uris = await wsManager.getFoldersFromFilesystem();
-
-      expect(vscode.workspace.findFiles).toHaveBeenCalledTimes(1);
-      expect(vscode.workspace.findFiles).toHaveBeenCalledWith(
-        expect.stringContaining('package.json'),
-        expect.anything()
-      );
-      expect(uris).toHaveLength(2);
-      expect(uris.map((uri) => uri.fsPath)).toEqual(['folder-1', 'folder-2']);
-    });
-    it('if no folder is found, throw exception', async () => {
+    it('if no folder is found, returns empyt list', async () => {
       (vscode.workspace as any).workspaceFolders = [];
       mockFindFiles.mockReturnValue(Promise.resolve([]));
       const wsManager = new WorkspaceManager();
-      await expect(wsManager.getFoldersFromFilesystem()).rejects.toThrow();
+      await expect(wsManager.getFoldersFromFilesystem()).resolves.toEqual([]);
     });
   });
   describe('can validate jest eligible workspaces', () => {
