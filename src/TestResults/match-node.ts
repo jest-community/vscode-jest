@@ -8,7 +8,7 @@ type IsGroupType = 'yes' | 'no' | 'maybe';
 
 const IsMatchedEvents = ['match-by-context', 'match-by-name', 'match-by-location'] as const;
 
-export type IsMatchedEvent = typeof IsMatchedEvents[number];
+export type IsMatchedEvent = (typeof IsMatchedEvents)[number];
 
 export type MatchEvent =
   | IsMatchedEvent

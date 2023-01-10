@@ -114,7 +114,7 @@ export class TestSuiteRecord implements TestSuiteUpdatable {
       }
     }
 
-    return this._testBlocks;
+    return this._testBlocks ?? 'failed';
   }
 
   public get assertionContainer(): ContainerNode<TestAssertionStatus> | undefined {
