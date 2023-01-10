@@ -161,6 +161,7 @@ describe('getExtensionResourceSettings()', () => {
       testExplorer: {},
       monitorLongRun: 60000,
       shell: mockShell,
+      autoRevealOutput: 'on-run',
     });
   });
 
