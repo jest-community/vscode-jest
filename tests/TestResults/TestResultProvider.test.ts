@@ -35,7 +35,10 @@ jest.mock('path', () => {
 });
 
 import * as vscode from 'vscode';
-import { TestResultProvider } from '../../src/TestResults/TestResultProvider';
+import {
+  TestResultProvider,
+  TestResultProviderOptions,
+} from '../../src/TestResults/TestResultProvider';
 import { TestReconciliationState } from '../../src/TestResults';
 import * as helper from '../test-helper';
 import { ItBlock, TestAssertionStatus, TestReconcilationState } from 'jest-editor-support';
@@ -97,7 +100,10 @@ const makeData = (
 
 const eventsMock: any = mockJestExtEvents();
 
-const newProviderWithData = (testData: TestData[], verbose?: boolean): TestResultProvider => {
+const newProviderWithData = (
+  testData: TestData[],
+  options?: TestResultProviderOptions
+): TestResultProvider => {
   mockParse.mockImplementation((file) => {
     const data = testData.find((data) => data.file === file);
     if (data) {
@@ -120,7 +126,7 @@ const newProviderWithData = (testData: TestData[], verbose?: boolean): TestResul
       assertions: data.assertions,
     }))
   );
-  const sut = new TestResultProvider(eventsMock, verbose);
+  const sut = new TestResultProvider(eventsMock, options);
   // warn up cache
   sut.updateTestResults({} as any, {} as any);
   return sut;
@@ -408,7 +414,7 @@ describe('TestResultProvider', () => {
           helper.makeAssertion(testBlock.name, TestReconciliationState.KnownFail, [], [1, 12]),
         ];
         const sut = newProviderWithData([makeData([testBlock], assertions, filePath)]);
-        sut.verbose = true;
+        sut.options = { verbose: true };
         const actual = sut.getResults(filePath);
         expect(actual).toHaveLength(1);
         expect(actual[0].status).toBe(TestReconciliationState.KnownFail);
@@ -629,12 +635,14 @@ describe('TestResultProvider', () => {
         }
       );
       it('parse error will output log only in verbose mode', () => {
-        let sut = newProviderWithData([makeData(itBlocks, assertions, 'whatever')], false);
+        let sut = newProviderWithData([makeData(itBlocks, assertions, 'whatever')], {
+          verbose: false,
+        });
         sut.getResults('whatever');
         forceParseError();
         expect(console.log).not.toHaveBeenCalled();
 
-        sut = newProviderWithData([makeData(itBlocks, assertions, 'whatever')], true);
+        sut = newProviderWithData([makeData(itBlocks, assertions, 'whatever')], { verbose: true });
         forceParseError();
         sut.getResults('whatever');
         expect(console.log).toHaveBeenCalled();
@@ -1010,6 +1018,32 @@ describe('TestResultProvider', () => {
         'whatever',
         'full test name'
       );
+    });
+  });
+  describe('allow parserOptions', () => {
+    const testPath = 'whatever.ts';
+    let sut, parserOptions;
+    beforeEach(() => {
+      const [itBlocks, assertions] = createDataSet();
+      parserOptions = { plugins: { decorators: 'legacy' } };
+      sut = newProviderWithData([makeData(itBlocks, assertions, testPath)], {
+        parserOptions: { plugins: { decorators: 'legacy' } },
+      });
+    });
+    it('always parse with the latest option', () => {
+      sut.getResults(testPath);
+      expect(mockParse).toHaveBeenCalledWith(testPath, undefined, parserOptions);
+      expect(mockSnapshotProvider.parse).toHaveBeenCalledWith(testPath, { parserOptions });
+
+      const newParserOptions = { plugins: { decorators: { allowCallParenthesized: true } } };
+      sut.options = {
+        parserOptions: newParserOptions,
+      };
+      sut.getResults(testPath);
+      expect(mockParse).toHaveBeenCalledWith(testPath, undefined, newParserOptions);
+      expect(mockSnapshotProvider.parse).toHaveBeenCalledWith(testPath, {
+        parserOptions: newParserOptions,
+      });
     });
   });
 });

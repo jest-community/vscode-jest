@@ -168,6 +168,12 @@
             "disable auto show test output"
           ],
           "scope": "resource"
+        },
+        "jest.parserPluginOptions": {
+          "markdownDescription": "Configure babel parser plugins. See valid [format](https://github.com/jest-community/vscode-jest/blob/master/README.md#parserpluginoptions)",
+          "type": "object",
+          "default": null,
+          "scope": "resource"
         }
       }
     },

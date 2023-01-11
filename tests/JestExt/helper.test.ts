@@ -162,6 +162,7 @@ describe('getExtensionResourceSettings()', () => {
       monitorLongRun: 60000,
       shell: mockShell,
       autoRevealOutput: 'on-run',
+      parserPluginOptions: null,
     });
   });
 

@@ -1,5 +1,5 @@
 import { CoverageColors } from '../Coverage/CoverageOverlay';
-import { ProjectWorkspace } from 'jest-editor-support';
+import { JESParserPluginOptions, ProjectWorkspace } from 'jest-editor-support';
 import { AutoRun } from '../JestExt/auto-run';
 import { RunShell } from '../JestExt/run-shell';
 
@@ -50,6 +50,7 @@ export interface PluginResourceSettings {
   shell: RunShell;
   monitorLongRun?: MonitorLongRun;
   autoRevealOutput: AutoRevealOutputType;
+  parserPluginOptions?: JESParserPluginOptions;
 }
 
 export interface PluginWindowSettings {
