@@ -163,6 +163,7 @@ describe('test-item-data', () => {
     ];
     context = new JestTestProviderContext(mockExtExplorerContext('ws-1'), controllerMock, profiles);
     context.output.write = jest.fn((t) => t);
+    context.output.show = jest.fn();
     [jestRun, runEndSpy, runMock] = createTestRun();
 
     vscode.Uri.joinPath = jest
@@ -170,6 +171,8 @@ describe('test-item-data', () => {
       .mockImplementation((uri, p) => ({ fsPath: `${uri.fsPath}/${p}` }));
     vscode.Uri.file = jest.fn().mockImplementation((f) => ({ fsPath: f }));
     (tiContextManager.setItemContext as jest.Mocked<any>).mockClear();
+
+    (vscode.Location as jest.Mocked<any>).mockReturnValue({});
   });
   describe('discover children', () => {
     describe('WorkspaceRoot', () => {
@@ -780,8 +783,8 @@ describe('test-item-data', () => {
 
           const dItem = getChildItem(wsRoot.item, 'a.test.ts');
           expect(dItem.children.size).toBe(2);
-          const tItem = getChildItem(dItem, 'test-a');
-          expect(runMock.passed).toHaveBeenCalledWith(tItem, undefined);
+          const aItem = getChildItem(dItem, 'test-a');
+          expect(runMock.passed).toHaveBeenCalledWith(aItem, undefined);
           expect(runMock.end).toHaveBeenCalledTimes(1);
         });
         it('for exporer-triggered runs, only the resolve function will be invoked', () => {
@@ -845,11 +848,16 @@ describe('test-item-data', () => {
 
             const dItem = getChildItem(wsRoot.item, 'a.test.ts');
             const tItem = getChildItem(dItem, 'test-b');
-            expect(runMock.failed).toHaveBeenCalledWith(tItem, expect.anything(), undefined);
             if (hasLocation) {
               expect(vscode.TestMessage).toHaveBeenCalled();
+              expect(runMock.failed).toHaveBeenCalledWith(
+                tItem,
+                expect.objectContaining({ location: {} }),
+                undefined
+              );
             } else {
               expect(vscode.TestMessage).not.toHaveBeenCalled();
+              expect(runMock.failed).toHaveBeenCalledWith(tItem, [], undefined);
             }
           }
         );
@@ -1347,6 +1355,12 @@ describe('test-item-data', () => {
             expect(runMock2.errored).toHaveBeenCalled();
             expect(runMock2.end).toHaveBeenCalled();
           });
+          it('can report end error', () => {
+            const process = { id: 'whatever', request: { type: 'all-tests' } };
+            env.onRunEvent({ type: 'start', process });
+            env.onRunEvent({ type: 'end', process, error: 'whatever' });
+            expect(context.output.write).toHaveBeenCalledWith('whatever', 'error');
+          });
           it('if WorkspaceRoot is disposed before process end, all pending run will be closed', () => {
             const process = { id: 'whatever', request: { type: 'all-tests' } };
             env.onRunEvent({ type: 'start', process });
@@ -1562,6 +1576,10 @@ describe('test-item-data', () => {
     let wsRoot, folder, doc, testItem;
     beforeEach(() => {
       ({ wsRoot, folder, doc, testItem } = createAllTestItems());
+    });
+    it('can reveal output', () => {
+      wsRoot.runItemCommand(ItemCommand.revealOutput);
+      expect(context.ext.output.show).toHaveBeenCalledTimes(1);
     });
     it('can update-snapshot for every TestItemData', () => {
       const createTestRunSpy = jest.spyOn(context, 'createTestRun');

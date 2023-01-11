@@ -97,6 +97,9 @@ abstract class TestItemDataBase implements TestItemData, JestRunable, WithUri {
       case ItemCommand.viewSnapshot: {
         return this.viewSnapshot().catch((e) => this.log('error', e));
       }
+      case ItemCommand.revealOutput: {
+        return this.context.output.show();
+      }
     }
   }
   viewSnapshot(): Promise<void> {
@@ -422,6 +425,9 @@ export class WorkspaceRoot extends TestItemDataBase {
           break;
         }
         case 'end': {
+          if (event.error) {
+            this.writer(run).write(event.error, 'error');
+          }
           this.runLog('finished');
           run?.end();
           break;

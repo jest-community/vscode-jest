@@ -34,4 +34,5 @@ export enum TestTagId {
 export enum ItemCommand {
   updateSnapshot = 'update-snapshot',
   viewSnapshot = 'view-snapshot',
+  revealOutput = 'reveal-output',
 }

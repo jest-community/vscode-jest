@@ -87,6 +87,7 @@ const ViewColumn = {
 
 const TestMessage = jest.fn();
 const TestRunRequest = jest.fn();
+const ThemeColor = jest.fn();
 
 const EventEmitter = jest.fn().mockImplementation(() => {
   return {
@@ -100,6 +101,7 @@ const QuickPickItemKind = {
 };
 
 export = {
+  ThemeColor,
   CodeLens,
   languages,
   StatusBarAlignment,

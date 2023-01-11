@@ -8,7 +8,7 @@ export enum StatusType {
   summary,
 }
 
-export type ProcessState = 'running' | 'failed' | 'success' | 'stopped' | 'initial' | 'done';
+export type ProcessState = 'running' | 'success' | 'exec-error' | 'stopped' | 'initial' | 'done';
 export type AutoRunMode =
   | 'auto-run-watch'
   | 'auto-run-on-save'
@@ -18,7 +18,7 @@ export type Mode = AutoRunMode | 'coverage';
 
 type SummaryState = 'summary-warning' | 'summary-pass' | 'stats-not-sync';
 
-export type SBTestStats = TestStats & { isDirty?: boolean };
+export type SBTestStats = TestStats & { isDirty?: boolean; state?: ProcessState };
 export interface ExtensionStatus {
   mode?: Mode[];
   stats?: SBTestStats;
@@ -35,39 +35,22 @@ export type StatusBarUpdate = Partial<ExtensionStatus>;
 export interface StatusBarUpdateRequest {
   update: (status: StatusBarUpdate) => void;
 }
-interface SpinnableStatusBarItem
-  extends Pick<vscode.StatusBarItem, 'command' | 'text' | 'tooltip'> {
+interface TypedStatusBarItem {
+  actual: vscode.StatusBarItem;
   readonly type: StatusType;
-  show(): void;
-  hide(): void;
 }
 
-const createStatusBarItem = (type: StatusType, priority: number): SpinnableStatusBarItem => {
-  const item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, priority);
+type BGColor = 'error' | 'warning';
+
+interface StateInfo {
+  label: string;
+  backgroundColor?: BGColor;
+}
+
+const createStatusBarItem = (type: StatusType, priority: number): TypedStatusBarItem => {
   return {
     type,
-    show: () => item.show(),
-    hide: () => item.hide(),
-
-    get command() {
-      return item.command;
-    },
-    get text() {
-      return item.text;
-    },
-    get tooltip() {
-      return item.tooltip;
-    },
-
-    set command(_command) {
-      item.command = _command;
-    },
-    set text(_text: string) {
-      item.text = _text;
-    },
-    set tooltip(_tooltip: string | vscode.MarkdownString | undefined) {
-      item.tooltip = _tooltip;
-    },
+    actual: vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, priority),
   };
 };
 
@@ -75,21 +58,23 @@ const createStatusBarItem = (type: StatusType, priority: number): SpinnableStatu
 export class StatusBar {
   private activeStatusItem = createStatusBarItem(StatusType.active, 2);
   private summaryStatusItem = createStatusBarItem(StatusType.summary, 1);
+  private warningColor = new vscode.ThemeColor('statusBarItem.warningBackground');
+  private errorColor = new vscode.ThemeColor('statusBarItem.errorBackground');
 
   private sourceStatusMap = new Map<string, SourceStatus>();
   private _activeFolder?: string;
   private summaryOutput?: vscode.OutputChannel;
 
   constructor() {
-    this.summaryStatusItem.tooltip = 'Jest status summary of the workspace';
-    this.activeStatusItem.tooltip = 'Jest status of the active folder';
+    this.summaryStatusItem.actual.tooltip = 'Jest status summary of the workspace';
+    this.activeStatusItem.actual.tooltip = 'Jest status of the active folder';
   }
 
   register(getExtension: (name: string) => JestExt | undefined): vscode.Disposable[] {
     const showSummaryOutput = `${extensionName}.show-summary-output`;
     const showActiveOutput = `${extensionName}.show-active-output`;
-    this.summaryStatusItem.command = showSummaryOutput;
-    this.activeStatusItem.command = showActiveOutput;
+    this.summaryStatusItem.actual.command = showSummaryOutput;
+    this.activeStatusItem.actual.command = showActiveOutput;
 
     return [
       vscode.commands.registerCommand(showSummaryOutput, () => {
@@ -162,9 +147,10 @@ export class StatusBar {
 
     if (ss) {
       const tooltip = this.getModes(ss.status.mode, false);
-      this.render(this.buildSourceStatusString(ss), tooltip, this.activeStatusItem);
+      const stateInfo = this.buildSourceStatusString(ss);
+      this.render(stateInfo, tooltip, this.activeStatusItem);
     } else {
-      this.activeStatusItem.hide();
+      this.activeStatusItem.actual.hide();
     }
   }
 
@@ -182,15 +168,25 @@ export class StatusBar {
       this.updateSummaryOutput();
 
       const summaryStats: SBTestStats = { fail: 0, success: 0, unknown: 0 };
-      for (const r of this.sourceStatusMap.values()) {
-        this.updateSummaryStats(r, summaryStats);
+      let backgroundColor: BGColor | undefined;
+      for (const ss of this.sourceStatusMap.values()) {
+        this.updateSummaryStats(ss, summaryStats);
+        if (!backgroundColor) {
+          const color = ss.status.state && this.getStateInfo(ss.status.state).backgroundColor;
+          if (color) {
+            backgroundColor = 'warning';
+          }
+        }
       }
-
       const tooltip = this.buildStatsString(summaryStats, false);
-      this.render(this.buildStatsString(summaryStats), tooltip, this.summaryStatusItem);
+      this.render(
+        { label: this.buildStatsString(summaryStats), backgroundColor },
+        tooltip,
+        this.summaryStatusItem
+      );
       return;
     }
-    this.summaryStatusItem.hide();
+    this.summaryStatusItem.actual.hide();
   }
   private buildStatsString(stats: SBTestStats, showIcon = true, alwaysShowDetails = false): string {
     const summary: SummaryState = stats.isDirty
@@ -211,29 +207,42 @@ export class StatusBar {
     return output.filter((s) => s).join(' | ');
   }
 
-  private buildSourceStatusString(ss: SourceStatus): string {
+  private buildSourceStatusString(ss: SourceStatus): StateInfo {
+    const stateInfo = ss.status.state && this.getStateInfo(ss.status.state);
+
     const parts: string[] = [
-      ss.status.state ? this.getMessageByState(ss.status.state) : '',
+      stateInfo?.label ?? '',
       ss.status.mode ? this.getModes(ss.status.mode) : '',
     ];
-    return parts.filter((s) => s.length > 0).join(' | ');
+    return {
+      label: parts.filter((s) => s.length > 0).join(' | '),
+      backgroundColor: stateInfo?.backgroundColor,
+    };
   }
 
-  private render(text: string, tooltip: string, statusBarItem: SpinnableStatusBarItem) {
+  private toThemeColor(color?: BGColor): vscode.ThemeColor | undefined {
+    switch (color) {
+      case 'error':
+        return this.errorColor;
+      case 'warning':
+        return this.warningColor;
+    }
+  }
+  private render(stateInfo: StateInfo, tooltip: string, statusBarItem: TypedStatusBarItem) {
     switch (statusBarItem.type) {
       case StatusType.active: {
-        statusBarItem.text = `Jest: ${text}`;
-        statusBarItem.tooltip = `'${this.activeFolder}' Jest: ${tooltip}`;
+        statusBarItem.actual.text = `Jest: ${stateInfo.label}`;
+        statusBarItem.actual.tooltip = `'${this.activeFolder}' Jest: ${tooltip}`;
+        statusBarItem.actual.backgroundColor = this.toThemeColor(stateInfo.backgroundColor);
         break;
       }
       case StatusType.summary:
-        statusBarItem.text = `Jest-WS: ${text}`;
-        statusBarItem.tooltip = `Workspace(s) stats: ${tooltip}`;
+        statusBarItem.actual.text = `Jest-WS: ${stateInfo.label}`;
+        statusBarItem.actual.tooltip = `Workspace(s) stats: ${tooltip}`;
+        statusBarItem.actual.backgroundColor = this.toThemeColor(stateInfo.backgroundColor);
         break;
-      default:
-        throw new Error(`unexpected statusType: ${statusBarItem.type}`);
     }
-    statusBarItem.show();
+    statusBarItem.actual.show();
   }
 
   private updateSummaryOutput() {
@@ -259,35 +268,43 @@ export class StatusBar {
     return this.sourceStatusMap.size > 0;
   }
 
-  private getMessageByState(
+  private getStateInfo(
     state: ProcessState | TestStatsCategory | SummaryState,
     showIcon = true
-  ): string {
+  ): StateInfo {
     switch (state) {
       case 'running':
-        return showIcon ? '$(sync~spin)' : state;
+        return { label: showIcon ? '$(sync~spin)' : state };
       case 'fail':
-        return showIcon ? '$(error)' : state;
+        return { label: showIcon ? '$(error)' : state };
       case 'summary-warning':
-        return showIcon ? '' : 'warning';
-      case 'failed':
-        return showIcon ? '$(alert)' : state;
+        return { label: showIcon ? '' : 'warning' };
+      case 'exec-error':
+        return { label: showIcon ? '$(alert)' : state, backgroundColor: 'error' };
+      case 'stopped':
+        return { label: state, backgroundColor: 'error' };
       case 'success':
-        return showIcon ? '$(pass)' : state;
+        return { label: showIcon ? '$(pass)' : state };
       case 'initial':
-        return showIcon ? '...' : state;
+        return { label: showIcon ? '...' : state };
       case 'unknown':
-        return showIcon ? '$(question)' : state;
+        return { label: showIcon ? '$(question)' : state };
       case 'done':
-        return showIcon ? '' : 'idle';
+        return { label: showIcon ? '' : 'idle' };
       case 'summary-pass':
-        return showIcon ? '$(check)' : 'pass';
+        return { label: showIcon ? '$(check)' : 'pass' };
       case 'stats-not-sync':
-        return showIcon ? '$(sync-ignored)' : state;
+        return { label: showIcon ? '$(sync-ignored)' : state, backgroundColor: 'warning' };
 
       default:
-        return state;
+        return { label: state };
     }
+  }
+  private getMessageByState(
+    state: ProcessState | TestStatsCategory | SummaryState,
+    showIcon: boolean
+  ): string {
+    return this.getStateInfo(state, showIcon).label;
   }
   private getModes(modes?: Mode[], showIcon = true): string {
     if (!modes || modes.length <= 0) {
@@ -308,10 +325,6 @@ export class StatusBar {
           return '$(save)';
         case 'auto-run-off':
           return '$(wrench)';
-
-        default:
-          console.error(`unrecognized mode: ${m}`);
-          return '';
       }
     });
     return modesStrings.join(showIcon ? ' ' : ', ');

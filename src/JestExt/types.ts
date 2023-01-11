@@ -37,7 +37,7 @@ export type JestRunEvent = RunEventBase &
     | { type: 'data'; text: string; raw?: string; newLine?: boolean; isError?: boolean }
     | { type: 'process-start' }
     | { type: 'start' }
-    | { type: 'end' }
+    | { type: 'end'; error?: string }
     | { type: 'exit'; error?: string; code?: number }
     | { type: 'long-run'; threshold: number; numTotalTestSuites?: number }
   );

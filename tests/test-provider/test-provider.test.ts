@@ -590,6 +590,13 @@ describe('JestTestProvider', () => {
           itemIds: [workspaceRootMock.item.id],
         })
       );
+      expect(tiContextManager.setItemContext).toHaveBeenCalledWith(
+        expect.objectContaining({
+          workspace: extExplorerContextMock.workspace,
+          key: 'jest.workspaceRoot',
+          itemIds: [workspaceRootMock.item.id],
+        })
+      );
     });
   });
   it('supports runItemCommand', () => {

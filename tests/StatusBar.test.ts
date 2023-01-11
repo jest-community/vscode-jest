@@ -15,7 +15,7 @@ import * as vscode from 'vscode';
 import { StatusBar, StatusType, ProcessState } from '../src/StatusBar';
 import { TestStats } from '../src/types';
 
-const mockSummaryChannel = { append: jest.fn(), clear: jest.fn() } as any;
+const mockSummaryChannel = { append: jest.fn(), clear: jest.fn(), show: jest.fn() } as any;
 const makeStats = (success: number, fail: number, unknown: number): TestStats => ({
   success,
   fail,
@@ -52,6 +52,9 @@ describe('StatusBar', () => {
       }
       throw new Error(`unexpected createStatusBarItem priority ${priority}`);
     });
+    (vscode.ThemeColor as jest.Mocked<any>).mockImplementation((id) => ({
+      id,
+    }));
 
     statusBar = new StatusBar();
     updateSpy = jest.spyOn(statusBar as any, 'handleUpdate');
@@ -69,6 +72,29 @@ describe('StatusBar', () => {
       const calls = registerCommand.mock.calls;
       expect(calls.some((c) => c[0].includes('show-summary-output'))).toBe(true);
       expect(calls.some((c) => c[0].includes('show-active-output'))).toBe(true);
+    });
+    it('each command will show corresponding output', () => {
+      const ext: any = { showOutput: jest.fn() };
+      statusBar.register(() => ext);
+
+      const calls = (vscode.commands.registerCommand as jest.Mock<any>).mock.calls;
+
+      setupWorkspace('testSource1');
+      statusBar.bind('testSource1').update({ state: 'initial' });
+
+      let found = 0;
+      for (const call of calls) {
+        //invoke the command
+        call[1]();
+        if (call[0].includes('show-summary-output')) {
+          expect(mockSummaryChannel.show).toHaveBeenCalled();
+          found |= 0x1;
+        } else if (call[0].includes('show-active-output')) {
+          expect(ext.showOutput).toHaveBeenCalled();
+          found |= 0x2;
+        }
+      }
+      expect(found).toEqual(3);
     });
   });
 
@@ -90,21 +116,33 @@ describe('StatusBar', () => {
       });
       describe('will update both active and summary items', () => {
         const alertStats = { success: 1, fail: 2, unknown: 3 };
+        const alertSummary = '$(pass) 1 $(error) 2 $(question) 3';
         const passStats = { success: 10, fail: 0, unknown: 0 };
         const emptyStatsString = `$(pass) 0 $(error) 0 $(question) 0`;
 
         it.each`
-          seq  | update                                          | active                    | summary
-          ${1} | ${{ state: 'running' }}                         | ${'$(sync~spin)'}         | ${emptyStatsString}
-          ${2} | ${{ state: 'done' }}                            | ${''}                     | ${emptyStatsString}
-          ${3} | ${{ mode: ['auto-run-watch', 'coverage'] }}     | ${'$(eye) $(color-mode)'} | ${emptyStatsString}
-          ${4} | ${{ stats: alertStats }}                        | ${''}                     | ${'$(pass) 1 $(error) 2 $(question) 3'}
-          ${5} | ${{ mode: ['auto-run-off'], stats: passStats }} | ${'$(wrench)'}            | ${'$(check)'}
-        `('update: $update', ({ update, active, summary }) => {
+          seq  | update                                                    | active                    | summary             | backgroundColor
+          ${1} | ${{ state: 'running' }}                                   | ${'$(sync~spin)'}         | ${emptyStatsString} | ${undefined}
+          ${2} | ${{ state: 'done' }}                                      | ${''}                     | ${emptyStatsString} | ${undefined}
+          ${3} | ${{ mode: ['auto-run-watch', 'coverage'] }}               | ${'$(eye) $(color-mode)'} | ${emptyStatsString} | ${undefined}
+          ${4} | ${{ stats: alertStats }}                                  | ${''}                     | ${alertSummary}     | ${undefined}
+          ${5} | ${{ mode: ['auto-run-off'], stats: passStats }}           | ${'$(wrench)'}            | ${'$(check)'}       | ${undefined}
+          ${6} | ${{ state: 'exec-error' }}                                | ${'alert'}                | ${emptyStatsString} | ${'statusBarItem.errorBackground'}
+          ${7} | ${{ state: 'initial' }}                                   | ${'...'}                  | ${emptyStatsString} | ${undefined}
+          ${8} | ${{ state: 'stopped' }}                                   | ${'stopped'}              | ${emptyStatsString} | ${'statusBarItem.errorBackground'}
+          ${9} | ${{ mode: ['auto-run-on-save-test'], stats: alertStats }} | ${'$(save)'}              | ${alertSummary}     | ${undefined}
+        `('update: $update', ({ update, active, summary, backgroundColor }) => {
           statusBar.bind('testSource1').update(update);
           expect(renderSpy).toHaveBeenCalledTimes(2);
           expect(mockActiveSBItem.text).toContain(active);
           expect(mockSummarySBItem.text).toContain(summary);
+          if (backgroundColor) {
+            expect(mockActiveSBItem.backgroundColor.id).toEqual(
+              expect.stringContaining(backgroundColor)
+            );
+          } else {
+            expect(mockActiveSBItem.backgroundColor).toBeUndefined();
+          }
         });
         it.each`
           stats                                                 | summary

@@ -340,17 +340,8 @@ export class RunTestListener extends AbstractProcessListener {
       this.runEnded();
 
       // possible no output will be generated
-      const matched = output.match(RUN_EXEC_ERROR);
-      if (matched) {
-        this.onRunEvent.fire({
-          type: 'data',
-          process,
-          text: matched[1],
-          newLine: true,
-          isError: true,
-        });
-      }
-      this.onRunEvent.fire({ type: 'end', process });
+      const error = output.match(RUN_EXEC_ERROR)?.[1];
+      this.onRunEvent.fire({ type: 'end', process, error });
     }
   }
   protected onExecutableOutput(process: JestProcess, output: string, raw: string): void {

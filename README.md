@@ -212,7 +212,7 @@ shows active workspace has an execution error.
 ### How to use the Test Explorer?
 Users with `vscode` v1.59 and `vscode-jest` v4.1 and up will start to see tests appearing in the test explorer automatically. Test explorer provides a "test-centric" view, allows users to run/debug tests directly from the explorer, and provides a native terminal output experience (with colors!):
 
-<img src="images/testExplorer.png" alt="testExplorer.png" width="800"/>
+<img src="images/testExplorer-5.1.1.png" alt="testExplorer.png" width="800"/>
 
 <a id='how-to-toggle-auto-run'>**How to toggle autoRun for the workspace?**</a>
 - In TestExplorer, click on the root of the test tree, i.e. the one with the workspace name and the current autoRun mode. You will see a list of buttons to its right.

@@ -119,6 +119,41 @@ describe('TestItemContextManager', () => {
         );
       });
     });
+    describe('jest.workspaceRoot', () => {
+      it('update context with accumulated workspace root ids', () => {
+        const ws1: any = { name: 'ws1' };
+        const ws2: any = { name: 'ws2' };
+        const manager = new TestItemContextManager();
+        const context1: any = {
+          workspace: ws1,
+          key: 'jest.workspaceRoot',
+          itemIds: ['a'],
+        };
+        manager.setItemContext(context1);
+        expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+          'setContext',
+          'jest.workspaceRoot',
+          context1.itemIds
+        );
+
+        const context2 = { ...context1, workspace: ws2, itemIds: ['b'] };
+        manager.setItemContext(context2);
+        expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+          'setContext',
+          'jest.workspaceRoot',
+          [...context1.itemIds, ...context2.itemIds]
+        );
+
+        // can update
+        const context3 = { ...context1, itemIds: ['c'] };
+        manager.setItemContext(context3);
+        expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+          'setContext',
+          'jest.workspaceRoot',
+          [...context2.itemIds, ...context3.itemIds]
+        );
+      });
+    });
   });
   describe('can register item menu commands', () => {
     it('toggle-autoRun menu commands', () => {
@@ -241,6 +276,25 @@ describe('TestItemContextManager', () => {
           ItemCommand.updateSnapshot
         );
       });
+    });
+    it('reveal output commands', () => {
+      const manager = new TestItemContextManager();
+      manager.registerCommands();
+      const revealOutputCommand = (
+        vscode.commands.registerCommand as jest.Mocked<any>
+      ).mock.calls.find((call) => call[0] === `${extensionName}.test-item.reveal-output`)[1];
+
+      const testItem = { id: 'a', uri: {} };
+      const workspace: any = { name: 'ws-a' };
+      (vscode.workspace.getWorkspaceFolder as jest.Mocked<any>).mockReturnValue(workspace);
+      revealOutputCommand(testItem);
+      const extCmd = `${extensionName}.with-workspace.item-command`;
+      expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+        extCmd,
+        workspace,
+        testItem,
+        ItemCommand.revealOutput
+      );
     });
   });
 });
