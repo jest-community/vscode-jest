@@ -34,13 +34,13 @@ Release Notes
 
 
 ### Main Features
-#### 1. More control of test output terminal
+#### 1. Enhance control of test output terminal
 
-1. A new setting `jest.autoRevealOutput` to control when to reveal test output
+- A new setting `jest.autoRevealOutput` to control when to reveal test output
 
     For those who prefer different behavior of test output terminals, this is the setting for you. You can turn it off (`"off"`), set it to only reveal if there is critical error (`"on-exec-error"`), or by default when the tests are run (`"on-run"`).  See more details in [jest.autoRevealOutput](../README.md#autorevealoutput).
 
-2. The TestExplorer workspace items also get a new button to open the test output terminal on demand.
+- The TestExplorer workspace items also get a new button to open the test output terminal on demand.
 
     <img src="../images/release-notes-5.x-reveal-output-button.png" alt="snapshot-menu" width="500"/>
 
