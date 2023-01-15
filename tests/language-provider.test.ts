@@ -45,6 +45,7 @@ describe('LocalFileCompletionItemProvider', () => {
       ${'jest.requireActual'}        | ${true}
       ${'jest.requireMock'}          | ${true}
       ${'jest.createMockFromModule'} | ${true}
+      ${'jest.unstable_mockModule'}  | ${true}
       ${'jest.spyOn'}                | ${false}
       ${'jest.fn'}                   | ${false}
     `('for $jestMethod', async ({ jestMethod, isValid }) => {

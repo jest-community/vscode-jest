@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 
 const JestMockModuleApi =
-  /jest\.(mock|unmock|domock|dontmock|setmock|requireActual|requireMock|createMockFromModule|)\(['"](.*)/gi;
+  /jest\.(mock|unmock|domock|dontmock|setmock|requireActual|requireMock|createMockFromModule|unstable_mockModule)\(['"](.*)/gi;
 const ImportFileRegex = /^([^\\.].*)\.(json|jsx|tsx|mjs|cjs|js|ts)$/gi;
 
 const toCompletionItem = (
