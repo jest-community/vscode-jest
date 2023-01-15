@@ -1376,6 +1376,7 @@ describe('JestExt', () => {
             expect(messaging.systemErrorMessage).not.toHaveBeenCalled();
           } else {
             expect(messaging.systemErrorMessage).toHaveBeenCalled();
+            expect(sbUpdateMock).toHaveBeenCalledWith({ state: 'exec-error' });
           }
         }
       });

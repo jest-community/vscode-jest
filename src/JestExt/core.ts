@@ -533,6 +533,7 @@ export class JestExt {
       ...this.buildMessageActions([actionType, 'disable-folder', 'help'])
     );
     this.extContext.output.write(`Abort jest session: ${msg}`, 'error');
+    this.updateStatusBar({ state: 'exec-error' });
     return 'fail';
   }
   /* istanbul ignore next */

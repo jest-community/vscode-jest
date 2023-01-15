@@ -51,7 +51,7 @@ The jest statusBar are also updated to show different colors for execution error
 
   <img src="../images/status-bar-error.png" alt="snapshot-menu" width="500"/>
   
-([#985](https://github.com/jest-community/vscode-jest/pull/985) - @connectdotz)
+([#985](https://github.com/jest-community/vscode-jest/pull/985), [#991](https://github.com/jest-community/vscode-jest/pull/991) - @connectdotz)
 
 
 #### 3. More control on parser plugins (decorators)
