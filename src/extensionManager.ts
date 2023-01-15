@@ -463,7 +463,8 @@ export class ExtensionManager {
 
 const ReleaseNoteBase = 'https://github.com/jest-community/vscode-jest/blob/master/release-notes';
 const ReleaseNotes: Record<string, string> = {
-  '5.1.0': `${ReleaseNoteBase}/release-note-v5.1.md#v510`,
+  '5.2.0': `${ReleaseNoteBase}/release-note-v5.x.md#v520-pre-release`,
+  '5.1.0': `${ReleaseNoteBase}/release-note-v5.x.md#v510`,
   '5.0.4': `${ReleaseNoteBase}/release-note-v5.md#v50-pre-release-roll-up`,
   '5.0.3': `${ReleaseNoteBase}/release-note-v5.md#v50-pre-release-roll-up`,
   '5.0.2': `${ReleaseNoteBase}/release-note-v5.md#v50-pre-release-roll-up`,
