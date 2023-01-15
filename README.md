@@ -62,7 +62,8 @@ Content
     - [Debug Config](#debug-config)
       - [Debug Config v2](#debug-config-v2)
     - [monitorLongRun](#monitorlongrun)
-        - [autoRevealOutput](#autorevealoutput)
+    - [autoRevealOutput](#autorevealoutput)
+    - [parserPluginOptions](#parserpluginoptions)
   - [Commands](#commands)
   - [Menu](#menu)
   - [Troubleshooting](#troubleshooting)
@@ -256,6 +257,7 @@ Users can use the following settings to tailor the extension for their environme
 |[autoRun](#autorun)|Controls when and what tests should be run|undefined|`"jest.autoRun": "off"` or `"jest.autoRun": "watch"` or `"jest.autoRun": {"watch": false, "onSave":"test-only"}`|
 |[rootPath](#rootPath)|The path to your frontend src folder|""|`"jest.rootPath":"packages/app"` or `"jest.rootPath":"/apps/my-app"`|
 |[monitorLongRun](#monitorlongrun)| monitor long running tests based on given threshold in ms|60000|`"jest.monitorLongRun": 120000`|
+|[parserPluginOptions](#parserpluginoptions)|Configure babel parser plugins|null|`"jest.parserPluginOptions": {decorators: 'legacy'}`|
 |**Editor**|
 |[testExplorer](#testexplorer) |Configure jest test explorer|null|`{"showInlineError": "true"}`|
 |**Coverage**|
@@ -493,6 +495,7 @@ Currently supported variables:
   ``` 
   
 </details>
+
 ### monitorLongRun
 ```ts
 monitorLongRun = number | 'off'
@@ -503,13 +506,31 @@ monitorLongRun = number | 'off'
 
 Default is `"jest.monitorLongRun":60000` (1 minute)
 
-##### autoRevealOutput
+### autoRevealOutput
 ```ts
 autoRevealOutput = "on-run" | "on-exec-error" | "off"
 ```
 - `on-run`: reveal test run output when test run started.
 - `on-exec-error`: reveal test run output only when execution error (note, not test error) occurred.
 - `off`: no auto reveal test output. Note this could mask critical error, check status bar status for detail.
+
+### parserPluginOptions
+
+```ts
+parserPluginOptions = { decorators?: 
+  | 'legacy' 
+  | {
+      decoratorsBeforeExport?: boolean;
+      allowCallParenthesized?: boolean;
+    }
+  }
+```
+This extension uses babel to parse the test files. For decorators [plugin options](https://babeljs.io/docs/en/babel-parser#plugins-options), it uses  `'decorators', {decoratorsBeforeExport: true}` by default, which can be customized with this setting. Examples:
+```json
+"jest.parserPluginOptions": {"decorators": "legacy"}
+
+"jest.parserPluginOptions": {"decorators": {"decoratorsBeforeExport": false}}
+```
 
 ## Commands
 
