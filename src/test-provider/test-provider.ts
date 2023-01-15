@@ -138,7 +138,7 @@ export class JestTestProvider {
     cancelToken: vscode.CancellationToken
   ): Promise<void> => {
     if (!request.profile) {
-      const message = 'not supporting runRequest without profile'
+      const message = 'not supporting runRequest without profile';
       this.log('error', message, request);
       return Promise.reject(message);
     }
