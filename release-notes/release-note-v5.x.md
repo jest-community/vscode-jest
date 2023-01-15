@@ -5,7 +5,7 @@ Release Notes
 - [Release Notes](#release-notes)
 - [v5.2.0 (pre-release)](#v520-pre-release)
   - [Main Features](#main-features)
-    - [1. More control of test output terminal](#1-more-control-of-test-output-terminal)
+    - [1. Enhance control of test output terminal](#1-enhance-control-of-test-output-terminal)
     - [2. Status Bar are colorized for execution error and warning status](#2-status-bar-are-colorized-for-execution-error-and-warning-status)
     - [3. More control on parser plugins (decorators)](#3-more-control-on-parser-plugins-decorators)
   - [Fixes](#fixes)
