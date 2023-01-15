@@ -47,6 +47,7 @@ import { RunShell } from '../../src/JestExt/run-shell';
 import * as errors from '../../src/errors';
 import { ItemCommand } from '../../src/test-provider/types';
 import { WorkspaceManager } from '../../src/workspace-manager';
+import { TestResultProvider } from '../../src/TestResults';
 
 /* eslint jest/expect-expect: ["error", { "assertFunctionNames": ["expect", "expectItTakesNoAction"] }] */
 const mockHelpers = helper as jest.Mocked<any>;
@@ -668,8 +669,11 @@ describe('JestExt', () => {
   });
 
   describe('triggerUpdateActiveEditor()', () => {
+    beforeEach(() => {
+      (vscode.workspace.getWorkspaceFolder as jest.Mocked<any>).mockReturnValue(workspaceFolder);
+    });
     it('should update the coverage overlay in visible editors', () => {
-      const editor: any = {};
+      const editor: any = { document: { uri: 'whatever' } };
 
       const sut = newJestExt();
       sut.triggerUpdateActiveEditor(editor);
@@ -758,11 +762,7 @@ describe('JestExt', () => {
           expect(updateCurrentDiagnostics).toHaveBeenCalled();
         }
       });
-      it('if editor has no document', () => {
-        const editor = {};
-        sut.triggerUpdateActiveEditor(editor);
-        expect(updateCurrentDiagnostics).not.toHaveBeenCalled();
-      });
+
       it.each`
         isTestFile   | shouldUpdate
         ${'yes'}     | ${true}
@@ -789,6 +789,13 @@ describe('JestExt', () => {
           }
         }
       );
+    });
+    it('only activate whe editor is under the same workspace', () => {
+      const editor: any = { document: { uri: 'whatever' } };
+      (vscode.workspace.getWorkspaceFolder as jest.Mocked<any>).mockReturnValue({});
+      const sut = newJestExt();
+      sut.triggerUpdateActiveEditor(editor);
+      expect(updateCurrentDiagnostics).not.toHaveBeenCalled();
     });
   });
 
@@ -1432,6 +1439,39 @@ describe('JestExt', () => {
       sut.triggerUpdateSettings({ autoRevealOutput: 'off' } as any);
       expect(mockOutputTerminal.revealOnError).toEqual(false);
       expect(mockOutputTerminal.close).toHaveBeenCalled();
+    });
+  });
+  describe('parserPluginOptions', () => {
+    it('pass to TestResultProvider on creation', () => {
+      newJestExt();
+      expect(TestResultProvider).toHaveBeenCalledWith(expect.anything(), {
+        verbose: false,
+        parserOptions: undefined,
+      });
+      const parserPluginOptions = { decorators: { decoratorsBeforeExport: false } };
+      const settings: any = {
+        parserPluginOptions,
+      };
+      newJestExt({ settings });
+      expect(TestResultProvider).toHaveBeenCalledWith(expect.anything(), {
+        verbose: false,
+        parserOptions: { plugins: parserPluginOptions },
+      });
+    });
+    it('update TestResultProvider upon setting changes', async () => {
+      expect.hasAssertions();
+      const jestExt = newJestExt();
+
+      const parserPluginOptions = { decorators: 'legacy' };
+      const settings: any = {
+        debugMode: true,
+        parserPluginOptions,
+      };
+      await jestExt.triggerUpdateSettings(settings);
+      expect(jestExt.testResultProvider.options).toEqual({
+        parserOptions: { plugins: parserPluginOptions },
+        verbose: true,
+      });
     });
   });
 });

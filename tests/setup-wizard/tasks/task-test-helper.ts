@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 import { workspaceFolder } from '../test-helper';
 import * as path from 'path';
 

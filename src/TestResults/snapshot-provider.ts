@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { Snapshot, SnapshotBlock } from 'jest-editor-support';
+import { Snapshot, SnapshotBlock, SnapshotParserOptions } from 'jest-editor-support';
 import { escapeRegExp } from '../helpers';
 
 export type SnapshotStatus = 'exists' | 'missing' | 'inline';
@@ -21,9 +21,9 @@ export class SnapshotProvider {
     this.snapshotSupport = new Snapshot(undefined, inlineKeys);
   }
 
-  public parse(testPath: string): SnapshotSuite {
+  public parse(testPath: string, options?: SnapshotParserOptions): SnapshotSuite {
     try {
-      const sBlocks = this.snapshotSupport.parse(testPath);
+      const sBlocks = this.snapshotSupport.parse(testPath, options);
       const blocks = sBlocks.map((block) => ({
         ...block,
         isInline: inlineKeys.find((key) => block.node.name.includes(key)) ? true : false,

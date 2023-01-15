@@ -3,7 +3,7 @@
  */
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { ProjectWorkspace, LoginShell } from 'jest-editor-support';
+import { ProjectWorkspace, LoginShell, JESParserPluginOptions } from 'jest-editor-support';
 import { JestProcessRequest } from '../JestProcessManagement';
 import {
   PluginResourceSettings,
@@ -120,6 +120,7 @@ export const getExtensionResourceSettings = (uri: vscode.Uri): PluginResourceSet
     monitorLongRun: config.get<MonitorLongRun>('monitorLongRun') ?? undefined,
     autoRun: new AutoRun(config.get<JestExtAutoRunSetting | null>('autoRun')),
     autoRevealOutput: config.get<AutoRevealOutputType>('autoRevealOutput') ?? 'on-run',
+    parserPluginOptions: config.get<JESParserPluginOptions>('parserPluginOptions'),
   };
 };
 

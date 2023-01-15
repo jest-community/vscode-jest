@@ -7,6 +7,7 @@ import {
   TestAssertionStatus,
   ParsedRange,
   ItBlock,
+  SnapshotParserOptions,
 } from 'jest-editor-support';
 import { TestReconciliationState, TestReconciliationStateType } from './TestReconciliationState';
 import { TestResult, TestResultStatusInfo } from './TestResult';
@@ -17,7 +18,7 @@ import { emptyTestStats } from '../helpers';
 import { createTestResultEvents, TestResultEvents } from './test-result-events';
 import { ContainerNode, ROOT_NODE_NAME } from './match-node';
 import { JestProcessInfo } from '../JestProcessManagement';
-import { ExtSnapshotBlock, SnapshotProvider } from './snapshot-provider';
+import { ExtSnapshotBlock, SnapshotProvider, SnapshotSuite } from './snapshot-provider';
 
 type TestBlocks = IParseResults & { sourceContainer: ContainerNode<ItBlock> };
 interface TestSuiteParseResultRaw {
@@ -61,12 +62,7 @@ export class TestSuiteRecord implements TestSuiteUpdatable {
   private _testBlocks?: TestBlocks | 'failed';
   private _assertionContainer?: ContainerNode<TestAssertionStatus>;
 
-  constructor(
-    public testFile: string,
-    private snapshotProvider: SnapshotProvider,
-    private reconciler: TestReconciler,
-    private verbose = false
-  ) {
+  constructor(public testFile: string, private reconciler: TestReconciler, private parser: Parser) {
     this._status = TestReconciliationState.Unknown;
     this._message = '';
   }
@@ -93,7 +89,7 @@ export class TestSuiteRecord implements TestSuiteUpdatable {
   public get testBlocks(): TestBlocks | 'failed' {
     if (!this._testBlocks) {
       try {
-        const pResult = parse(this.testFile);
+        const pResult = this.parser.parseTestFile(this.testFile);
         if (![pResult.describeBlocks, pResult.itBlocks].find((blocks) => blocks.length > 0)) {
           // nothing in this file yet, skip. Otherwise we might accidentally publish a source file, for example
           return 'failed';
@@ -101,20 +97,20 @@ export class TestSuiteRecord implements TestSuiteUpdatable {
         const sourceContainer = match.buildSourceContainer(pResult.root);
         this._testBlocks = { ...pResult, sourceContainer };
 
-        const snapshotBlocks = this.snapshotProvider.parse(this.testFile).blocks;
+        const snapshotBlocks = this.parser.parseSnapshot(this.testFile).blocks;
         if (snapshotBlocks.length > 0) {
           this.updateSnapshotAttr(sourceContainer, snapshotBlocks);
         }
       } catch (e) {
         // normal to fail, for example when source file has syntax error
-        if (this.verbose) {
+        if (this.parser.options?.verbose) {
           console.log(`parseTestBlocks failed for ${this.testFile}`, e);
         }
         this._testBlocks = 'failed';
       }
     }
 
-    return this._testBlocks;
+    return this._testBlocks ?? 'failed';
   }
 
   public get assertionContainer(): ContainerNode<TestAssertionStatus> | undefined {
@@ -165,20 +161,42 @@ export class TestSuiteRecord implements TestSuiteUpdatable {
       'assertionContainer' in change ? change.assertionContainer : this._assertionContainer;
   }
 }
+export type TestResultProviderOptions = SnapshotParserOptions;
+
+class Parser {
+  constructor(
+    private snapshotProvider: SnapshotProvider,
+    public options?: TestResultProviderOptions
+  ) {}
+  public parseSnapshot(testPath: string): SnapshotSuite {
+    const res = this.snapshotProvider.parse(testPath, this.options);
+    return res;
+  }
+
+  public parseTestFile(testPath: string): IParseResults {
+    const res = parse(testPath, undefined, this.options?.parserOptions);
+    return res;
+  }
+}
 export class TestResultProvider {
-  verbose: boolean;
+  private _options: TestResultProviderOptions;
   events: TestResultEvents;
   private reconciler: TestReconciler;
   private testSuites: Map<string, TestSuiteRecord>;
   private testFiles?: string[];
   private snapshotProvider: SnapshotProvider;
+  private parser: Parser;
 
-  constructor(extEvents: JestSessionEvents, verbose = false) {
+  constructor(
+    extEvents: JestSessionEvents,
+    options: TestResultProviderOptions = { verbose: false }
+  ) {
     this.reconciler = new TestReconciler();
-    this.verbose = verbose;
+    this._options = options;
     this.events = createTestResultEvents();
     this.testSuites = new Map();
     this.snapshotProvider = new SnapshotProvider();
+    this.parser = new Parser(this.snapshotProvider, this._options);
     extEvents.onTestSessionStarted.event(this.onSessionStart.bind(this));
   }
 
@@ -187,13 +205,14 @@ export class TestResultProvider {
     this.events.testSuiteChanged.dispose();
   }
 
+  set options(options: TestResultProviderOptions) {
+    this._options = options;
+    this.parser.options = this._options;
+    this.testSuites.clear();
+  }
+
   private addTestSuiteRecord(testFile: string): TestSuiteRecord {
-    const record = new TestSuiteRecord(
-      testFile,
-      this.snapshotProvider,
-      this.reconciler,
-      this.verbose
-    );
+    const record = new TestSuiteRecord(testFile, this.reconciler, this.parser);
     this.testSuites.set(testFile, record);
     return record;
   }
@@ -285,7 +304,7 @@ export class TestResultProvider {
             filePath,
             testBlocks.sourceContainer,
             record.assertionContainer,
-            this.verbose
+            this._options.verbose
           )
         );
         record.update({ results });

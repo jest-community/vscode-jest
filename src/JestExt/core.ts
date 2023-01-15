@@ -6,6 +6,7 @@ import {
   TestResultProvider,
   resultsWithLowerCaseWindowsDriveLetters,
   SortedTestResults,
+  TestResultProviderOptions,
 } from '../TestResults';
 import {
   testIdString,
@@ -127,7 +128,7 @@ export class JestExt {
 
     this.testResultProvider = new TestResultProvider(
       this.events,
-      pluginSettings.debugMode ?? false
+      this.testResultProviderOptions(pluginSettings)
     );
 
     this.debugConfigurationProvider = debugConfigurationProvider;
@@ -368,6 +369,9 @@ export class JestExt {
   }
 
   public triggerUpdateActiveEditor(editor: vscode.TextEditor): void {
+    if (!this.isInWorkspace(editor)) {
+      return;
+    }
     this.updateEditorContext();
 
     this.coverageOverlay.updateVisibleEditors();
@@ -379,6 +383,14 @@ export class JestExt {
     this.output.revealOnError = settings.autoRevealOutput !== 'off';
     this.output.close();
   }
+  private testResultProviderOptions(settings: PluginResourceSettings): TestResultProviderOptions {
+    return {
+      verbose: settings.debugMode ?? false,
+      parserOptions: settings.parserPluginOptions
+        ? { plugins: settings.parserPluginOptions }
+        : undefined,
+    };
+  }
   public async triggerUpdateSettings(newSettings?: PluginResourceSettings): Promise<void> {
     const updatedSettings =
       newSettings ?? getExtensionResourceSettings(this.extContext.workspace.uri);
@@ -388,8 +400,8 @@ export class JestExt {
       this.updateOutputSetting(updatedSettings);
     }
 
-    // debug
-    this.testResultProvider.verbose = updatedSettings.debugMode ?? false;
+    // TestResultProvider
+    this.testResultProvider.options = this.testResultProviderOptions(updatedSettings);
 
     // coverage
     const showCoverage = this.coverageOverlay.enabled ?? updatedSettings.showCoverageOnLoad;
@@ -408,6 +420,10 @@ export class JestExt {
     this.deubgConfig = undefined;
 
     await this.startSession(true);
+  }
+
+  private isInWorkspace(editor: vscode.TextEditor): boolean {
+    return vscode.workspace.getWorkspaceFolder(editor.document.uri) === this.extContext.workspace;
   }
 
   private isSupportedDocument(document: vscode.TextDocument | undefined): boolean {
@@ -695,10 +711,7 @@ export class JestExt {
    */
   private refreshDocumentChange(document?: vscode.TextDocument): void {
     for (const editor of vscode.window.visibleTextEditors) {
-      if (
-        (document && editor.document === document) ||
-        vscode.workspace.getWorkspaceFolder(editor.document.uri) === this.extContext.workspace
-      ) {
+      if ((document && editor.document === document) || this.isInWorkspace(editor)) {
         this.triggerUpdateActiveEditor(editor);
       }
     }

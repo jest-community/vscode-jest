@@ -23,7 +23,7 @@ export type ActionableMenuItem<T = WizardStatus> = vscode.QuickPickItem & Action
 export type ActionableButton<T = WizardStatus> = vscode.QuickInputButton & ActionableComp<T>;
 export type ActionableMessageItem<T> = vscode.MessageItem & ActionableComp<T>;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/explicit-module-boundary-types
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const isActionableButton = (arg: any): arg is ActionableButton<unknown> =>
   arg && arg.iconPath && typeof arg.action === 'function';
 
@@ -59,7 +59,7 @@ export type SetupTask = (context: WizardContext) => Promise<WizardStatus>;
 
 // settings
 export const JestSettings = ['jestCommandLine', 'rootPath'];
-type JestSettingKey = typeof JestSettings[number];
+type JestSettingKey = (typeof JestSettings)[number];
 
 // prettier-ignore
 export type WizardSettings = 

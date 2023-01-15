@@ -20,7 +20,6 @@ export type TestSuitChangeEvent =
       sourceContainer: ContainerNode<ItBlock>;
     };
 
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const createTestResultEvents = () => ({
   testListUpdated: new vscode.EventEmitter<string[] | undefined>(),
   testSuiteChanged: new vscode.EventEmitter<TestSuitChangeEvent>(),
