@@ -233,11 +233,12 @@ describe('DebugConfigurationProvider', () => {
         expect(() => sut.withCommandLine(workspace, cmdLine)).toThrow('invalid cmdLine');
       });
       describe('on win32, should throw error if the raw jest binary can not be found', () => {
-        beforeEach(() => {
-          (os.platform as jest.Mocked<any>) = jest.fn().mockReturnValue('win32');
+        let platformSpy;
+        beforeAll(() => {
+          platformSpy = jest.spyOn(os, 'platform').mockImplementation(() => 'win32');
         });
-        afterEach(() => {
-          (os.platform as jest.Mocked<any>).mockReset();
+        afterAll(() => {
+          platformSpy.mockRestore();
         });
         it.each`
           exists
