@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs';
 
 import {
   toFilePath,
@@ -8,6 +9,7 @@ import {
   escapeRegExp,
   parseCmdLine,
 } from './helpers';
+import { platform } from 'os';
 
 export const DEBUG_CONFIG_PLATFORMS = ['windows', 'linux', 'osx'];
 const testNamePatternRegex = /\$\{jest.testNamePattern\}/g;
@@ -204,11 +206,12 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
       };
     } else {
       // convert the cmd to absolute path
-      const program = path.isAbsolute(cmd)
+      let program = path.isAbsolute(cmd)
         ? cmd
         : absoluteRootPath
         ? path.resolve(absoluteRootPath, cmd)
         : ['${workspaceFolder}', cmd].join(path.sep);
+      program = this.adjustProgram(program);
       const args = [...cmdArgs, ...config.args];
       finalConfig = { ...finalConfig, cwd, program, args };
     }
@@ -217,5 +220,20 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     DEBUG_CONFIG_PLATFORMS.forEach((p) => delete finalConfig[p]);
 
     return finalConfig;
+  }
+
+  // adopt program/command for debug purpose
+  private adjustProgram(program: string): string {
+    if (platform() === 'win32' && program.endsWith('\\node_modules\\.bin\\jest.cmd')) {
+      const newProgram = program.replace(
+        '\\node_modules\\.bin\\jest.cmd',
+        '\\node_modules\\jest\\bin\\jest.js'
+      );
+      if (fs.existsSync(newProgram)) {
+        return newProgram;
+      }
+      throw new Error(`failed to find jest binary: ${newProgram}`);
+    }
+    return program;
   }
 }
