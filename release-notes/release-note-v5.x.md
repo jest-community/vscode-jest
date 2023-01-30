@@ -3,16 +3,18 @@
 Release Notes
 ---
 - [Release Notes](#release-notes)
+- [v5.2.2](#v522)
+  - [CHANGELOG](#changelog)
 - [v5.2.1 (pre-release)](#v521-pre-release)
   - [Fixes](#fixes)
-  - [CHANGELOG](#changelog)
+  - [CHANGELOG](#changelog-1)
 - [v5.2.0 (pre-release)](#v520-pre-release)
   - [Main Features](#main-features)
     - [1. Enhance control of test output terminal](#1-enhance-control-of-test-output-terminal)
     - [2. Status Bar are colorized for execution error and warning status](#2-status-bar-are-colorized-for-execution-error-and-warning-status)
     - [3. More control on parser plugins (decorators)](#3-more-control-on-parser-plugins-decorators)
   - [Fixes](#fixes-1)
-  - [CHANGELOG](#changelog-1)
+  - [CHANGELOG](#changelog-2)
 - [v5.1.0](#v510)
   - [Main Features](#main-features-1)
     - [1. toggle autoRun and coverage through TestExplorer inline menu](#1-toggle-autorun-and-coverage-through-testexplorer-inline-menu)
@@ -30,9 +32,15 @@ Release Notes
     - [13. added auto-completion for jest module methods](#13-added-auto-completion-for-jest-module-methods)
   - [Fixes](#fixes-2)
   - [Breaking Changes](#breaking-changes)
-  - [CHANGELOG](#changelog-2)
+  - [CHANGELOG](#changelog-3)
 ---
 
+## v5.2.2 
+
+Promote v5.2.1 pre-release to production.
+
+### CHANGELOG 
+- [v5.2.2](https://github.com/jest-community/vscode-jest/releases/tag/v5.2.2)
 ## v5.2.1 (pre-release) 
 
 ### Fixes
