@@ -326,7 +326,7 @@ describe('getDefaultJestCommand', () => {
     ${1} | ${'react-scripts test'}             | ${'yarn.lock'}         | ${'react-scripts'}        | ${'yarn test'}
     ${2} | ${'react-scripts test'}             | ${'package-lock.json'} | ${'react-scripts'}        | ${'npm test --'}
     ${3} | ${'some other test'}                | ${'yarn.lock'}         | ${'jest'}                 | ${'binary'}
-    ${4} | ${'some other test'}                | ${'package-lock.json'} | ${'react-native-scripts'} | ${'binary'}
+    ${4} | ${'some other test'}                | ${'package-lock.json'} | ${'react-native-scripts'} | ${'npm test --'}
     ${5} | ${'some other test'}                | ${'package-lock.json'} | ${undefined}              | ${undefined}
     ${6} | ${'jest'}                           | ${'package-lock.json'} | ${undefined}              | ${'npm test --'}
     ${7} | ${undefined}                        | ${'package-lock.json'} | ${'jest'}                 | ${'binary'}

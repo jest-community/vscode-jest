@@ -66,13 +66,22 @@ export function isCreateReactAppTestCommand(testCommand?: string | null): boolea
     createReactAppBinaryNames.some((binary) => testCommand.includes(`${binary} test`))
   );
 }
+export function hasReactBinary(rootPath: string): boolean {
+  return createReactAppBinaryNames.some((binary) => getLocalPathForExecutable(rootPath, binary));
+}
 
 function checkPackageTestScript(rootPath: string): string | undefined {
   const testCommand = getTestCommand(rootPath);
   if (!testCommand) {
     return;
   }
-  if (isCreateReactAppTestCommand(testCommand) || testCommand.includes('jest')) {
+  if (
+    isCreateReactAppTestCommand(testCommand) ||
+    testCommand.includes('jest') ||
+    // for react apps, even if we don't recognize the test script pattern, still better to use the test script
+    // than running the binary with hard coded parameters outselves.
+    hasReactBinary(rootPath)
+  ) {
     const pm = getPM(rootPath) ?? 'npm';
     if (pm === 'npm') {
       return 'npm test --';
@@ -109,11 +118,9 @@ export const getDefaultJestCommand = (rootPath = ''): string | undefined => {
     return pmScript;
   }
 
-  for (const binary of [...createReactAppBinaryNames, 'jest']) {
-    const cmd = getLocalPathForExecutable(rootPath, binary);
-    if (cmd) {
-      return `"${cmd}"`;
-    }
+  const cmd = getLocalPathForExecutable(rootPath, 'jest');
+  if (cmd) {
+    return `"${cmd}"`;
   }
 };
 
