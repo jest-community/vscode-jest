@@ -7,6 +7,8 @@ import { toErrorString } from '../../helpers';
 import { PendingSetupTaskKey } from '../start-wizard';
 import { setupJestCmdLine } from './setup-jest-cmdline';
 
+export const IgnoreWorkspaceChanges = 'jest.IgnoreWorkspaceChanges';
+
 export const MonorepoSetupActionId = {
   setupJestCmdLine: 0,
   autoConvert: 1,
@@ -121,27 +123,21 @@ export const setupMonorepo: SetupTask = async (context: WizardContext): Promise<
     return 'exit';
   };
 
-  const addWorkspaces = async (rootFolder: vscode.WorkspaceFolder): Promise<WizardStatus> => {
+  const addWorkspaces = async (): Promise<WizardStatus> => {
     message(`Adding monorepo packages to multi-root workspace...`);
-
-    const workspaceName = (uri: vscode.Uri): string => {
-      const parts = uri.path.split('/');
-      return parts[parts.length - 1];
-    };
 
     try {
       const uris = await wsManager.getFoldersFromFilesystem();
-      // disable all the folders first so extension manager won't trying to register everything during the process
-      await disableWorkspaceFolders(
-        [rootFolder.name].concat(uris.map((uri) => workspaceName(uri)))
-      );
 
       return new Promise<WizardStatus>((resolve, reject) => {
         const subscription = vscode.workspace.onDidChangeWorkspaceFolders(() => {
           validateWorkspaces()
             .then((status) => resolve(status))
             .catch((e) => reject(e))
-            .finally(() => subscription.dispose());
+            .finally(() => {
+              subscription.dispose();
+              context.vscodeContext.workspaceState.update(IgnoreWorkspaceChanges, undefined);
+            });
         });
 
         message(`adding ${uris.length} folders:`);
@@ -149,6 +145,8 @@ export const setupMonorepo: SetupTask = async (context: WizardContext): Promise<
           message(uri.fsPath);
           return { uri };
         });
+
+        context.vscodeContext.workspaceState.update(IgnoreWorkspaceChanges, true);
 
         const success = vscode.workspace.updateWorkspaceFolders(1, null, ...folders);
         if (!success) {
@@ -226,7 +224,7 @@ export const setupMonorepo: SetupTask = async (context: WizardContext): Promise<
       return validateWorkspaces();
     }
     if (vscode.workspace.workspaceFile) {
-      return addWorkspaces(workspaces[0]);
+      return addWorkspaces();
     }
     return handleSingleRoot();
   };

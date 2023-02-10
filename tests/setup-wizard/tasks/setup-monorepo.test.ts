@@ -6,6 +6,7 @@ import * as vscode from 'vscode';
 
 import * as helper from '../../../src/setup-wizard/wizard-helper';
 import {
+  IgnoreWorkspaceChanges,
   MonorepoSetupActionId,
   setupMonorepo,
 } from '../../../src/setup-wizard/tasks/setup-monorepo';
@@ -141,6 +142,17 @@ describe('setupMonorepo', () => {
           if (!isError) {
             expect(vscode.workspace.onDidChangeWorkspaceFolders).toHaveBeenCalled();
             expect(subscription.dispose).toHaveBeenCalled();
+            expect(context.vscodeContext.workspaceState.update).toHaveBeenCalledTimes(2);
+            expect(context.vscodeContext.workspaceState.update).toHaveBeenNthCalledWith(
+              1,
+              IgnoreWorkspaceChanges,
+              true
+            );
+            expect(context.vscodeContext.workspaceState.update).toHaveBeenNthCalledWith(
+              2,
+              IgnoreWorkspaceChanges,
+              undefined
+            );
           }
           if (folderUris) {
             expect(vscode.workspace.updateWorkspaceFolders).toHaveBeenCalledWith(

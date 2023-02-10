@@ -265,6 +265,7 @@ Users can use the following settings to tailor the extension for their environme
 |[coverageFormatter](#coverageFormatter)|Determine the coverage overlay style|"DefaultFormatter"|`"jest.coverageFormatter": "GutterFormatter"`|
 |[coverageColors](#coverageColors)|Coverage indicator color override|undefined|`"jest.coverageColors": { "uncovered": "rgba(255,99,71, 0.2)", "partially-covered": "rgba(255,215,0, 0.2)"}`|
 |**Misc**|
+|enable|Enable/disable jest extension for the given workspace folder|true|`"jest.enable": false`|
 |debugMode|Enable debug mode to diagnose plugin issues. (see developer console)|false|`"jest.debugMode": true`|
 |disabledWorkspaceFolders 💼|Disabled workspace folders names in multiroot environment|[]|`"jest.disabledWorkspaceFolders": ["package-a", "package-b"]`|
 |[autoRevealOutput](#autoRevealOutput)|Determine when to show test output|"on-run"|`"jest.autoRevealOutput": "on-exec-error"`|
@@ -322,6 +323,8 @@ for example:
 </details>
 
 ##### autoRun
+
+AutoRun controls when **tests** should be executed automatically.
 
 Performance and automation/completeness are often a trade-off. autoRun is the tool to fine-tune the balance, which is unique for every project and user. 
 
@@ -397,6 +400,8 @@ There are 2 ways to change autoRun:
     ```
 
 </details>
+
+**Please note**, _even when the `autoRun` is "off", the extension will still perform the usual setup upon start-up, such as checking jest env and parsing test blocks, so users can run test blocks manually. To turn off the extension completely for the given workspace, you can use `jest.enable` setting instead._
 
 ##### testExplorer
   ```ts

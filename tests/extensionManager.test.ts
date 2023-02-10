@@ -2,18 +2,18 @@ jest.unmock('../src/extensionManager');
 jest.unmock('../src/appGlobals');
 
 import * as vscode from 'vscode';
-import {
-  addFolderToDisabledWorkspaceFolders,
-  ExtensionManager,
-  getExtensionWindowSettings,
-} from '../src/extensionManager';
+import { addFolderToDisabledWorkspaceFolders, ExtensionManager } from '../src/extensionManager';
 import { readFileSync } from 'fs';
-import { PluginWindowSettings } from '../src/Settings';
 import { extensionName } from '../src/appGlobals';
 import { JestExt } from '../src/JestExt';
 import { DebugConfigurationProvider } from '../src/DebugConfigurationProvider';
 import { CoverageCodeLensProvider } from '../src/Coverage';
 import { startWizard } from '../src/setup-wizard';
+
+const mockEnabledWorkspaceFolders = jest.fn();
+jest.mock('../src/workspace-manager', () => ({
+  enabledWorkspaceFolders: () => mockEnabledWorkspaceFolders(),
+}));
 
 const updateConfigurationMock = jest.fn();
 
@@ -35,7 +35,7 @@ vscode.workspace.getWorkspaceFolder = jest.fn().mockReturnValue({ name: 'workspa
   .fn()
   .mockReturnValue('onDidCloseTextDocument');
 
-vscode.workspace.getConfiguration = jest.fn().mockImplementation((section) => {
+const mockGetConfiguration = jest.fn().mockImplementation((section) => {
   const data = readFileSync('./package.json');
   const config = JSON.parse(data.toString()).contributes.configuration.properties;
 
@@ -45,7 +45,6 @@ vscode.workspace.getConfiguration = jest.fn().mockImplementation((section) => {
       defaults[key] = config[key].default;
     }
   }
-
   return {
     get: jest.fn().mockImplementation((key) => defaults[`${section}.${key}`]),
     update: updateConfigurationMock,
@@ -88,18 +87,31 @@ const createExtensionContext = () => ({
     get: jest.fn(),
     update: jest.fn(),
   },
+  workspaceState: {
+    get: jest.fn(),
+    update: jest.fn(),
+  },
 });
+const initWorkspaces = (all: string[], enabled?: string[]): any[] => {
+  const allWorspaces = all.map((name) => makeWorkspaceFolder(name));
+  (vscode.workspace as any).workspaceFolders = allWorspaces;
+  const enabledWorkspaces = enabled
+    ? allWorspaces.filter((w) => enabled.includes(w.name))
+    : allWorspaces;
+  mockEnabledWorkspaceFolders.mockReturnValue(enabledWorkspaces);
+  return allWorspaces;
+};
+
 const createExtensionManager = (workspaceFolders: string[], context?: any): ExtensionManager => {
-  (vscode.workspace as any).workspaceFolders =
-    workspaceFolders?.map((f) => makeWorkspaceFolder(f)) ?? [];
+  const allFolders = initWorkspaces(workspaceFolders);
 
   (vscode.workspace.getWorkspaceFolder as jest.Mocked<any>).mockImplementation((uri) => {
-    return vscode.workspace.workspaceFolders.find((ws) => ws.name === uri);
+    return allFolders.find((ws) => ws.name === uri);
   });
   mockJestExt();
   const extensionContext = context ?? createExtensionContext();
   const em = new ExtensionManager(extensionContext);
-  vscode.workspace.workspaceFolders.forEach((ws) => em.registerWorkspace(ws));
+  allFolders.forEach((ws) => em.registerWorkspace(ws));
   return em;
 };
 
@@ -107,17 +119,16 @@ describe('ExtensionManager', () => {
   const jestInstance = makeJestExt(makeWorkspaceFolder('workspace-1'));
   let context;
   let extensionManager: ExtensionManager;
-  const registerInstance = (folderName: string) => {
-    extensionManager.registerWorkspace(makeWorkspaceFolder(folderName));
-  };
+
   const registerSpy = jest.spyOn(ExtensionManager.prototype, 'registerWorkspace');
   const unregisterSpy = jest.spyOn(ExtensionManager.prototype, 'unregisterWorkspace');
-
+  let workspaceFolder1;
   beforeEach(() => {
     jest.clearAllMocks();
+    vscode.workspace.getConfiguration = mockGetConfiguration;
     (JestExt as jest.Mocked<any>).mockImplementation(() => jestInstance);
     context = createExtensionContext();
-    (vscode.workspace as any).workspaceFolders = [makeWorkspaceFolder('workspaceFolder1')];
+    [workspaceFolder1] = initWorkspaces(['workspaceFolder1']);
   });
 
   describe('constructor()', () => {
@@ -161,65 +172,62 @@ describe('ExtensionManager', () => {
       extensionManager = new ExtensionManager(context);
       registerSpy.mockClear();
       unregisterSpy.mockClear();
-      (vscode.window.showWorkspaceFolderPick as any).mockReset();
+      (vscode.window.showQuickPick as any).mockReset();
       (vscode.commands.registerCommand as any).mockReset();
     });
 
     describe('applySettings()', () => {
-      it('should save settings to instance', () => {
-        const newSettings: PluginWindowSettings = {
-          disabledWorkspaceFolders: [],
-        };
-        extensionManager.applySettings(newSettings);
-        expect((extensionManager as any).commonPluginSettings).toEqual(newSettings);
+      const ws1 = makeWorkspaceFolder('ws-1');
+      const ws2 = makeWorkspaceFolder('ws-2');
+      beforeEach(() => {
+        (vscode.workspace as any).workspaceFolders = [ws1, ws2];
       });
+      it('will register enabled workspace and unregister disabled ones', () => {
+        //set up
+        mockEnabledWorkspaceFolders.mockReturnValue([ws1, ws2]);
+        extensionManager.registerWorkspace(ws1);
+        extensionManager.registerWorkspace(ws2);
+        expect(extensionManager.getByName(ws1.name)).toBeDefined();
+        expect(extensionManager.getByName(ws2.name)).toBeDefined();
 
-      it('should respect disabledWorkspaceFolders', () => {
-        registerInstance('workspaceFolder2');
-        expect(extensionManager.getByName('workspaceFolder1')).toBeDefined();
-        expect(extensionManager.getByName('workspaceFolder2')).toBeDefined();
-        const newSettings: PluginWindowSettings = {
-          disabledWorkspaceFolders: ['workspaceFolder1'],
-        };
-        extensionManager.applySettings(newSettings);
-        expect(extensionManager.getByName('workspaceFolder1')).toBeUndefined();
-        expect(extensionManager.getByName('workspaceFolder2')).toBeDefined();
-      });
-      it('will register workspace not in disable list', () => {
-        expect(extensionManager.getByName('workspaceFolder1')).not.toBeUndefined();
-
-        const newSettings: PluginWindowSettings = {
-          disabledWorkspaceFolders: ['workspaceFolder1'],
-        };
-        extensionManager.applySettings(newSettings);
-        expect(extensionManager.getByName('workspaceFolder1')).toBeUndefined();
-
-        newSettings.disabledWorkspaceFolders = [];
-        extensionManager.applySettings(newSettings);
-
-        expect(extensionManager.getByName('workspaceFolder1')).not.toBeUndefined();
+        // when disable ws2
+        mockEnabledWorkspaceFolders.mockReturnValue([ws1]);
+        extensionManager.applySettings();
+        expect(extensionManager.getByName(ws1.name)).toBeDefined();
+        expect(extensionManager.getByName(ws2.name)).toBeUndefined();
       });
     });
 
     describe('registerWorkspace', () => {
+      const ws1 = makeWorkspaceFolder('ws-1');
+      const ws2 = makeWorkspaceFolder('ws-2');
+      beforeEach(() => {
+        (vscode.workspace as any).workspaceFolders = [ws1, ws2];
+      });
       it('should register an instance', () => {
-        registerInstance('workspaceFolder1');
-        expect(extensionManager.getByName('workspaceFolder1')).toBe(jestInstance);
+        mockEnabledWorkspaceFolders.mockReturnValue([ws1, ws2]);
+        extensionManager.registerWorkspace(ws1);
+        expect(extensionManager.getByName(ws1.name)).toBeDefined();
+      });
+      it('should not register disabled workspace', () => {
+        mockEnabledWorkspaceFolders.mockReturnValue([ws2]);
+        extensionManager.registerWorkspace(ws1);
+        expect(extensionManager.getByName(ws1.name)).toBeUndefined();
       });
     });
 
     describe('unregisterWorkspace', () => {
       it('should unregister instance by wokspaceFolder', () => {
-        registerInstance('workspaceFolder1');
-        extensionManager.unregisterWorkspace({ name: 'workspaceFolder1' } as any);
-        expect(extensionManager.getByName('workspaceFolder1')).toBeUndefined();
+        extensionManager.registerWorkspace(workspaceFolder1);
+        extensionManager.unregisterWorkspace(workspaceFolder1);
+        expect(extensionManager.getByName(workspaceFolder1.name)).toBeUndefined();
         expect(jestInstance.deactivate).toHaveBeenCalled();
       });
     });
 
     describe('unregisterByName', () => {
       it('should unregister instance by wokspaceFolder name', () => {
-        registerInstance('workspaceFolder1');
+        extensionManager.registerWorkspace(workspaceFolder1);
         extensionManager.unregisterWorkspaceByName('workspaceFolder1');
         expect(extensionManager.getByName('workspaceFolder1')).toBeUndefined();
         expect(jestInstance.deactivate).toHaveBeenCalled();
@@ -228,33 +236,24 @@ describe('ExtensionManager', () => {
 
     describe('unregisterAllWorkspaces', () => {
       it('should unregister all instances', () => {
-        registerInstance('workspaceFolder1');
-        registerInstance('workspaceFolder2');
-        extensionManager.unregisterAllWorkspaces();
-        expect(extensionManager.getByName('workspaceFolder1')).toBeUndefined();
-        expect(extensionManager.getByName('workspaceFolder2')).toBeUndefined();
-        expect(jestInstance.deactivate).toHaveBeenCalledTimes(2);
-      });
-    });
+        const [ws1, ws2] = initWorkspaces(['workspaceFolder1', 'workspaceFolder2']);
+        extensionManager.registerWorkspace(ws1);
+        extensionManager.registerWorkspace(ws2);
 
-    describe('shouldStart()', () => {
-      it('should check whether instance already started', () => {
-        registerInstance('workspaceFolder1');
-        expect(extensionManager.shouldStart('workspaceFolder1')).toEqual(false);
-        expect(extensionManager.shouldStart('workspaceFolder2')).toEqual(true);
-      });
-      it('should check if folder is in disabledFolderNames', () => {
-        (extensionManager as any).commonPluginSettings.disabledWorkspaceFolders = [
-          'workspaceFolder2',
-        ];
-        expect(extensionManager.shouldStart('workspaceFolder2')).toEqual(false);
-        expect(extensionManager.shouldStart('workspaceFolder3')).toEqual(true);
+        expect(extensionManager.getByName(ws1.name)).toBeDefined();
+        expect(extensionManager.getByName(ws2.name)).toBeDefined();
+
+        extensionManager.unregisterAllWorkspaces();
+
+        expect(extensionManager.getByName(ws1.name)).toBeUndefined();
+        expect(extensionManager.getByName(ws2.name)).toBeUndefined();
+        expect(jestInstance.deactivate).toHaveBeenCalledTimes(2);
       });
     });
 
     describe('getByName()', () => {
       it('should return extension', () => {
-        registerInstance('workspaceFolder1');
+        extensionManager.registerWorkspace(workspaceFolder1);
         expect(extensionManager.getByName('workspaceFolder1')).toBe(jestInstance);
         expect(extensionManager.getByName('workspaceFolder2')).toBeUndefined();
       });
@@ -262,7 +261,7 @@ describe('ExtensionManager', () => {
 
     describe('getByDocUri()', () => {
       it('should return extension', async () => {
-        registerInstance('workspaceFolder1');
+        extensionManager.registerWorkspace(workspaceFolder1);
         (vscode.workspace.getWorkspaceFolder as any).mockReturnValueOnce({
           name: 'workspaceFolder1',
         });
@@ -280,29 +279,27 @@ describe('ExtensionManager', () => {
       });
 
       it('should return extension at once if there is only one workspace folder', async () => {
-        registerInstance('workspaceFolder1');
+        extensionManager.registerWorkspace(workspaceFolder1);
         expect(await extensionManager.selectExtension()).toBe(jestInstance);
       });
 
-      it('should prompt for workspace if there are more then one workspace folder', async () => {
-        registerInstance('workspaceFolder1');
-        (vscode.workspace as any).workspaceFolders = [
-          makeWorkspaceFolder('workspaceFolder1'),
-          makeWorkspaceFolder('workspaceFolder2'),
-        ];
-        (vscode.window.showWorkspaceFolderPick as any).mockReturnValue({
-          name: 'workspaceFolder1',
-        });
+      it('should prompt for workspace if there are more then one enabled workspace folder', async () => {
+        const [ws1, ws2] = initWorkspaces(['ws1', 'ws2', 'ws3'], ['ws1', 'ws2']);
+        extensionManager.registerWorkspace(ws1);
+        (vscode.window.showQuickPick as any).mockReturnValue(ws1.name);
         expect(await extensionManager.selectExtension()).toBe(jestInstance);
-        expect(vscode.window.showWorkspaceFolderPick).toHaveBeenCalled();
+        expect(vscode.window.showQuickPick).toHaveBeenCalledWith([ws1.name, ws2.name]);
       });
 
+      it('should return undefined if no workspace opened', async () => {
+        initWorkspaces([]);
+        expect(await extensionManager.selectExtension()).toBeUndefined();
+        expect(vscode.window.showQuickPick).not.toHaveBeenCalled();
+      });
       it('should return undefined if no workspace selected', async () => {
-        (vscode.workspace as any).workspaceFolders = [
-          { name: 'workspaceFolder1' },
-          { name: 'workspaceFolder2' },
-        ] as any;
-        (vscode.window.showWorkspaceFolderPick as any).mockReturnValue(undefined);
+        const [ws1] = initWorkspaces(['ws1', 'ws2']);
+        extensionManager.registerWorkspace(ws1);
+        (vscode.window.showQuickPick as any).mockReturnValue(undefined);
         expect(await extensionManager.selectExtension()).toBeUndefined();
       });
 
@@ -332,12 +329,12 @@ describe('ExtensionManager', () => {
             expect.anything()
           );
         });
-        it('can execute command for all workspaces', () => {
+        it('can execute command for all enabled workspaces', () => {
           const callback = jest.fn();
           const someObject = {};
 
-          // recreate extensionManager with new workspaceFolders
-          extensionManager = createExtensionManager(['ws-1', 'ws-2']);
+          const // recreate extensionManager with new workspaceFolders
+            extensionManager = createExtensionManager(['ws-1', 'ws-2']);
           jest.clearAllMocks();
 
           extensionManager.registerCommand(
@@ -361,8 +358,8 @@ describe('ExtensionManager', () => {
           extensionManager = createExtensionManager(['ws-1', 'ws-2']);
           jest.clearAllMocks();
 
-          (vscode.window.showWorkspaceFolderPick as jest.Mocked<any>).mockImplementation(() =>
-            Promise.resolve(vscode.workspace.workspaceFolders[1])
+          (vscode.window.showQuickPick as jest.Mocked<any>).mockReturnValue(
+            vscode.workspace.workspaceFolders[1].name
           );
 
           extensionManager.registerCommand({
@@ -373,7 +370,7 @@ describe('ExtensionManager', () => {
           const registeredCallback = (vscode.commands.registerCommand as jest.Mocked<any>).mock
             .calls[0][1];
           await registeredCallback('arg1', 2);
-          expect(vscode.window.showWorkspaceFolderPick).toHaveBeenCalledTimes(1);
+          expect(vscode.window.showQuickPick).toHaveBeenCalledTimes(1);
           expect(callback).toHaveBeenCalledTimes(1);
           expect(callback).toHaveBeenCalledWith(extensionManager.getByName('ws-2'), 'arg1', 2);
         });
@@ -455,10 +452,14 @@ describe('ExtensionManager', () => {
       let ws1Ext;
       let ws2Ext;
       const mockEvent = (value: boolean | string[]): any => {
-        const affectsConfiguration =
-          typeof value === 'boolean'
-            ? jest.fn(() => value)
-            : jest.fn((_, uri) => !uri || value.includes(uri?.fsPath));
+        const affectsConfiguration = jest.fn().mockImplementation((section: string, scope: any) => {
+          if (section === 'jest') {
+            if (typeof value === 'boolean') {
+              return value;
+            }
+            return !scope || value.includes(scope?.fsPath);
+          }
+        });
         return { affectsConfiguration };
       };
       beforeEach(() => {
@@ -487,9 +488,56 @@ describe('ExtensionManager', () => {
           }
         );
       });
+      describe('when enabled workspace is changed', () => {
+        it('will unregister disabled workpsaces', () => {
+          expect(extensionManager.getByName('ws-1')).not.toBeUndefined();
+          expect(extensionManager.getByName('ws-2')).not.toBeUndefined();
+
+          // disabled ws2
+          mockEnabledWorkspaceFolders.mockReturnValue(
+            vscode.workspace.workspaceFolders.filter((ws) => ws.name == 'ws-1')
+          );
+
+          const event = mockEvent(true);
+          event.affectsConfiguration
+            .mockReturnValueOnce(false) //ws1 did not change
+            .mockReturnValueOnce(true) //ws2 change
+            .mockReturnValueOnce(true); // ws2 jest.enable changed
+
+          extensionManager.onDidChangeConfiguration(event);
+          expect(applySettingsSpy).toHaveBeenCalledTimes(1);
+          expect(extensionManager.getByName('ws-1')).not.toBeUndefined();
+          expect(extensionManager.getByName('ws-2')).toBeUndefined();
+        });
+        it('will register newly enabled workspace', () => {
+          const [ws1, ws2] = vscode.workspace.workspaceFolders;
+          extensionManager.unregisterWorkspace(ws1);
+          expect(extensionManager.getByName(ws1.name)).toBeUndefined();
+          expect(extensionManager.getByName(ws2.name)).not.toBeUndefined();
+
+          const event = mockEvent(true);
+          event.affectsConfiguration
+            .mockReturnValueOnce(true) //ws1 changed
+            .mockReturnValueOnce(true) //ws1 jest.enable changed
+            .mockReturnValueOnce(true); // ws2 did not change
+
+          extensionManager.onDidChangeConfiguration(event);
+          expect(applySettingsSpy).toHaveBeenCalledTimes(1);
+          expect(extensionManager.getByName(ws1.name)).not.toBeUndefined();
+          expect(extensionManager.getByName(ws2.name)).not.toBeUndefined();
+        });
+      });
     });
 
     describe('onDidChangeWorkspaceFolders()', () => {
+      it('will ignore folder change if IgnoreWorkspaceChanges is true', () => {
+        context.workspaceState.get.mockReturnValue(true);
+        extensionManager.onDidChangeWorkspaceFolders({
+          added: [makeWorkspaceFolder('wokspaceFolderAdded')],
+          removed: [],
+        } as any);
+        expect(registerSpy).not.toHaveBeenCalled();
+      });
       it('should register all new folders', () => {
         extensionManager.onDidChangeWorkspaceFolders({
           added: [makeWorkspaceFolder('wokspaceFolderAdded')],
@@ -499,10 +547,11 @@ describe('ExtensionManager', () => {
       });
 
       it('should unregister all removed folders', () => {
-        registerInstance('wokspaceFolderAdded');
+        const ws = makeWorkspaceFolder('wokspaceFolderToRemove');
+        extensionManager.registerWorkspace(ws);
         extensionManager.onDidChangeWorkspaceFolders({
           added: [],
-          removed: [makeWorkspaceFolder('wokspaceFolderAdded')],
+          removed: [ws],
         } as any);
         expect(unregisterSpy).toHaveBeenCalledTimes(1);
       });
@@ -567,14 +616,6 @@ describe('ExtensionManager', () => {
         (vscode.workspace.getWorkspaceFolder as any).mockReturnValueOnce(undefined);
         extensionManager.onDidChangeTextDocument({ document: {} } as any);
         expect(jestInstance.onDidChangeTextDocument).not.toHaveBeenCalled();
-      });
-    });
-
-    describe('getExtensionWindowSettings()', () => {
-      it('should return the extension window configuration', async () => {
-        expect(getExtensionWindowSettings()).toEqual({
-          disabledWorkspaceFolders: [],
-        });
       });
     });
 
@@ -682,8 +723,8 @@ describe('ExtensionManager', () => {
         );
         expect(call).not.toBeUndefined();
 
-        (vscode.window.showWorkspaceFolderPick as jest.Mocked<any>).mockImplementation(() =>
-          Promise.resolve(vscode.workspace.workspaceFolders[1])
+        (vscode.window.showQuickPick as jest.Mocked<any>).mockImplementation(() =>
+          Promise.resolve(vscode.workspace.workspaceFolders[1].name)
         );
         const registeredCallback = call[1];
         await registeredCallback({ name: 'ws-2' });

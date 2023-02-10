@@ -15,6 +15,7 @@ const window = {
   createTextEditorDecorationType: jest.fn(),
   createOutputChannel: jest.fn(),
   showWorkspaceFolderPick: jest.fn(),
+  showQuickPick: jest.fn(),
   onDidChangeActiveTextEditor: jest.fn(),
   showInformationMessage: jest.fn(),
   createWebviewPanel: jest.fn(),
