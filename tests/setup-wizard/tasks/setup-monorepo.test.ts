@@ -143,15 +143,12 @@ describe('setupMonorepo', () => {
             expect(vscode.workspace.onDidChangeWorkspaceFolders).toHaveBeenCalled();
             expect(subscription.dispose).toHaveBeenCalled();
             expect(context.vscodeContext.workspaceState.update).toHaveBeenCalledTimes(2);
-            expect(context.vscodeContext.workspaceState.update).toHaveBeenNthCalledWith(
-              1,
-              IgnoreWorkspaceChanges,
-              true
-            );
-            expect(context.vscodeContext.workspaceState.update).toHaveBeenNthCalledWith(
-              2,
-              IgnoreWorkspaceChanges,
-              undefined
+            [true, undefined].forEach((value, idx) =>
+              expect(context.vscodeContext.workspaceState.update).toHaveBeenNthCalledWith(
+                idx + 1,
+                IgnoreWorkspaceChanges,
+                value
+              )
             );
           }
           if (folderUris) {
@@ -174,6 +171,27 @@ describe('setupMonorepo', () => {
           (vscode.workspace.updateWorkspaceFolders as jest.Mocked<any>).mockReturnValue(false);
 
           await expect(setupMonorepo(context)).rejects.toThrow();
+          expect(context.vscodeContext.workspaceState.update).toHaveBeenLastCalledWith(
+            IgnoreWorkspaceChanges,
+            undefined
+          );
+        });
+        it('IgnoreWorkspaceChanges will always be reset after workspaces are added, regardless exceptions', async () => {
+          expect.hasAssertions();
+          const folderUris = [{ fsPath: 'whatever', path: 'whatever' }];
+          context.wsManager.getFoldersFromFilesystem.mockImplementation(() => {
+            return Promise.resolve(folderUris);
+          });
+          context.wsManager.getValidWorkspaces.mockRejectedValue('error');
+          (vscode.workspace.updateWorkspaceFolders as jest.Mocked<any>).mockReturnValue(true);
+
+          // const result = await setupMonorepo(context);
+          // expect(result).toEqual('abort');
+          await expect(setupMonorepo(context)).rejects.toEqual('error');
+          expect(context.vscodeContext.workspaceState.update).toHaveBeenLastCalledWith(
+            IgnoreWorkspaceChanges,
+            undefined
+          );
         });
       });
     });

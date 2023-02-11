@@ -136,7 +136,6 @@ export const setupMonorepo: SetupTask = async (context: WizardContext): Promise<
             .catch((e) => reject(e))
             .finally(() => {
               subscription.dispose();
-              context.vscodeContext.workspaceState.update(IgnoreWorkspaceChanges, undefined);
             });
         });
 
@@ -155,7 +154,10 @@ export const setupMonorepo: SetupTask = async (context: WizardContext): Promise<
       });
     } catch (e) {
       message(`Failed to add/validate workspace folders:\r\n${toErrorString(e)}`, 'error');
+    } finally {
+      context.vscodeContext.workspaceState.update(IgnoreWorkspaceChanges, undefined);
     }
+
     return 'abort';
   };
 

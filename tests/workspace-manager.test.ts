@@ -13,12 +13,15 @@ import { getPackageJson } from '../src/helpers';
 import { toUri } from './setup-wizard/tasks/task-test-helper';
 import { makeWorkspaceFolder } from './test-helper';
 
-const mockGetConfiguration = (disabledWorkspaceFolders: string[], enabled: 'all' | string[]) => {
+const mockGetConfiguration = (disabledWorkspaceFolders?: string[], enabled?: 'all' | string[]) => {
   const getConfiguration = (scope, key) => {
     if (key === 'disabledWorkspaceFolders') {
       return disabledWorkspaceFolders;
     }
     if (key === 'enable') {
+      if (!enabled) {
+        return enabled;
+      }
       return enabled === 'all' ? true : enabled.includes(scope.name);
     }
   };
@@ -38,6 +41,7 @@ describe('workspace-manager', () => {
     });
     it.each`
       case | disabledWorkspaceFolders | enableSettings    | result
+      ${1} | ${undefined}             | ${undefined}      | ${['ws1', 'ws2']}
       ${1} | ${[]}                    | ${['ws1']}        | ${['ws1']}
       ${2} | ${['ws1']}               | ${['ws1', 'ws2']} | ${['ws2']}
       ${3} | ${['ws2']}               | ${['ws1', 'ws2']} | ${['ws1']}
@@ -45,10 +49,10 @@ describe('workspace-manager', () => {
     `('case $case', ({ disabledWorkspaceFolders, enableSettings, result }) => {
       const folders = ['ws1', 'ws2'].map((name) => makeWorkspaceFolder(name));
       (vscode.workspace as any).workspaceFolders = folders;
-      const disabled = disabledWorkspaceFolders.map(
+      const disabled = disabledWorkspaceFolders?.map(
         (name) => folders.find((f) => f.name === name)?.name
       );
-      const enabled = enableSettings.map((name) => folders.find((f) => f.name === name)?.name);
+      const enabled = enableSettings?.map((name) => folders.find((f) => f.name === name)?.name);
       vscode.workspace.getConfiguration = mockGetConfiguration(disabled, enabled);
 
       expect(enabledWorkspaceFolders().map((f) => f.name)).toEqual(result);
