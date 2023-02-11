@@ -185,8 +185,6 @@ describe('setupMonorepo', () => {
           context.wsManager.getValidWorkspaces.mockRejectedValue('error');
           (vscode.workspace.updateWorkspaceFolders as jest.Mocked<any>).mockReturnValue(true);
 
-          // const result = await setupMonorepo(context);
-          // expect(result).toEqual('abort');
           await expect(setupMonorepo(context)).rejects.toEqual('error');
           expect(context.vscodeContext.workspaceState.update).toHaveBeenLastCalledWith(
             IgnoreWorkspaceChanges,
