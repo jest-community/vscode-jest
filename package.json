@@ -73,6 +73,11 @@
           "type": "string",
           "scope": "resource"
         },
+        "jest.clearTerminal": {
+          "description": "Clear the terminal output at the start of any new test run.",
+          "type": "boolean",
+          "scope": "resource"
+        },
         "jest.rootPath": {
           "description": "The path to your frontend src folder",
           "type": "string",

@@ -407,6 +407,9 @@ export class WorkspaceRoot extends TestItemDataBase {
             run = this.createRunForEvent(event);
             this.deepItemState(run.item, run.enqueued);
           }
+          if (this.context.ext.settings.clearTerminal === true) {
+            this.context.output.clear();
+          }
 
           break;
         }

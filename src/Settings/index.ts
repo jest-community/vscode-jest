@@ -39,6 +39,7 @@ export type MonitorLongRun = 'off' | number;
 export type AutoRevealOutputType = 'on-run' | 'on-exec-error' | 'off';
 export interface PluginResourceSettings {
   jestCommandLine?: string;
+  clearTerminal?: boolean;
   rootPath: string;
   showCoverageOnLoad: boolean;
   coverageFormatter: string;
