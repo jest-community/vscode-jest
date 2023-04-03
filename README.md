@@ -108,7 +108,7 @@ A few known failure scenarios:
 - PNP without node_modules nor a "test" script in package.json will need to set up jest.jestCommandLine explicitly.
 - Multi-root monorepo project in a single-root workspace will need to be converted to a multi-root project first. From v5, you can quickly perform this with the [monorepo setup tool](setup-wizard.md#setup-monorepo-project).
 
-For more details see the [setup too](setup-wizard.md) and the complete customization options in [settings](#settings).
+For more details see the [setup tool](setup-wizard.md) and the complete customization options in [settings](#settings).
 
 ### How to trigger the test run?
 
