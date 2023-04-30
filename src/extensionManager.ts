@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import { JestExt } from './JestExt';
 import { DebugConfigurationProvider } from './DebugConfigurationProvider';
-import { PluginWindowSettings } from './Settings';
 import { statusBar } from './StatusBar';
 import { CoverageCodeLensProvider } from './Coverage';
 import { extensionId, extensionName } from './appGlobals';
@@ -11,19 +10,12 @@ import {
   startWizard,
   StartWizardOptions,
   WizardTaskId,
+  IgnoreWorkspaceChanges,
 } from './setup-wizard';
 import { ItemCommand } from './test-provider/types';
+import { enabledWorkspaceFolders } from './workspace-manager';
 
 export type GetJestExtByURI = (uri: vscode.Uri) => JestExt | undefined;
-
-export function getExtensionWindowSettings(): PluginWindowSettings {
-  const config = vscode.workspace.getConfiguration('jest');
-
-  return {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    disabledWorkspaceFolders: config.get<string[]>('disabledWorkspaceFolders')!,
-  };
-}
 
 export function addFolderToDisabledWorkspaceFolders(folder: string): void {
   const config = vscode.workspace.getConfiguration('jest');
@@ -73,30 +65,24 @@ export class ExtensionManager {
 
   private extByWorkspace: Map<string, JestExt> = new Map();
   private context: vscode.ExtensionContext;
-  private commonPluginSettings: PluginWindowSettings;
 
   constructor(context: vscode.ExtensionContext) {
     this.context = context;
-
-    this.commonPluginSettings = getExtensionWindowSettings();
 
     this.debugConfigurationProvider = new DebugConfigurationProvider();
     this.coverageCodeLensProvider = new CoverageCodeLensProvider(this.getByDocUri);
     this.startWizard = (options?: StartWizardOptions) =>
       startWizard(this.debugConfigurationProvider, context, options);
-    this.applySettings(this.commonPluginSettings);
+    this.applySettings();
   }
   private getPendingSetupTask(): WizardTaskId | undefined {
+    const root = vscode.workspace.workspaceFolders?.[0];
     const task = this.context.globalState.get<PendingSetupTask>(PendingSetupTaskKey);
-    if (
-      task &&
-      vscode.workspace.workspaceFolders &&
-      vscode.workspace.workspaceFolders[0].name === task.workspace
-    ) {
+    if (task && root?.name === task.workspace) {
       return task.taskId;
     }
   }
-  applySettings(settings: PluginWindowSettings): void {
+  applySettings(): void {
     const setupTask = this.getPendingSetupTask();
     if (setupTask) {
       console.warn(
@@ -105,18 +91,18 @@ export class ExtensionManager {
       this.startWizard({ taskId: setupTask });
       return;
     }
-    this.commonPluginSettings = settings;
-    settings.disabledWorkspaceFolders.forEach(this.unregisterWorkspaceByName, this);
-
-    //register workspace folder not in the disable list
+    const enabled = enabledWorkspaceFolders();
     vscode.workspace.workspaceFolders?.forEach((ws) => {
-      if (!this.extByWorkspace.get(ws.name)) {
+      if (enabled.includes(ws)) {
         this.registerWorkspace(ws);
+      } else {
+        this.unregisterWorkspace(ws);
       }
     });
   }
   registerWorkspace(workspaceFolder: vscode.WorkspaceFolder): void {
-    if (!this.shouldStart(workspaceFolder.name)) {
+    const enabled = enabledWorkspaceFolders();
+    if (!enabled.includes(workspaceFolder) || this.extByWorkspace.has(workspaceFolder.name)) {
       return;
     }
 
@@ -146,18 +132,7 @@ export class ExtensionManager {
       this.unregisterWorkspaceByName(key);
     }
   }
-  shouldStart(workspaceFolderName: string): boolean {
-    const {
-      commonPluginSettings: { disabledWorkspaceFolders },
-    } = this;
-    if (this.extByWorkspace.has(workspaceFolderName)) {
-      return false;
-    }
-    if (disabledWorkspaceFolders.includes(workspaceFolderName)) {
-      return false;
-    }
-    return true;
-  }
+
   public getByName = (workspaceFolderName: string): JestExt | undefined => {
     return this.extByWorkspace.get(workspaceFolderName);
   };
@@ -168,12 +143,19 @@ export class ExtensionManager {
     }
   };
 
+  private async showWorkspaceFolderPick(): Promise<vscode.WorkspaceFolder | undefined> {
+    const folders = enabledWorkspaceFolders();
+    if (folders.length <= 0) {
+      return Promise.resolve(undefined);
+    }
+    if (folders.length === 1) {
+      return Promise.resolve(folders[0]);
+    }
+    const folderName = await vscode.window.showQuickPick(folders.map((f) => f.name));
+    return folders.find((f) => f.name === folderName);
+  }
   async selectExtension(): Promise<JestExt | undefined> {
-    const workspace =
-      vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length <= 1
-        ? vscode.workspace.workspaceFolders[0]
-        : await vscode.window.showWorkspaceFolderPick();
-
+    const workspace = await this.showWorkspaceFolderPick();
     const instance = workspace && this.getByName(workspace.name);
     if (instance) {
       return instance;
@@ -193,7 +175,7 @@ export class ExtensionManager {
     switch (command.type) {
       case 'all-workspaces': {
         return vscode.commands.registerCommand(commandName, async (...args) => {
-          vscode.workspace.workspaceFolders?.forEach((ws) => {
+          enabledWorkspaceFolders().forEach((ws) => {
             const extension = this.getByName(ws.name);
             if (extension) {
               command.callback.call(thisArg, extension, ...args);
@@ -240,16 +222,23 @@ export class ExtensionManager {
   }
 
   onDidChangeConfiguration(e: vscode.ConfigurationChangeEvent): void {
+    let applied = false;
     vscode.workspace.workspaceFolders?.forEach((workspaceFolder, idx) => {
       if (e.affectsConfiguration('jest', workspaceFolder.uri)) {
-        if (idx === 0) {
-          this.applySettings(getExtensionWindowSettings());
+        if (!applied && (idx === 0 || e.affectsConfiguration('jest.enable', workspaceFolder.uri))) {
+          this.applySettings();
+          applied = true;
         }
+
         this.getByName(workspaceFolder.name)?.triggerUpdateSettings();
       }
     });
   }
   onDidChangeWorkspaceFolders(e: vscode.WorkspaceFoldersChangeEvent): void {
+    if (this.context.workspaceState.get<boolean>(IgnoreWorkspaceChanges)) {
+      return;
+    }
+
     e.added.forEach(this.registerWorkspace, this);
     e.removed.forEach(this.unregisterWorkspace, this);
   }
@@ -453,10 +442,7 @@ export class ExtensionManager {
   activate(): void {
     this.showReleaseMessage();
     if (vscode.window.activeTextEditor?.document.uri) {
-      const ext = this.getByDocUri(vscode.window.activeTextEditor.document.uri);
-      if (ext) {
-        ext.activate();
-      }
+      this.getByDocUri(vscode.window.activeTextEditor.document.uri)?.activate();
     }
   }
 }

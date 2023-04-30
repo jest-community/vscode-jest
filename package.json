@@ -68,6 +68,12 @@
       "type": "object",
       "title": "Jest",
       "properties": {
+        "jest.enable": {
+          "markdownDescription": "enable/disable jest extension for the workspace folder. Default is true",
+          "type": "boolean",
+          "scope": "resource",
+          "default": true
+        },
         "jest.jestCommandLine": {
           "description": "The command line to start jest tests. It should be the same command line users run jest tests from a terminal/shell, with ability to append extra arguments (by the extension at runtime)",
           "type": "string",

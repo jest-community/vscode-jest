@@ -6,6 +6,7 @@ import * as vscode from 'vscode';
 
 import * as helper from '../../../src/setup-wizard/wizard-helper';
 import {
+  IgnoreWorkspaceChanges,
   MonorepoSetupActionId,
   setupMonorepo,
 } from '../../../src/setup-wizard/tasks/setup-monorepo';
@@ -141,6 +142,14 @@ describe('setupMonorepo', () => {
           if (!isError) {
             expect(vscode.workspace.onDidChangeWorkspaceFolders).toHaveBeenCalled();
             expect(subscription.dispose).toHaveBeenCalled();
+            expect(context.vscodeContext.workspaceState.update).toHaveBeenCalledTimes(2);
+            [true, undefined].forEach((value, idx) =>
+              expect(context.vscodeContext.workspaceState.update).toHaveBeenNthCalledWith(
+                idx + 1,
+                IgnoreWorkspaceChanges,
+                value
+              )
+            );
           }
           if (folderUris) {
             expect(vscode.workspace.updateWorkspaceFolders).toHaveBeenCalledWith(
@@ -162,6 +171,25 @@ describe('setupMonorepo', () => {
           (vscode.workspace.updateWorkspaceFolders as jest.Mocked<any>).mockReturnValue(false);
 
           await expect(setupMonorepo(context)).rejects.toThrow();
+          expect(context.vscodeContext.workspaceState.update).toHaveBeenLastCalledWith(
+            IgnoreWorkspaceChanges,
+            undefined
+          );
+        });
+        it('IgnoreWorkspaceChanges will always be reset after workspaces are added, regardless exceptions', async () => {
+          expect.hasAssertions();
+          const folderUris = [{ fsPath: 'whatever', path: 'whatever' }];
+          context.wsManager.getFoldersFromFilesystem.mockImplementation(() => {
+            return Promise.resolve(folderUris);
+          });
+          context.wsManager.getValidWorkspaces.mockRejectedValue('error');
+          (vscode.workspace.updateWorkspaceFolders as jest.Mocked<any>).mockReturnValue(true);
+
+          await expect(setupMonorepo(context)).rejects.toEqual('error');
+          expect(context.vscodeContext.workspaceState.update).toHaveBeenLastCalledWith(
+            IgnoreWorkspaceChanges,
+            undefined
+          );
         });
       });
     });

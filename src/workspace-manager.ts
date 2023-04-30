@@ -26,6 +26,23 @@ interface ValidatePatternType {
   binary: string[];
 }
 
+export const enabledWorkspaceFolders = (): vscode.WorkspaceFolder[] => {
+  if (!vscode.workspace.workspaceFolders) {
+    return [];
+  }
+
+  const windowConfig = vscode.workspace.getConfiguration('jest');
+  const disabledWorkspaceFolders = windowConfig.get<string[]>('disabledWorkspaceFolders') ?? [];
+
+  return vscode.workspace.workspaceFolders.filter((ws) => {
+    if (disabledWorkspaceFolders.includes(ws.name)) {
+      return false;
+    }
+    const config = vscode.workspace.getConfiguration('jest', ws);
+    return config.get<boolean>('enable') ?? true;
+  });
+};
+
 export const isSameWorkspace = (
   ws1: vscode.WorkspaceFolder,
   ws2: vscode.WorkspaceFolder
@@ -42,7 +59,7 @@ export class WorkspaceManager {
     }
 
     const validWorkspaces: Map<string, WorkspaceInfo> = new Map();
-    for (const ws of vscode.workspace.workspaceFolders) {
+    for (const ws of enabledWorkspaceFolders()) {
       if (validWorkspaces.has(ws.uri.path)) {
         continue;
       }

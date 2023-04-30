@@ -12,6 +12,10 @@ export const createWizardContext = (debugConfigProvider: any, wsName?: string): 
       get: jest.fn(),
       update: jest.fn(),
     },
+    workspaceState: {
+      get: jest.fn(),
+      update: jest.fn(),
+    },
   },
   workspace: wsName ? workspaceFolder(wsName) : undefined,
   message: jest.fn(),
