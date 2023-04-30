@@ -71,7 +71,10 @@ export const buildSourceContainer = (sourceRoot: ParsedNode): ContainerNode<ItBl
     let container = parent;
     const attrs = (namedNode: NamedBlock): OptionalAttributes => ({
       isGroup: namedNode.lastProperty === 'each' ? 'yes' : 'no',
-      nonLiteralName: namedNode.nameType !== 'Literal',
+      // TODO: we could probably remove the checking for 'Literal' after a while. This was probably produced by the older version of the babel-parser
+      nonLiteralName: !(
+        namedNode.nameType && ['StringLiteral', 'Literal'].includes(namedNode.nameType)
+      ),
       range: {
         start: namedNode.start ? adjustLocation(namedNode.start) : UnknownRange.start,
         end: namedNode.end ? adjustLocation(namedNode.end) : UnknownRange.end,

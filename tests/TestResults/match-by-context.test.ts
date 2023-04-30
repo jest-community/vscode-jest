@@ -148,6 +148,22 @@ describe('buildSourceContainer', () => {
     expect(root.childData.map((n) => (n as any).name)).toEqual(['test-1', 'test-2']);
     expect(root.childContainers).toHaveLength(0);
   });
+  describe('can properly populate nonLiteralName for source blocks', () => {
+    it.each`
+      nameType             | nonLiteralName
+      ${null}              | ${true}
+      ${''}                | ${true}
+      ${'TemplateLiteral'} | ${true}
+      ${'Whatever'}        | ${true}
+      ${'Literal'}         | ${false}
+      ${'StringLiteral'}   | ${false}
+    `('$nameType => nonLiteralName? $inonLiteralName', ({ nameType, nonLiteralName }) => {
+      const t1 = helper.makeItBlock('test-1', [1, 0, 5, 0], { nameType });
+      const sourceRoot = helper.makeRoot([t1]);
+      const root = match.buildSourceContainer(sourceRoot);
+      expect(root.childData.map((n) => (n as any).attrs.nonLiteralName)).toEqual([nonLiteralName]);
+    });
+  });
 });
 describe('matchTestAssertions', () => {
   const mockError = jest.fn();
