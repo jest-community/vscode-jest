@@ -198,7 +198,15 @@ export class WorkspaceRoot extends TestItemDataBase {
     );
   };
   private addPath = (absoluteFileName: string): FolderData | undefined => {
-    const relativePath = path.relative(this.context.ext.workspace.uri.fsPath, absoluteFileName);
+    const fs = require('fs');
+
+    // On Windows, the workspace URI is not the real resolved path, however, the
+    // paths returned by the jest cli tool are resolved paths. Explicitly
+    // resolve the path to ensure that we get the proper relative path.  Note
+    // that we must use `fs.realpath.native` as `fs.realpath` will only
+    // canonicalise the path, not resolve any path substitutions.
+    const workspace =  fs.realpathSync.native(this.context.ext.workspace.uri.fsPath);
+    const relativePath = path.relative(workspace, absoluteFileName);
     const folders = relativePath.split(path.sep).slice(0, -1);
 
     return folders.reduce(this.addFolder, undefined);
