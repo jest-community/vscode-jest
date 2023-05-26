@@ -369,7 +369,8 @@ export class JestExt {
   }
 
   public triggerUpdateActiveEditor(editor: vscode.TextEditor): void {
-    if (!this.isInWorkspace(editor)) {
+    // there is use case that the active editor is not in the workspace but is in jest test file list
+    if (!this.isInWorkspace(editor) && !this.isTestFileEditor(editor)) {
       return;
     }
     this.updateEditorContext();
@@ -712,7 +713,11 @@ export class JestExt {
    */
   private refreshDocumentChange(document?: vscode.TextDocument): void {
     for (const editor of vscode.window.visibleTextEditors) {
-      if ((document && editor.document === document) || this.isInWorkspace(editor)) {
+      if (
+        (document && editor.document === document) ||
+        this.isInWorkspace(editor) ||
+        this.isTestFileEditor(editor)
+      ) {
         this.triggerUpdateActiveEditor(editor);
       }
     }

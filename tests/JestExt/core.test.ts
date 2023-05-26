@@ -1102,12 +1102,16 @@ describe('JestExt', () => {
       expect(sut.testResultProvider.getTestSuiteStats).toHaveBeenCalled();
       expect(sbUpdateMock).toHaveBeenCalled();
     });
-    it('will update visible editors for the current workspace', () => {
+    it('will update visible editors for the current workspace and test file list', () => {
       (vscode.window.visibleTextEditors as any) = [
         mockEditor('a'),
         mockEditor('b'),
         mockEditor('c'),
       ];
+      (sut.testResultProvider.isTestFile as jest.Mocked<any>)
+        .mockReturnValueOnce('yes')
+        .mockReturnValueOnce('no')
+        .mockReturnValueOnce('maybe');
       (vscode.workspace.getWorkspaceFolder as jest.Mocked<any>).mockImplementation((uri) =>
         uri !== 'b' ? workspaceFolder : undefined
       );
