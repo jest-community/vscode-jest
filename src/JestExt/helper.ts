@@ -109,7 +109,7 @@ export const getExtensionResourceSettings = (uri: vscode.Uri): PluginResourceSet
 
   return {
     jestCommandLine: config.get<string>('jestCommandLine'),
-    clearTerminal: config.get<boolean>('clearTerminal') ?? false,
+    autoClearTerminal: config.get<boolean>('autoClearTerminal') ?? false,
     rootPath: absoluteRootPath(config.get<string>('rootPath') ?? '', uri.fsPath),
     showCoverageOnLoad: config.get<boolean>('showCoverageOnLoad') ?? false,
     coverageFormatter: config.get<string>('coverageFormatter') ?? 'DefaultFormatter',

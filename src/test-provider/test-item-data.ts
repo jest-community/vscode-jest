@@ -407,7 +407,7 @@ export class WorkspaceRoot extends TestItemDataBase {
             run = this.createRunForEvent(event);
             this.deepItemState(run.item, run.enqueued);
           }
-          if (this.context.ext.settings.clearTerminal === true) {
+          if (this.context.ext.settings.autoClearTerminal === true) {
             this.context.output.clear();
           }
 
@@ -424,6 +424,9 @@ export class WorkspaceRoot extends TestItemDataBase {
         case 'start': {
           run = run ?? this.createRunForEvent(event);
           this.deepItemState(run.item, run.started);
+          if (this.context.ext.settings.autoClearTerminal === true) {
+            this.context.output.clear();
+          }
           this.runLog('started');
           break;
         }
