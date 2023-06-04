@@ -33,5 +33,5 @@ export function activate(context: vscode.ExtensionContext): void {
   extensionManager.activate();
 }
 export function deactivate(): void {
-  extensionManager.unregisterAllWorkspaces();
+  extensionManager.deleteAllExtensions();
 }

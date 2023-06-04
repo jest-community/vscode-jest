@@ -1,5 +1,6 @@
 jest.unmock('../../src/JestExt/helper');
 jest.unmock('../../src/JestExt/auto-run');
+jest.unmock('../../src/virtual-workspace-folder');
 jest.unmock('../test-helper');
 
 const mockPlatform = jest.fn();
@@ -17,11 +18,12 @@ import {
 } from '../../src/JestExt/helper';
 import { ProjectWorkspace } from 'jest-editor-support';
 import { workspaceLogging } from '../../src/logging';
-import { mockProjectWorkspace } from '../test-helper';
+import { makeWorkspaceFolder, mockProjectWorkspace } from '../test-helper';
 
 import { toFilePath } from '../../src/helpers';
 import { RunnerWorkspaceOptions } from '../../src/JestExt/types';
 import { RunShell } from '../../src/JestExt/run-shell';
+import { VirtualWorkspaceFolder } from '../../src/virtual-workspace-folder';
 
 jest.mock('jest-editor-support', () => ({ isLoginShell: jest.fn(), ProjectWorkspace: jest.fn() }));
 
@@ -149,8 +151,8 @@ describe('getExtensionResourceSettings()', () => {
   it('should return the extension resource configuration', async () => {
     const mockShell = jest.fn();
     (RunShell as jest.Mocked<any>).mockImplementation(() => mockShell);
-    const uri: any = { fsPath: 'workspaceFolder1' };
-    expect(getExtensionResourceSettings(uri)).toEqual({
+    const folder = makeWorkspaceFolder('workspaceFolder1');
+    expect(getExtensionResourceSettings(folder)).toEqual({
       coverageFormatter: 'DefaultFormatter',
       jestCommandLine: undefined,
       rootPath: 'workspaceFolder1',
@@ -163,6 +165,8 @@ describe('getExtensionResourceSettings()', () => {
       shell: mockShell,
       autoRevealOutput: 'on-run',
       parserPluginOptions: null,
+      enable: true,
+      nodeEnv: undefined,
     });
   });
 
@@ -177,8 +181,8 @@ describe('getExtensionResourceSettings()', () => {
         nodeEnv: { whatever: '1' },
         shell: mockShell,
       };
-      const uri: any = { fsPath: 'workspaceFolder1' };
-      const settings = getExtensionResourceSettings(uri);
+      const folder = makeWorkspaceFolder('workspaceFolder1');
+      const settings = getExtensionResourceSettings(folder);
       expect(settings).toEqual(
         expect.objectContaining({
           ...userSettings,
@@ -199,8 +203,8 @@ describe('getExtensionResourceSettings()', () => {
         'testExplorer: $testExplorer => show legacy warning? $showWarning',
         ({ testExplorer, showWarning, converted }) => {
           userSettings = { testExplorer };
-          const uri: any = { fsPath: 'workspaceFolder1' };
-          const settings = getExtensionResourceSettings(uri);
+          const folder = makeWorkspaceFolder('workspaceFolder1');
+          const settings = getExtensionResourceSettings(folder);
           expect(settings).toEqual(
             expect.objectContaining({
               testExplorer: converted,
@@ -211,6 +215,42 @@ describe('getExtensionResourceSettings()', () => {
           }
         }
       );
+    });
+    describe('virtualFolders', () => {
+      let folderSetting;
+      beforeEach(() => {
+        folderSetting = {
+          jestCommandLine: 'yarn test',
+        };
+      });
+      it.each`
+        case | virtualFolders                                                                                    | expectedSettings
+        ${1} | ${undefined}                                                                                      | ${'throw'}
+        ${2} | ${[{ name: 'v1', debugMode: true }]}                                                              | ${{ debugMode: true }}
+        ${3} | ${[{ name: 'v1', jestCommandLine: 'yarn integ-test' }]}                                           | ${{ jestCommandLine: 'yarn integ-test' }}
+        ${4} | ${[{ name: 'v2', jestCommandLine: 'yarn integ-test' }]}                                           | ${'throw'}
+        ${5} | ${[{ name: 'v1', jestCommandLine: 'yarn test1' }, { name: 'v2', jestCommandLine: 'yarn test2' }]} | ${{ jestCommandLine: 'yarn test1' }}
+      `('case $case: can load virtualFolder settings', ({ virtualFolders, expectedSettings }) => {
+        const folder = makeWorkspaceFolder('workspaceFolder1');
+        const vFolder = new VirtualWorkspaceFolder(folder, 'v1');
+        userSettings = { ...folderSetting, virtualFolders };
+        if (expectedSettings === 'throw') {
+          expect(() => getExtensionResourceSettings(vFolder)).toThrow();
+        } else {
+          const settings = getExtensionResourceSettings(vFolder);
+          expect(settings).toEqual(expect.objectContaining(expectedSettings ?? folderSetting));
+        }
+      });
+      it('will ignore virtualFolder setting for regular WorkspaceFolder', () => {
+        const folder = makeWorkspaceFolder('workspaceFolder1');
+        userSettings = {
+          debugMode: false,
+          virtualFolders: { name: 'workspaceFolder1', debugMode: true },
+        };
+
+        const settings = getExtensionResourceSettings(folder);
+        expect(settings).toEqual(expect.objectContaining({ debugMode: false }));
+      });
     });
   });
 });

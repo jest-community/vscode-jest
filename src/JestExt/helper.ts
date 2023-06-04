@@ -13,6 +13,8 @@ import {
   TestExplorerConfigLegacy,
   JestExtAutoRunSetting,
   AutoRevealOutputType,
+  VirtualFolderSettings,
+  VirtualFolderSettingKey,
 } from '../Settings';
 import { workspaceLogging } from '../logging';
 import { JestExtContext, RunnerWorkspaceOptions } from './types';
@@ -22,6 +24,7 @@ import { JestOutputTerminal } from './output-terminal';
 import { AutoRun } from './auto-run';
 import { RunShell } from './run-shell';
 import { toFilePath } from '../helpers';
+import { isVirtualWorkspaceFolder } from '../virtual-workspace-folder';
 
 export const isWatchRequest = (request: JestProcessRequest): boolean =>
   request.type === 'watch-tests' || request.type === 'watch-all-tests';
@@ -83,8 +86,9 @@ const isTestExplorerConfigLegacy = (arg: any): arg is TestExplorerConfigLegacy =
   typeof arg.enabled === 'boolean';
 
 const DefaultTestExplorerSetting: TestExplorerConfig = {};
-const getTestExplorer = (config: vscode.WorkspaceConfiguration): TestExplorerConfig => {
-  const setting = config.get<TestExplorerConfig | TestExplorerConfigLegacy>('testExplorer');
+const adaptTestExplorer = (
+  setting?: TestExplorerConfig | TestExplorerConfigLegacy
+): TestExplorerConfig => {
   if (!setting) {
     return DefaultTestExplorerSetting;
   }
@@ -104,23 +108,42 @@ const getTestExplorer = (config: vscode.WorkspaceConfiguration): TestExplorerCon
 export const absoluteRootPath = (rootPath: string, workspaceRoot: string): string => {
   return path.isAbsolute(rootPath) ? rootPath : path.join(workspaceRoot, rootPath);
 };
-export const getExtensionResourceSettings = (uri: vscode.Uri): PluginResourceSettings => {
-  const config = vscode.workspace.getConfiguration('jest', uri);
+export const getExtensionResourceSettings = (
+  workspaceFolder: vscode.WorkspaceFolder
+): PluginResourceSettings => {
+  const config = vscode.workspace.getConfiguration('jest', workspaceFolder.uri);
+  let vFolder: VirtualFolderSettings | undefined;
+
+  if (isVirtualWorkspaceFolder(workspaceFolder)) {
+    const virtualFolders = config.get<VirtualFolderSettings[]>('virtualFolders');
+    vFolder = virtualFolders?.find((v) => v.name === workspaceFolder.name);
+    if (!vFolder) {
+      throw new Error(`[${workspaceFolder.name}] is missing corresponding virtual folder setting`);
+    }
+  }
+
+  // get setting from venv first, fallback to workspace setting if not found
+  const getSetting = <T>(key: VirtualFolderSettingKey): T | undefined => {
+    return vFolder && key in vFolder ? (vFolder[key] as T) : config.get<T>(key);
+  };
 
   return {
-    jestCommandLine: config.get<string>('jestCommandLine'),
-    rootPath: absoluteRootPath(config.get<string>('rootPath') ?? '', uri.fsPath),
-    showCoverageOnLoad: config.get<boolean>('showCoverageOnLoad') ?? false,
-    coverageFormatter: config.get<string>('coverageFormatter') ?? 'DefaultFormatter',
-    debugMode: config.get<boolean>('debugMode'),
-    coverageColors: config.get<CoverageColors>('coverageColors'),
-    testExplorer: getTestExplorer(config),
-    nodeEnv: config.get<NodeEnv | null>('nodeEnv') ?? undefined,
-    shell: new RunShell(config.get<string | LoginShell>('shell')),
-    monitorLongRun: config.get<MonitorLongRun>('monitorLongRun') ?? undefined,
-    autoRun: new AutoRun(config.get<JestExtAutoRunSetting | null>('autoRun')),
-    autoRevealOutput: config.get<AutoRevealOutputType>('autoRevealOutput') ?? 'on-run',
-    parserPluginOptions: config.get<JESParserPluginOptions>('parserPluginOptions'),
+    jestCommandLine: getSetting<string>('jestCommandLine'),
+    rootPath: absoluteRootPath(getSetting<string>('rootPath') ?? '', workspaceFolder.uri.fsPath),
+    showCoverageOnLoad: getSetting<boolean>('showCoverageOnLoad') ?? false,
+    coverageFormatter: getSetting<string>('coverageFormatter') ?? 'DefaultFormatter',
+    debugMode: getSetting<boolean>('debugMode'),
+    coverageColors: getSetting<CoverageColors>('coverageColors'),
+    testExplorer: adaptTestExplorer(
+      getSetting<TestExplorerConfig | TestExplorerConfigLegacy>('testExplorer')
+    ),
+    nodeEnv: getSetting<NodeEnv | null>('nodeEnv') ?? undefined,
+    shell: new RunShell(getSetting<string | LoginShell>('shell')),
+    monitorLongRun: getSetting<MonitorLongRun>('monitorLongRun') ?? undefined,
+    autoRun: new AutoRun(getSetting<JestExtAutoRunSetting | null>('autoRun')),
+    autoRevealOutput: getSetting<AutoRevealOutputType>('autoRevealOutput') ?? 'on-run',
+    parserPluginOptions: getSetting<JESParserPluginOptions>('parserPluginOptions'),
+    enable: getSetting<boolean>('enable'),
   };
 };
 

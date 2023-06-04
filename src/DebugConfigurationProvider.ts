@@ -18,25 +18,52 @@ const testFilePatternRegex = /\$\{jest.testFilePattern\}/g;
 export class DebugConfigurationProvider implements vscode.DebugConfigurationProvider {
   private fileNameToRun = '';
   private testToRun = '';
+  private fromWorkspaceFolder: vscode.WorkspaceFolder | undefined;
 
   /**
    * Prepares injecting the name of the test, which has to be debugged, into the `DebugConfiguration`,
    * This function has to be called before `vscode.debug.startDebugging`.
    */
-  public prepareTestRun(fileNameToRun: string, testToRun: string): void {
+  public prepareTestRun(
+    fileNameToRun: string,
+    testToRun: string,
+    workspaceFolder: vscode.WorkspaceFolder
+  ): void {
     this.fileNameToRun = fileNameToRun;
     this.testToRun = testToRun;
+    this.fromWorkspaceFolder = workspaceFolder;
+  }
+
+  getDebugConfigNames(workspaceFolder?: vscode.WorkspaceFolder): {
+    v1: string[];
+    v2: string[];
+    sorted: string[];
+  } {
+    const v1 = ['vscode-jest-tests'];
+    const v2 = ['vscode-jest-tests.v2'];
+    const sorted = [...v2, ...v1];
+
+    if (workspaceFolder) {
+      v1.unshift(`vscode-jest-tests.${workspaceFolder.name}`);
+      v2.unshift(`vscode-jest-tests.v2.${workspaceFolder.name}`);
+      sorted.unshift(v2[0], v1[0]);
+    }
+    return { v1, v2, sorted };
   }
 
   resolveDebugConfiguration(
-    _folder: vscode.WorkspaceFolder | undefined,
+    workspace: vscode.WorkspaceFolder | undefined,
     debugConfiguration: vscode.DebugConfiguration,
     _token?: vscode.CancellationToken
   ): vscode.DebugConfiguration {
-    if (debugConfiguration.name === 'vscode-jest-tests.v2') {
+    const folder = this.fromWorkspaceFolder || workspace;
+    const { v1, v2 } = this.getDebugConfigNames(folder);
+
+    if (v2.includes(debugConfiguration.name)) {
       return this.resolveDebugConfig2(debugConfiguration);
     }
-    if (debugConfiguration.name !== 'vscode-jest-tests') {
+    // not our debug configuration
+    if (!v1.includes(debugConfiguration.name)) {
       return debugConfiguration;
     }
 
@@ -117,10 +144,12 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     // create-react-app config according to:
     // https://facebook.github.io/create-react-app/docs/debugging-tests#debugging-tests-in-visual-studio-code
 
+    const name = this.getDebugConfigNames(folder).v2[0];
+
     // tslint:disable no-invalid-template-strings
     const debugConfiguration: vscode.DebugConfiguration = {
       type: 'node',
-      name: 'vscode-jest-tests.v2',
+      name,
       request: 'launch',
       args: [
         '--runInBand',

@@ -2,7 +2,7 @@
   "name": "vscode-jest",
   "displayName": "Jest",
   "description": "Use Facebook's Jest With Pleasure.",
-  "version": "5.2.3",
+  "version": "5.3.0",
   "publisher": "Orta",
   "engines": {
     "vscode": "^1.68.1"
@@ -36,7 +36,6 @@
     "workspaceContains:node_modules/.bin/jest",
     "workspaceContains:node_modules/react-scripts/node_modules/.bin/jest",
     "workspaceContains:node_modules/react-native-scripts",
-    "onCommand:io.orta.jest.start",
     "workspaceContains:**/.vscode-jest"
   ],
   "main": "./out/extension",
@@ -180,6 +179,12 @@
           "type": "object",
           "default": null,
           "scope": "resource"
+        },
+        "jest.virtualFolders": {
+          "markdownDescription": "Allows multiple jest run config for a given (physical) folder. See valid [format](TODO)",
+          "type": "array",
+          "default": null,
+          "scope": "resource"
         }
       }
     },
@@ -272,40 +277,64 @@
       "commandPalette": [
         {
           "command": "io.orta.jest.workspace.start",
-          "when": "workspaceFolderCount > 1"
+          "when": "jest.folderCount > 1"
         },
         {
           "command": "io.orta.jest.workspace.stop",
-          "when": "workspaceFolderCount > 1"
+          "when": "jest.folderCount > 1"
         },
         {
           "command": "io.orta.jest.workspace.toggle-coverage",
-          "when": "workspaceFolderCount > 1"
+          "when": "jest.folderCount > 1"
         },
         {
           "command": "io.orta.jest.editor.workspace.toggle-coverage",
-          "when": "workspaceFolderCount > 1"
+          "when": "jest.folderCount > 1"
         },
         {
           "command": "io.orta.jest.workspace.run-all-tests",
-          "when": "jest:run.interactive && workspaceFolderCount > 1"
-        },
-        {
-          "command": "io.orta.jest.run-all-tests",
-          "when": "jest:run.interactive"
+          "when": "jest.folderCount > 1"
         },
         {
           "command": "io.orta.jest.editor.workspace.run-all-tests",
-          "when": "jest:run.interactive && workspaceFolderCount > 1"
+          "when": "jest.folderCount > 1"
         },
         {
           "command": "io.orta.jest.editor.run-all-tests",
-          "when": "jest:never"
+          "when": "jest.never"
+        },
+        {
+          "command": "io.orta.jest.test-item.auto-run.toggle-on",
+          "when": "jest.never"
+        },
+        {
+          "command": "io.orta.jest.test-item.auto-run.toggle-off",
+          "when": "jest.never"
+        },
+        {
+          "command": "io.orta.jest.test-item.coverage.toggle-on",
+          "when": "jest.never"
+        },
+        {
+          "command": "io.orta.jest.test-item.coverage.toggle-off",
+          "when": "jest.never"
+        },
+        {
+          "command": "io.orta.jest.test-item.reveal-output",
+          "when": "jest.never"
+        },
+        {
+          "command": "io.orta.jest.test-item.view-snapshot",
+          "when": "jest.never"
+        },
+        {
+          "command": "io.orta.jest.test-item.update-snapshot",
+          "when": "jest.never"
         }
       ],
       "editor/context": [
         {
-          "when": "jest:run.interactive && editorLangId =~ /(javascript|javascriptreact|typescript|typescriptreact|vue)/ ",
+          "when": "editorLangId =~ /(javascript|javascriptreact|typescript|typescriptreact|vue)/ ",
           "command": "io.orta.jest.editor.run-all-tests",
           "group": "Jest"
         }
@@ -356,7 +385,7 @@
         "command": "io.orta.jest.editor.run-all-tests",
         "key": "ctrl+alt+t",
         "mac": "ctrl+alt+t",
-        "when": "jest:run.interactive && editorLangId =~ /(javascript|javascriptreact|typescript|typescriptreact|vue)/ "
+        "when": "editorLangId =~ /(javascript|javascriptreact|typescript|typescriptreact|vue)/ "
       }
     ],
     "debuggers": [

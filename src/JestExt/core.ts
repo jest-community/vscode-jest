@@ -44,6 +44,7 @@ import { MessageAction } from '../messaging';
 import { getExitErrorDef } from '../errors';
 import { WorkspaceManager } from '../workspace-manager';
 import { ansiEsc, JestOutputTerminal } from './output-terminal';
+import { isVirtualWorkspaceFolder } from '../virtual-workspace-folder';
 
 interface RunTestPickItem extends vscode.QuickPickItem {
   id: DebugTestIdentifier;
@@ -61,6 +62,7 @@ interface JestCommandSettings {
   rootPath: string;
   jestCommandLine: string;
 }
+
 /** extract lines starts and end with [] */
 export class JestExt {
   coverageMapProvider: CoverageMapProvider;
@@ -97,7 +99,8 @@ export class JestExt {
     coverageCodeLensProvider: CoverageCodeLensProvider
   ) {
     this.vscodeContext = vscodeContext;
-    const pluginSettings = getExtensionResourceSettings(workspaceFolder.uri);
+    const pluginSettings = this.getExtensionResourceSettings(workspaceFolder);
+
     this.output = new JestOutputTerminal(workspaceFolder.name);
     this.updateOutputSetting(pluginSettings);
 
@@ -133,7 +136,7 @@ export class JestExt {
 
     this.debugConfigurationProvider = debugConfigurationProvider;
 
-    this.status = statusBar.bind(workspaceFolder.name);
+    this.status = statusBar.bind(workspaceFolder);
 
     // reset the jest diagnostics
     resetDiagnostics(this.failDiagnostics);
@@ -141,6 +144,30 @@ export class JestExt {
     this.processSession = this.createProcessSession();
 
     this.setupStatusBar();
+  }
+
+  public get name(): string {
+    return this.extContext.workspace.name;
+  }
+  public get workspaceFolder(): vscode.WorkspaceFolder {
+    return this.extContext.workspace;
+  }
+
+  /**
+   * Gets the plugin resource settings for a workspace folder.
+   * @param workspaceFolder The workspace folder to get the plugin resource settings for.
+   * @returns The plugin resource settings for the workspace folder.
+   * @throws An error if Jest is disabled for the workspace folder.
+   */
+  private getExtensionResourceSettings(
+    workspaceFolder: vscode.WorkspaceFolder
+  ): PluginResourceSettings {
+    const pluginSettings = getExtensionResourceSettings(workspaceFolder);
+
+    if (pluginSettings.enable === false) {
+      throw new Error(`Jest is disabled for workspace ${workspaceFolder.name}`);
+    }
+    return pluginSettings;
   }
 
   public showOutput(): void {
@@ -336,11 +363,6 @@ export class JestExt {
     }
   }
 
-  /** update custom editor context used by vscode when clause, such as `jest:run.interactive` in package.json */
-  private updateEditorContext(): void {
-    // since v4.3, all autoRun modes supports interactive-run
-    vscode.commands.executeCommand('setContext', 'jest:run.interactive', true);
-  }
   private updateTestFileEditor(editor: vscode.TextEditor): void {
     if (!this.isTestFileEditor(editor)) {
       return;
@@ -373,8 +395,6 @@ export class JestExt {
     if (!this.isInWorkspace(editor) && !this.isTestFileEditor(editor)) {
       return;
     }
-    this.updateEditorContext();
-
     this.coverageOverlay.updateVisibleEditors();
 
     this.updateTestFileEditor(editor);
@@ -394,7 +414,7 @@ export class JestExt {
   }
   public async triggerUpdateSettings(newSettings?: PluginResourceSettings): Promise<void> {
     const updatedSettings =
-      newSettings ?? getExtensionResourceSettings(this.extContext.workspace.uri);
+      newSettings ?? this.getExtensionResourceSettings(this.extContext.workspace);
 
     // output
     if (this.extContext.settings.autoRevealOutput !== updatedSettings.autoRevealOutput) {
@@ -424,10 +444,14 @@ export class JestExt {
   }
 
   private isInWorkspace(editor: vscode.TextEditor): boolean {
-    return vscode.workspace.getWorkspaceFolder(editor.document.uri) === this.extContext.workspace;
+    if (isVirtualWorkspaceFolder(this.extContext.workspace)) {
+      return this.extContext.workspace.isInWorkspace(editor.document.uri);
+    } else {
+      return vscode.workspace.getWorkspaceFolder(editor.document.uri) === this.extContext.workspace;
+    }
   }
 
-  private isSupportedDocument(document: vscode.TextDocument | undefined): boolean {
+  private isSupportedDocument(document?: vscode.TextDocument | undefined): boolean {
     if (!document) {
       return false;
     }
@@ -547,6 +571,7 @@ export class JestExt {
 
     this.testResultProvider.dispose();
     this.testProvider?.dispose();
+    statusBar.removeWorkspaceFolder(this.extContext.workspace);
 
     this.events.onRunEvent.dispose();
     this.events.onTestSessionStarted.dispose();
@@ -564,12 +589,21 @@ export class JestExt {
       folder?: vscode.WorkspaceFolder
     ): vscode.DebugConfiguration | undefined => {
       const configs = vscode.workspace
-        .getConfiguration('launch', folder?.uri)
+        .getConfiguration('launch', folder)
         ?.get<vscode.DebugConfiguration[]>('configurations');
-      return (
-        configs?.find((c) => c.name === 'vscode-jest-tests.v2') ??
-        configs?.find((c) => c.name === 'vscode-jest-tests')
+      if (!configs) {
+        return undefined;
+      }
+
+      const { sorted } = this.debugConfigurationProvider.getDebugConfigNames(
+        this.extContext.workspace
       );
+      for (const name of sorted) {
+        const found = configs.find((c) => c.name === name);
+        if (found) {
+          return found;
+        }
+      }
     };
     const selectTest = async (
       testIdentifiers: DebugTestIdentifier[]
@@ -603,7 +637,8 @@ export class JestExt {
 
     this.debugConfigurationProvider.prepareTestRun(
       typeof document === 'string' ? document : document.fileName,
-      testId ? escapeRegExp(idString('full-name', testId)) : '.*'
+      testId ? escapeRegExp(idString('full-name', testId)) : '.*',
+      this.extContext.workspace
     );
 
     let debugConfig =

@@ -1,4 +1,5 @@
 jest.unmock('../src/workspace-manager');
+jest.unmock('../src/virtual-workspace-folder');
 jest.unmock('./setup-wizard/test-helper');
 jest.unmock('./test-helper');
 jest.unmock('./setup-wizard/tasks/task-test-helper');
@@ -12,8 +13,13 @@ import { workspaceFolder } from './setup-wizard/test-helper';
 import { getPackageJson } from '../src/helpers';
 import { toUri } from './setup-wizard/tasks/task-test-helper';
 import { makeWorkspaceFolder } from './test-helper';
+import { VirtualWorkspaceFolder } from '../src/virtual-workspace-folder';
 
-const mockGetConfiguration = (disabledWorkspaceFolders?: string[], enabled?: 'all' | string[]) => {
+const mockGetConfiguration = (
+  disabledWorkspaceFolders?: string[],
+  enabled?: 'all' | string[],
+  vFolders?: any
+) => {
   const getConfiguration = (scope, key) => {
     if (key === 'disabledWorkspaceFolders') {
       return disabledWorkspaceFolders;
@@ -23,6 +29,9 @@ const mockGetConfiguration = (disabledWorkspaceFolders?: string[], enabled?: 'al
         return enabled;
       }
       return enabled === 'all' ? true : enabled.includes(scope.name);
+    }
+    if (key === 'virtualFolders') {
+      return vFolders?.[scope.name];
     }
   };
   return jest.fn().mockImplementation((_section, scope) => ({
@@ -56,6 +65,41 @@ describe('workspace-manager', () => {
       vscode.workspace.getConfiguration = mockGetConfiguration(disabled, enabled);
 
       expect(enabledWorkspaceFolders().map((f) => f.name)).toEqual(result);
+    });
+    describe('with virtual folders', () => {
+      let ws1, ws2, v1, v2;
+      beforeEach(() => {
+        ws1 = makeWorkspaceFolder('ws1');
+        ws2 = makeWorkspaceFolder('ws2');
+        v1 = new VirtualWorkspaceFolder(ws1, 'v1');
+        v2 = new VirtualWorkspaceFolder(ws1, 'v2');
+        (vscode.workspace as any).workspaceFolders = [ws1, ws2];
+      });
+      it('will include enabled virtual folders if indicated', () => {
+        vscode.workspace.getConfiguration = mockGetConfiguration([], 'all', {
+          ws1: [{ name: v1.name }, { name: v2.name }],
+        });
+        expect(enabledWorkspaceFolders().map((f) => f.name)).toEqual(
+          expect.arrayContaining(['ws2', 'v1', 'v2'])
+        );
+        expect(enabledWorkspaceFolders(false).map((f) => f.name)).toEqual(
+          expect.arrayContaining(['ws1', 'ws2'])
+        );
+      });
+      it('can filter disabled virtual folders', () => {
+        vscode.workspace.getConfiguration = mockGetConfiguration([], 'all', {
+          ws1: [{ name: v1.name, enable: false }, { name: v2.name }],
+        });
+        expect(enabledWorkspaceFolders().map((f) => f.name)).toEqual(
+          expect.arrayContaining(['ws2', 'v2'])
+        );
+        vscode.workspace.getConfiguration = mockGetConfiguration(['v2'], 'all', {
+          ws1: [{ name: v1.name, enable: false }, { name: v2.name }],
+        });
+        expect(enabledWorkspaceFolders().map((f) => f.name)).toEqual(
+          expect.arrayContaining(['ws2'])
+        );
+      });
     });
   });
 
@@ -149,12 +193,12 @@ describe('workspace-manager', () => {
         });
         (vscode as any).RelativePattern = jest.fn((ws, p) => [ws, p]);
       });
-      describe('getValidWorkspaces: returns all valid workspaces', () => {
+      describe('getValidWorkspaceFolders: returns all valid workspaces', () => {
         it('throw error if no workspace folders', async () => {
           expect.hasAssertions();
           (vscode.workspace as any).workspaceFolders = [];
           const wsManager = new WorkspaceManager();
-          await expect(wsManager.getValidWorkspaces()).rejects.toThrow();
+          await expect(wsManager.getValidWorkspaceFolders()).rejects.toThrow();
         });
         describe('validate algorithms', () => {
           const byJestConfig = () => {
@@ -208,8 +252,8 @@ describe('workspace-manager', () => {
             init();
 
             const wsManager = new WorkspaceManager();
-            const wsList = await wsManager.getValidWorkspaces();
-            expect(wsList.map((ws) => ws.workspace.name)).toEqual(['folder-1', 'folder-2']);
+            const wsList = await wsManager.getValidWorkspaceFolders();
+            expect(wsList.map((ws) => ws.folder.name)).toEqual(['folder-1', 'folder-2']);
           });
           it('will ignore disabled folders', async () => {
             expect.hasAssertions();
@@ -217,8 +261,8 @@ describe('workspace-manager', () => {
             vscode.workspace.getConfiguration = mockGetConfiguration([], ['folder-1']);
 
             const wsManager = new WorkspaceManager();
-            const wsList = await wsManager.getValidWorkspaces();
-            expect(wsList.map((ws) => ws.workspace.name)).toEqual(['folder-1']);
+            const wsList = await wsManager.getValidWorkspaceFolders();
+            expect(wsList.map((ws) => ws.folder.name)).toEqual(['folder-1']);
           });
         });
       });
@@ -258,14 +302,14 @@ describe('workspace-manager', () => {
             expect.hasAssertions();
 
             const wsManager = new WorkspaceManager();
-            let wsList = await wsManager.validateWorkspace(workspaceFolder('root'), types);
-            expect(wsList.map((ws) => ws.workspace.name).sort()).toEqual(rootResult.sort());
+            let wsList = await wsManager.validateWorkspaceFolder(workspaceFolder('root'), types);
+            expect(wsList.map((ws) => ws.folder.name).sort()).toEqual(rootResult.sort());
 
-            wsList = await wsManager.validateWorkspace(workspaceFolder('folder-1'), types);
-            expect(wsList.map((ws) => ws.workspace.name).sort()).toEqual(folder1Result.sort());
+            wsList = await wsManager.validateWorkspaceFolder(workspaceFolder('folder-1'), types);
+            expect(wsList.map((ws) => ws.folder.name).sort()).toEqual(folder1Result.sort());
 
-            wsList = await wsManager.validateWorkspace(workspaceFolder('folder-2'), types);
-            expect(wsList.map((ws) => ws.workspace.name).sort()).toEqual(folder2Result.sort());
+            wsList = await wsManager.validateWorkspaceFolder(workspaceFolder('folder-2'), types);
+            expect(wsList.map((ws) => ws.folder.name).sort()).toEqual(folder2Result.sort());
           }
         );
         it('can detect rootPath', async () => {
@@ -281,10 +325,10 @@ describe('workspace-manager', () => {
 
           const workspace = workspaceFolder('folder-1');
           const wsManager = new WorkspaceManager();
-          const wsList = await wsManager.validateWorkspace(workspace, ['deep-config']);
+          const wsList = await wsManager.validateWorkspaceFolder(workspace, ['deep-config']);
           expect(wsList).toHaveLength(1);
           expect(wsList[0]).toEqual({
-            workspace,
+            folder: workspace,
             rootPath: `.${path.sep}src`,
             activation,
           });
@@ -302,7 +346,7 @@ describe('workspace-manager', () => {
 
           const workspace = workspaceFolder('folder-1');
           const wsManager = new WorkspaceManager();
-          const wsList = await wsManager.validateWorkspace(workspace, ['deep-config']);
+          const wsList = await wsManager.validateWorkspaceFolder(workspace, ['deep-config']);
           expect(wsList).toHaveLength(0);
         });
       });

@@ -16,6 +16,7 @@ const statusBar = {
   bind: () => ({
     update: sbUpdateMock,
   }),
+  removeWorkspaceFolder: jest.fn(),
 };
 jest.mock('../../src/StatusBar', () => ({ statusBar }));
 jest.mock('jest-editor-support');
@@ -78,6 +79,7 @@ describe('JestExt', () => {
     provideDebugConfigurations: jest.fn(),
     prepareTestRun: jest.fn(),
     withCommandLine: jest.fn(),
+    getDebugConfigNames: jest.fn(),
   } as any;
 
   const mockProcessSession = {
@@ -168,6 +170,12 @@ describe('JestExt', () => {
       debugConfiguration2 = { type: 'with-command-line' };
       debugConfigurationProvider.provideDebugConfigurations.mockReturnValue([debugConfiguration]);
       debugConfigurationProvider.withCommandLine.mockReturnValue(debugConfiguration2);
+      debugConfigurationProvider.getDebugConfigNames.mockImplementation((ws) => {
+        const v1 = [`vscode-jest-tests.${ws.name}`, 'vscode-jest-tests'];
+        const v2 = [`vscode-jest-tests.v2.${ws.name}`, 'vscode-jest-tests.v2'];
+        const sorted = [...v2, ...v1];
+        return { v1, v2, sorted };
+      });
       vscode.window.showQuickPick = mockShowQuickPick;
       mockHelpers.escapeRegExp.mockImplementation((s) => s);
       mockHelpers.testIdString.mockImplementation((_, s) => s);
@@ -214,7 +222,8 @@ describe('JestExt', () => {
 
           expect(sut.debugConfigurationProvider.prepareTestRun).toHaveBeenCalledWith(
             fileName,
-            testNamePattern
+            testNamePattern,
+            workspaceFolder
           );
 
           expect(messaging.systemWarningMessage).not.toHaveBeenCalled();
@@ -284,7 +293,8 @@ describe('JestExt', () => {
         expect(configuration.type).toBe(debugConfiguration2.type);
         expect(sut.debugConfigurationProvider.prepareTestRun).toHaveBeenCalledWith(
           fileName,
-          testNamePattern
+          testNamePattern,
+          workspaceFolder
         );
       });
     });
@@ -303,7 +313,8 @@ describe('JestExt', () => {
       expect(mockHelpers.testIdString).toHaveBeenCalledWith('full-name', tId);
       expect(sut.debugConfigurationProvider.prepareTestRun).toHaveBeenCalledWith(
         fileName,
-        fullName
+        fullName,
+        workspaceFolder
       );
     });
     it.each`
@@ -334,12 +345,14 @@ describe('JestExt', () => {
         if (testIds?.length === 1) {
           expect(sut.debugConfigurationProvider.prepareTestRun).toHaveBeenCalledWith(
             document.fileName,
-            testIds[0]
+            testIds[0],
+            workspaceFolder
           );
         } else {
           expect(sut.debugConfigurationProvider.prepareTestRun).toHaveBeenCalledWith(
             document.fileName,
-            '.*'
+            '.*',
+            workspaceFolder
           );
         }
         expect(sut.debugConfigurationProvider.prepareTestRun).toHaveBeenCalled();
@@ -395,7 +408,8 @@ describe('JestExt', () => {
           expect(configuration).toBeDefined();
           expect(sut.debugConfigurationProvider.prepareTestRun).toHaveBeenCalledWith(
             fileName,
-            selected
+            selected,
+            workspaceFolder
           );
         });
         it('if user did not choose any test, no debug will be run', async () => {
@@ -410,7 +424,8 @@ describe('JestExt', () => {
           expect(mockHelpers.testIdString).not.toHaveBeenCalled();
           expect(sut.debugConfigurationProvider.prepareTestRun).toHaveBeenCalledWith(
             document.fileName,
-            '.*'
+            '.*',
+            workspaceFolder
           );
           expect(vscode.debug.startDebugging).toHaveBeenCalled();
         });
@@ -693,25 +708,6 @@ describe('JestExt', () => {
       sut.triggerUpdateActiveEditor(editor);
 
       expect(updateCurrentDiagnostics).toHaveBeenCalled();
-    });
-    it.each`
-      autoRun                                                  | isInteractive
-      ${'off'}                                                 | ${true}
-      ${{ watch: true }}                                       | ${true}
-      ${{ watch: false }}                                      | ${true}
-      ${{ onStartup: ['all-tests'] }}                          | ${true}
-      ${{ onSave: 'test-file' }}                               | ${true}
-      ${{ onSave: 'test-src-file' }}                           | ${true}
-      ${{ onSave: 'test-src-file', onStartup: ['all-tests'] }} | ${true}
-    `('should update vscode editor context', ({ autoRun, isInteractive }) => {
-      const sut = newJestExt({ settings: { autoRun } });
-      const editor = mockEditor('a');
-      sut.triggerUpdateActiveEditor(editor);
-      expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-        'setContext',
-        'jest:run.interactive',
-        isInteractive
-      );
     });
     it('when failed to get test result, it should report error and clear the decorators and diagnostics', () => {
       const sut = newJestExt();
@@ -1143,6 +1139,11 @@ describe('JestExt', () => {
       expect(sut.events.onTestSessionStarted.dispose).toHaveBeenCalled();
       expect(sut.events.onTestSessionStopped.dispose).toHaveBeenCalled();
     });
+    it('will remove workspace from statusBar', () => {
+      const sut = newJestExt();
+      sut.deactivate();
+      expect(statusBar.removeWorkspaceFolder).toHaveBeenCalled();
+    });
   });
 
   describe('runEvents', () => {
@@ -1477,6 +1478,16 @@ describe('JestExt', () => {
         parserOptions: { plugins: parserPluginOptions },
         verbose: true,
       });
+    });
+  });
+  describe('virtual folder related', () => {
+    it('added name and workspaceFolder properties}', () => {
+      const jestExt = newJestExt();
+      expect(jestExt.name).toEqual(workspaceFolder.name);
+      expect(jestExt.workspaceFolder).toEqual(workspaceFolder);
+    });
+    it('instantiate a disabled JestExt will throw exception', () => {
+      expect(() => newJestExt({ settings: { enable: false } })).toThrow('Jest is disabled');
     });
   });
 });

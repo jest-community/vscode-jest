@@ -51,8 +51,15 @@ export interface PluginResourceSettings {
   monitorLongRun?: MonitorLongRun;
   autoRevealOutput: AutoRevealOutputType;
   parserPluginOptions?: JESParserPluginOptions;
+  enable?: boolean;
 }
 
 export interface PluginWindowSettings {
   disabledWorkspaceFolders: string[];
 }
+
+export type VirtualFolderSettingKey = keyof PluginResourceSettings;
+export type VirtualFolderSettings = {
+  name: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+} & Record<VirtualFolderSettingKey, any>;
