@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import { GetJestExtByURI } from '../extensionManager';
+import { GetJestExtByURI } from '../extension-manager';
 import { FileCoverage } from 'istanbul-lib-coverage';
 
 export class CoverageCodeLensProvider implements vscode.CodeLensProvider {

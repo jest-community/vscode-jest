@@ -1,9 +1,9 @@
-jest.unmock('../src/extensionManager');
+jest.unmock('../src/extension-manager');
 jest.unmock('../src/virtual-workspace-folder');
 jest.unmock('../src/appGlobals');
 
 import * as vscode from 'vscode';
-import { addFolderToDisabledWorkspaceFolders, ExtensionManager } from '../src/extensionManager';
+import { addFolderToDisabledWorkspaceFolders, ExtensionManager } from '../src/extension-manager';
 import { readFileSync } from 'fs';
 import { extensionName } from '../src/appGlobals';
 import { JestExt } from '../src/JestExt';
@@ -148,6 +148,7 @@ describe('ExtensionManager', () => {
   const jestInstance = makeJestExt(makeWorkspaceFolder('workspaceFolder1'));
   let context;
   let extensionManager: ExtensionManager;
+  const isInWorkspaceSpy = jest.spyOn(VirtualWorkspaceFolder.prototype, 'isInWorkspaceFolder');
 
   const registerSpy = jest.spyOn(ExtensionManager.prototype, 'addExtension');
   const unregisterSpy = jest.spyOn(ExtensionManager.prototype, 'deleteExtension');
@@ -156,6 +157,8 @@ describe('ExtensionManager', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     vscode.workspace.getConfiguration = mockGetConfiguration;
+    isInWorkspaceSpy.mockReturnValue(true);
+
     (JestExt as jest.Mocked<any>).mockImplementation(() => jestInstance);
     context = createExtensionContext();
     [workspaceFolder1] = initWorkspaces(['workspaceFolder1']);
@@ -613,7 +616,7 @@ describe('ExtensionManager', () => {
           registeredCallback(editor, {}, 'addtional argument');
           expect(callback).not.toHaveBeenCalled();
         });
-        it('will prompt a chooser if the active workspace has virtual folders', async () => {
+        it('will prompt a chooser if the active workspace has multiple virtual folders', async () => {
           const { ws2, ws2_v1, ws2_v2 } = setupVirtualFolders(extensionManager);
           jest.clearAllMocks();
 
@@ -640,6 +643,22 @@ describe('ExtensionManager', () => {
             editor,
             'addtional argument'
           );
+        });
+        it('will show warning if no extension supports the given editor file', async () => {
+          const { ws2 } = setupVirtualFolders(extensionManager);
+          jest.clearAllMocks();
+          isInWorkspaceSpy.mockReturnValue(false);
+
+          extensionManager.registerCommand({
+            type,
+            name: 'something',
+            callback,
+          });
+          const registeredCallback = (vscode.commands.registerTextEditorCommand as jest.Mocked<any>)
+            .mock.calls[0][1];
+          const editor = makeEditor(ws2.name);
+          await registeredCallback(editor, {}, 'addtional argument');
+          expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
         });
       });
     });
@@ -917,19 +936,40 @@ describe('ExtensionManager', () => {
         extensionManager.onDidChangeActiveTextEditor({ document: {} } as any);
         expect(jestInstances[0].onDidChangeActiveTextEditor).not.toHaveBeenCalled();
       });
-      it('will notify all extensions under the same actual workspace folder', () => {
-        const { ws2, ws2_v1, ws2_v2 } = setupVirtualFolders(extensionManager);
+      it.each`
+        case        | isInV1   | isInV2
+        ${'case 1'} | ${true}  | ${true}
+        ${'case 2'} | ${true}  | ${false}
+        ${'case 3'} | ${false} | ${false}
+      `(
+        'case $case: will notify qualified extensions under the same actual workspace folder',
+        ({ isInV1, isInV2 }) => {
+          const { ws2, ws2_v1, ws2_v2 } = setupVirtualFolders(extensionManager);
+          isInWorkspaceSpy.mockReturnValueOnce(isInV1).mockReturnValueOnce(isInV2);
 
-        // close a document in ws2, we should expect all extensions under ws2 are notified
-        (vscode.workspace.getWorkspaceFolder as any).mockReturnValueOnce(ws2);
-        extensionManager.onDidChangeActiveTextEditor({ document: {} } as any);
-        expect(
-          extensionManager.getByName(ws2_v1.name)?.onDidChangeActiveTextEditor
-        ).toHaveBeenCalled();
-        expect(
-          extensionManager.getByName(ws2_v2.name)?.onDidChangeActiveTextEditor
-        ).toHaveBeenCalled();
-      });
+          // close a document in ws2, we should expect all extensions under ws2 are notified
+          (vscode.workspace.getWorkspaceFolder as any).mockReturnValueOnce(ws2);
+          extensionManager.onDidChangeActiveTextEditor({ document: {} } as any);
+          if (isInV1) {
+            expect(
+              extensionManager.getByName(ws2_v1.name)?.onDidChangeActiveTextEditor
+            ).toHaveBeenCalled();
+          } else {
+            expect(
+              extensionManager.getByName(ws2_v1.name)?.onDidChangeActiveTextEditor
+            ).not.toHaveBeenCalled();
+          }
+          if (isInV2) {
+            expect(
+              extensionManager.getByName(ws2_v2.name)?.onDidChangeActiveTextEditor
+            ).toHaveBeenCalled();
+          } else {
+            expect(
+              extensionManager.getByName(ws2_v2.name)?.onDidChangeActiveTextEditor
+            ).not.toHaveBeenCalled();
+          }
+        }
+      );
     });
 
     describe('onDidChangeTextDocument()', () => {

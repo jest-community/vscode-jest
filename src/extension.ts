@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { statusBar } from './StatusBar';
-import { ExtensionManager } from './extensionManager';
+import { ExtensionManager } from './extension-manager';
 import { tiContextManager } from './test-provider/test-item-context-manager';
 import * as languageProvider from './language-provider';
 

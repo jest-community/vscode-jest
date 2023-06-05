@@ -37,7 +37,7 @@ const mockExtensionManager = {
   getExtensionWindowSettings: jest.fn(() => ({})),
 };
 
-jest.mock('../src/extensionManager', () => mockExtensionManager);
+jest.mock('../src/extension-manager', () => mockExtensionManager);
 
 import { activate, deactivate } from '../src/extension';
 

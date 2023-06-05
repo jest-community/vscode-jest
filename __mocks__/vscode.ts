@@ -8,6 +8,7 @@ const StatusBarAlignment = { Left: 1, Right: 2 };
 const window = {
   createStatusBarItem: jest.fn(() => ({
     show: jest.fn(),
+    hide: jest.fn(),
     tooltip: jest.fn(),
   })),
   showErrorMessage: jest.fn(),

@@ -151,8 +151,7 @@ export class ExtensionManager {
   };
 
   public getByDocUri: GetJestExtByURI = (uri: vscode.Uri): JestExt[] => {
-    const workspace = vscode.workspace.getWorkspaceFolder(uri);
-    return (workspace && this.extCache.getItemsByActualFolderName(workspace.name)) ?? [];
+    return this.extCache.findRelatedItems(uri) ?? [];
   };
   private getExtensionsByFolder(folder: vscode.WorkspaceFolder): JestExt[] {
     const ext = this.extCache.getItemByFolderName(folder.name);
@@ -235,11 +234,13 @@ export class ExtensionManager {
         return vscode.commands.registerTextEditorCommand(
           commandName,
           async (editor: vscode.TextEditor, _edit, ...args: unknown[]) => {
-            const workspace = vscode.workspace.getWorkspaceFolder(editor.document.uri);
-            if (!workspace) {
+            const extensions = this.extCache.findRelatedItems(editor.document.uri);
+            if (!extensions || extensions.length === 0) {
+              vscode.window.showWarningMessage(
+                `No Jest extension activated for this file. Please check your vscode settings.`
+              );
               return;
             }
-            const extensions = this.getExtensionsByFolder(workspace);
             let targeteExt;
             if (extensions.length > 1) {
               targeteExt = await this.selectExtensions(extensions);

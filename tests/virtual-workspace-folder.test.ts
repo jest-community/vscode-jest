@@ -57,7 +57,7 @@ describe('VirtualWorkspaceFolder', () => {
       ${3} | ${['src', 'index.ts']}                   | ${false}
     `('case $case: can determine if a uri is in the workspace', ({ pathComps, expected }) => {
       const uri = makeUri(workspaceFolder.uri.fsPath, ...pathComps);
-      expect(virtualFolder.isInWorkspace(uri)).toBe(expected);
+      expect(virtualFolder.isInWorkspaceFolder(uri)).toBe(expected);
     });
   });
   it('isVirtualWorkspaceFolder can determine if a workspace folder is virtual', () => {

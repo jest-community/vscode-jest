@@ -99,6 +99,13 @@ export const enabledWorkspaceFolders = (includingVirtual = true): vscode.Workspa
     : enabled;
 };
 
+export const isInFolder = (uri: vscode.Uri, workspaceFolder: vscode.WorkspaceFolder): boolean => {
+  if (isVirtualWorkspaceFolder(workspaceFolder)) {
+    return workspaceFolder.isInWorkspaceFolder(uri);
+  }
+  return vscode.workspace.getWorkspaceFolder(uri)?.name === workspaceFolder.name;
+};
+
 export const isSameWorkspace = (
   ws1: vscode.WorkspaceFolder,
   ws2: vscode.WorkspaceFolder

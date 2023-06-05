@@ -24,6 +24,11 @@ export class VirtualFolderBasedCache<T extends FolderAwareItem> {
   getAllItems(): T[] {
     return Object.values(this.byFolderName);
   }
+  /**
+   * Adds an item to the cache. If an item with the same workspace folder name already exists, it will be replaced.
+   * The item will also be added to the list of items under the actual folder name.
+   * @param item The item to add to the cache.
+   */
   addItem(item: T) {
     this.byFolderName[item.workspaceFolder.name] = item;
     const actualFolderName = isVirtualWorkspaceFolder(item.workspaceFolder)
@@ -58,6 +63,21 @@ export class VirtualFolderBasedCache<T extends FolderAwareItem> {
   getItemsByActualFolderName(actualFolderName: string): T[] | undefined {
     return this.byActualFolderName[actualFolderName];
   }
+  findRelatedItems(uri: vscode.Uri): T[] | undefined {
+    const checkVirtualFolder = (includeActualFolder: boolean) => (item: T) =>
+      isVirtualWorkspaceFolder(item.workspaceFolder)
+        ? item.workspaceFolder.isInWorkspaceFolder(uri)
+        : includeActualFolder;
+
+    const actualFolder = vscode.workspace.getWorkspaceFolder(uri);
+    if (actualFolder) {
+      const items = this.getItemsByActualFolderName(actualFolder.name);
+      return items?.filter(checkVirtualFolder(true));
+    }
+    // if the file is not in any actual workspace folder, try all virtual folders
+    return this.getAllItems().filter(checkVirtualFolder(false));
+  }
+
   reset() {
     this.byFolderName = {};
     this.byActualFolderName = {};
@@ -91,7 +111,7 @@ export class VirtualWorkspaceFolder implements vscode.WorkspaceFolder {
   }
 
   /** check if the given uri falls within the virtual folder's path */
-  isInWorkspace(uri: vscode.Uri): boolean {
+  isInWorkspaceFolder(uri: vscode.Uri): boolean {
     return uri.fsPath.startsWith(this.uri.fsPath);
   }
 }

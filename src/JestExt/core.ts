@@ -39,7 +39,7 @@ import { WizardTaskId } from '../setup-wizard';
 import { ItemCommand, JestExtExplorerContext } from '../test-provider/types';
 import { JestTestProvider } from '../test-provider';
 import { JestProcessInfo } from '../JestProcessManagement';
-import { addFolderToDisabledWorkspaceFolders } from '../extensionManager';
+import { addFolderToDisabledWorkspaceFolders } from '../extension-manager';
 import { MessageAction } from '../messaging';
 import { getExitErrorDef } from '../errors';
 import { WorkspaceManager } from '../workspace-manager';
@@ -445,7 +445,7 @@ export class JestExt {
 
   private isInWorkspace(editor: vscode.TextEditor): boolean {
     if (isVirtualWorkspaceFolder(this.extContext.workspace)) {
-      return this.extContext.workspace.isInWorkspace(editor.document.uri);
+      return this.extContext.workspace.isInWorkspaceFolder(editor.document.uri);
     } else {
       return vscode.workspace.getWorkspaceFolder(editor.document.uri) === this.extContext.workspace;
     }

@@ -42,7 +42,7 @@ import {
 } from '../test-helper';
 import { JestTestProvider } from '../../src/test-provider';
 import { MessageAction } from '../../src/messaging';
-import { addFolderToDisabledWorkspaceFolders } from '../../src/extensionManager';
+import { addFolderToDisabledWorkspaceFolders } from '../../src/extension-manager';
 import { JestOutputTerminal } from '../../src/JestExt/output-terminal';
 import { RunShell } from '../../src/JestExt/run-shell';
 import * as errors from '../../src/errors';
