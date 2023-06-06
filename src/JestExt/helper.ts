@@ -122,9 +122,13 @@ export const getExtensionResourceSettings = (
     }
   }
 
-  // get setting from venv first, fallback to workspace setting if not found
+  // get setting from virtual folder first, fallback to workspace setting if not found
   const getSetting = <T>(key: VirtualFolderSettingKey): T | undefined => {
-    return vFolder && key in vFolder ? (vFolder[key] as T) : config.get<T>(key);
+    // we already incorporated rootPath in the virtual folder uri, so do not repeat it here
+    if (vFolder && key in vFolder) {
+      return key === 'rootPath' ? undefined : (vFolder[key] as T);
+    }
+    return config.get<T>(key);
   };
 
   return {

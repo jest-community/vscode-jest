@@ -28,7 +28,7 @@ describe('VirtualWorkspaceFolder', () => {
     expect(virtualFolder.name).toEqual(vFolderName);
   });
 
-  it('should have the correct uri', () => {
+  it('should have the correct uri that includes rootPath', () => {
     expect(virtualFolder.uri.fsPath).toEqual(
       path.join(workspaceFolder.uri.fsPath, vFolderRootPath)
     );
@@ -102,9 +102,18 @@ describe('VirtualFolderBasedCache', () => {
   describe('with virtual folders', () => {
     let item1, item2, item3;
     beforeEach(() => {
+      vscode.Uri.file = jest.fn().mockImplementation((f) => ({ fsPath: f }));
+      vscode.Uri.joinPath = jest
+        .fn()
+        .mockImplementation((uri, ...parts) => makeUri(uri.fsPath, ...parts));
+
       item1 = makeCacheItem(makeWorkspaceFolder('folder1'));
-      item2 = makeCacheItem(new VirtualWorkspaceFolder(item1.workspaceFolder, 'folder2'));
-      item3 = makeCacheItem(new VirtualWorkspaceFolder(item1.workspaceFolder, 'folder3'));
+      item2 = makeCacheItem(
+        new VirtualWorkspaceFolder(item1.workspaceFolder, 'folder2', 'folder2')
+      );
+      item3 = makeCacheItem(
+        new VirtualWorkspaceFolder(item1.workspaceFolder, 'folder3', 'folder3')
+      );
     });
 
     it('can retrieve items by actual folder name', () => {
@@ -150,6 +159,33 @@ describe('VirtualFolderBasedCache', () => {
       expect(cache.getItemByFolderName('folder2')).toBeUndefined();
       expect(cache.getItemByFolderName('folder3')).toBeUndefined();
       expect(cache.size).toBe(0);
+    });
+    describe('findRelatedItems', () => {
+      let item4;
+      beforeEach(() => {
+        item4 = makeCacheItem(makeWorkspaceFolder('folder4'));
+      });
+      it.each`
+        case | uriComps                                     | getWorkspaceFolder             | expectedItems
+        ${1} | ${['dummy']}                                 | ${() => undefined}             | ${[]}
+        ${2} | ${['folder1']}                               | ${() => item1.workspaceFolder} | ${[]}
+        ${3} | ${['folder1', 'something']}                  | ${() => item1.workspaceFolder} | ${[]}
+        ${4} | ${['folder1', 'folder2', 'index.ts']}        | ${() => item1.workspaceFolder} | ${() => [item2]}
+        ${5} | ${['folder1', 'folder3', 'src', 'index.ts']} | ${() => item1.workspaceFolder} | ${() => [item3]}
+        ${6} | ${['folder4', 'src', 'index.ts']}            | ${() => item4.workspaceFolder} | ${() => [item4]}
+      `(
+        'case $case: can find related items for a given uri',
+        ({ uriComps, getWorkspaceFolder, expectedItems }) => {
+          cache.addItem(item2);
+          cache.addItem(item3);
+          cache.addItem(item4);
+          const uri = makeUri(...uriComps);
+          vscode.workspace.getWorkspaceFolder = jest.fn().mockReturnValue(getWorkspaceFolder());
+          expect(cache.findRelatedItems(uri)).toEqual(
+            typeof expectedItems === 'function' ? expectedItems() : expectedItems
+          );
+        }
+      );
     });
   });
 

@@ -227,20 +227,24 @@ describe('getExtensionResourceSettings()', () => {
         case | virtualFolders                                                                                    | expectedSettings
         ${1} | ${undefined}                                                                                      | ${'throw'}
         ${2} | ${[{ name: 'v1', debugMode: true }]}                                                              | ${{ debugMode: true }}
-        ${3} | ${[{ name: 'v1', jestCommandLine: 'yarn integ-test' }]}                                           | ${{ jestCommandLine: 'yarn integ-test' }}
+        ${3} | ${[{ name: 'v1', jestCommandLine: 'yarn integ-test', rootPath: 'whatever' }]}                     | ${{ jestCommandLine: 'yarn integ-test' }}
         ${4} | ${[{ name: 'v2', jestCommandLine: 'yarn integ-test' }]}                                           | ${'throw'}
         ${5} | ${[{ name: 'v1', jestCommandLine: 'yarn test1' }, { name: 'v2', jestCommandLine: 'yarn test2' }]} | ${{ jestCommandLine: 'yarn test1' }}
-      `('case $case: can load virtualFolder settings', ({ virtualFolders, expectedSettings }) => {
-        const folder = makeWorkspaceFolder('workspaceFolder1');
-        const vFolder = new VirtualWorkspaceFolder(folder, 'v1');
-        userSettings = { ...folderSetting, virtualFolders };
-        if (expectedSettings === 'throw') {
-          expect(() => getExtensionResourceSettings(vFolder)).toThrow();
-        } else {
-          const settings = getExtensionResourceSettings(vFolder);
-          expect(settings).toEqual(expect.objectContaining(expectedSettings ?? folderSetting));
+        ${6} | ${[{ name: 'v1', rootPath: 'packages/v1' }, { name: 'v2', rootPath: 'packages/v2' }]}             | ${{}}
+      `(
+        'case $case: can load virtualFolder settings for a specific folder',
+        ({ virtualFolders, expectedSettings }) => {
+          const folder = makeWorkspaceFolder('workspaceFolder1');
+          const vFolder = new VirtualWorkspaceFolder(folder, 'v1');
+          userSettings = { ...folderSetting, virtualFolders };
+          if (expectedSettings === 'throw') {
+            expect(() => getExtensionResourceSettings(vFolder)).toThrow();
+          } else {
+            const settings = getExtensionResourceSettings(vFolder);
+            expect(settings).toEqual(expect.objectContaining(expectedSettings ?? folderSetting));
+          }
         }
-      });
+      );
       it('will ignore virtualFolder setting for regular WorkspaceFolder', () => {
         const folder = makeWorkspaceFolder('workspaceFolder1');
         userSettings = {
