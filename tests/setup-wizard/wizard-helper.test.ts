@@ -12,7 +12,6 @@ jest.mock('fs', () => ({
 import * as vscode from 'vscode';
 
 import * as path from 'path';
-import * as os from 'os';
 
 import {
   showActionMenu,
@@ -618,9 +617,6 @@ describe('validateCommandLine', () => {
   });
 });
 
-const canRunTest = (isWin32: boolean) =>
-  (isWin32 && os.platform() === 'win32') || (!isWin32 && os.platform() !== 'win32');
-
 describe('getWizardSettings', () => {
   const workspace: any = {
     name: 'a workspace',
@@ -657,27 +653,16 @@ describe('getWizardSettings', () => {
     expect(getWizardSettings(workspace)).toEqual(expectedSettings);
   });
   it.each`
-    isWin32  | rootPath                      | absoluteRootPath
-    ${false} | ${undefined}                  | ${undefined}
-    ${false} | ${'../parent'}                | ${'/parent'}
-    ${false} | ${'/root'}                    | ${'/root'}
-    ${false} | ${'"/root with space/dir"'}   | ${'/root with space/dir'}
-    ${false} | ${'dir with space/tests'}     | ${'/workspace/dir with space/tests'}
-    ${true}  | ${undefined}                  | ${undefined}
-    ${true}  | ${'..\\parent'}               | ${'\\parent'}
-    ${true}  | ${'\\root'}                   | ${'\\root'}
-    ${true}  | ${'"\\root with space\\dir"'} | ${'\\root with space\\dir'}
-    ${true}  | ${'dir with space\\tests'}    | ${'\\workspace\\dir with space\\tests'}
-  `(
-    'compute absoluteRootPath: $rootPath => $absoluteRootPath',
-    ({ isWin32, rootPath, absoluteRootPath }) => {
-      if (!canRunTest(isWin32)) {
-        return;
-      }
-      vscodeSettings['rootPath'] = rootPath;
-      expect(getWizardSettings(workspace)).toEqual({ rootPath, absoluteRootPath });
-    }
-  );
+    case  | rootPath                                            | absoluteRootPath
+    ${6}  | ${undefined}                                        | ${undefined}
+    ${7}  | ${path.join('..', 'parent')}                        | ${path.resolve(path.sep, 'parent')}
+    ${8}  | ${path.resolve(path.sep, 'root')}                   | ${path.resolve(path.sep, 'root')}
+    ${9}  | ${path.resolve(path.sep, 'root with space', 'dir')} | ${path.resolve(path.sep, 'root with space', 'dir')}
+    ${10} | ${path.join('dir with space', 'tests')}             | ${path.resolve(workspace.uri.fsPath, 'dir with space', 'tests')}
+  `('case $case: can resolve rootPath to absoluteRootPath', ({ rootPath, absoluteRootPath }) => {
+    vscodeSettings['rootPath'] = rootPath;
+    expect(getWizardSettings(workspace)).toEqual({ rootPath, absoluteRootPath });
+  });
 });
 
 describe('createSaveConfig', () => {
@@ -782,11 +767,11 @@ describe('validateRootPath', () => {
     jest.resetAllMocks();
   });
   it.each`
-    case | rootPath              | expectedPath
-    ${1} | ${'sub-folder'}       | ${path.resolve(workspace.uri.fsPath, 'sub-folder')}
-    ${2} | ${'"sub folder"'}     | ${path.resolve(workspace.uri.fsPath, 'sub folder')}
-    ${3} | ${'/root/sub-folder'} | ${'/root/sub-folder'}
-    ${4} | ${''}                 | ${workspace.uri.fsPath}
+    case | rootPath                              | expectedPath
+    ${1} | ${'sub-folder'}                       | ${path.resolve(workspace.uri.fsPath, 'sub-folder')}
+    ${2} | ${'"sub folder"'}                     | ${path.resolve(workspace.uri.fsPath, 'sub folder')}
+    ${3} | ${path.resolve('root', 'sub-folder')} | ${path.resolve('root', 'sub-folder')}
+    ${4} | ${''}                                 | ${workspace.uri.fsPath}
   `('case $case', ({ rootPath, expectedPath }) => {
     validateRootPath(workspace, rootPath);
     expect(mockExistsSync).toHaveBeenCalledWith(expectedPath);
