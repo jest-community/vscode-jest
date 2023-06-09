@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { getPackageJson } from './helpers';
 import { VirtualWorkspaceFolder, isVirtualWorkspaceFolder } from './virtual-workspace-folder';
-import { VirtualFolderSettings } from './Settings';
+import { VirtualFolderSettings, createJestSettingGetter } from './Settings';
 
 const ActivationFilePattern = [
   '**/jest.config.{js, ts, mjs, cjs, json}',
@@ -40,7 +40,7 @@ const expandWithVirtualFolders = (
   enableFilter?: EnableFolderFilter
 ): vscode.WorkspaceFolder[] => {
   // check if there is venv
-  const config = vscode.workspace.getConfiguration('jest', workspaceFolder);
+  const config = vscode.workspace.getConfiguration('jest', workspaceFolder.uri);
   const vFolders = config.get<VirtualFolderSettings[]>('virtualFolders');
   if (!vFolders || vFolders.length <= 0) {
     return [workspaceFolder];
@@ -66,24 +66,8 @@ const createEnableFilter = (): EnableFolderFilter => {
     if (disabledWorkspaceFolders.includes(folder.name)) {
       return false;
     }
-    const actualFolder = isVirtualWorkspaceFolder(folder) ? folder.actualWorkspaceFolder : folder;
-    const config = vscode.workspace.getConfiguration('jest', actualFolder);
-    if (config.get<boolean>('enable') === false) {
-      return false;
-    }
-    if (isVirtualWorkspaceFolder(folder)) {
-      const vFolder = config
-        .get<VirtualFolderSettings[]>('virtualFolders')
-        ?.find((f) => f.name === folder.name);
-
-      if (!vFolder) {
-        throw new Error(
-          `Virtual folder "${folder.name}" not found in workspace folder "${folder.actualWorkspaceFolder.name}"`
-        );
-      }
-      return vFolder['enable'] ?? true;
-    }
-    return true;
+    const getSetting = createJestSettingGetter(folder);
+    return getSetting<boolean>('enable') ?? true;
   };
 };
 export const enabledWorkspaceFolders = (includingVirtual = true): vscode.WorkspaceFolder[] => {

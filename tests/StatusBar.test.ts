@@ -10,6 +10,7 @@ import { StatusBar, StatusType, ProcessState } from '../src/StatusBar';
 import { TestStats } from '../src/types';
 import { makeUri, makeWorkspaceFolder } from './test-helper';
 import { VirtualWorkspaceFolder } from '../src/virtual-workspace-folder';
+import { isInFolder } from '../src/workspace-manager';
 
 const mockSummaryChannel = {
   append: jest.fn(),
@@ -33,11 +34,18 @@ describe('StatusBar', () => {
   let mockSummarySBItems;
   let mockActiveSBItems;
 
+  const mockIsInFolder = (...folderNames: string[] | undefined) => {
+    (isInFolder as jest.Mocked<any>).mockImplementation(
+      (_uri, folder) => folderNames && folderNames.find((n) => n === folder.name) !== undefined
+    );
+  };
+
   const setupWorkspace = (active: string, ...additional: string[]) => {
     const folders = [active, ...additional].map((ws) => makeWorkspaceFolder(ws));
     (vscode.workspace as any).workspaceFolders = folders;
     (vscode.window.activeTextEditor as any) = { document: { uri: makeUri('whatever') } };
-    vscode.workspace.getWorkspaceFolder = jest.fn().mockReturnValue(folders[0]);
+    // default to be in the first folder
+    mockIsInFolder(folders[0].name);
     return folders;
   };
 
@@ -80,6 +88,8 @@ describe('StatusBar', () => {
 
     createFolderItemSpy = jest.spyOn(StatusBar.prototype as any, 'createFolderStatusBarItem');
     createSummaryItemSpy = jest.spyOn(StatusBar.prototype as any, 'createSummaryStatusBarItem');
+
+    (isInFolder as jest.Mocked<any>).mockReturnValue(true);
 
     statusBar = new StatusBar();
     updateSpy = jest.spyOn(statusBar as any, 'handleUpdate');
@@ -364,7 +374,7 @@ describe('StatusBar', () => {
   describe('when no active workspace', () => {
     beforeEach(() => {
       (vscode.workspace as any).workspaceFolders = [];
-      vscode.workspace.getWorkspaceFolder = jest.fn().mockReturnValueOnce(undefined);
+      mockIsInFolder(undefined);
     });
     it('no active item will be shown even if only one workspace reported', () => {
       statusBar.bind(makeWorkspaceFolder('testSource1')).update({ state: 'running' });
@@ -403,7 +413,7 @@ describe('StatusBar', () => {
       'case $case: will only show status bar items if the uri is in the specific worksppace folder',
       ({ inWorkspaceFolder }) => {
         // active document are in both v1 and v2 folders
-        isInWorkspaceFolderSpy
+        (isInFolder as jest.Mocked<any>)
           .mockReturnValueOnce(inWorkspaceFolder[0])
           .mockReturnValueOnce(inWorkspaceFolder[1])
           .mockReturnValueOnce(false);
@@ -413,7 +423,7 @@ describe('StatusBar', () => {
         statusBar.bind(v3).update({ state: 'initial' });
         // 3 items created
         expect(createFolderItemSpy.mock.results).toHaveLength(3);
-        expect(isInWorkspaceFolderSpy).toHaveBeenCalledTimes(3);
+        expect(isInFolder).toHaveBeenCalledTimes(3);
 
         // since the URI will match ws1, so only the virtual folders under ws1 will be visible
         expect(createFolderItemSpy.mock.results[0].value.isVisible).toEqual(inWorkspaceFolder[0]); // v1
@@ -448,19 +458,17 @@ describe('StatusBar', () => {
 
   describe('clear up functions', () => {
     let ws1, ws2, v1, v2, editor;
-    let isInWorkspaceFolderSpy;
     beforeEach(() => {
       // setup 2 workspace folders with 2 virtual folders
       [ws1, ws2] = setupWorkspace('ws-1', 'ws-2');
       v1 = new VirtualWorkspaceFolder(ws1, 'v1');
       v2 = new VirtualWorkspaceFolder(ws1, 'v2');
-      isInWorkspaceFolderSpy = jest.spyOn(VirtualWorkspaceFolder.prototype, 'isInWorkspaceFolder');
       editor = { document: { uri: makeUri('test') } };
+      mockIsInFolder(ws1.name, v1.name, v2.name);
     });
     it('when workspace folder is removed, the status bar item will be removed', () => {
       // active editor is in ws1
       vscode.workspace.getWorkspaceFolder = jest.fn().mockReturnValueOnce(ws1);
-      isInWorkspaceFolderSpy.mockReturnValue(true);
       vscode.window.activeTextEditor = editor;
 
       statusBar.bind(ws2).update({ state: 'running' });
@@ -482,7 +490,7 @@ describe('StatusBar', () => {
       expect(disposeSpy).toHaveBeenCalled();
 
       // switch active editor to ws2
-      vscode.workspace.getWorkspaceFolder = jest.fn().mockReturnValueOnce(ws2);
+      mockIsInFolder(ws2.name);
       statusBar.onDidChangeActiveTextEditor(editor);
 
       //now v1 and v2 are not visible
@@ -491,7 +499,6 @@ describe('StatusBar', () => {
     });
     it('when dispose, all status bar items will be disposed', () => {
       vscode.workspace.getWorkspaceFolder = jest.fn().mockReturnValueOnce(ws1);
-      isInWorkspaceFolderSpy.mockReturnValue(true);
       vscode.window.activeTextEditor = editor;
 
       statusBar.bind(ws2).update({ state: 'running' });

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
+import { toAbsoluteRootPath } from './helpers';
 
 export interface FolderAwareItem {
   workspaceFolder: vscode.WorkspaceFolder;
@@ -91,28 +91,28 @@ export class VirtualFolderBasedCache<T extends FolderAwareItem> {
  * Note: The class will have the same index as the actual workspace folder, but different name and uri (if it has set a different rootPath).
  */
 export class VirtualWorkspaceFolder implements vscode.WorkspaceFolder {
-  public readonly uri: vscode.Uri;
+  // the URI with the rootPath applied
+  private effectiveUri: vscode.Uri;
   constructor(
     public readonly actualWorkspaceFolder: vscode.WorkspaceFolder,
     public readonly name: string,
     rootPath?: string
   ) {
-    if (rootPath) {
-      this.uri = path.isAbsolute(rootPath)
-        ? vscode.Uri.file(rootPath)
-        : vscode.Uri.joinPath(actualWorkspaceFolder.uri, rootPath);
-    } else {
-      this.uri = actualWorkspaceFolder.uri;
-    }
+    this.effectiveUri = rootPath
+      ? vscode.Uri.file(toAbsoluteRootPath(actualWorkspaceFolder, rootPath))
+      : actualWorkspaceFolder.uri;
   }
 
   get index(): number {
     return this.actualWorkspaceFolder.index;
   }
+  get uri(): vscode.Uri {
+    return this.actualWorkspaceFolder.uri;
+  }
 
   /** check if the given uri falls within the virtual folder's path */
   isInWorkspaceFolder(uri: vscode.Uri): boolean {
-    return uri.fsPath.startsWith(this.uri.fsPath);
+    return uri.fsPath.startsWith(this.effectiveUri.fsPath);
   }
 }
 

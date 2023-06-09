@@ -8,6 +8,7 @@ import {
   isCreateReactAppTestCommand,
   escapeRegExp,
   parseCmdLine,
+  toAbsoluteRootPath,
 } from './helpers';
 import { platform } from 'os';
 
@@ -216,13 +217,11 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
       throw new Error(`invalid cmdLine: ${cmdLine}`);
     }
 
-    const absoluteRootPath =
-      rootPath &&
-      (path.isAbsolute(rootPath) ? rootPath : path.resolve(workspace.uri.fsPath, rootPath));
+    const absoluteRootPath = rootPath && toAbsoluteRootPath(workspace, rootPath);
 
     let finalConfig: vscode.DebugConfiguration = { ...config };
 
-    const cwd = absoluteRootPath ? absoluteRootPath : config.cwd;
+    const cwd = absoluteRootPath ?? config.cwd;
 
     const pmConfig = this.usePM(cmd, cmdArgs);
     if (pmConfig) {

@@ -7,6 +7,7 @@ import {
   toFilePath,
   escapeRegExp,
   parseCmdLine,
+  toAbsoluteRootPath,
 } from '../src/helpers';
 import * as os from 'os';
 import * as fs from 'fs';
@@ -171,6 +172,9 @@ describe('DebugConfigurationProvider', () => {
     beforeEach(() => {
       (parseCmdLine as jest.Mocked<any>).mockImplementation(
         jest.requireActual('../src/helpers').parseCmdLine
+      );
+      (toAbsoluteRootPath as jest.Mocked<any>).mockImplementation(
+        jest.requireActual('../src/helpers').toAbsoluteRootPath
       );
     });
 

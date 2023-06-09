@@ -1,5 +1,6 @@
 jest.unmock('../../../src/setup-wizard/tasks/setup-jest-cmdline');
 jest.unmock('../test-helper');
+jest.unmock('../../test-helper');
 jest.unmock('./task-test-helper');
 
 import * as vscode from 'vscode';
@@ -73,9 +74,9 @@ describe('wizard-tasks', () => {
         await setupJestCmdLine(c);
 
         if (wsInContext) {
-          expect(mockHelper.selectWorkspace).not.toHaveBeenCalled();
+          expect(mockHelper.selectWorkspaceFolder).not.toHaveBeenCalled();
         } else {
-          expect(mockHelper.selectWorkspace).toHaveBeenCalled();
+          expect(mockHelper.selectWorkspaceFolder).toHaveBeenCalled();
         }
         if (willAbort) {
           expect(mockHelper.showActionMenu).not.toHaveBeenCalled();
@@ -147,11 +148,15 @@ describe('wizard-tasks', () => {
 
           expect(wizardSettings[setting]).toEqual(newValue);
 
-          expect(mockSaveConfig).toHaveBeenCalledTimes(2);
-          expect(mockSaveConfig).toHaveBeenCalledWith({
-            name: `jest.${setting}`,
-            value: newValue,
-          });
+          expect(mockSaveConfig).toHaveBeenCalledTimes(1);
+          expect(mockSaveConfig.mock.calls[0]).toEqual(
+            expect.arrayContaining([
+              {
+                name: `jest.${setting}`,
+                value: newValue,
+              },
+            ])
+          );
         });
       });
     });

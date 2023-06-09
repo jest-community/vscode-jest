@@ -1,10 +1,10 @@
-import { workspaceFolder } from '../test-helper';
+import { makeWorkspaceFolder } from '../../test-helper';
 import * as path from 'path';
 
 export const createWizardContext = (debugConfigProvider: any, wsName?: string): any => ({
   debugConfigProvider,
   wsManager: {
-    getValidWorkspaces: jest.fn(),
+    getValidWorkspaceFolders: jest.fn(),
     getFoldersFromFilesystem: jest.fn(),
   },
   vscodeContext: {
@@ -17,7 +17,7 @@ export const createWizardContext = (debugConfigProvider: any, wsName?: string): 
       update: jest.fn(),
     },
   },
-  workspace: wsName ? workspaceFolder(wsName) : undefined,
+  workspace: wsName ? makeWorkspaceFolder(wsName) : undefined,
   message: jest.fn(),
 });
 

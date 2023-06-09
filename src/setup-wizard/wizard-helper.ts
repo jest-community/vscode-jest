@@ -2,7 +2,6 @@
  * helper functions that are used across components/files
  */
 import * as vscode from 'vscode';
-import * as path from 'path';
 import {
   WizardStatus,
   WizardAction,
@@ -10,7 +9,6 @@ import {
   ActionMenuOptions,
   ActionableButton,
   WizardSettings,
-  JestSettings,
   ConfigEntry,
   ActionableMessageItem,
   ActionMessageType,
@@ -22,9 +20,10 @@ import {
   isActionableButton,
   WizardContext,
 } from './types';
-import { JestExtAutoRunSetting } from '../Settings';
+import { VirtualFolderSettings, createJestSettingGetter } from '../Settings';
 import { existsSync } from 'fs';
-import { parseCmdLine, removeSurroundingQuote } from '../helpers';
+import { parseCmdLine, removeSurroundingQuote, toAbsoluteRootPath } from '../helpers';
+import { VirtualWorkspaceFolder, isVirtualWorkspaceFolder } from '../virtual-workspace-folder';
 
 export const jsonOut = (json: unknown): string => JSON.stringify(json, undefined, 4);
 
@@ -264,60 +263,86 @@ export const validateCommandLine = (cmdLine: string): string | undefined => {
  * get releveant settings from vscode config (settings.json and launch.json) of the given workspace
  * @param workspace
  */
-export const getWizardSettings = (workspace: vscode.WorkspaceFolder): WizardSettings => {
-  const wsSettings: WizardSettings = {};
+export const getWizardSettings = (workspaceFolder: vscode.WorkspaceFolder): WizardSettings => {
+  const getSetting = createJestSettingGetter(workspaceFolder);
+  const wsSettings: WizardSettings = {
+    jestCommandLine: getSetting<string>('jestCommandLine')?.trim() || undefined,
+    rootPath: getSetting<string>('rootPath')?.trim() || undefined,
+  };
 
   // populate jest settings
-  const jestSettings = vscode.workspace.getConfiguration('jest', workspace.uri);
-  JestSettings.forEach((name) => {
-    const value = jestSettings.get<string>(name)?.trim();
-    if (!value) {
-      return;
-    }
-    wsSettings[name] = value;
-    if (name === 'rootPath' && value) {
-      const rootPath = removeSurroundingQuote(value);
-      wsSettings['absoluteRootPath'] = path.normalize(
-        path.isAbsolute(rootPath) ? rootPath : path.join(workspace.uri.fsPath, rootPath)
-      );
-    }
-  });
-
-  wsSettings.autoRun = jestSettings.get<JestExtAutoRunSetting>('autoRun');
+  if (wsSettings.rootPath) {
+    const rootPath = removeSurroundingQuote(wsSettings.rootPath);
+    wsSettings['absoluteRootPath'] = toAbsoluteRootPath(workspaceFolder, rootPath);
+  }
 
   // populate debug config settings
   const value = vscode.workspace
-    .getConfiguration('launch', workspace.uri)
+    .getConfiguration('launch', workspaceFolder.uri)
     .get<vscode.DebugConfiguration[]>('configurations');
   if (value) {
-    wsSettings['configurations'] = value;
+    wsSettings.configurations = value;
   }
   return wsSettings;
 };
 
 export const validateRootPath = (workspace: vscode.WorkspaceFolder, rootPath: string): boolean => {
   const _rootPath = removeSurroundingQuote(rootPath);
-  return existsSync(
-    path.isAbsolute(_rootPath) ? _rootPath : path.resolve(workspace.uri.fsPath, _rootPath)
-  );
+  return existsSync(toAbsoluteRootPath(workspace, _rootPath));
+};
+
+export const actualWorkspaceFolder = (folder: vscode.WorkspaceFolder): vscode.WorkspaceFolder =>
+  isVirtualWorkspaceFolder(folder) ? folder.actualWorkspaceFolder : folder;
+
+export const toVirtualFolderSettings = (
+  vFolder: VirtualWorkspaceFolder,
+  ...entries: ConfigEntry[]
+): ConfigEntry => {
+  const config = vscode.workspace.getConfiguration('jest', vFolder.actualWorkspaceFolder);
+  const virtualFolders = config.get<VirtualFolderSettings[]>('virtualFolders');
+  if (!virtualFolders) {
+    throw new Error(
+      `Resolving virtual folder "${vFolder.name}" failed: no virtualFolders setting found under actual folder "${vFolder.actualWorkspaceFolder.name}}"`
+    );
+  }
+
+  // remove the jest prefix from the entry name
+  const updatedSettings = entries.reduce((combined, entry) => {
+    const name = entry.name.replace(/^jest\./, '');
+    combined[name] = entry.value;
+    return combined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  }, {} as any);
+
+  const vFoldersEntry: ConfigEntry = {
+    name: 'jest.virtualFolders',
+    value: virtualFolders.map((vf) =>
+      vf.name === vFolder.name ? { ...vf, ...updatedSettings } : vf
+    ),
+  };
+  return vFoldersEntry;
 };
 
 export const createSaveConfig =
   (context: WizardContext) =>
   (...entries: ConfigEntry[]): Promise<void> => {
     const { workspace, message } = context;
-    const config = vscode.workspace.getConfiguration(undefined, workspace?.uri);
+    const targetWorkspace =
+      workspace && isVirtualWorkspaceFolder(workspace)
+        ? workspace.actualWorkspaceFolder
+        : workspace;
+    const config = vscode.workspace.getConfiguration(undefined, targetWorkspace?.uri);
 
     const promises = entries.map((e) => {
       message(
         `Updating setting "${e.name}" in vscode workspace ${
-          workspace ? `folder ${workspace.name}` : ''
+          targetWorkspace ? `folder ${targetWorkspace.name}` : ''
         }`
       );
       return config.update(
         e.name,
         e.value,
-        workspace
+        targetWorkspace
           ? vscode.ConfigurationTarget.WorkspaceFolder
           : vscode.ConfigurationTarget.Workspace
       );
@@ -332,11 +357,20 @@ export const createSaveConfig =
       });
   };
 
-export const selectWorkspace = async (): Promise<vscode.WorkspaceFolder | undefined> => {
-  if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length <= 0) {
+export const selectWorkspaceFolder = async (
+  workspaceFolders?: vscode.WorkspaceFolder[]
+): Promise<vscode.WorkspaceFolder | undefined> => {
+  const folders = workspaceFolders ? workspaceFolders : vscode.workspace.workspaceFolders;
+
+  if (!folders || folders.length <= 0) {
     return Promise.resolve(undefined);
   }
-  return vscode.workspace.workspaceFolders.length == 1
-    ? Promise.resolve(vscode.workspace.workspaceFolders[0])
-    : await vscode.window.showWorkspaceFolderPick();
+  return folders.length == 1
+    ? Promise.resolve(folders[0])
+    : await vscode.window
+        .showQuickPick(
+          folders.map((f) => f.name),
+          { placeHolder: 'Select a workspace folder' }
+        )
+        .then((name) => folders.find((f) => f.name === name));
 };

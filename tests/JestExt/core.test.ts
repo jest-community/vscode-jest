@@ -109,7 +109,7 @@ describe('JestExt', () => {
   };
   const mockEditor = (fileName: string, languageId = 'typescript'): any => {
     return {
-      document: { fileName, languageId, uri: fileName },
+      document: { fileName, languageId, uri: makeUri(fileName) },
       setDecorations: jest.fn(),
     };
   };
@@ -141,7 +141,7 @@ describe('JestExt', () => {
     });
     (RunShell as jest.Mocked<any>).mockImplementation(() => ({ toSetting: jest.fn() }));
 
-    mockWorkspaceManager = { getFoldersFromFilesystem: jest.fn() };
+    mockWorkspaceManager = { getFoldersFromFilesystem: jest.fn(), isInFolder: jest.fn() };
     (WorkspaceManager as jest.Mocked<any>).mockReturnValue(mockWorkspaceManager);
   });
 
@@ -685,10 +685,10 @@ describe('JestExt', () => {
 
   describe('triggerUpdateActiveEditor()', () => {
     beforeEach(() => {
-      (vscode.workspace.getWorkspaceFolder as jest.Mocked<any>).mockReturnValue(workspaceFolder);
+      mockWorkspaceManager.isInFolder.mockReturnValue(true);
     });
     it('should update the coverage overlay in visible editors', () => {
-      const editor: any = { document: { uri: 'whatever' } };
+      const editor: any = { document: { uri: 'whatever', languageId: 'javascript' } };
 
       const sut = newJestExt();
       sut.triggerUpdateActiveEditor(editor);
@@ -1076,12 +1076,12 @@ describe('JestExt', () => {
       mockCoverageMapProvider.update.mockImplementation(() => Promise.resolve());
 
       sut = newJestExt();
-      const { updateWithData: f } = (createProcessSession as jest.Mocked<any>).mock.calls[0][0];
-      updateWithData = f;
+      ({ updateWithData } = (createProcessSession as jest.Mocked<any>).mock.calls[0][0]);
 
       (resultsWithLowerCaseWindowsDriveLetters as jest.Mocked<any>).mockReturnValue({
         coverageMap: {},
       });
+      vscode.window.visibleTextEditors = [];
     });
     it('will invoke internal components to process test results', () => {
       updateWithData({}, 'test-all-12');
@@ -1104,14 +1104,17 @@ describe('JestExt', () => {
         mockEditor('b'),
         mockEditor('c'),
       ];
-      (sut.testResultProvider.isTestFile as jest.Mocked<any>)
-        .mockReturnValueOnce('yes')
-        .mockReturnValueOnce('no')
-        .mockReturnValueOnce('maybe');
-      (vscode.workspace.getWorkspaceFolder as jest.Mocked<any>).mockImplementation((uri) =>
-        uri !== 'b' ? workspaceFolder : undefined
-      );
+      (sut.testResultProvider.isTestFile as jest.Mocked<any>).mockImplementation((fileName) => {
+        if (fileName === 'a') return 'yes';
+        if (fileName === 'b') return 'no';
+        if (fileName === 'c') return 'maybe';
+        throw new Error(`unexpected document editor.document.fileName`);
+      });
+      mockWorkspaceManager.isInFolder.mockImplementation((uri) => {
+        return uri.fsPath !== 'b';
+      });
       const triggerUpdateActiveEditorSpy = jest.spyOn(sut as any, 'triggerUpdateActiveEditor');
+      expect(triggerUpdateActiveEditorSpy).toHaveBeenCalledTimes(0);
       updateWithData();
       expect(triggerUpdateActiveEditorSpy).toHaveBeenCalledTimes(2);
     });

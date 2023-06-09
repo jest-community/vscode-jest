@@ -22,12 +22,13 @@ import {
   createSaveConfig,
   showActionMessage,
   validateCommandLine,
-  selectWorkspace,
+  selectWorkspaceFolder,
   validateRootPath,
 } from '../../src/setup-wizard/wizard-helper';
 import { ActionMessageType, WizardStatus } from '../../src/setup-wizard/types';
-import { throwError, workspaceFolder } from './test-helper';
+import { throwError } from './test-helper';
 import { makeWorkspaceFolder } from '../test-helper';
+import { createJestSettingGetter } from '../../src/Settings';
 
 describe('QuickInput Proxy', () => {
   const mockOnDidTriggerButton = jest.fn();
@@ -632,6 +633,7 @@ describe('getWizardSettings', () => {
     jest.resetAllMocks();
 
     vscodeSettings = {};
+    (createJestSettingGetter as jest.Mocked<any>).mockReturnValue(mockConfigGet);
     vscode.workspace.getConfiguration = jest.fn().mockReturnValue({
       get: mockConfigGet,
     });
@@ -639,9 +641,8 @@ describe('getWizardSettings', () => {
   });
   it('extracted from vscode settings and launch config', () => {
     getWizardSettings(workspace);
-    expect(vscode.workspace.getConfiguration).toHaveBeenCalledTimes(2);
-    expect(vscode.workspace.getConfiguration).toHaveBeenNthCalledWith(1, 'jest', workspace.uri);
-    expect(vscode.workspace.getConfiguration).toHaveBeenNthCalledWith(2, 'launch', workspace.uri);
+    expect(createJestSettingGetter).toHaveBeenCalled();
+    expect(vscode.workspace.getConfiguration).toHaveBeenCalledWith('launch', workspace.uri);
   });
   it.each`
     seq  | settings                                                 | expectedSettings
@@ -762,15 +763,16 @@ describe('selectWorkspace', () => {
     jest.clearAllMocks();
   });
   it.each`
-    desc                    | workspaceFolders                                      | callCount
-    ${'single-workspace'}   | ${[workspaceFolder('single-root')]}                   | ${0}
-    ${'multiple-workspace'} | ${[workspaceFolder('ws-1'), workspaceFolder('ws-2')]} | ${1}
-    ${'no-workspace'}       | ${undefined}                                          | ${0}
+    desc                    | workspaceFolders                                              | callCount
+    ${'single-workspace'}   | ${[makeWorkspaceFolder('single-root')]}                       | ${0}
+    ${'multiple-workspace'} | ${[makeWorkspaceFolder('ws-1'), makeWorkspaceFolder('ws-2')]} | ${1}
+    ${'no-workspace'}       | ${undefined}                                                  | ${0}
   `('will only prompt to picker if multi-root: $desc', async ({ workspaceFolders, callCount }) => {
     expect.hasAssertions();
     (vscode.workspace as any).workspaceFolders = workspaceFolders;
-    await selectWorkspace();
-    expect(vscode.window.showWorkspaceFolderPick).toHaveBeenCalledTimes(callCount);
+    (vscode.window.showQuickPick as jest.Mocked<any>).mockResolvedValueOnce(undefined);
+    await selectWorkspaceFolder();
+    expect(vscode.window.showQuickPick).toHaveBeenCalledTimes(callCount);
   });
 });
 
@@ -784,7 +786,7 @@ describe('validateRootPath', () => {
     ${1} | ${'sub-folder'}       | ${path.resolve(workspace.uri.fsPath, 'sub-folder')}
     ${2} | ${'"sub folder"'}     | ${path.resolve(workspace.uri.fsPath, 'sub folder')}
     ${3} | ${'/root/sub-folder'} | ${'/root/sub-folder'}
-    ${4} | ${''}                 | ${path.resolve(workspace.uri.fsPath)}
+    ${4} | ${''}                 | ${workspace.uri.fsPath}
   `('case $case', ({ rootPath, expectedPath }) => {
     validateRootPath(workspace, rootPath);
     expect(mockExistsSync).toHaveBeenCalledWith(expectedPath);

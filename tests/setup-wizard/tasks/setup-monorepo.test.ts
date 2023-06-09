@@ -1,5 +1,6 @@
 jest.unmock('../../../src/setup-wizard/tasks/setup-monorepo');
 jest.unmock('../test-helper');
+jest.unmock('../../test-helper');
 jest.unmock('./task-test-helper');
 
 import * as vscode from 'vscode';
@@ -13,7 +14,8 @@ import {
 import { isSameWorkspace } from '../../../src/workspace-manager';
 
 import { createWizardContext } from './task-test-helper';
-import { mockWizardHelper, workspaceFolder } from '../test-helper';
+import { mockWizardHelper } from '../test-helper';
+import { makeWorkspaceFolder } from '../../test-helper';
 import { PendingSetupTaskKey } from '../../../src/setup-wizard/start-wizard';
 import { setupJestCmdLine } from '../../../src/setup-wizard/tasks/setup-jest-cmdline';
 
@@ -55,7 +57,7 @@ describe('setupMonorepo', () => {
   describe('with singleroot workspace', () => {
     it('can still support monorepo', async () => {
       expect.hasAssertions();
-      (vscode.workspace as any).workspaceFolders = [workspaceFolder('root')];
+      (vscode.workspace as any).workspaceFolders = [makeWorkspaceFolder('root')];
       (setupJestCmdLine as jest.Mocked<any>).mockResolvedValue('success');
       mockShowActionMenu(MonorepoSetupActionId.setupJestCmdLine);
       await expect(setupMonorepo(context)).resolves.toEqual('success');
@@ -63,7 +65,7 @@ describe('setupMonorepo', () => {
     });
     it('can auto convert to a multi-root workspace', async () => {
       expect.hasAssertions();
-      (vscode.workspace as any).workspaceFolders = [workspaceFolder('root')];
+      (vscode.workspace as any).workspaceFolders = [makeWorkspaceFolder('root')];
       mockShowActionMenu(MonorepoSetupActionId.autoConvert);
       await expect(setupMonorepo(context)).resolves.toEqual('exit');
 
@@ -79,13 +81,13 @@ describe('setupMonorepo', () => {
     });
     it('if not able to run test in terminal => abort', async () => {
       expect.hasAssertions();
-      (vscode.workspace as any).workspaceFolders = [workspaceFolder('root')];
+      (vscode.workspace as any).workspaceFolders = [makeWorkspaceFolder('root')];
       mockShowActionMenu(MonorepoSetupActionId.notSetup);
       await expect(setupMonorepo(context)).resolves.toEqual('abort');
     });
     it('user can abort', async () => {
       expect.hasAssertions();
-      (vscode.workspace as any).workspaceFolders = [workspaceFolder('root')];
+      (vscode.workspace as any).workspaceFolders = [makeWorkspaceFolder('root')];
       mockShowActionMenu(MonorepoSetupActionId.abort);
       await expect(setupMonorepo(context)).resolves.toEqual('abort');
 
@@ -102,11 +104,11 @@ describe('setupMonorepo', () => {
     describe('when only 1 folder in multi-root workspace', () => {
       let subscription;
       beforeEach(() => {
-        (vscode.workspace as any).workspaceFolders = [workspaceFolder('root')];
+        (vscode.workspace as any).workspaceFolders = [makeWorkspaceFolder('root')];
         (vscode.workspace.updateWorkspaceFolders as jest.Mocked<any>).mockImplementation(
           (_a, _b, ...folders) => {
             (vscode.workspace as any).workspaceFolders = folders.map((folder) =>
-              workspaceFolder(folder)
+              makeWorkspaceFolder(folder)
             );
           }
         );
@@ -134,7 +136,7 @@ describe('setupMonorepo', () => {
             }
             return Promise.reject(new Error('failed'));
           });
-          context.wsManager.getValidWorkspaces.mockReturnValue(Promise.resolve([]));
+          context.wsManager.getValidWorkspaceFolders.mockReturnValue(Promise.resolve([]));
           (vscode.workspace.updateWorkspaceFolders as jest.Mocked<any>).mockReturnValue(true);
 
           await expect(setupMonorepo(context)).resolves.toEqual(isError ? 'abort' : 'success');
@@ -167,7 +169,7 @@ describe('setupMonorepo', () => {
           context.wsManager.getFoldersFromFilesystem.mockImplementation(() => {
             return Promise.resolve(folderUris);
           });
-          context.wsManager.getValidWorkspaces.mockReturnValue(Promise.resolve([]));
+          context.wsManager.getValidWorkspaceFolders.mockReturnValue(Promise.resolve([]));
           (vscode.workspace.updateWorkspaceFolders as jest.Mocked<any>).mockReturnValue(false);
 
           await expect(setupMonorepo(context)).rejects.toThrow();
@@ -182,7 +184,7 @@ describe('setupMonorepo', () => {
           context.wsManager.getFoldersFromFilesystem.mockImplementation(() => {
             return Promise.resolve(folderUris);
           });
-          context.wsManager.getValidWorkspaces.mockRejectedValue('error');
+          context.wsManager.getValidWorkspaceFolders.mockRejectedValue('error');
           (vscode.workspace.updateWorkspaceFolders as jest.Mocked<any>).mockReturnValue(true);
 
           await expect(setupMonorepo(context)).rejects.toEqual('error');
@@ -195,12 +197,12 @@ describe('setupMonorepo', () => {
     });
     describe('when more than 1 folder in config', () => {
       const wsInfo = (wsName: string, rootPath?: string) => ({
-        workspace: workspaceFolder(wsName),
+        folder: makeWorkspaceFolder(wsName),
         rootPath,
       });
       const wsNames = ['root', 'folder-1', 'folder-2', 'folder-3'];
       beforeEach(() => {
-        (vscode.workspace as any).workspaceFolders = wsNames.map((d) => workspaceFolder(d));
+        (vscode.workspace as any).workspaceFolders = wsNames.map((d) => makeWorkspaceFolder(d));
       });
       describe('can validate each workspace folder and disable invalid ones', () => {
         it.each`
@@ -214,7 +216,9 @@ describe('setupMonorepo', () => {
           const validWorkspaceInfo = wsNames
             .filter((n) => !invalid.includes(n))
             .map((vn) => wsInfo(vn));
-          context.wsManager.getValidWorkspaces.mockReturnValue(Promise.resolve(validWorkspaceInfo));
+          context.wsManager.getValidWorkspaceFolders.mockReturnValue(
+            Promise.resolve(validWorkspaceInfo)
+          );
 
           await expect(setupMonorepo(context)).resolves.toEqual('success');
           if (updateSetting) {
@@ -231,7 +235,7 @@ describe('setupMonorepo', () => {
       describe('can adjust rootPath', () => {
         beforeEach(() => {
           const validWorkspaceInfo = [wsInfo('folder-2', 'src'), wsInfo('folder-3')];
-          context.wsManager.getValidWorkspaces.mockReturnValue(validWorkspaceInfo);
+          context.wsManager.getValidWorkspaceFolders.mockReturnValue(validWorkspaceInfo);
         });
         it('if no rootPath is defined, will automatically update', async () => {
           expect.hasAssertions();

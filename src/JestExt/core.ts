@@ -42,9 +42,8 @@ import { JestProcessInfo } from '../JestProcessManagement';
 import { addFolderToDisabledWorkspaceFolders } from '../extension-manager';
 import { MessageAction } from '../messaging';
 import { getExitErrorDef } from '../errors';
-import { WorkspaceManager } from '../workspace-manager';
+import { WorkspaceManager, isInFolder } from '../workspace-manager';
 import { ansiEsc, JestOutputTerminal } from './output-terminal';
-import { isVirtualWorkspaceFolder } from '../virtual-workspace-folder';
 
 interface RunTestPickItem extends vscode.QuickPickItem {
   id: DebugTestIdentifier;
@@ -392,7 +391,7 @@ export class JestExt {
 
   public triggerUpdateActiveEditor(editor: vscode.TextEditor): void {
     // there is use case that the active editor is not in the workspace but is in jest test file list
-    if (!this.isInWorkspace(editor) && !this.isTestFileEditor(editor)) {
+    if (!this.isInWorkspaceFolder(editor) && !this.isTestFileEditor(editor)) {
       return;
     }
     this.coverageOverlay.updateVisibleEditors();
@@ -443,21 +442,13 @@ export class JestExt {
     await this.startSession(true);
   }
 
-  private isInWorkspace(editor: vscode.TextEditor): boolean {
-    if (isVirtualWorkspaceFolder(this.extContext.workspace)) {
-      return this.extContext.workspace.isInWorkspaceFolder(editor.document.uri);
-    } else {
-      return vscode.workspace.getWorkspaceFolder(editor.document.uri) === this.extContext.workspace;
-    }
+  private isInWorkspaceFolder(editor: vscode.TextEditor): boolean {
+    return isInFolder(editor.document.uri, this.extContext.workspace);
   }
 
   private isSupportedDocument(document?: vscode.TextDocument | undefined): boolean {
-    if (!document) {
-      return false;
-    }
-
     // if no testFiles list, then error on including more possible files as long as they are in the supported languages - this is backward compatible with v3 logic
-    return SupportedLanguageIds.includes(document.languageId);
+    return (document && SupportedLanguageIds.includes(document.languageId)) ?? false;
   }
 
   private isTestFileEditor(editor: vscode.TextEditor): boolean {
@@ -750,7 +741,7 @@ export class JestExt {
     for (const editor of vscode.window.visibleTextEditors) {
       if (
         (document && editor.document === document) ||
-        this.isInWorkspace(editor) ||
+        this.isInWorkspaceFolder(editor) ||
         this.isTestFileEditor(editor)
       ) {
         this.triggerUpdateActiveEditor(editor);

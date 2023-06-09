@@ -9,6 +9,7 @@ jest.unmock('../../src/errors');
 
 import { JestTestRun } from '../../src/test-provider/test-provider-helper';
 import { tiContextManager } from '../../src/test-provider/test-item-context-manager';
+import { toAbsoluteRootPath } from '../../src/helpers';
 
 jest.mock('path', () => {
   let sep = '/';
@@ -173,6 +174,8 @@ describe('test-item-data', () => {
     (tiContextManager.setItemContext as jest.Mocked<any>).mockClear();
 
     (vscode.Location as jest.Mocked<any>).mockReturnValue({});
+
+    (toAbsoluteRootPath as jest.Mocked<any>).mockImplementation((p) => p.uri.fsPath);
   });
   describe('discover children', () => {
     describe('WorkspaceRoot', () => {

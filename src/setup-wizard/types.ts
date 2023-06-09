@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import { DebugConfigurationProvider } from '../DebugConfigurationProvider';
 import { JestExtOutput } from '../JestExt/output-terminal';
-import { JestExtAutoRunSetting } from '../Settings';
 import { WorkspaceManager } from '../workspace-manager';
 
 export interface WizardContext {
@@ -58,15 +57,12 @@ export interface ActionInputBoxOptions<T> extends AllowBackButton, Verbose {
 export type SetupTask = (context: WizardContext) => Promise<WizardStatus>;
 
 // settings
-export const JestSettings = ['jestCommandLine', 'rootPath'];
-type JestSettingKey = (typeof JestSettings)[number];
-
-// prettier-ignore
-export type WizardSettings = 
-  { [key in JestSettingKey]?: string } & 
-  { ['autoRun']?: JestExtAutoRunSetting} &
-  { ['configurations']?: vscode.DebugConfiguration[] } & 
-  { ['absoluteRootPath']?: string };
+export interface WizardSettings {
+  jestCommandLine?: string;
+  rootPath?: string;
+  absoluteRootPath?: string;
+  configurations?: vscode.DebugConfiguration[];
+}
 
 export interface ConfigEntry {
   name: string;

@@ -2,7 +2,8 @@ import * as vscode from 'vscode';
 import { extensionName } from './appGlobals';
 import { JestExt } from './JestExt';
 import { TestStats, TestStatsCategory } from './types';
-import { VirtualFolderBasedCache, isVirtualWorkspaceFolder } from './virtual-workspace-folder';
+import { VirtualFolderBasedCache } from './virtual-workspace-folder';
+import { isInFolder } from './workspace-manager';
 
 export enum StatusType {
   active,
@@ -147,7 +148,7 @@ export class StatusBar {
 
     if (
       vscode.window.activeTextEditor?.document.uri &&
-      this.isInFolder(vscode.window.activeTextEditor?.document.uri, folder)
+      isInFolder(vscode.window.activeTextEditor.document.uri, folder)
     ) {
       item.show();
     }
@@ -183,13 +184,6 @@ export class StatusBar {
     this.updateSummaryStatus();
   }
 
-  private isInFolder(uri: vscode.Uri, workspaceFolder: vscode.WorkspaceFolder): boolean {
-    if (isVirtualWorkspaceFolder(workspaceFolder)) {
-      return workspaceFolder.isInWorkspaceFolder(uri);
-    }
-    return vscode.workspace.getWorkspaceFolder(uri)?.name === workspaceFolder.name;
-  }
-
   private updateItemStatus(item: TypedStatusBarItem) {
     const tooltip = this.getModes(item.status.mode, false);
     const stateInfo = this.buildSourceStatusString(item.status);
@@ -206,29 +200,28 @@ export class StatusBar {
   }
 
   private updateSummaryStatus() {
-    if (this.needsSummaryStatus()) {
-      this.updateSummaryOutput();
-
-      const summaryStats: SBTestStats = { fail: 0, success: 0, unknown: 0 };
-      let backgroundColor: BGColor | undefined;
-      for (const item of this.cache.getAllItems()) {
-        this.updateSummaryStats(item.status, summaryStats);
-        if (!backgroundColor) {
-          const color = item.status.state && this.getStateInfo(item.status.state).backgroundColor;
-          if (color) {
-            backgroundColor = 'warning';
-          }
-        }
-      }
-      const tooltip = this.buildStatsString(summaryStats, false);
-      this.render(
-        { label: this.buildStatsString(summaryStats), backgroundColor },
-        tooltip,
-        this.summaryStatusItem
-      );
+    if (!this.needsSummaryStatus()) {
       return;
     }
-    this.summaryStatusItem.hide();
+    this.updateSummaryOutput();
+
+    const summaryStats: SBTestStats = { fail: 0, success: 0, unknown: 0 };
+    let backgroundColor: BGColor | undefined;
+    for (const item of this.cache.getAllItems()) {
+      this.updateSummaryStats(item.status, summaryStats);
+      if (!backgroundColor) {
+        const color = item.status.state && this.getStateInfo(item.status.state).backgroundColor;
+        if (color) {
+          backgroundColor = 'warning';
+        }
+      }
+    }
+    const tooltip = this.buildStatsString(summaryStats, false);
+    this.render(
+      { label: this.buildStatsString(summaryStats), backgroundColor },
+      tooltip,
+      this.summaryStatusItem
+    );
   }
   private buildStatsString(stats: SBTestStats, showIcon = true, alwaysShowDetails = false): string {
     const summary: SummaryState = stats.isDirty

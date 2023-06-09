@@ -311,6 +311,13 @@ export const parseCmdLine = (cmdLine: string): string[] => {
   return parts;
 };
 
+/**
+ * Converts a relative or absolute root path to an absolute root path based on the provided workspace folder.
+ * If no root path is provided, returns the absolute path of the workspace folder.
+ * @param workspace The workspace folder to use as a base for the absolute root path.
+ * @param rootPath The relative or absolute root path to convert to an absolute root path.
+ * @returns The absolute root path.
+ */
 export const toAbsoluteRootPath = (
   workspace: vscode.WorkspaceFolder,
   rootPath?: string
@@ -318,7 +325,7 @@ export const toAbsoluteRootPath = (
   if (!rootPath) {
     return workspace.uri.fsPath;
   }
-  return isAbsolute(rootPath) ? rootPath : resolve(workspace.uri.fsPath, rootPath);
+  return isAbsolute(rootPath) ? normalize(rootPath) : resolve(workspace.uri.fsPath, rootPath);
 };
 
 export interface JestCommandSettings {
