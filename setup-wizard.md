@@ -23,7 +23,7 @@ This tool helps users set up the extension's basic configurations via a simple U
 
 The tool asks questions and collects answers to update `settings.json`, `launch.json` or workspace file `xxx.code-workspace` ( [How does it work ?](#how-does-it-work)). It works for both single and multi-root workspaces. An output Terminal `"vscode-jest Setup"` will show progress and tips throughout the process. 
 
-Users can run the setup tool any time ([How to run it ?](how-to-run-it)) and safely abort if desired. 
+Users can run the setup tool any time ([How to run it ?](#how-to-run-it)) and safely abort if desired. 
 
 The tool tries its best to create accurate configurations, but it will not be able to cover all use cases out there. However, it always strikes for transparency and shows where and what the configuration will be updated so users can easily modify it manually if needed.
 
