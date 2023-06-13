@@ -66,7 +66,8 @@ export const createJestExtContext = (
       options?.collectCoverage ?? settings.showCoverageOnLoad,
       settings.debugMode,
       settings.nodeEnv,
-      settings.shell.toSetting()
+      settings.shell.toSetting(),
+      settings.useDashedArgs
     );
   };
   return {
@@ -121,6 +122,7 @@ export const getExtensionResourceSettings = (uri: vscode.Uri): PluginResourceSet
     autoRun: new AutoRun(config.get<JestExtAutoRunSetting | null>('autoRun')),
     autoRevealOutput: config.get<AutoRevealOutputType>('autoRevealOutput') ?? 'on-run',
     parserPluginOptions: config.get<JESParserPluginOptions>('parserPluginOptions'),
+    useDashedArgs: config.get<boolean>('useDashedArgs') ?? false,
   };
 };
 

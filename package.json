@@ -180,6 +180,12 @@
           "type": "object",
           "default": null,
           "scope": "resource"
+        },
+        "jest.useDashedArgs": {
+          "markdownDescription": "Use dashed args for jest command line.",
+          "type": "boolean",
+          "default": false,
+          "scope": "resource" 
         }
       }
     },

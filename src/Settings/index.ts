@@ -51,6 +51,7 @@ export interface PluginResourceSettings {
   monitorLongRun?: MonitorLongRun;
   autoRevealOutput: AutoRevealOutputType;
   parserPluginOptions?: JESParserPluginOptions;
+  useDashedArgs?: boolean;
 }
 
 export interface PluginWindowSettings {

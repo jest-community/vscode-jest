@@ -56,6 +56,17 @@ describe('createJestExtContext', () => {
       expect(toFilePath).toHaveBeenCalledWith(rootPath);
       expect(runnerWorkspace).toEqual(mockRunnerWorkspace);
     });
+    it('will pass through useDashedArgs', () => {
+      const settings: any = { ...baseSettings, useDashedArgs: true };
+
+      jest.clearAllMocks();
+
+      const { createRunnerWorkspace } = createJestExtContext(workspaceFolder, settings, output);
+      createRunnerWorkspace();
+      const args = (ProjectWorkspace as jest.Mocked<any>).mock.calls[0];
+      const [useDashedArgs] = [args[9]];
+      expect(useDashedArgs).toBeTruthy();
+    });
     describe('allow creating runnerWorkspace with custom options', () => {
       it('outputFileSuffix and collectCoverage', () => {
         const settings: any = { ...baseSettings, showCoverageOnLoad: false };
@@ -163,6 +174,7 @@ describe('getExtensionResourceSettings()', () => {
       shell: mockShell,
       autoRevealOutput: 'on-run',
       parserPluginOptions: null,
+      useDashedArgs: false,
     });
   });
 
