@@ -66,7 +66,8 @@ export const createJestExtContext = (
       options?.collectCoverage ?? settings.showCoverageOnLoad,
       settings.debugMode,
       settings.nodeEnv,
-      settings.shell.toSetting()
+      settings.shell.toSetting(),
+      settings.useDashedArgs
     );
   };
   return {
@@ -125,6 +126,7 @@ export const getExtensionResourceSettings = (
     autoRevealOutput: getSetting<AutoRevealOutputType>('autoRevealOutput') ?? 'on-run',
     parserPluginOptions: getSetting<JESParserPluginOptions>('parserPluginOptions'),
     enable: getSetting<boolean>('enable'),
+    useDashedArgs: getSetting<boolean>('useDashedArgs') ?? false,
   };
 };
 

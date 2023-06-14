@@ -54,6 +54,7 @@ export interface PluginResourceSettings {
   autoRevealOutput: AutoRevealOutputType;
   parserPluginOptions?: JESParserPluginOptions;
   enable?: boolean;
+  useDashedArgs?: boolean;
 }
 
 export interface PluginWindowSettings {

@@ -180,11 +180,16 @@
           "default": null,
           "scope": "resource"
         },
+        "jest.useDashedArgs": {
+          "markdownDescription": "Use dashed args for jest command line.",
+          "type": "boolean",
+          "default": false,
+          "scope": "resource"
+        },
         "jest.virtualFolders": {
           "markdownDescription": "Allows multiple jest run config for a given (physical) folder. See valid [format](TODO)",
           "type": "array",
-          "default": null,
-          "scope": "resource"
+          "default": null
         }
       }
     },
@@ -515,7 +520,7 @@
   "dependencies": {
     "istanbul-lib-coverage": "^3.2.0",
     "istanbul-lib-source-maps": "^4.0.1",
-    "jest-editor-support": "^31.0.1"
+    "jest-editor-support": "^31.1.0"
   },
   "devDependencies": {
     "@types/istanbul-lib-coverage": "^2.0.4",
