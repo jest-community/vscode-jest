@@ -185,7 +185,7 @@
           "markdownDescription": "Use dashed args for jest command line.",
           "type": "boolean",
           "default": false,
-          "scope": "resource" 
+          "scope": "resource"
         }
       }
     },
