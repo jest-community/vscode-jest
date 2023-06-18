@@ -21,6 +21,13 @@ const statusBar = {
 jest.mock('../../src/StatusBar', () => ({ statusBar }));
 jest.mock('jest-editor-support');
 
+const mockIsInFolder = jest.fn();
+const mockWorkspaceManager = { getFoldersFromFilesystem: jest.fn() };
+jest.mock('../../src/workspace-manager', () => ({
+  WorkspaceManager: jest.fn().mockReturnValue(mockWorkspaceManager),
+  isInFolder: mockIsInFolder,
+}));
+
 import * as vscode from 'vscode';
 import { JestExt } from '../../src/JestExt/core';
 import { AutoRun } from '../../src/JestExt/auto-run';
@@ -47,7 +54,6 @@ import { JestOutputTerminal } from '../../src/JestExt/output-terminal';
 import { RunShell } from '../../src/JestExt/run-shell';
 import * as errors from '../../src/errors';
 import { ItemCommand } from '../../src/test-provider/types';
-import { WorkspaceManager } from '../../src/workspace-manager';
 import { TestResultProvider } from '../../src/TestResults';
 
 /* eslint jest/expect-expect: ["error", { "assertFunctionNames": ["expect", "expectItTakesNoAction"] }] */
@@ -119,7 +125,6 @@ describe('JestExt', () => {
     runItemCommand: jest.fn(),
   };
 
-  let mockWorkspaceManager;
   beforeEach(() => {
     jest.resetAllMocks();
 
@@ -140,9 +145,6 @@ describe('JestExt', () => {
       return { fire: jest.fn(), event: jest.fn(), dispose: jest.fn() };
     });
     (RunShell as jest.Mocked<any>).mockImplementation(() => ({ toSetting: jest.fn() }));
-
-    mockWorkspaceManager = { getFoldersFromFilesystem: jest.fn(), isInFolder: jest.fn() };
-    (WorkspaceManager as jest.Mocked<any>).mockReturnValue(mockWorkspaceManager);
   });
 
   describe('debugTests()', () => {
@@ -683,9 +685,9 @@ describe('JestExt', () => {
     });
   });
 
-  describe('triggerUpdateActiveEditor()', () => {
+  describe('triggerUpdateActiveEditor', () => {
     beforeEach(() => {
-      mockWorkspaceManager.isInFolder.mockReturnValue(true);
+      mockIsInFolder.mockReturnValueOnce(true);
     });
     it('should update the coverage overlay in visible editors', () => {
       const editor: any = { document: { uri: 'whatever', languageId: 'javascript' } };
@@ -1110,7 +1112,7 @@ describe('JestExt', () => {
         if (fileName === 'c') return 'maybe';
         throw new Error(`unexpected document editor.document.fileName`);
       });
-      mockWorkspaceManager.isInFolder.mockImplementation((uri) => {
+      mockIsInFolder.mockImplementation((uri) => {
         return uri.fsPath !== 'b';
       });
       const triggerUpdateActiveEditorSpy = jest.spyOn(sut as any, 'triggerUpdateActiveEditor');
