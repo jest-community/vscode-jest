@@ -3,6 +3,7 @@ jest.unmock('../../src/setup-wizard/types');
 jest.unmock('./test-helper');
 jest.unmock('../test-helper');
 jest.unmock('../../src/helpers');
+jest.unmock('../../src/virtual-workspace-folder');
 
 const mockExistsSync = jest.fn();
 jest.mock('fs', () => ({
@@ -23,11 +24,13 @@ import {
   validateCommandLine,
   selectWorkspaceFolder,
   validateRootPath,
+  toVirtualFolderSettings,
 } from '../../src/setup-wizard/wizard-helper';
 import { ActionMessageType, WizardStatus } from '../../src/setup-wizard/types';
 import { throwError } from './test-helper';
 import { makeWorkspaceFolder } from '../test-helper';
 import { createJestSettingGetter } from '../../src/Settings';
+import { VirtualWorkspaceFolder } from '../../src/virtual-workspace-folder';
 
 describe('QuickInput Proxy', () => {
   const mockOnDidTriggerButton = jest.fn();
@@ -775,5 +778,54 @@ describe('validateRootPath', () => {
   `('case $case', ({ rootPath, expectedPath }) => {
     validateRootPath(workspace, rootPath);
     expect(mockExistsSync).toHaveBeenCalledWith(expectedPath);
+  });
+});
+
+describe('toVirtualFolderSettings', () => {
+  let mockConfigGet;
+  beforeEach(() => {
+    jest.resetAllMocks();
+
+    mockConfigGet = jest.fn();
+    vscode.workspace.getConfiguration = jest.fn().mockReturnValue({
+      get: mockConfigGet,
+    });
+  });
+  it('can transform jest setting updates to virtual folder settings', () => {
+    const actualFolder = makeWorkspaceFolder('ws');
+    const vFolder = new VirtualWorkspaceFolder(actualFolder, 'v-1');
+
+    const callArgs: [any, any, any] = [
+      vFolder,
+      { name: 'jest.rootPath', value: 'a-1' },
+      { name: 'jest.jestCommandLine', value: 'new-command' },
+    ];
+
+    // error handling: throws if no virtual folder is found
+    expect(() => toVirtualFolderSettings(...callArgs)).toThrow();
+
+    // config with virtualFolders, now it should work
+    const vFolderSettings = [
+      { name: 'v-1', rootPath: 'a' },
+      { name: 'v-2', rootPath: 'b' },
+    ];
+    mockConfigGet.mockImplementation((name) => {
+      if (name === 'virtualFolders') {
+        return vFolderSettings;
+      }
+    });
+
+    const expectedSettings = [
+      {
+        ...vFolderSettings[0],
+        rootPath: 'a-1',
+        jestCommandLine: 'new-command',
+      },
+      vFolderSettings[1],
+    ];
+    expect(toVirtualFolderSettings(...callArgs)).toEqual({
+      name: 'jest.virtualFolders',
+      value: expectedSettings,
+    });
   });
 });

@@ -684,6 +684,13 @@ describe('ExtensionManager', () => {
         ws1Ext = extensionManager.getByName('ws-1');
         ws2Ext = extensionManager.getByName('ws-2');
       });
+      it('no op if no workspace folders', () => {
+        expect.hasAssertions();
+        (vscode.workspace as any).workspaceFolders = undefined;
+        const event = mockEvent(true);
+        extensionManager.onDidChangeConfiguration(event);
+        expect(event.affectsConfiguration).not.toHaveBeenCalled();
+      });
       describe('only trigger action if change affects the extensions', () => {
         it.each`
           eventValue          | EMCount | Ws1Count | Ws2Count

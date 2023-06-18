@@ -103,14 +103,10 @@ export class StatusBar {
   }
 
   private createFolderStatusBarItem(workspaceFolder: vscode.WorkspaceFolder): FolderStatusBarItem {
-    let item = this.cache.getItemByFolderName(workspaceFolder.name);
-    if (item) {
-      return item;
-    }
     const actual = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 2);
     actual.tooltip = 'Jest status of the active folder';
 
-    item = new FolderStatusBarItem(StatusType.active, actual, workspaceFolder);
+    const item = new FolderStatusBarItem(StatusType.active, actual, workspaceFolder);
 
     const { showActiveOutput } = this.itemCommands();
     actual.command = { title: 'show test output', command: showActiveOutput, arguments: [item] };

@@ -254,9 +254,9 @@ export class ExtensionManager {
     }
   }
 
-  async onDidChangeConfiguration(e: vscode.ConfigurationChangeEvent): Promise<void> {
+  onDidChangeConfiguration(e: vscode.ConfigurationChangeEvent): void {
     if (!vscode.workspace.workspaceFolders) {
-      return Promise.resolve();
+      return;
     }
     let shouldApplySettings = true;
     for (const [idx, workspaceFolder] of vscode.workspace.workspaceFolders.entries()) {

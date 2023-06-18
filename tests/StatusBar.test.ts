@@ -159,6 +159,15 @@ describe('StatusBar', () => {
       expect(createFolderItemSpy).toHaveBeenCalledWith(ws1);
       expect(createFolderItemSpy).toHaveBeenCalledWith(ws2);
     });
+    it('will not duplicate status bar items for same workspace (source)', () => {
+      const ws1 = makeWorkspaceFolder('ws1');
+      statusBar.bind(ws1);
+      expect(createFolderItemSpy).toHaveBeenCalledTimes(1);
+      expect(createFolderItemSpy).toHaveBeenCalledWith(ws1);
+
+      statusBar.bind(ws1);
+      expect(createFolderItemSpy).toHaveBeenCalledTimes(1);
+    });
     it('binding same workspace (source) multiple times will not create duplicate statusBarItem', () => {
       const ws1 = makeWorkspaceFolder('ws1');
       const ws2 = makeWorkspaceFolder('ws1');

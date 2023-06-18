@@ -13,6 +13,7 @@ import {
 
 import { mockWizardHelper } from '../test-helper';
 import { createWizardContext } from './task-test-helper';
+import { isVirtualWorkspaceFolder } from '../../../src/virtual-workspace-folder';
 
 const mockHelper = helper as jest.Mocked<any>;
 const { mockHelperSetup, mockSelectWorkspace, mockShowActionMenu } = mockWizardHelper(mockHelper);
@@ -126,11 +127,17 @@ describe('wizard-tasks', () => {
       });
       describe('can edit, validate and save settings', () => {
         it.each`
-          case | setting              | taskId
-          ${1} | ${'jestCommandLine'} | ${CLSetupActionId.editJestCommandLine}
-          ${2} | ${'rootPath'}        | ${CLSetupActionId.editRootPath}
-        `('case $case', async ({ setting, taskId }) => {
+          case | setting              | taskId                                 | isVirtualWorkspace
+          ${1} | ${'jestCommandLine'} | ${CLSetupActionId.editJestCommandLine} | ${false}
+          ${2} | ${'rootPath'}        | ${CLSetupActionId.editRootPath}        | ${false}
+          ${3} | ${'jestCommandLine'} | ${CLSetupActionId.editJestCommandLine} | ${true}
+        `('case $case', async ({ setting, taskId, isVirtualWorkspace }) => {
           expect.hasAssertions();
+
+          (isVirtualWorkspaceFolder as jest.Mocked<any>).mockReturnValue(isVirtualWorkspace);
+          const toVirtualFolderSettingsSpy = jest.spyOn(helper, 'toVirtualFolderSettings');
+          const virtualFolderSettings: any = {};
+          toVirtualFolderSettingsSpy.mockReturnValue(virtualFolderSettings);
 
           mockSelectWorkspace('ws-1');
 
@@ -149,14 +156,22 @@ describe('wizard-tasks', () => {
           expect(wizardSettings[setting]).toEqual(newValue);
 
           expect(mockSaveConfig).toHaveBeenCalledTimes(1);
-          expect(mockSaveConfig.mock.calls[0]).toEqual(
-            expect.arrayContaining([
-              {
-                name: `jest.${setting}`,
-                value: newValue,
-              },
-            ])
-          );
+          if (isVirtualWorkspace) {
+            expect(helper.toVirtualFolderSettings).toHaveBeenCalledTimes(1);
+            expect(mockSaveConfig.mock.calls[0]).toEqual(
+              expect.arrayContaining([virtualFolderSettings])
+            );
+          } else {
+            expect(helper.toVirtualFolderSettings).not.toHaveBeenCalled();
+            expect(mockSaveConfig.mock.calls[0]).toEqual(
+              expect.arrayContaining([
+                {
+                  name: `jest.${setting}`,
+                  value: newValue,
+                },
+              ])
+            );
+          }
         });
       });
     });
