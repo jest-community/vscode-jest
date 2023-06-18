@@ -179,6 +179,11 @@ describe('test-item-data', () => {
   });
   describe('discover children', () => {
     describe('WorkspaceRoot', () => {
+      it('has no parent item and the id should contain the workspace name', () => {
+        const wsRoot = new WorkspaceRoot(context);
+        expect(wsRoot.item.parent).toBeUndefined();
+        expect(wsRoot.item.id).toEqual(expect.stringContaining(`:${context.ext.workspace.name}`));
+      });
       it('create test document tree for testFiles list', () => {
         const testFiles = [
           '/ws-1/src/a.test.ts',
