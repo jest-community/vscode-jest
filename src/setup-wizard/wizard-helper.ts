@@ -67,6 +67,7 @@ const handleButtonClick = <T>(button: vscode.QuickInputButton): ActionableButton
   if (isActionableButton(button)) {
     return button as ActionableButton<T>;
   }
+  /* istanbul ignore next */
   throw new Error(`expect actionableButton but got ${JSON.stringify(button)}`);
 };
 
@@ -290,9 +291,6 @@ export const validateRootPath = (workspace: vscode.WorkspaceFolder, rootPath: st
   const _rootPath = removeSurroundingQuote(rootPath);
   return existsSync(toAbsoluteRootPath(workspace, _rootPath));
 };
-
-export const actualWorkspaceFolder = (folder: vscode.WorkspaceFolder): vscode.WorkspaceFolder =>
-  isVirtualWorkspaceFolder(folder) ? folder.actualWorkspaceFolder : folder;
 
 export const toVirtualFolderSettings = (
   vFolder: VirtualWorkspaceFolder,

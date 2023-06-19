@@ -196,9 +196,6 @@ export class StatusBar {
   }
 
   private updateSummaryStatus() {
-    if (!this.needsSummaryStatus()) {
-      return;
-    }
     this.updateSummaryOutput();
 
     const summaryStats: SBTestStats = { fail: 0, success: 0, unknown: 0 };
@@ -297,10 +294,6 @@ export class StatusBar {
       messages.push(`${item.workspaceFolder.name}:\t\t${summary}`);
     });
     this.summaryOutput.append(messages.join('\n'));
-  }
-
-  private needsSummaryStatus() {
-    return this.cache.size > 0;
   }
 
   private getStateInfo(

@@ -730,6 +730,23 @@ describe('createSaveConfig', () => {
       vscode.ConfigurationTarget.Workspace
     );
   });
+  it('will svae to actual workspace folder for vertual workspace folder', async () => {
+    expect.hasAssertions();
+    mockUpdate.mockReturnValue(Promise.resolve());
+    const ws = makeWorkspaceFolder('ws');
+    context.workspace = new VirtualWorkspaceFolder(ws, 'virtual');
+    const saveConfig = createSaveConfig(context);
+    const entry = { name: 'jest.virtualFolders', value: '[]' };
+    await saveConfig(entry);
+
+    expect(vscode.workspace.getConfiguration).toHaveBeenCalledWith(undefined, ws.uri);
+    expect(mockUpdate).toHaveBeenCalledTimes(1);
+    expect(mockUpdate).toHaveBeenCalledWith(
+      entry.name,
+      entry.value,
+      vscode.ConfigurationTarget.WorkspaceFolder
+    );
+  });
   it('when save failed, throws error', async () => {
     expect.hasAssertions();
     mockUpdate
