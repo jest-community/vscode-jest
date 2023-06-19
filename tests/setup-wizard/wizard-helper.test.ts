@@ -3,6 +3,7 @@ jest.unmock('../../src/setup-wizard/types');
 jest.unmock('./test-helper');
 jest.unmock('../test-helper');
 jest.unmock('../../src/helpers');
+jest.unmock('../../src/virtual-workspace-folder');
 
 const mockExistsSync = jest.fn();
 jest.mock('fs', () => ({
@@ -12,7 +13,6 @@ jest.mock('fs', () => ({
 import * as vscode from 'vscode';
 
 import * as path from 'path';
-import * as os from 'os';
 
 import {
   showActionMenu,
@@ -22,12 +22,15 @@ import {
   createSaveConfig,
   showActionMessage,
   validateCommandLine,
-  selectWorkspace,
+  selectWorkspaceFolder,
   validateRootPath,
+  toVirtualFolderSettings,
 } from '../../src/setup-wizard/wizard-helper';
 import { ActionMessageType, WizardStatus } from '../../src/setup-wizard/types';
-import { throwError, workspaceFolder } from './test-helper';
+import { throwError } from './test-helper';
 import { makeWorkspaceFolder } from '../test-helper';
+import { createJestSettingGetter } from '../../src/Settings';
+import { VirtualWorkspaceFolder } from '../../src/virtual-workspace-folder';
 
 describe('QuickInput Proxy', () => {
   const mockOnDidTriggerButton = jest.fn();
@@ -617,9 +620,6 @@ describe('validateCommandLine', () => {
   });
 });
 
-const canRunTest = (isWin32: boolean) =>
-  (isWin32 && os.platform() === 'win32') || (!isWin32 && os.platform() !== 'win32');
-
 describe('getWizardSettings', () => {
   const workspace: any = {
     name: 'a workspace',
@@ -632,6 +632,7 @@ describe('getWizardSettings', () => {
     jest.resetAllMocks();
 
     vscodeSettings = {};
+    (createJestSettingGetter as jest.Mocked<any>).mockReturnValue(mockConfigGet);
     vscode.workspace.getConfiguration = jest.fn().mockReturnValue({
       get: mockConfigGet,
     });
@@ -639,9 +640,8 @@ describe('getWizardSettings', () => {
   });
   it('extracted from vscode settings and launch config', () => {
     getWizardSettings(workspace);
-    expect(vscode.workspace.getConfiguration).toHaveBeenCalledTimes(2);
-    expect(vscode.workspace.getConfiguration).toHaveBeenNthCalledWith(1, 'jest', workspace.uri);
-    expect(vscode.workspace.getConfiguration).toHaveBeenNthCalledWith(2, 'launch', workspace.uri);
+    expect(createJestSettingGetter).toHaveBeenCalled();
+    expect(vscode.workspace.getConfiguration).toHaveBeenCalledWith('launch', workspace.uri);
   });
   it.each`
     seq  | settings                                                 | expectedSettings
@@ -656,27 +656,16 @@ describe('getWizardSettings', () => {
     expect(getWizardSettings(workspace)).toEqual(expectedSettings);
   });
   it.each`
-    isWin32  | rootPath                      | absoluteRootPath
-    ${false} | ${undefined}                  | ${undefined}
-    ${false} | ${'../parent'}                | ${'/parent'}
-    ${false} | ${'/root'}                    | ${'/root'}
-    ${false} | ${'"/root with space/dir"'}   | ${'/root with space/dir'}
-    ${false} | ${'dir with space/tests'}     | ${'/workspace/dir with space/tests'}
-    ${true}  | ${undefined}                  | ${undefined}
-    ${true}  | ${'..\\parent'}               | ${'\\parent'}
-    ${true}  | ${'\\root'}                   | ${'\\root'}
-    ${true}  | ${'"\\root with space\\dir"'} | ${'\\root with space\\dir'}
-    ${true}  | ${'dir with space\\tests'}    | ${'\\workspace\\dir with space\\tests'}
-  `(
-    'compute absoluteRootPath: $rootPath => $absoluteRootPath',
-    ({ isWin32, rootPath, absoluteRootPath }) => {
-      if (!canRunTest(isWin32)) {
-        return;
-      }
-      vscodeSettings['rootPath'] = rootPath;
-      expect(getWizardSettings(workspace)).toEqual({ rootPath, absoluteRootPath });
-    }
-  );
+    case  | rootPath                                            | absoluteRootPath
+    ${6}  | ${undefined}                                        | ${undefined}
+    ${7}  | ${path.join('..', 'parent')}                        | ${path.resolve(path.sep, 'parent')}
+    ${8}  | ${path.resolve(path.sep, 'root')}                   | ${path.resolve(path.sep, 'root')}
+    ${9}  | ${path.resolve(path.sep, 'root with space', 'dir')} | ${path.resolve(path.sep, 'root with space', 'dir')}
+    ${10} | ${path.join('dir with space', 'tests')}             | ${path.resolve(workspace.uri.fsPath, 'dir with space', 'tests')}
+  `('case $case: can resolve rootPath to absoluteRootPath', ({ rootPath, absoluteRootPath }) => {
+    vscodeSettings['rootPath'] = rootPath;
+    expect(getWizardSettings(workspace)).toEqual({ rootPath, absoluteRootPath });
+  });
 });
 
 describe('createSaveConfig', () => {
@@ -741,6 +730,23 @@ describe('createSaveConfig', () => {
       vscode.ConfigurationTarget.Workspace
     );
   });
+  it('will svae to actual workspace folder for vertual workspace folder', async () => {
+    expect.hasAssertions();
+    mockUpdate.mockReturnValue(Promise.resolve());
+    const ws = makeWorkspaceFolder('ws');
+    context.workspace = new VirtualWorkspaceFolder(ws, 'virtual');
+    const saveConfig = createSaveConfig(context);
+    const entry = { name: 'jest.virtualFolders', value: '[]' };
+    await saveConfig(entry);
+
+    expect(vscode.workspace.getConfiguration).toHaveBeenCalledWith(undefined, ws.uri);
+    expect(mockUpdate).toHaveBeenCalledTimes(1);
+    expect(mockUpdate).toHaveBeenCalledWith(
+      entry.name,
+      entry.value,
+      vscode.ConfigurationTarget.WorkspaceFolder
+    );
+  });
   it('when save failed, throws error', async () => {
     expect.hasAssertions();
     mockUpdate
@@ -762,15 +768,16 @@ describe('selectWorkspace', () => {
     jest.clearAllMocks();
   });
   it.each`
-    desc                    | workspaceFolders                                      | callCount
-    ${'single-workspace'}   | ${[workspaceFolder('single-root')]}                   | ${0}
-    ${'multiple-workspace'} | ${[workspaceFolder('ws-1'), workspaceFolder('ws-2')]} | ${1}
-    ${'no-workspace'}       | ${undefined}                                          | ${0}
+    desc                    | workspaceFolders                                              | callCount
+    ${'single-workspace'}   | ${[makeWorkspaceFolder('single-root')]}                       | ${0}
+    ${'multiple-workspace'} | ${[makeWorkspaceFolder('ws-1'), makeWorkspaceFolder('ws-2')]} | ${1}
+    ${'no-workspace'}       | ${undefined}                                                  | ${0}
   `('will only prompt to picker if multi-root: $desc', async ({ workspaceFolders, callCount }) => {
     expect.hasAssertions();
     (vscode.workspace as any).workspaceFolders = workspaceFolders;
-    await selectWorkspace();
-    expect(vscode.window.showWorkspaceFolderPick).toHaveBeenCalledTimes(callCount);
+    (vscode.window.showQuickPick as jest.Mocked<any>).mockResolvedValueOnce(undefined);
+    await selectWorkspaceFolder();
+    expect(vscode.window.showQuickPick).toHaveBeenCalledTimes(callCount);
   });
 });
 
@@ -780,13 +787,62 @@ describe('validateRootPath', () => {
     jest.resetAllMocks();
   });
   it.each`
-    case | rootPath              | expectedPath
-    ${1} | ${'sub-folder'}       | ${path.resolve(workspace.uri.fsPath, 'sub-folder')}
-    ${2} | ${'"sub folder"'}     | ${path.resolve(workspace.uri.fsPath, 'sub folder')}
-    ${3} | ${'/root/sub-folder'} | ${'/root/sub-folder'}
-    ${4} | ${''}                 | ${path.resolve(workspace.uri.fsPath)}
+    case | rootPath                              | expectedPath
+    ${1} | ${'sub-folder'}                       | ${path.resolve(workspace.uri.fsPath, 'sub-folder')}
+    ${2} | ${'"sub folder"'}                     | ${path.resolve(workspace.uri.fsPath, 'sub folder')}
+    ${3} | ${path.resolve('root', 'sub-folder')} | ${path.resolve('root', 'sub-folder')}
+    ${4} | ${''}                                 | ${workspace.uri.fsPath}
   `('case $case', ({ rootPath, expectedPath }) => {
     validateRootPath(workspace, rootPath);
     expect(mockExistsSync).toHaveBeenCalledWith(expectedPath);
+  });
+});
+
+describe('toVirtualFolderSettings', () => {
+  let mockConfigGet;
+  beforeEach(() => {
+    jest.resetAllMocks();
+
+    mockConfigGet = jest.fn();
+    vscode.workspace.getConfiguration = jest.fn().mockReturnValue({
+      get: mockConfigGet,
+    });
+  });
+  it('can transform jest setting updates to virtual folder settings', () => {
+    const actualFolder = makeWorkspaceFolder('ws');
+    const vFolder = new VirtualWorkspaceFolder(actualFolder, 'v-1');
+
+    const callArgs: [any, any, any] = [
+      vFolder,
+      { name: 'jest.rootPath', value: 'a-1' },
+      { name: 'jest.jestCommandLine', value: 'new-command' },
+    ];
+
+    // error handling: throws if no virtual folder is found
+    expect(() => toVirtualFolderSettings(...callArgs)).toThrow();
+
+    // config with virtualFolders, now it should work
+    const vFolderSettings = [
+      { name: 'v-1', rootPath: 'a' },
+      { name: 'v-2', rootPath: 'b' },
+    ];
+    mockConfigGet.mockImplementation((name) => {
+      if (name === 'virtualFolders') {
+        return vFolderSettings;
+      }
+    });
+
+    const expectedSettings = [
+      {
+        ...vFolderSettings[0],
+        rootPath: 'a-1',
+        jestCommandLine: 'new-command',
+      },
+      vFolderSettings[1],
+    ];
+    expect(toVirtualFolderSettings(...callArgs)).toEqual({
+      name: 'jest.virtualFolders',
+      value: expectedSettings,
+    });
   });
 });

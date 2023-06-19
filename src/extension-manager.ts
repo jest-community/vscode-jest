@@ -14,8 +14,9 @@ import {
 } from './setup-wizard';
 import { ItemCommand } from './test-provider/types';
 import { enabledWorkspaceFolders } from './workspace-manager';
+import { VirtualFolderBasedCache } from './virtual-workspace-folder';
 
-export type GetJestExtByURI = (uri: vscode.Uri) => JestExt | undefined;
+export type GetJestExtByURI = (uri: vscode.Uri) => JestExt[];
 
 export function addFolderToDisabledWorkspaceFolders(folder: string): void {
   const config = vscode.workspace.getConfiguration('jest');
@@ -58,17 +59,21 @@ const CommandPrefix: Record<CommandType, string> = {
   'active-text-editor-workspace': `${extensionName}.editor.workspace`,
 };
 export type StartWizardFunc = (options?: StartWizardOptions) => ReturnType<typeof startWizard>;
+
 export class ExtensionManager {
   debugConfigurationProvider: DebugConfigurationProvider;
   coverageCodeLensProvider: CoverageCodeLensProvider;
   startWizard: StartWizardFunc;
 
-  private extByWorkspace: Map<string, JestExt> = new Map();
+  private extCache: VirtualFolderBasedCache<JestExt>;
+  private enabledFolders: vscode.WorkspaceFolder[] = [];
+
   private context: vscode.ExtensionContext;
 
   constructor(context: vscode.ExtensionContext) {
     this.context = context;
 
+    this.extCache = new VirtualFolderBasedCache<JestExt>();
     this.debugConfigurationProvider = new DebugConfigurationProvider();
     this.coverageCodeLensProvider = new CoverageCodeLensProvider(this.getByDocUri);
     this.startWizard = (options?: StartWizardOptions) =>
@@ -91,18 +96,27 @@ export class ExtensionManager {
       this.startWizard({ taskId: setupTask });
       return;
     }
-    const enabled = enabledWorkspaceFolders();
-    vscode.workspace.workspaceFolders?.forEach((ws) => {
-      if (enabled.includes(ws)) {
-        this.registerWorkspace(ws);
-      } else {
-        this.unregisterWorkspace(ws);
+    this.enabledFolders = enabledWorkspaceFolders();
+
+    // update context setting
+    vscode.commands.executeCommand('setContext', 'jest.folderCount', this.enabledFolders.length);
+
+    const enabledNames = this.enabledFolders.map((w) => w.name);
+
+    // unregister the not enabled workspaces
+    this.extCache.getAllItems().forEach((ext) => {
+      if (!enabledNames.includes(ext.name)) {
+        this.deleteExtension(ext);
       }
     });
+    this.enabledFolders.forEach((folder) => this.addExtension(folder));
   }
-  registerWorkspace(workspaceFolder: vscode.WorkspaceFolder): void {
-    const enabled = enabledWorkspaceFolders();
-    if (!enabled.includes(workspaceFolder) || this.extByWorkspace.has(workspaceFolder.name)) {
+  addExtension(workspaceFolder: vscode.WorkspaceFolder): void {
+    // abort if extension already exists or not enabled
+    if (
+      this.extCache.getItemByFolderName(workspaceFolder.name) ||
+      !this.enabledFolders.find((f) => f.name === workspaceFolder.name)
+    ) {
       return;
     }
 
@@ -112,56 +126,68 @@ export class ExtensionManager {
       this.debugConfigurationProvider,
       this.coverageCodeLensProvider
     );
-    this.extByWorkspace.set(workspaceFolder.name, jestExt);
+    this.extCache.addItem(jestExt);
     jestExt.startSession();
   }
 
-  unregisterWorkspace(workspaceFolder: vscode.WorkspaceFolder): void {
-    this.unregisterWorkspaceByName(workspaceFolder.name);
+  deleteExtensionByFolder(workspaceFolder: vscode.WorkspaceFolder): void {
+    this.deleteExtension(this.extCache.getItemByFolderName(workspaceFolder.name));
   }
-  unregisterWorkspaceByName(name: string): void {
-    const extension = this.extByWorkspace.get(name);
+  deleteExtension(extension?: JestExt): void {
     if (extension) {
       extension.deactivate();
-      this.extByWorkspace.delete(name);
+      this.extCache.deleteItemByFolder(extension.workspaceFolder);
     }
   }
-  unregisterAllWorkspaces(): void {
-    const keys = this.extByWorkspace.keys();
-    for (const key of keys) {
-      this.unregisterWorkspaceByName(key);
+  deleteAllExtensions(): void {
+    const extensions = this.extCache.getAllItems();
+    for (const ext of extensions) {
+      this.deleteExtension(ext);
     }
   }
 
   public getByName = (workspaceFolderName: string): JestExt | undefined => {
-    return this.extByWorkspace.get(workspaceFolderName);
-  };
-  public getByDocUri: GetJestExtByURI = (uri: vscode.Uri) => {
-    const workspace = vscode.workspace.getWorkspaceFolder(uri);
-    if (workspace) {
-      return this.getByName(workspace.name);
-    }
+    return this.extCache.getItemByFolderName(workspaceFolderName);
   };
 
-  private async showWorkspaceFolderPick(): Promise<vscode.WorkspaceFolder | undefined> {
-    const folders = enabledWorkspaceFolders();
-    if (folders.length <= 0) {
+  public getByDocUri: GetJestExtByURI = (uri: vscode.Uri): JestExt[] => {
+    return this.extCache.findRelatedItems(uri) ?? [];
+  };
+  private getExtensionsByFolder(folder: vscode.WorkspaceFolder): JestExt[] {
+    const ext = this.extCache.getItemByFolderName(folder.name);
+    if (ext) {
+      return [ext];
+    }
+    return this.extCache.getItemsByActualFolderName(folder.name) ?? [];
+  }
+
+  async selectExtension(fromExtensions?: JestExt[]): Promise<JestExt | undefined> {
+    const selections = await this.selectExtensions(fromExtensions, false);
+    if (selections && selections.length === 1) {
+      return selections[0];
+    }
+  }
+  async selectExtensions(
+    fromExtensions?: JestExt[],
+    canPickMany = true
+  ): Promise<JestExt[] | undefined> {
+    const extensions = fromExtensions ?? this.extCache.getAllItems();
+    if (extensions.length <= 0) {
       return Promise.resolve(undefined);
     }
-    if (folders.length === 1) {
-      return Promise.resolve(folders[0]);
+    if (extensions.length === 1) {
+      return Promise.resolve(extensions);
     }
-    const folderName = await vscode.window.showQuickPick(folders.map((f) => f.name));
-    return folders.find((f) => f.name === folderName);
-  }
-  async selectExtension(): Promise<JestExt | undefined> {
-    const workspace = await this.showWorkspaceFolderPick();
-    const instance = workspace && this.getByName(workspace.name);
-    if (instance) {
-      return instance;
-    } else if (workspace) {
-      throw new Error(`No Jest instance in ${workspace.name} workspace`);
+    const pick: string | string[] | undefined = await vscode.window.showQuickPick(
+      extensions.map((f) => f.name),
+      { canPickMany }
+    );
+    if (!pick) {
+      return undefined;
     }
+    return extensions.filter((ext) =>
+      typeof pick === 'string' ? ext.name === pick : (pick as string[]).includes(ext.name)
+    );
   }
 
   /**
@@ -175,29 +201,30 @@ export class ExtensionManager {
     switch (command.type) {
       case 'all-workspaces': {
         return vscode.commands.registerCommand(commandName, async (...args) => {
-          enabledWorkspaceFolders().forEach((ws) => {
-            const extension = this.getByName(ws.name);
-            if (extension) {
-              command.callback.call(thisArg, extension, ...args);
-            }
-          });
+          this.extCache
+            .getAllItems()
+            .forEach((extension) => command.callback.call(thisArg, extension, ...args));
         });
       }
       case 'select-workspace': {
         return vscode.commands.registerCommand(commandName, async (...args) => {
-          const extension = await this.selectExtension();
-          if (extension) {
-            command.callback.call(thisArg, extension, ...args);
-          }
+          const extensions = await this.selectExtensions();
+          extensions?.forEach((ext) => command.callback.call(thisArg, ext, ...args));
         });
       }
       case 'workspace': {
         return vscode.commands.registerCommand(
           commandName,
           async (workspace: vscode.WorkspaceFolder, ...args) => {
-            const extension = this.getByName(workspace.name);
-            if (extension) {
-              command.callback.call(thisArg, extension, ...args);
+            const extensions = this.getExtensionsByFolder(workspace);
+            let ext;
+            if (extensions.length > 1) {
+              ext = await this.selectExtension(extensions);
+            } else if (extensions.length === 1) {
+              ext = extensions[0];
+            }
+            if (ext) {
+              command.callback.call(thisArg, ext, ...args);
             }
           }
         );
@@ -206,15 +233,21 @@ export class ExtensionManager {
       case 'active-text-editor-workspace': {
         return vscode.commands.registerTextEditorCommand(
           commandName,
-          (editor: vscode.TextEditor, _edit, ...args: unknown[]) => {
-            const workspace = vscode.workspace.getWorkspaceFolder(editor.document.uri);
-            if (!workspace) {
+          async (editor: vscode.TextEditor, _edit, ...args: unknown[]) => {
+            const extensions = this.extCache.findRelatedItems(editor.document.uri);
+            if (!extensions || extensions.length === 0) {
+              vscode.window.showWarningMessage(
+                `No Jest extension activated for this file. Please check your vscode settings.`
+              );
               return;
             }
-            const extension = this.getByName(workspace.name);
-            if (extension) {
-              command.callback.call(thisArg, extension, editor, ...args);
+            let targeteExt;
+            if (extensions.length > 1) {
+              targeteExt = await this.selectExtensions(extensions);
+            } else if (extensions.length === 1) {
+              targeteExt = extensions;
             }
+            targeteExt?.forEach((ext) => command.callback.call(thisArg, ext, editor, ...args));
           }
         );
       }
@@ -222,78 +255,78 @@ export class ExtensionManager {
   }
 
   onDidChangeConfiguration(e: vscode.ConfigurationChangeEvent): void {
-    let applied = false;
-    vscode.workspace.workspaceFolders?.forEach((workspaceFolder, idx) => {
-      if (e.affectsConfiguration('jest', workspaceFolder.uri)) {
-        if (!applied && (idx === 0 || e.affectsConfiguration('jest.enable', workspaceFolder.uri))) {
+    if (!vscode.workspace.workspaceFolders) {
+      return;
+    }
+    let shouldApplySettings = true;
+    for (const [idx, workspaceFolder] of vscode.workspace.workspaceFolders.entries()) {
+      if (e.affectsConfiguration('jest', workspaceFolder)) {
+        if (idx === 0 || shouldApplySettings) {
           this.applySettings();
-          applied = true;
+          shouldApplySettings = false;
         }
 
-        this.getByName(workspaceFolder.name)?.triggerUpdateSettings();
+        this.getExtensionsByFolder(workspaceFolder).forEach((ext) => ext.triggerUpdateSettings());
       }
-    });
+    }
   }
-  onDidChangeWorkspaceFolders(e: vscode.WorkspaceFoldersChangeEvent): void {
+  onDidChangeWorkspaceFolders(): void {
     if (this.context.workspaceState.get<boolean>(IgnoreWorkspaceChanges)) {
       return;
     }
+    this.applySettings();
+  }
 
-    e.added.forEach(this.registerWorkspace, this);
-    e.removed.forEach(this.unregisterWorkspace, this);
+  private onExtensionByUri(
+    uri: vscode.Uri | readonly vscode.Uri[],
+    handler: (ext: JestExt) => unknown
+  ): void {
+    const uriList = Array.isArray(uri) ? uri : [uri];
+    const extension = uriList.flatMap((uri) => this.getByDocUri(uri));
+    // dedup
+    const set = new Set(extension);
+    set.forEach(handler);
   }
   onDidCloseTextDocument(document: vscode.TextDocument): void {
-    const ext = this.getByDocUri(document.uri);
-    if (ext) {
-      ext.onDidCloseTextDocument(document);
-    }
+    this.onExtensionByUri(document.uri, (ext) => ext.onDidCloseTextDocument(document));
   }
   onDidChangeActiveTextEditor(editor?: vscode.TextEditor): void {
     if (editor && editor.document) {
       statusBar.onDidChangeActiveTextEditor(editor);
-      const ext = this.getByDocUri(editor.document.uri);
-      if (ext) {
+      this.onExtensionByUri(editor?.document?.uri, (ext) => {
         ext.onDidChangeActiveTextEditor(editor);
-      }
+      });
     }
   }
   onDidChangeTextDocument(event: vscode.TextDocumentChangeEvent): void {
-    const ext = this.getByDocUri(event.document.uri);
-    if (ext) {
+    this.onExtensionByUri(event.document.uri, (ext) => {
       ext.onDidChangeTextDocument(event);
-    }
+    });
   }
 
   onWillSaveTextDocument(event: vscode.TextDocumentWillSaveEvent): void {
-    const ext = this.getByDocUri(event.document.uri);
-    if (ext) {
+    this.onExtensionByUri(event.document.uri, (ext) => {
       ext.onWillSaveTextDocument(event);
-    }
+    });
   }
   onDidSaveTextDocument(document: vscode.TextDocument): void {
-    const ext = this.getByDocUri(document.uri);
-    if (ext) {
+    this.onExtensionByUri(document.uri, (ext) => {
       ext.onDidSaveTextDocument(document);
-    }
-  }
-  private onFilesChange(files: readonly vscode.Uri[], handler: (ext: JestExt) => void) {
-    const exts = files.map((f) => this.getByDocUri(f)).filter((ext) => ext != null) as JestExt[];
-    const set = new Set<JestExt>(exts);
-    set.forEach(handler);
+    });
   }
 
   onDidCreateFiles(event: vscode.FileCreateEvent): void {
-    this.onFilesChange(event.files, (ext) => ext.onDidCreateFiles(event));
+    this.onExtensionByUri(event.files, (ext) => ext.onDidCreateFiles(event));
   }
   onDidDeleteFiles(event: vscode.FileDeleteEvent): void {
-    this.onFilesChange(event.files, (ext) => ext.onDidDeleteFiles(event));
+    this.onExtensionByUri(event.files, (ext) => ext.onDidDeleteFiles(event));
   }
   onDidRenameFiles(event: vscode.FileRenameEvent): void {
     const files = event.files.reduce((list, f) => {
       list.push(f.newUri, f.oldUri);
       return list;
     }, [] as vscode.Uri[]);
-    this.onFilesChange(files, (ext) => ext.onDidRenameFiles(event));
+    this.onExtensionByUri(files, (ext) => ext.onDidRenameFiles(event));
   }
 
   public register(): vscode.Disposable[] {
@@ -441,8 +474,11 @@ export class ExtensionManager {
 
   activate(): void {
     this.showReleaseMessage();
+
     if (vscode.window.activeTextEditor?.document.uri) {
-      this.getByDocUri(vscode.window.activeTextEditor.document.uri)?.activate();
+      this.onExtensionByUri(vscode.window.activeTextEditor?.document.uri, (ext) => {
+        ext.activate();
+      });
     }
   }
 }

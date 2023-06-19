@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
-import { GetJestExtByURI } from '../extensionManager';
+import { GetJestExtByURI } from '../extension-manager';
+import { FileCoverage } from 'istanbul-lib-coverage';
 
 export class CoverageCodeLensProvider implements vscode.CodeLensProvider {
   private getJestExt: GetJestExtByURI;
@@ -13,18 +14,7 @@ export class CoverageCodeLensProvider implements vscode.CodeLensProvider {
     this.onDidChangeCodeLenses = this.onDidChange.event;
   }
 
-  public provideCodeLenses(
-    document: vscode.TextDocument
-  ): vscode.ProviderResult<vscode.CodeLens[]> {
-    const ext = this.getJestExt(document.uri);
-    const coverage =
-      ext &&
-      ext.coverageOverlay.enabled &&
-      ext.coverageMapProvider.getFileCoverage(document.fileName);
-    if (!coverage) {
-      return;
-    }
-
+  private createCodeLensForCoverage(coverage: FileCoverage, name?: string): vscode.CodeLens {
     const summary = coverage.toSummary();
     const json = summary.toJSON();
     const metrics = (Object.keys(json) as Array<keyof typeof json>).reduce((previous, metric) => {
@@ -33,11 +23,31 @@ export class CoverageCodeLensProvider implements vscode.CodeLensProvider {
 
     const range = new vscode.Range(0, 0, 0, 0);
     const command: vscode.Command = {
-      title: metrics,
+      title: name ? `${name}: ${metrics}` : metrics,
       command: '',
     };
 
-    return [new vscode.CodeLens(range, command)];
+    return new vscode.CodeLens(range, command);
+  }
+
+  public provideCodeLenses(
+    document: vscode.TextDocument
+  ): vscode.ProviderResult<vscode.CodeLens[]> {
+    const coverages: [FileCoverage, string][] = this.getJestExt(document.uri)
+      .map((ext) => {
+        if (ext.coverageOverlay.enabled) {
+          return [ext.coverageMapProvider.getFileCoverage(document.fileName), ext.name];
+        }
+      })
+      .filter((coverageInfo) => coverageInfo?.[0] != null) as [FileCoverage, string][];
+
+    if (coverages.length === 0) {
+      return undefined;
+    }
+    if (coverages.length === 1) {
+      return [this.createCodeLensForCoverage(coverages[0][0])];
+    }
+    return coverages.map(([coverage, name]) => this.createCodeLensForCoverage(coverage, name));
   }
   public coverageChanged(): void {
     this.onDidChange.fire();

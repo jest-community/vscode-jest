@@ -2,7 +2,6 @@
  * collection of stateless utility functions for declutter and easy to test
  */
 import * as vscode from 'vscode';
-import * as path from 'path';
 import { ProjectWorkspace, LoginShell, JESParserPluginOptions } from 'jest-editor-support';
 import { JestProcessRequest } from '../JestProcessManagement';
 import {
@@ -13,6 +12,7 @@ import {
   TestExplorerConfigLegacy,
   JestExtAutoRunSetting,
   AutoRevealOutputType,
+  createJestSettingGetter,
 } from '../Settings';
 import { workspaceLogging } from '../logging';
 import { JestExtContext, RunnerWorkspaceOptions } from './types';
@@ -21,7 +21,7 @@ import { userInfo } from 'os';
 import { JestOutputTerminal } from './output-terminal';
 import { AutoRun } from './auto-run';
 import { RunShell } from './run-shell';
-import { toFilePath } from '../helpers';
+import { toAbsoluteRootPath, toFilePath } from '../helpers';
 
 export const isWatchRequest = (request: JestProcessRequest): boolean =>
   request.type === 'watch-tests' || request.type === 'watch-all-tests';
@@ -84,8 +84,9 @@ const isTestExplorerConfigLegacy = (arg: any): arg is TestExplorerConfigLegacy =
   typeof arg.enabled === 'boolean';
 
 const DefaultTestExplorerSetting: TestExplorerConfig = {};
-const getTestExplorer = (config: vscode.WorkspaceConfiguration): TestExplorerConfig => {
-  const setting = config.get<TestExplorerConfig | TestExplorerConfigLegacy>('testExplorer');
+const adaptTestExplorer = (
+  setting?: TestExplorerConfig | TestExplorerConfigLegacy
+): TestExplorerConfig => {
   if (!setting) {
     return DefaultTestExplorerSetting;
   }
@@ -102,27 +103,30 @@ const getTestExplorer = (config: vscode.WorkspaceConfiguration): TestExplorerCon
 
   return setting;
 };
-export const absoluteRootPath = (rootPath: string, workspaceRoot: string): string => {
-  return path.isAbsolute(rootPath) ? rootPath : path.join(workspaceRoot, rootPath);
-};
-export const getExtensionResourceSettings = (uri: vscode.Uri): PluginResourceSettings => {
-  const config = vscode.workspace.getConfiguration('jest', uri);
+
+export const getExtensionResourceSettings = (
+  workspaceFolder: vscode.WorkspaceFolder
+): PluginResourceSettings => {
+  const getSetting = createJestSettingGetter(workspaceFolder);
 
   return {
-    jestCommandLine: config.get<string>('jestCommandLine'),
-    rootPath: absoluteRootPath(config.get<string>('rootPath') ?? '', uri.fsPath),
-    showCoverageOnLoad: config.get<boolean>('showCoverageOnLoad') ?? false,
-    coverageFormatter: config.get<string>('coverageFormatter') ?? 'DefaultFormatter',
-    debugMode: config.get<boolean>('debugMode'),
-    coverageColors: config.get<CoverageColors>('coverageColors'),
-    testExplorer: getTestExplorer(config),
-    nodeEnv: config.get<NodeEnv | null>('nodeEnv') ?? undefined,
-    shell: new RunShell(config.get<string | LoginShell>('shell')),
-    monitorLongRun: config.get<MonitorLongRun>('monitorLongRun') ?? undefined,
-    autoRun: new AutoRun(config.get<JestExtAutoRunSetting | null>('autoRun')),
-    autoRevealOutput: config.get<AutoRevealOutputType>('autoRevealOutput') ?? 'on-run',
-    parserPluginOptions: config.get<JESParserPluginOptions>('parserPluginOptions'),
-    useDashedArgs: config.get<boolean>('useDashedArgs') ?? false,
+    jestCommandLine: getSetting<string>('jestCommandLine'),
+    rootPath: toAbsoluteRootPath(workspaceFolder, getSetting<string>('rootPath')),
+    showCoverageOnLoad: getSetting<boolean>('showCoverageOnLoad') ?? false,
+    coverageFormatter: getSetting<string>('coverageFormatter') ?? 'DefaultFormatter',
+    debugMode: getSetting<boolean>('debugMode'),
+    coverageColors: getSetting<CoverageColors>('coverageColors'),
+    testExplorer: adaptTestExplorer(
+      getSetting<TestExplorerConfig | TestExplorerConfigLegacy>('testExplorer')
+    ),
+    nodeEnv: getSetting<NodeEnv | null>('nodeEnv') ?? undefined,
+    shell: new RunShell(getSetting<string | LoginShell>('shell')),
+    monitorLongRun: getSetting<MonitorLongRun>('monitorLongRun') ?? undefined,
+    autoRun: new AutoRun(getSetting<JestExtAutoRunSetting | null>('autoRun')),
+    autoRevealOutput: getSetting<AutoRevealOutputType>('autoRevealOutput') ?? 'on-run',
+    parserPluginOptions: getSetting<JESParserPluginOptions>('parserPluginOptions'),
+    enable: getSetting<boolean>('enable'),
+    useDashedArgs: getSetting<boolean>('useDashedArgs') ?? false,
   };
 };
 

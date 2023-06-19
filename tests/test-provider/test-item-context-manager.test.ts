@@ -172,16 +172,18 @@ describe('TestItemContextManager', () => {
       // set some itemContext then trigger the menu
       const extCmd = `${extensionName}.with-workspace.toggle-auto-run`;
       const workspace: any = { name: 'ws' };
+      const root = { id: `whatever:${workspace.name}` };
       manager.setItemContext({ workspace, key: 'jest.autoRun', value: true, itemIds: ['a'] });
       expect(calls).toHaveLength(2);
       calls.forEach((call) => {
         const callBack = call[1];
-        callBack({ id: 'a' });
+        callBack({ id: 'a', parent: root });
         expect(vscode.commands.executeCommand).toHaveBeenCalledWith(extCmd, workspace);
 
+        // the command will be executed regardless of the context
         (vscode.commands.executeCommand as jest.Mocked<any>).mockClear();
-        callBack({ id: 'b' });
-        expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(extCmd, workspace);
+        callBack({ id: 'b', parent: root });
+        expect(vscode.commands.executeCommand).toHaveBeenCalledWith(extCmd, workspace);
       });
     });
     it('toggle-coverage menu commands', () => {
@@ -200,16 +202,17 @@ describe('TestItemContextManager', () => {
       // set some itemContext then trigger the menu
       const extCmd = `${extensionName}.with-workspace.toggle-coverage`;
       const workspace: any = { name: 'ws' };
+      const parent = { id: `whatever:${workspace.name}` };
       manager.setItemContext({ workspace, key: 'jest.coverage', value: false, itemIds: ['a'] });
       expect(calls).toHaveLength(2);
       calls.forEach((call) => {
         const callBack = call[1];
-        callBack({ id: 'a' });
+        callBack({ id: 'a', parent });
         expect(vscode.commands.executeCommand).toHaveBeenCalledWith(extCmd, workspace);
 
         (vscode.commands.executeCommand as jest.Mocked<any>).mockClear();
-        callBack({ id: 'b' });
-        expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(extCmd, workspace);
+        callBack({ id: 'b', parent });
+        expect(vscode.commands.executeCommand).toHaveBeenCalledWith(extCmd, workspace);
       });
     });
     describe('snapshot menu commands', () => {
@@ -230,6 +233,7 @@ describe('TestItemContextManager', () => {
 
         // set some itemContext then trigger the menu
         const workspace: any = { name: 'ws' };
+        const parent = { id: `whatever:${workspace.name}` };
         const context: any = {
           workspace,
           key: contextId,
@@ -237,7 +241,7 @@ describe('TestItemContextManager', () => {
         };
         manager.setItemContext(context);
         const callBack = calls[0][1];
-        const testItem = { id: 'a' };
+        const testItem = { id: 'a', parent };
         callBack(testItem);
         const extCmd = `${extensionName}.with-workspace.item-command`;
         expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
@@ -249,7 +253,7 @@ describe('TestItemContextManager', () => {
 
         (vscode.commands.executeCommand as jest.Mocked<any>).mockClear();
 
-        callBack({ id: 'b' });
+        callBack({ id: 'b', parent });
         expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(
           extCmd,
           workspace,
@@ -294,6 +298,95 @@ describe('TestItemContextManager', () => {
         workspace,
         testItem,
         ItemCommand.revealOutput
+      );
+    });
+    it('can distinguish virtualFolders for same itemIds', () => {
+      // say 2 virtual folders have the same test items
+      const manager = new TestItemContextManager();
+      const disposableList = manager.registerCommands();
+      expect(disposableList.length).toBeGreaterThanOrEqual(6);
+
+      const calls = (vscode.commands.registerCommand as jest.Mocked<any>).mock.calls.filter(
+        (call) => call[0] === `${extensionName}.test-item.view-snapshot`
+      );
+
+      expect(calls).toHaveLength(1);
+      const callBack = calls[0][1];
+
+      // set some itemContext then trigger the menu
+      const workspace: any = { name: 'ws' };
+      (vscode.workspace.getWorkspaceFolder as jest.Mocked<any>).mockReturnValue(workspace);
+
+      const workspace1: any = { name: 'ws-1' };
+      const workspace2: any = { name: 'ws-2' };
+      const parent1 = { id: `whatever:${workspace1.name}` };
+      const parent2 = { id: `whatever:${workspace2.name}` };
+
+      manager.setItemContext({
+        workspace: workspace1,
+        key: 'jest.editor-view-snapshot',
+        itemIds: ['a'],
+      });
+      manager.setItemContext({
+        workspace: workspace2,
+        key: 'jest.editor-view-snapshot',
+        itemIds: ['a'],
+      });
+      const testItem1 = { id: 'a', uri: {}, parent: parent1 };
+      callBack(testItem1);
+      const extCmd = `${extensionName}.with-workspace.item-command`;
+      expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+        extCmd,
+        workspace1,
+        testItem1,
+        ItemCommand.viewSnapshot
+      );
+      const testItem2 = { id: 'a', uri: {}, parent: parent2 };
+      callBack(testItem2);
+      expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+        extCmd,
+        workspace2,
+        testItem2,
+        ItemCommand.viewSnapshot
+      );
+    });
+    it('if we can not find workspace from testItem, will fallback to the vscode folder', () => {
+      const manager = new TestItemContextManager();
+      const disposableList = manager.registerCommands();
+      expect(disposableList.length).toBeGreaterThanOrEqual(6);
+
+      const calls = (vscode.commands.registerCommand as jest.Mocked<any>).mock.calls.filter(
+        (call) => call[0] === `${extensionName}.test-item.view-snapshot`
+      );
+
+      expect(calls).toHaveLength(1);
+      const callBack = calls[0][1];
+
+      // set some itemContext then trigger the menu
+      const workspace: any = { name: 'ws' };
+      (vscode.workspace.getWorkspaceFolder as jest.Mocked<any>).mockReturnValue(workspace);
+
+      const workspace1: any = { name: 'ws-1' };
+      const workspace2: any = { name: 'ws-2' };
+
+      manager.setItemContext({
+        workspace: workspace1,
+        key: 'jest.editor-view-snapshot',
+        itemIds: ['a'],
+      });
+      manager.setItemContext({
+        workspace: workspace2,
+        key: 'jest.editor-view-snapshot',
+        itemIds: ['a'],
+      });
+      const testItem = { id: 'a', uri: {} };
+      callBack(testItem);
+      const extCmd = `${extensionName}.with-workspace.item-command`;
+      expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+        extCmd,
+        workspace,
+        testItem,
+        ItemCommand.viewSnapshot
       );
     });
   });

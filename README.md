@@ -59,11 +59,12 @@ Content
         - [autoRun](#autorun)
         - [testExplorer](#testexplorer)
         - [shell](#shell)
+        - [monitorLongRun](#monitorlongrun)
+        - [autoRevealOutput](#autorevealoutput)
+        - [parserPluginOptions](#parserpluginoptions)
+        - [virtualFolders](#virtualfolders)
     - [Debug Config](#debug-config)
       - [Debug Config v2](#debug-config-v2)
-    - [monitorLongRun](#monitorlongrun)
-    - [autoRevealOutput](#autorevealoutput)
-    - [parserPluginOptions](#parserpluginoptions)
   - [Commands](#commands)
   - [Menu](#menu)
   - [Troubleshooting](#troubleshooting)
@@ -87,7 +88,8 @@ Content
 * View and update snapshots interactively. 
 * Help debug jest tests in vscode.
 * Show coverage information in files being tested.
-* Supports monorepo, react, react-native, vue and various configurations/platforms.
+* Supports monorepo, react, react-native, angular, vue and various configurations/platforms.
+* Supports running multiple jest processes from the same workspace folder.
 * active community support.
 
 ## Installation
@@ -174,18 +176,19 @@ Snapshots are now fully supported for parameterized (`test.each`) and template-l
 
 ### How to use the extension with monorepo projects?
 
-The easiest way to setup the monorepo projects is to use the [Setup Tool](setup-wizard.md#setup-monorepo-project) and choose **Setup monorepo project**
-
-The extension supports monorepo projects in the following configurations:
+The extension supports monorepo projects with the following mechanisms:
 
 1. Single-root workspace: If all tests from monorepo packages can be run from a centralized location, such as project root, then a single-root workspace with proper ["jest.jestCommandLine"](#jestcommandline) and ["jest.rootPath"](#rootpath) setting should work. 
 2. Multi-root workspace: If each monorepo package has its own local jest root and configuration, a [multi-root workspaces](https://code.visualstudio.com/docs/editor/multi-root-workspaces) is required. Users can use `"jest.disabledWorkspaceFolders"` to exclude the packages from jest run. 
+3. Virtual folders: Starting from v6, users can also use virtual folders to configure monorepo packages from the root folder. See [virtual folders](#virtual-folders) for more details.
+
+For option 1 and 2, the easiest way to setup the monorepo projects is to use the [Setup Tool](setup-wizard.md#setup-monorepo-project) and choose **Setup monorepo project**. 
 
 Please note, a working jest environment is a prerequisite for this extension. If you are having problem running the tests from a terminal, please follow [jest](https://jestjs.io/docs/configuration) instruction to set it up first.
    
 ### How to read the StatusBar?
 StatusBar shows 2 kinds of information:
-`Jest` shows the mode and state of the "active" workspace folder.
+`Jest` shows the mode and state of the "active" workspace folder or virtual folder(s).
 `Jest-WS` shows the total test suite stats for the whole workspace.
 Clicking on each of these button will reveal the corresponding output window with more details.
 
@@ -256,8 +259,10 @@ Users can use the following settings to tailor the extension for their environme
 |[shell](#shell)|shell (path or LoginShell) for executing jest|null|`"jest.shell": "/bin/bash"` or `"jest.shell": "powershell"` or `"jest.shell": {"path": "/bin/bash"; args: ["--login"]}`  |
 |[autoRun](#autorun)|Controls when and what tests should be run|undefined|`"jest.autoRun": "off"` or `"jest.autoRun": "watch"` or `"jest.autoRun": {"watch": false, "onSave":"test-only"}`|
 |[rootPath](#rootPath)|The path to your frontend src folder|""|`"jest.rootPath":"packages/app"` or `"jest.rootPath":"/apps/my-app"`|
+useDashedArgs| Determine if to use dashed arguments for jest processes |undefined|`"jest.useDashedArgs":true`|
 |[monitorLongRun](#monitorlongrun)| monitor long running tests based on given threshold in ms|60000|`"jest.monitorLongRun": 120000`|
 |[parserPluginOptions](#parserpluginoptions)|Configure babel parser plugins|null|`"jest.parserPluginOptions": {decorators: 'legacy'}`|
+|[virtualFolders](#virtual-folders)|defines multiple jest runs in a given vscode workspace folder|undefined|`"jest.virtualFolders": "[{"name": "front-end", "rootPath': "packages/front-end"}, {"name": "back-end", "rootPath': "packages/back-end"} ]"`|
 |**Editor**|
 |[testExplorer](#testexplorer) |Configure jest test explorer|null|`{"showInlineError": "true"}`|
 |**Coverage**|
@@ -267,7 +272,7 @@ Users can use the following settings to tailor the extension for their environme
 |**Misc**|
 |enable|Enable/disable jest extension for the given workspace folder|true|`"jest.enable": false`|
 |debugMode|Enable debug mode to diagnose plugin issues. (see developer console)|false|`"jest.debugMode": true`|
-|disabledWorkspaceFolders 💼|Disabled workspace folders names in multiroot environment|[]|`"jest.disabledWorkspaceFolders": ["package-a", "package-b"]`|
+|disabledWorkspaceFolders 💼|Disabled workspace folders names in multi-root environment|[]|`"jest.disabledWorkspaceFolders": ["package-a", "package-b"]`|
 |[autoRevealOutput](#autoRevealOutput)|Determine when to show test output|"on-run"|`"jest.autoRevealOutput": "on-exec-error"`|
 
 #### Details
@@ -284,7 +289,7 @@ If your project doesn't live in the root of your repository, you may want to cus
 
 There are 2 formatters to choose from:
   <details>
-  <summary> DefaultFormatter: high light uncovered and partially-covered code inlilne as well as on the right overview ruler. (this is the default)</summary>
+  <summary> DefaultFormatter: high light uncovered and partially-covered code inline as well as on the right overview ruler. (this is the default)</summary>
   
 ![coverage-DefaultFormatter.png](images/coverage-DefaultFormatter.png)
 
@@ -426,9 +431,107 @@ Note the LoginShell is only applicable for non-windows platform and could cause 
 <a id="auto-recovery-login-shell"></a>
 _Note_: Since v5, if detected shell env issue, such as `node: command not found` or `npm: no such file or directory`, the extension will fallback to a login shell to ensure tests can run correctly. If will try to auto generate a login shell configuration based on the `jest.shell` setting, otherwise, it will use the default `bash` login-shell. Currently supported auto-fallback shells are `bash`, `zsh`, `fish`.
 
+
+##### monitorLongRun
+```ts
+monitorLongRun = number | 'off'
+```
+
+- specify a number (milliseconds) means any run exceeds this threshold will trigger a warning. The number has to be > 0. 
+- specify "off" to disable long-run process monitoring
+
+Default is `"jest.monitorLongRun":60000` (1 minute)
+
+##### autoRevealOutput
+```ts
+autoRevealOutput = "on-run" | "on-exec-error" | "off"
+```
+- `on-run`: reveal test run output when test run started.
+- `on-exec-error`: reveal test run output only when execution error (note, not test error) occurred.
+- `off`: no auto reveal test output. Note this could mask critical error, check status bar status for detail.
+
+##### parserPluginOptions
+
+```ts
+parserPluginOptions = { decorators?: 
+  | 'legacy' 
+  | {
+      decoratorsBeforeExport?: boolean;
+      allowCallParenthesized?: boolean;
+    }
+  }
+```
+This extension uses babel to parse the test files. For decorators [plugin options](https://babeljs.io/docs/en/babel-parser#plugins-options), it uses  `'decorators', {decoratorsBeforeExport: true}` by default, which can be customized with this setting. Examples:
+```json
+"jest.parserPluginOptions": {"decorators": "legacy"}
+
+"jest.parserPluginOptions": {"decorators": {"decoratorsBeforeExport": false}}
+```
+##### virtualFolders
+
+Much like a vscode workspace folder, which manages a runtime environment for a specific folder, a virtualFolder manages a custom Jest runtime environment. Each virtualFolder can have its own resource-level [settings](#settings), such as `jestCommandLine` and `rootPath`.
+
+You can configure multiple virtual folders within any given vscode workspace folder using the `jest.virtualFolders` setting. Here are a few common use cases and examples:
+
+1. Your project contains multiple jest configurations, such as unit test and integration test. While they run on the same set of source files, you want to run them separately and with different frequency: for instance, unit tests should always run automatically ("autoRun": "watch") while the integration tests should only run on-demand ("autoRun": "off"): 
+
+   ```json
+   // settings.json for unit and integration test environments under the root folder:
+   {
+     "jest.virtualFolders": [
+       {"name": "unit-tests", "jestCommandLine": "--config=jest.unit.config.js", "autoRun": "watch"},
+       {"name": "integration-tests", "jestCommandLine": "--config=jest.integration.config.js", "autoRun": "off"}
+     ]
+   }
+   ```
+
+2. Your project is a monorepo and you want to run tests for each package separately. You can configure a virtual folder for each package:
+   
+   ```json
+   // settings.json for a monorepo project under the root folder:
+   {
+     "jest.virtualFolders": [
+       {"name": "package1", "rootPath": "packages/package1"},
+       {"name": "package2", "rootPath": "packages/package2"}
+     ]
+   }
+   ```
+
+
+**Virtual Folders Inherit and Override Workspace Folder Settings**
+Virtual folders inherit settings from the parent workspace but can override these settings as needed. For instance, you can set the autoRun option to "off" in the workspace, but enable it for a specific virtual folder. This flexibility allows for granular control over the testing environments within a single workspace folder.
+
+
+```json
+// settings.json in the "project" folder
+{
+  ...
+  "jest.autoRun": "off",
+  "jest.jestCommandLine": "yarn test",
+  "jest.virtualFolders": [
+    {"name": "unit-tests", "autoRun": "watch"},
+    {"name": "integration-tests", "jestCommandLine": "yarn test --config=jest.integration.config.js"}
+  ]
+}
+```
+
+In this scenario, the "project" workspace will not run its own Jest environment but will instead spawn two separate Jest environments for "unit-tests" and "integration-tests".
+
+**VirtualFolders vs. Multi-root Workspace**
+While virtual folders are primarily designed to address the gap of supporting multiple test configurations for the same set of source files, they are also capable of supporting monorepo projects. Some developers might prefer this approach over traditional multi-root workspaces due to the simplified and centralized settings over individual package settings.
+
+However, there are some key differences between virtual folders and multi-root workspaces to consider:
+
+1. Debug configurations for all virtual folders will appear in the same launch.json or debug configuration dropdown menu, each marked with the folder name for differentiation.
+2. Any changes to settings within the same VSCode folder will trigger a refresh or relaunch of all virtual folders within that folder.
+3. The StatusBar might display the status of multiple Jest runtime environments if the active editor document is shared by multiple virtual folders, such as a source code file that both unit and integration tests depend on.
+4. You might receive additional prompts to select target folders when running commands for shared files.
+5. virtualFolders only contains jest settings. If your project require non-jest settings from the package's own `.vscode/settings.json` (like in a multi-root workspace), then you are probably better off continue with multi-root workspace.
+
+
 ### Debug Config
 
-This extension looks for jest specific debug config (`"vscode-jest-tests"` or `"vscode-jest-tests.v2"`) in the following order:
+This extension looks for jest specific debug config (`"vscode-jest-tests.[folder-name]"` or `"vscode-jest-tests.v2.[folder-name]"`) in the following order:
 1. workspace folder `.vscode/launch.json`. 
 2. workspace `xxx.code-workspace`, if exists
 3. if none found, generated a debug config
@@ -442,7 +545,7 @@ There are many information online about how to setup vscode debug config for spe
 
 #### Debug Config v2
 
-v4.3 introduces a "variable substitution" based config with name `"vscode-jest-tests.v2"`. The extension will merely substitute the jest variables in the config, without adding/removing anything else. 
+v4.3 introduces a "variable substitution" based config with name `"vscode-jest-tests.v2.[folder-name]"`. The extension will merely substitute the jest variables in the config, without adding/removing anything else. 
 
 Currently supported variables:
 - **${jest.testNamePattern}** - will be replaced by the test block's full name (include the surrounding describe block names).
@@ -501,42 +604,6 @@ Currently supported variables:
   
 </details>
 
-### monitorLongRun
-```ts
-monitorLongRun = number | 'off'
-```
-
-- specify a number (milliseconds) means any run exceeds this threshold will trigger a warning. The number has to be > 0. 
-- specify "off" to disable long-run process monitoring
-
-Default is `"jest.monitorLongRun":60000` (1 minute)
-
-### autoRevealOutput
-```ts
-autoRevealOutput = "on-run" | "on-exec-error" | "off"
-```
-- `on-run`: reveal test run output when test run started.
-- `on-exec-error`: reveal test run output only when execution error (note, not test error) occurred.
-- `off`: no auto reveal test output. Note this could mask critical error, check status bar status for detail.
-
-### parserPluginOptions
-
-```ts
-parserPluginOptions = { decorators?: 
-  | 'legacy' 
-  | {
-      decoratorsBeforeExport?: boolean;
-      allowCallParenthesized?: boolean;
-    }
-  }
-```
-This extension uses babel to parse the test files. For decorators [plugin options](https://babeljs.io/docs/en/babel-parser#plugins-options), it uses  `'decorators', {decoratorsBeforeExport: true}` by default, which can be customized with this setting. Examples:
-```json
-"jest.parserPluginOptions": {"decorators": "legacy"}
-
-"jest.parserPluginOptions": {"decorators": {"decoratorsBeforeExport": false}}
-```
-
 ## Commands
 
 This extension contributes the following commands and can be accessed via [Command Palette](https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette):
@@ -591,7 +658,7 @@ There could be other causes, such as jest test root path is different from the p
 
 The extension should be a thin wrapper on top of the jest process, i.e., it shouldn't use much more resources than the jest process itself. 
 
-Having said that, the sluggish performance for some projects/users is real, and we can help. The short answer is [try turning off autoRun in the explorer](#how-to-toggle-auto-run), which should usually show noticeable improvement. 
+Having said that, we have definitely seen sluggish performance for some projects/users. The short answer is [try turning off autoRun in the explorer](#how-to-toggle-auto-run), which should usually show noticeable improvement. 
 
 The long answer is a bit more complicated:
 - The jest/node/watchman might be slow due to code changes, your test setup, environment, etc. See [facebook/jest#11956](https://github.com/facebook/jest/issues/11956) for a glimpse of such examples. However, this issue should impact with or without this extension. There are many resources and tips online about optimizing jest performance; we will leave it at that. 

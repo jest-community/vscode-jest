@@ -40,7 +40,7 @@ export const buildAssertionContainer = (
     assertions.forEach((a) => {
       const container = root.findContainer(
         a.ancestorTitles,
-        (name: string) => new ContainerNode(name, { isGroup: 'maybe' })
+        (name: string) => new ContainerNode(name, undefined, { isGroup: 'maybe' })
       );
       // regardless the document: https://jestjs.io/docs/26.x/cli#--testlocationinresults
       // the location are actually zero-based, but the "line" attribute is 1-based.
@@ -81,7 +81,7 @@ export const buildSourceContainer = (sourceRoot: ParsedNode): ContainerNode<ItBl
       },
     });
     if (isDescribeBlock(node)) {
-      container = new ContainerNode(node.name, attrs(node));
+      container = new ContainerNode(node.name, node.start?.line - 1, attrs(node));
       parent.addContainerNode(container);
     } else if (isItBlock(node)) {
       parent.addDataNode(new DataNode(node.name, node.start.line - 1, node, attrs(node)));

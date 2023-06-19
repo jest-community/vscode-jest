@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 
 import { actionItem, createSaveConfig, getConfirmation, showActionMenu } from '../wizard-helper';
 import { WizardStatus, WizardContext, SetupTask, WIZARD_HELP_URL } from '../types';
-import { isSameWorkspace, WorkspaceInfo } from '../../workspace-manager';
+import { isSameWorkspace, WorkspaceFolderInfo } from '../../workspace-manager';
 import { toErrorString } from '../../helpers';
 import { PendingSetupTaskKey } from '../start-wizard';
 import { setupJestCmdLine } from './setup-jest-cmdline';
@@ -26,15 +26,15 @@ export const setupMonorepo: SetupTask = async (context: WizardContext): Promise<
   const { message } = context;
   const wsManager = context.wsManager;
 
-  const updateRootPath = async (wsInfo: WorkspaceInfo) => {
-    const config = vscode.workspace.getConfiguration('jest', wsInfo.workspace.uri);
+  const updateRootPath = async (wsInfo: WorkspaceFolderInfo) => {
+    const config = vscode.workspace.getConfiguration('jest', wsInfo.folder.uri);
     const rootPath = config.get<string>('rootPath');
 
     let shouldUpdate = true;
     if (rootPath && rootPath !== wsInfo.rootPath) {
       shouldUpdate = await getConfirmation(
         'warning',
-        `[${wsInfo.workspace.name}] The existing jest.rootPath is "${rootPath}", which is different from the detected "${wsInfo.rootPath}". Do you want to override it?`,
+        `[${wsInfo.folder.name}] The existing jest.rootPath is "${rootPath}", which is different from the detected "${wsInfo.rootPath}". Do you want to override it?`,
         'Yes',
         'No',
         'yes'
@@ -42,10 +42,10 @@ export const setupMonorepo: SetupTask = async (context: WizardContext): Promise<
     }
 
     if (!shouldUpdate) {
-      message(`\t[${wsInfo.workspace.name}] Skipped "jest.rootPath" setting updated.`, 'warn');
+      message(`\t[${wsInfo.folder.name}] Skipped "jest.rootPath" setting updated.`, 'warn');
       return;
     }
-    await createSaveConfig({ ...context, workspace: wsInfo.workspace })({
+    await createSaveConfig({ ...context, workspace: wsInfo.folder })({
       name: `jest.rootPath`,
       value: wsInfo.rootPath,
     });
@@ -61,11 +61,11 @@ export const setupMonorepo: SetupTask = async (context: WizardContext): Promise<
   const validateWorkspaces = async (): Promise<WizardStatus> => {
     const workspaceFolders = getWorkspaceFolders();
     message(`Validating ${workspaceFolders.length} workspaces:`, 'new-line');
-    const validWorkspaces = await wsManager.getValidWorkspaces();
+    const validWorkspaces = await wsManager.getValidWorkspaceFolders();
     const invalid: string[] = [];
 
     for (const ws of workspaceFolders) {
-      const valid = validWorkspaces.find((wInfo) => isSameWorkspace(wInfo.workspace, ws));
+      const valid = validWorkspaces.find((wInfo) => isSameWorkspace(wInfo.folder, ws));
       if (valid) {
         const extra = valid.rootPath ? `with rootPath="${valid.rootPath}"` : '';
         message(`"${ws.name}" is a valid jest workspace ${extra}`, ['success', 'lite']);

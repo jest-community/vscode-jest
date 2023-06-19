@@ -9,6 +9,7 @@ jest.unmock('../../src/errors');
 
 import { JestTestRun } from '../../src/test-provider/test-provider-helper';
 import { tiContextManager } from '../../src/test-provider/test-item-context-manager';
+import { toAbsoluteRootPath } from '../../src/helpers';
 
 jest.mock('path', () => {
   let sep = '/';
@@ -173,9 +174,16 @@ describe('test-item-data', () => {
     (tiContextManager.setItemContext as jest.Mocked<any>).mockClear();
 
     (vscode.Location as jest.Mocked<any>).mockReturnValue({});
+
+    (toAbsoluteRootPath as jest.Mocked<any>).mockImplementation((p) => p.uri.fsPath);
   });
   describe('discover children', () => {
     describe('WorkspaceRoot', () => {
+      it('has no parent item and the id should contain the workspace name', () => {
+        const wsRoot = new WorkspaceRoot(context);
+        expect(wsRoot.item.parent).toBeUndefined();
+        expect(wsRoot.item.id).toEqual(expect.stringContaining(`:${context.ext.workspace.name}`));
+      });
       it('create test document tree for testFiles list', () => {
         const testFiles = [
           '/ws-1/src/a.test.ts',
