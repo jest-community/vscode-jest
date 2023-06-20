@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import { extensionName } from './appGlobals';
 import { JestExt } from './JestExt';
 import { TestStats, TestStatsCategory } from './types';
+import { VirtualFolderBasedCache } from './virtual-workspace-folder';
+import { isInFolder } from './workspace-manager';
 
 export enum StatusType {
   active,
@@ -35,9 +37,39 @@ export type StatusBarUpdate = Partial<ExtensionStatus>;
 export interface StatusBarUpdateRequest {
   update: (status: StatusBarUpdate) => void;
 }
-interface TypedStatusBarItem {
-  actual: vscode.StatusBarItem;
-  readonly type: StatusType;
+
+class TypedStatusBarItem {
+  public status: ExtensionStatus = {};
+  public isVisible = false;
+  constructor(public readonly type: StatusType, protected readonly actual: vscode.StatusBarItem) {
+    this.actual.hide();
+  }
+  hide() {
+    this.actual.hide();
+    this.isVisible = false;
+  }
+  show() {
+    this.actual.show();
+    this.isVisible = true;
+  }
+  render(options: { text?: string; tooltip?: string; backgroundColor?: vscode.ThemeColor }) {
+    const { text, tooltip, backgroundColor } = options;
+    this.actual.text = text ?? this.actual.text;
+    this.actual.tooltip = tooltip ?? this.actual.tooltip;
+    this.actual.backgroundColor = backgroundColor ?? this.actual.backgroundColor;
+  }
+  dispose() {
+    this.actual.dispose();
+  }
+}
+class FolderStatusBarItem extends TypedStatusBarItem {
+  constructor(
+    public readonly type: StatusType,
+    protected readonly actual: vscode.StatusBarItem,
+    public readonly workspaceFolder: vscode.WorkspaceFolder
+  ) {
+    super(type, actual);
+  }
 }
 
 type BGColor = 'error' | 'warning';
@@ -47,146 +79,142 @@ interface StateInfo {
   backgroundColor?: BGColor;
 }
 
-const createStatusBarItem = (type: StatusType, priority: number): TypedStatusBarItem => {
-  return {
-    type,
-    actual: vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, priority),
-  };
-};
-
-// The bottom status bar
 export class StatusBar {
-  private activeStatusItem = createStatusBarItem(StatusType.active, 2);
-  private summaryStatusItem = createStatusBarItem(StatusType.summary, 1);
+  private summaryStatusItem: TypedStatusBarItem;
   private warningColor = new vscode.ThemeColor('statusBarItem.warningBackground');
   private errorColor = new vscode.ThemeColor('statusBarItem.errorBackground');
 
-  private sourceStatusMap = new Map<string, SourceStatus>();
-  private _activeFolder?: string;
+  private cache = new VirtualFolderBasedCache<FolderStatusBarItem>();
+  // private _activeFolder?: string;
   private summaryOutput?: vscode.OutputChannel;
 
   constructor() {
-    this.summaryStatusItem.actual.tooltip = 'Jest status summary of the workspace';
-    this.activeStatusItem.actual.tooltip = 'Jest status of the active folder';
+    this.summaryStatusItem = this.createSummaryStatusBarItem();
+  }
+
+  private createSummaryStatusBarItem(): TypedStatusBarItem {
+    const actual = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 1);
+    actual.tooltip = 'Jest status summary of the workspace';
+
+    const { showSummaryOutput } = this.itemCommands();
+    actual.command = showSummaryOutput;
+
+    return new TypedStatusBarItem(StatusType.summary, actual);
+  }
+
+  private createFolderStatusBarItem(workspaceFolder: vscode.WorkspaceFolder): FolderStatusBarItem {
+    const actual = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 2);
+    actual.tooltip = 'Jest status of the active folder';
+
+    const item = new FolderStatusBarItem(StatusType.active, actual, workspaceFolder);
+
+    const { showActiveOutput } = this.itemCommands();
+    actual.command = { title: 'show test output', command: showActiveOutput, arguments: [item] };
+
+    this.cache.addItem(item);
+    return item;
+  }
+
+  private itemCommands() {
+    const showSummaryOutput = `${extensionName}.show-summary-output`;
+    const showActiveOutput = `${extensionName}.show-active-output`;
+
+    return { showSummaryOutput, showActiveOutput };
   }
 
   register(getExtension: (name: string) => JestExt | undefined): vscode.Disposable[] {
-    const showSummaryOutput = `${extensionName}.show-summary-output`;
-    const showActiveOutput = `${extensionName}.show-active-output`;
-    this.summaryStatusItem.actual.command = showSummaryOutput;
-    this.activeStatusItem.actual.command = showActiveOutput;
-
+    const { showSummaryOutput, showActiveOutput } = this.itemCommands();
     return [
       vscode.commands.registerCommand(showSummaryOutput, () => {
         if (this.summaryOutput) {
           this.summaryOutput.show();
         }
       }),
-      vscode.commands.registerCommand(showActiveOutput, () => {
-        if (this.activeFolder) {
-          const ext = getExtension(this.activeFolder);
-          if (ext) {
-            ext.showOutput();
-          }
+      vscode.commands.registerCommand(showActiveOutput, (item: FolderStatusBarItem) => {
+        const ext = getExtension(item.workspaceFolder.name);
+        if (ext) {
+          ext.showOutput();
         }
       }),
     ];
   }
-  bind(source: string): StatusBarUpdateRequest {
+  bind(folder: vscode.WorkspaceFolder): StatusBarUpdateRequest {
+    const item =
+      this.cache.getItemByFolderName(folder.name) ?? this.createFolderStatusBarItem(folder);
+
+    if (
+      vscode.window.activeTextEditor?.document.uri &&
+      isInFolder(vscode.window.activeTextEditor.document.uri, folder)
+    ) {
+      item.show();
+    }
     return {
       update: (update: StatusBarUpdate) => {
-        this.handleUpdate(source, update);
+        this.handleUpdate(item, update);
       },
     };
   }
 
   onDidChangeActiveTextEditor(editor: vscode.TextEditor): void {
+    const visibleItems = this.cache.getAllItems().filter((item) => item.isVisible);
     if (editor && editor.document) {
-      const folder = vscode.workspace.getWorkspaceFolder(editor.document.uri);
-      if (folder && folder.name !== this._activeFolder) {
-        this._activeFolder = folder.name;
-        this.updateActiveStatus();
-      }
+      const items = this.cache.findRelatedItems(editor.document.uri);
+      items?.forEach((item) => {
+        if (!item.isVisible) {
+          this.updateItemStatus(item);
+        } else {
+          visibleItems.splice(visibleItems.indexOf(item), 1);
+        }
+      });
     }
+    // hide the items no longer relevant
+    visibleItems.forEach((item) => item.hide());
   }
 
-  private handleUpdate(source: string, update: StatusBarUpdate) {
-    const ss = this.sourceStatusMap.get(source) ?? { source, status: {} };
-    ss.status = { ...ss.status, ...update };
-    this.sourceStatusMap.set(source, ss);
+  private handleUpdate(item: FolderStatusBarItem, update: StatusBarUpdate) {
+    item.status = { ...item.status, ...update };
 
-    this.updateActiveStatus();
+    if (item.isVisible) {
+      this.updateItemStatus(item);
+    }
     this.updateSummaryStatus();
   }
 
-  private get activeFolder() {
-    if (!this._activeFolder) {
-      if (vscode.workspace.workspaceFolders?.length === 1) {
-        // there's only one workspaceFolder, so let's take it
-        this._activeFolder = vscode.workspace.workspaceFolders[0].name;
-      } else if (vscode.window.activeTextEditor) {
-        // otherwise select correct workspaceFolder based on the currently open textEditor
-        const folder = vscode.workspace.getWorkspaceFolder(
-          vscode.window.activeTextEditor.document.uri
-        );
-        if (folder) {
-          this._activeFolder = folder.name;
-        }
-      }
-    }
-    return this._activeFolder;
+  private updateItemStatus(item: TypedStatusBarItem) {
+    const tooltip = this.getModes(item.status.mode, false);
+    const stateInfo = this.buildSourceStatusString(item.status);
+    this.render(stateInfo, tooltip, item);
   }
 
-  private updateActiveStatus() {
-    let ss: SourceStatus | undefined;
-    if (this.activeFolder) {
-      ss = this.sourceStatusMap.get(this.activeFolder);
-    } else if (this.sourceStatusMap.size === 1) {
-      ss = this.sourceStatusMap.values().next().value;
-    }
-
-    if (ss) {
-      const tooltip = this.getModes(ss.status.mode, false);
-      const stateInfo = this.buildSourceStatusString(ss);
-      this.render(stateInfo, tooltip, this.activeStatusItem);
-    } else {
-      this.activeStatusItem.actual.hide();
-    }
-  }
-
-  private updateSummaryStats(ss: SourceStatus, summaryStats: SBTestStats): void {
-    summaryStats.fail += ss.status.stats?.fail ?? 0;
-    summaryStats.success += ss.status.stats?.success ?? 0;
-    summaryStats.unknown += ss.status.stats?.unknown ?? 0;
-    if (ss.status.stats?.isDirty) {
+  private updateSummaryStats(status: ExtensionStatus, summaryStats: SBTestStats): void {
+    summaryStats.fail += status.stats?.fail ?? 0;
+    summaryStats.success += status.stats?.success ?? 0;
+    summaryStats.unknown += status.stats?.unknown ?? 0;
+    if (status.stats?.isDirty) {
       summaryStats.isDirty = true;
     }
   }
 
   private updateSummaryStatus() {
-    if (this.needsSummaryStatus()) {
-      this.updateSummaryOutput();
+    this.updateSummaryOutput();
 
-      const summaryStats: SBTestStats = { fail: 0, success: 0, unknown: 0 };
-      let backgroundColor: BGColor | undefined;
-      for (const ss of this.sourceStatusMap.values()) {
-        this.updateSummaryStats(ss, summaryStats);
-        if (!backgroundColor) {
-          const color = ss.status.state && this.getStateInfo(ss.status.state).backgroundColor;
-          if (color) {
-            backgroundColor = 'warning';
-          }
+    const summaryStats: SBTestStats = { fail: 0, success: 0, unknown: 0 };
+    let backgroundColor: BGColor | undefined;
+    for (const item of this.cache.getAllItems()) {
+      this.updateSummaryStats(item.status, summaryStats);
+      if (!backgroundColor) {
+        const color = item.status.state && this.getStateInfo(item.status.state).backgroundColor;
+        if (color) {
+          backgroundColor = 'warning';
         }
       }
-      const tooltip = this.buildStatsString(summaryStats, false);
-      this.render(
-        { label: this.buildStatsString(summaryStats), backgroundColor },
-        tooltip,
-        this.summaryStatusItem
-      );
-      return;
     }
-    this.summaryStatusItem.actual.hide();
+    const tooltip = this.buildStatsString(summaryStats, false);
+    this.render(
+      { label: this.buildStatsString(summaryStats), backgroundColor },
+      tooltip,
+      this.summaryStatusItem
+    );
   }
   private buildStatsString(stats: SBTestStats, showIcon = true, alwaysShowDetails = false): string {
     const summary: SummaryState = stats.isDirty
@@ -207,13 +235,10 @@ export class StatusBar {
     return output.filter((s) => s).join(' | ');
   }
 
-  private buildSourceStatusString(ss: SourceStatus): StateInfo {
-    const stateInfo = ss.status.state && this.getStateInfo(ss.status.state);
+  private buildSourceStatusString(status: ExtensionStatus): StateInfo {
+    const stateInfo = status.state && this.getStateInfo(status.state);
 
-    const parts: string[] = [
-      stateInfo?.label ?? '',
-      ss.status.mode ? this.getModes(ss.status.mode) : '',
-    ];
+    const parts: string[] = [stateInfo?.label ?? '', status.mode ? this.getModes(status.mode) : ''];
     return {
       label: parts.filter((s) => s.length > 0).join(' | '),
       backgroundColor: stateInfo?.backgroundColor,
@@ -231,18 +256,25 @@ export class StatusBar {
   private render(stateInfo: StateInfo, tooltip: string, statusBarItem: TypedStatusBarItem) {
     switch (statusBarItem.type) {
       case StatusType.active: {
-        statusBarItem.actual.text = `Jest: ${stateInfo.label}`;
-        statusBarItem.actual.tooltip = `'${this.activeFolder}' Jest: ${tooltip}`;
-        statusBarItem.actual.backgroundColor = this.toThemeColor(stateInfo.backgroundColor);
+        const item = statusBarItem as FolderStatusBarItem;
+        const name = this.cache.size > 1 ? `Jest (${item.workspaceFolder.name})` : 'Jest';
+
+        statusBarItem.render({
+          text: `${name}: ${stateInfo.label}`,
+          tooltip: `'${item.workspaceFolder.name}' Jest: ${tooltip}`,
+          backgroundColor: this.toThemeColor(stateInfo.backgroundColor),
+        });
         break;
       }
       case StatusType.summary:
-        statusBarItem.actual.text = `Jest-WS: ${stateInfo.label}`;
-        statusBarItem.actual.tooltip = `Workspace(s) stats: ${tooltip}`;
-        statusBarItem.actual.backgroundColor = this.toThemeColor(stateInfo.backgroundColor);
+        statusBarItem.render({
+          text: `Jest-WS: ${stateInfo.label}`,
+          tooltip: `Workspace(s) stats: ${tooltip}`,
+          backgroundColor: this.toThemeColor(stateInfo.backgroundColor),
+        });
         break;
     }
-    statusBarItem.actual.show();
+    statusBarItem.show();
   }
 
   private updateSummaryOutput() {
@@ -252,20 +284,16 @@ export class StatusBar {
     this.summaryOutput.clear();
 
     const messages: string[] = [];
-    this.sourceStatusMap.forEach((ss) => {
+    this.cache.getAllItems().forEach((item) => {
       const parts: string[] = [
-        ss.status.stats ? this.buildStatsString(ss.status.stats, false, true) : '',
-        ss.status.mode ? `mode: ${this.getModes(ss.status.mode, false)}` : '',
-        ss.status.state ? `state: ${this.getMessageByState(ss.status.state, false)}` : '',
+        item.status.stats ? this.buildStatsString(item.status.stats, false, true) : '',
+        item.status.mode ? `mode: ${this.getModes(item.status.mode, false)}` : '',
+        item.status.state ? `state: ${this.getMessageByState(item.status.state, false)}` : '',
       ];
       const summary = parts.filter((s) => s.length > 0).join('; ');
-      messages.push(`${ss.source}:\t\t${summary}`);
+      messages.push(`${item.workspaceFolder.name}:\t\t${summary}`);
     });
     this.summaryOutput.append(messages.join('\n'));
-  }
-
-  private needsSummaryStatus() {
-    return this.sourceStatusMap.size > 0;
   }
 
   private getStateInfo(
@@ -328,6 +356,17 @@ export class StatusBar {
       }
     });
     return modesStrings.join(showIcon ? ' ' : ', ');
+  }
+
+  public removeWorkspaceFolder(folder: vscode.WorkspaceFolder) {
+    const item = this.cache.getItemByFolderName(folder.name);
+    if (item) {
+      this.cache.deleteItemByFolder(folder);
+      item.dispose();
+    }
+  }
+  public dispose() {
+    this.cache.getAllItems().forEach((item) => item.dispose());
   }
 }
 

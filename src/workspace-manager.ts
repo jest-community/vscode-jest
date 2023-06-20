@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { getPackageJson } from './helpers';
+import { VirtualWorkspaceFolder, isVirtualWorkspaceFolder } from './virtual-workspace-folder';
+import { VirtualFolderSettings, createJestSettingGetter } from './Settings';
 
 const ActivationFilePattern = [
   '**/jest.config.{js, ts, mjs, cjs, json}',
@@ -13,8 +15,8 @@ const ActivationBinary = [
   'node_modules/react-native-scripts',
 ];
 
-export interface WorkspaceInfo {
-  workspace: vscode.WorkspaceFolder;
+export interface WorkspaceFolderInfo {
+  folder: vscode.WorkspaceFolder;
   rootPath?: string;
   activation?: vscode.Uri;
 }
@@ -26,37 +28,103 @@ interface ValidatePatternType {
   binary: string[];
 }
 
+/**
+ * return all workspace folders, including virtual ones within the given workspace folder.
+ * If no virtual workspace folder is found, return the given workspace folder in an array;
+ * otherwise return an array of virtual workspace folders.
+ * @param workspaceFolder
+ * @returns
+ */
+const expandWithVirtualFolders = (
+  workspaceFolder: vscode.WorkspaceFolder,
+  enableFilter?: EnableFolderFilter
+): vscode.WorkspaceFolder[] => {
+  // check if there is venv
+  const config = vscode.workspace.getConfiguration('jest', workspaceFolder.uri);
+  const vFolders = config.get<VirtualFolderSettings[]>('virtualFolders');
+  if (!vFolders || vFolders.length <= 0) {
+    return [workspaceFolder];
+  }
+
+  const isEnabled = enableFilter ?? createEnableFilter();
+
+  return vFolders
+    .map((folder) => new VirtualWorkspaceFolder(workspaceFolder, folder.name, folder.rootPath))
+    .filter(isEnabled);
+};
+
+type EnableFolderFilter = (folder: vscode.WorkspaceFolder) => boolean;
+/**
+ * Returns a function that filters out disabled workspace folders and virtual folders that are disabled in the Jest configuration.
+ * @returns A EnableFolderFilter filter function that takes a `vscode.WorkspaceFolder` object as an argument and returns a boolean value.
+ */
+const createEnableFilter = (): EnableFolderFilter => {
+  const windowConfig = vscode.workspace.getConfiguration('jest');
+  const disabledWorkspaceFolders = windowConfig.get<string[]>('disabledWorkspaceFolders') ?? [];
+
+  return (folder: vscode.WorkspaceFolder) => {
+    if (disabledWorkspaceFolders.includes(folder.name)) {
+      return false;
+    }
+    const getSetting = createJestSettingGetter(folder);
+    return getSetting<boolean>('enable') ?? true;
+  };
+};
+export const enabledWorkspaceFolders = (includingVirtual = true): vscode.WorkspaceFolder[] => {
+  if (!vscode.workspace.workspaceFolders) {
+    return [];
+  }
+
+  const enableFilter = createEnableFilter();
+  const enabled = vscode.workspace.workspaceFolders.filter(enableFilter);
+
+  return includingVirtual
+    ? enabled.flatMap((ws) => expandWithVirtualFolders(ws, enableFilter))
+    : enabled;
+};
+
+export const isInFolder = (uri: vscode.Uri, workspaceFolder: vscode.WorkspaceFolder): boolean => {
+  if (isVirtualWorkspaceFolder(workspaceFolder)) {
+    return workspaceFolder.isInWorkspaceFolder(uri);
+  }
+  return vscode.workspace.getWorkspaceFolder(uri)?.name === workspaceFolder.name;
+};
+
 export const isSameWorkspace = (
   ws1: vscode.WorkspaceFolder,
   ws2: vscode.WorkspaceFolder
 ): boolean => ws1.uri.path === ws2.uri.path;
+
+/**
+ * A class to manage all workspace folders and their jest configurations.
+ */
 export class WorkspaceManager {
   /**
-   * validate each workspace folder for jest run eligibility.
+   * validate each workspace (physical) folder for jest run eligibility.
    * throw error if no workspace folder to validate.
    * @returns valid workspaceInfo array, [] if none is valid
    */
-  async getValidWorkspaces(): Promise<WorkspaceInfo[]> {
+  async getValidWorkspaceFolders(): Promise<WorkspaceFolderInfo[]> {
     if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length <= 0) {
       return Promise.reject(new Error('no workspace folder to validate'));
     }
 
-    const validWorkspaces: Map<string, WorkspaceInfo> = new Map();
-    for (const ws of vscode.workspace.workspaceFolders) {
+    const validWorkspaces: Map<string, WorkspaceFolderInfo> = new Map();
+    for (const ws of enabledWorkspaceFolders(false)) {
       if (validWorkspaces.has(ws.uri.path)) {
         continue;
       }
-      const list = await this.validateWorkspace(ws);
+      const list = await this.validateWorkspaceFolder(ws);
       list.forEach((info) => {
-        if (!validWorkspaces.has(info.workspace.uri.path)) {
-          validWorkspaces.set(info.workspace.uri.path, info);
+        if (!validWorkspaces.has(info.folder.uri.path)) {
+          validWorkspaces.set(info.folder.uri.path, info);
         }
       });
     }
     return Array.from(validWorkspaces.values());
   }
 
-  private toWorkspaceInfo(uri: vscode.Uri): WorkspaceInfo | undefined {
+  private toWorkspaceFolderInfo(uri: vscode.Uri): WorkspaceFolderInfo | undefined {
     const workspace = vscode.workspace.getWorkspaceFolder(uri);
     if (!workspace) {
       return;
@@ -66,7 +134,7 @@ export class WorkspaceManager {
       rootPath = rootPath.replace(workspace.uri.fsPath, '.');
     }
     return {
-      workspace,
+      folder: workspace,
       activation: uri,
       rootPath: rootPath === '.' ? undefined : rootPath,
     };
@@ -95,10 +163,10 @@ export class WorkspaceManager {
   /** validate if given workspace is a valid jest workspace
    * @retrun WorkspaceInfo if jest root is different from project root; otherwise undefined.
    */
-  async validateWorkspace(
+  async validateWorkspaceFolder(
     workspace: vscode.WorkspaceFolder,
     types: WSValidationType[] = ['deep-config', 'binary', 'jest-in-package']
-  ): Promise<WorkspaceInfo[]> {
+  ): Promise<WorkspaceFolderInfo[]> {
     const validatePatterns = this.toValidatePatterns(types);
 
     // find activation files deeply outside of node_modules
@@ -113,10 +181,10 @@ export class WorkspaceManager {
     const results = await Promise.allSettled(activationFiles);
     const wsInfo = results
       .flatMap((result) => (result.status === 'fulfilled' ? result.value : []))
-      .map((uri) => this.toWorkspaceInfo(uri))
-      .filter((wsInfo) => wsInfo != null) as WorkspaceInfo[];
+      .map((uri) => this.toWorkspaceFolderInfo(uri))
+      .filter((wsInfo) => wsInfo != null) as WorkspaceFolderInfo[];
 
-    if (wsInfo.length > 0 && wsInfo.find((info) => isSameWorkspace(info.workspace, workspace))) {
+    if (wsInfo.length > 0 && wsInfo.find((info) => isSameWorkspace(info.folder, workspace))) {
       return wsInfo;
     }
 
@@ -128,7 +196,7 @@ export class WorkspaceManager {
         1
       );
       if (results.length > 0) {
-        return [...wsInfo, { workspace }];
+        return [...wsInfo, { folder: workspace }];
       }
     }
 
@@ -136,7 +204,7 @@ export class WorkspaceManager {
     if (types.includes('jest-in-package')) {
       const packageJson = getPackageJson(workspace.uri.fsPath);
       if (packageJson && packageJson.jest) {
-        return [...wsInfo, { workspace }];
+        return [...wsInfo, { folder: workspace }];
       }
     }
 

@@ -7,11 +7,12 @@ import {
   showActionMenu,
   getWizardSettings,
   createSaveConfig,
-  selectWorkspace,
+  selectWorkspaceFolder,
 } from '../wizard-helper';
 import { WizardStatus, SetupTask, WizardContext } from '../types';
 import { setupJestCmdLine } from './setup-jest-cmdline';
 import { getValidJestCommand } from '../../helpers';
+import { enabledWorkspaceFolders } from '../../workspace-manager';
 
 export const DEBUG_CONFIG_NAME = 'vscode-jest-tests';
 
@@ -24,7 +25,7 @@ export const DebugSetupActionId = {
 type SetupMode = 'generate' | 'done';
 export const setupJestDebug: SetupTask = async (context: WizardContext): Promise<WizardStatus> => {
   const { workspace: _ws, message, debugConfigProvider } = context;
-  const workspace = _ws ?? (await selectWorkspace());
+  const workspace = _ws ?? (await selectWorkspaceFolder(enabledWorkspaceFolders()));
   if (!workspace) {
     return 'abort';
   }
@@ -64,10 +65,15 @@ export const setupJestDebug: SetupTask = async (context: WizardContext): Promise
     const launchFile = vscode.Uri.joinPath(workspace.uri, '.vscode', 'launch.json');
     const doc = await vscode.workspace.openTextDocument(launchFile);
     const text = doc.getText();
-    let offset = text.indexOf(`"${DEBUG_CONFIG_NAME}.v2"`);
-    if (offset < 0) {
-      offset = text.indexOf(`"${DEBUG_CONFIG_NAME}"`);
+    const { sorted } = debugConfigProvider.getDebugConfigNames(workspace);
+    let offset = -1;
+    for (const name of sorted) {
+      offset = text.indexOf(name);
+      if (offset > 0) {
+        break;
+      }
     }
+
     const startPos = doc.positionAt(offset);
     const endPos = new vscode.Position(
       startPos.line,
@@ -139,7 +145,7 @@ export const setupJestDebug: SetupTask = async (context: WizardContext): Promise
       }
     }
     const menuStatus = await showActionMenu<WizardStatus>(menuItems, {
-      title: 'Set up Debug Config',
+      title: `[${workspace.name}] Set up Debug Config`,
       placeholder: 'generating debug config with jestCommandLine and rootPath',
       enableBackButton: true,
       verbose: context.verbose,

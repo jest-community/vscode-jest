@@ -8,6 +8,7 @@ const StatusBarAlignment = { Left: 1, Right: 2 };
 const window = {
   createStatusBarItem: jest.fn(() => ({
     show: jest.fn(),
+    hide: jest.fn(),
     tooltip: jest.fn(),
   })),
   showErrorMessage: jest.fn(),
@@ -15,6 +16,7 @@ const window = {
   createTextEditorDecorationType: jest.fn(),
   createOutputChannel: jest.fn(),
   showWorkspaceFolderPick: jest.fn(),
+  showQuickPick: jest.fn(),
   onDidChangeActiveTextEditor: jest.fn(),
   showInformationMessage: jest.fn(),
   createWebviewPanel: jest.fn(),

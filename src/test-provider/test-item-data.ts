@@ -14,6 +14,7 @@ import { JestProcessInfo, JestProcessRequest } from '../JestProcessManagement';
 import { GENERIC_ERROR, getExitErrorDef, LONG_RUNNING_TESTS } from '../errors';
 import { JestExtOutput } from '../JestExt/output-terminal';
 import { tiContextManager } from './test-item-context-manager';
+import { toAbsoluteRootPath } from '../helpers';
 
 interface JestRunable {
   getJestRunRequest: () => JestExtRequestType;
@@ -198,7 +199,11 @@ export class WorkspaceRoot extends TestItemDataBase {
     );
   };
   private addPath = (absoluteFileName: string): FolderData | undefined => {
-    const relativePath = path.relative(this.context.ext.workspace.uri.fsPath, absoluteFileName);
+    const absoluteRoot = toAbsoluteRootPath(
+      this.context.ext.workspace,
+      this.context.ext.settings.rootPath
+    );
+    const relativePath = path.relative(absoluteRoot, absoluteFileName);
     const folders = relativePath.split(path.sep).slice(0, -1);
 
     return folders.reduce(this.addFolder, undefined);

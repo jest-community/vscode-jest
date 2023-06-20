@@ -7,6 +7,7 @@ import {
   toFilePath,
   escapeRegExp,
   parseCmdLine,
+  toAbsoluteRootPath,
 } from '../src/helpers';
 import * as os from 'os';
 import * as fs from 'fs';
@@ -17,13 +18,13 @@ describe('DebugConfigurationProvider', () => {
   const testName = 'a test';
 
   it('should by default return a DebugConfiguration for Jest', () => {
-    const folder: any = { uri: { fsPath: null } };
+    const folder: any = { name: 'folder', uri: { fsPath: null } };
     const sut = new DebugConfigurationProvider();
     const configurations = sut.provideDebugConfigurations(folder);
 
     expect(configurations).toHaveLength(1);
     const config = configurations[0];
-    expect(config.name).toBe('vscode-jest-tests.v2');
+    expect(config.name).toBe('vscode-jest-tests.v2.folder');
     expect(config.type).toBe('node');
     expect(config.program).toMatch('jest');
     expect(config.args).toEqual(
@@ -43,13 +44,13 @@ describe('DebugConfigurationProvider', () => {
     );
     (isCreateReactAppTestCommand as unknown as jest.Mock<{}>).mockReturnValueOnce(true);
 
-    const folder: any = { uri: { fsPath: null } };
+    const folder: any = { name: 'cra-app', uri: { fsPath: null } };
     const sut = new DebugConfigurationProvider();
     const configurations = sut.provideDebugConfigurations(folder);
 
     expect(configurations).toHaveLength(1);
     const config = configurations[0];
-    expect(config.name).toBe('vscode-jest-tests.v2');
+    expect(config.name).toBe('vscode-jest-tests.v2.cra-app');
     expect(config.type).toBe('node');
     // tslint:disable-next-line no-invalid-template-strings
     expect(config.runtimeExecutable).toBe('${workspaceFolder}/node_modules/.bin/react-scripts');
@@ -79,7 +80,8 @@ describe('DebugConfigurationProvider', () => {
       let configuration: any = { name: 'vscode-jest-tests', args: debugConfigArgs };
 
       const sut = new DebugConfigurationProvider();
-      sut.prepareTestRun(fileName, testName);
+      const ws = makeWorkspaceFolder('whatever');
+      sut.prepareTestRun(fileName, testName, ws);
 
       configuration = sut.resolveDebugConfiguration(undefined, configuration);
 
@@ -118,7 +120,8 @@ describe('DebugConfigurationProvider', () => {
       let configuration: any = { name: 'vscode-jest-tests.v2', args };
 
       const sut = new DebugConfigurationProvider();
-      sut.prepareTestRun(fileName, testName);
+      const ws = makeWorkspaceFolder('whatever');
+      sut.prepareTestRun(fileName, testName, ws);
 
       configuration = sut.resolveDebugConfiguration(undefined, configuration);
 
@@ -169,6 +172,9 @@ describe('DebugConfigurationProvider', () => {
     beforeEach(() => {
       (parseCmdLine as jest.Mocked<any>).mockImplementation(
         jest.requireActual('../src/helpers').parseCmdLine
+      );
+      (toAbsoluteRootPath as jest.Mocked<any>).mockImplementation(
+        jest.requireActual('../src/helpers').toAbsoluteRootPath
       );
     });
 
