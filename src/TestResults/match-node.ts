@@ -253,8 +253,8 @@ export class ContainerNode<T> extends BaseNode {
   public childContainers: ContainerNode<T>[] = [];
   public childData: DataNode<T>[] = [];
 
-  constructor(name: string, attrs?: OptionalAttributes) {
-    super(name, -1, attrs);
+  constructor(name: string, zeroBasedLine = -1, attrs?: OptionalAttributes) {
+    super(name, zeroBasedLine, attrs);
   }
 
   public addContainerNode(container: ContainerNode<T>): void {

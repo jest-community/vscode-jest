@@ -1,5 +1,6 @@
 jest.unmock('../../src/setup-wizard/start-wizard');
 jest.unmock('./test-helper');
+jest.unmock('../test-helper');
 import * as vscode from 'vscode';
 
 import {
@@ -10,7 +11,8 @@ import {
 } from '../../src/setup-wizard/start-wizard';
 import { showActionMenu } from '../../src/setup-wizard/wizard-helper';
 import * as tasks from '../../src/setup-wizard/tasks';
-import { mockWizardHelper, throwError, workspaceFolder } from './test-helper';
+import { mockWizardHelper, throwError } from './test-helper';
+import { makeWorkspaceFolder } from '../test-helper';
 import * as helper from '../../src/setup-wizard/wizard-helper';
 
 const mockTasks = tasks as jest.Mocked<any>;
@@ -64,7 +66,7 @@ describe('startWizard', () => {
       async ({ taskResult, menuCallCount, wizardResult }) => {
         expect.hasAssertions();
         console.error = jest.fn();
-        (vscode.workspace as any).workspaceFolders = [workspaceFolder('single-root')];
+        (vscode.workspace as any).workspaceFolders = [makeWorkspaceFolder('single-root')];
         mockShowActionMenu(menuId, StartWizardActionId.exit);
         const task = WizardTasks[taskId].task;
         task.mockImplementation(() => {
@@ -90,7 +92,7 @@ describe('startWizard', () => {
     `('invoke directly: $taskResult => $wizardResult', async ({ taskResult, wizardResult }) => {
       expect.hasAssertions();
       console.error = jest.fn();
-      const workspace = workspaceFolder('w-1');
+      const workspace = makeWorkspaceFolder('w-1');
       const task = WizardTasks[taskId].task;
       task.mockImplementation(() => {
         if (typeof taskResult === 'function') {
@@ -117,7 +119,7 @@ describe('startWizard', () => {
   });
   it('has a verbose mode', async () => {
     expect.hasAssertions();
-    (vscode.workspace as any).workspaceFolders = [workspaceFolder('single-root')];
+    (vscode.workspace as any).workspaceFolders = [makeWorkspaceFolder('single-root')];
     const mockLog = jest.fn();
     console.log = mockLog;
 

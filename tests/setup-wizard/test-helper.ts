@@ -34,7 +34,7 @@ export const mockWizardHelper = (mockHelper: jest.Mocked<any>): any => {
     }));
   };
   const mockSelectWorkspace = (ws?: string) => {
-    mockHelper.selectWorkspace.mockImplementation(() => Promise.resolve(ws));
+    mockHelper.selectWorkspaceFolder.mockImplementation(() => Promise.resolve(ws));
   };
   return {
     mockShowActionMenu,
@@ -47,8 +47,3 @@ export const mockWizardHelper = (mockHelper: jest.Mocked<any>): any => {
 export const throwError = (msg: string): void => {
   throw new Error(msg);
 };
-
-export const workspaceFolder = (name: string): any => ({
-  name,
-  uri: { fsPath: name, path: name },
-});

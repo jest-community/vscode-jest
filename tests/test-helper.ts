@@ -229,7 +229,6 @@ expect.extend({
 export const makeWorkspaceFolder = (name: string): any => ({
   uri: makeUri(name),
   name,
-  path: name,
 });
 export const makeUri = (...parts: string[]): any => ({
   fsPath: parts.join(path.sep),

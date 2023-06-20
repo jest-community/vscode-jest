@@ -1,5 +1,6 @@
 jest.unmock('../../src/JestExt/helper');
 jest.unmock('../../src/JestExt/auto-run');
+jest.unmock('../../src/virtual-workspace-folder');
 jest.unmock('../test-helper');
 
 const mockPlatform = jest.fn();
@@ -17,11 +18,12 @@ import {
 } from '../../src/JestExt/helper';
 import { ProjectWorkspace } from 'jest-editor-support';
 import { workspaceLogging } from '../../src/logging';
-import { mockProjectWorkspace } from '../test-helper';
+import { makeWorkspaceFolder, mockProjectWorkspace } from '../test-helper';
 
-import { toFilePath } from '../../src/helpers';
+import { toFilePath, toAbsoluteRootPath } from '../../src/helpers';
 import { RunnerWorkspaceOptions } from '../../src/JestExt/types';
 import { RunShell } from '../../src/JestExt/run-shell';
+import { createJestSettingGetter } from '../../src/Settings';
 
 jest.mock('jest-editor-support', () => ({ isLoginShell: jest.fn(), ProjectWorkspace: jest.fn() }));
 
@@ -55,6 +57,17 @@ describe('createJestExtContext', () => {
       expect(ProjectWorkspace).toHaveBeenCalled();
       expect(toFilePath).toHaveBeenCalledWith(rootPath);
       expect(runnerWorkspace).toEqual(mockRunnerWorkspace);
+    });
+    it('will pass through useDashedArgs', () => {
+      const settings: any = { ...baseSettings, useDashedArgs: true };
+
+      jest.clearAllMocks();
+
+      const { createRunnerWorkspace } = createJestExtContext(workspaceFolder, settings, output);
+      createRunnerWorkspace();
+      const args = (ProjectWorkspace as jest.Mocked<any>).mock.calls[0];
+      const [useDashedArgs] = [args[9]];
+      expect(useDashedArgs).toBeTruthy();
     });
     describe('allow creating runnerWorkspace with custom options', () => {
       it('outputFileSuffix and collectCoverage', () => {
@@ -129,28 +142,27 @@ describe('getExtensionResourceSettings()', () => {
   let userSettings: any;
   beforeEach(() => {
     userSettings = {};
-    vscode.workspace.getConfiguration = jest.fn().mockImplementation((section) => {
+    (toAbsoluteRootPath as jest.Mocked<any>).mockImplementation(
+      jest.requireActual('../../src/helpers').toAbsoluteRootPath
+    );
+    (createJestSettingGetter as jest.Mocked<any>).mockImplementation(() => {
       const data = readFileSync('./package.json');
       const config = JSON.parse(data.toString()).contributes.configuration.properties;
 
       const defaults = {};
       for (const key of Object.keys(config)) {
-        if (section.length === 0 || key.startsWith(`${section}.`)) {
+        if (key.startsWith('jest')) {
           defaults[key] = config[key].default;
         }
       }
-      return {
-        get: jest
-          .fn()
-          .mockImplementation((key) => userSettings[key] ?? defaults[`${section}.${key}`]),
-      };
+      return jest.fn().mockImplementation((key) => userSettings[key] ?? defaults[`jest.${key}`]);
     });
   });
   it('should return the extension resource configuration', async () => {
     const mockShell = jest.fn();
     (RunShell as jest.Mocked<any>).mockImplementation(() => mockShell);
-    const uri: any = { fsPath: 'workspaceFolder1' };
-    expect(getExtensionResourceSettings(uri)).toEqual({
+    const folder = makeWorkspaceFolder('workspaceFolder1');
+    expect(getExtensionResourceSettings(folder)).toEqual({
       coverageFormatter: 'DefaultFormatter',
       jestCommandLine: undefined,
       rootPath: 'workspaceFolder1',
@@ -164,7 +176,11 @@ describe('getExtensionResourceSettings()', () => {
       shell: mockShell,
       autoRevealOutput: 'on-run',
       parserPluginOptions: null,
+      enable: true,
+      nodeEnv: undefined,
+      useDashedArgs: false,
     });
+    expect(createJestSettingGetter).toHaveBeenCalledWith(folder);
   });
 
   describe('can read user settings', () => {
@@ -178,8 +194,8 @@ describe('getExtensionResourceSettings()', () => {
         nodeEnv: { whatever: '1' },
         shell: mockShell,
       };
-      const uri: any = { fsPath: 'workspaceFolder1' };
-      const settings = getExtensionResourceSettings(uri);
+      const folder = makeWorkspaceFolder('workspaceFolder1');
+      const settings = getExtensionResourceSettings(folder);
       expect(settings).toEqual(
         expect.objectContaining({
           ...userSettings,
@@ -200,8 +216,8 @@ describe('getExtensionResourceSettings()', () => {
         'testExplorer: $testExplorer => show legacy warning? $showWarning',
         ({ testExplorer, showWarning, converted }) => {
           userSettings = { testExplorer };
-          const uri: any = { fsPath: 'workspaceFolder1' };
-          const settings = getExtensionResourceSettings(uri);
+          const folder = makeWorkspaceFolder('workspaceFolder1');
+          const settings = getExtensionResourceSettings(folder);
           expect(settings).toEqual(
             expect.objectContaining({
               testExplorer: converted,

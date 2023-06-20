@@ -1,5 +1,6 @@
 jest.unmock('../../../src/setup-wizard/tasks/setup-jest-debug');
 jest.unmock('../test-helper');
+jest.unmock('../../test-helper');
 jest.unmock('./task-test-helper');
 
 import * as vscode from 'vscode';
@@ -23,6 +24,7 @@ describe('wizard-tasks', () => {
   const mockOpenTextDocument = jest.fn();
   const debugConfigProvider = {
     withCommandLine: jest.fn(),
+    getDebugConfigNames: jest.fn(),
   };
   let mockTextDocument;
   let wizardSettings: { [key: string]: any };
@@ -92,9 +94,9 @@ describe('wizard-tasks', () => {
         await setupJestDebug(c);
 
         if (wsInContext) {
-          expect(mockHelper.selectWorkspace).not.toHaveBeenCalled();
+          expect(mockHelper.selectWorkspaceFolder).not.toHaveBeenCalled();
         } else {
-          expect(mockHelper.selectWorkspace).toHaveBeenCalled();
+          expect(mockHelper.selectWorkspaceFolder).toHaveBeenCalled();
         }
         if (willAbort) {
           expect(mockHelper.showActionMenu).not.toHaveBeenCalled();
@@ -143,6 +145,7 @@ describe('wizard-tasks', () => {
           validSettings: [{ jestCommandLine: 'jest' }],
         });
         context.debugConfigProvider.withCommandLine.mockReturnValue(newDebugConfig);
+        debugConfigProvider.getDebugConfigNames.mockReturnValue({ sorted: ['whatever'] });
 
         mockShowActionMenu(DebugSetupActionId.generate, undefined);
       });
@@ -192,11 +195,20 @@ describe('wizard-tasks', () => {
         it.each`
           case | text                                                   | validateIndex
           ${1} | ${`"${DEBUG_CONFIG_NAME}"; "${DEBUG_CONFIG_NAME}.v2"`} | ${(idx) => idx > 5}
-          ${2} | ${`"${DEBUG_CONFIG_NAME}.v2";`}                        | ${(idx) => idx === 0}
-          ${3} | ${`"${DEBUG_CONFIG_NAME}";`}                           | ${(idx) => idx === 0}
+          ${2} | ${`"${DEBUG_CONFIG_NAME}.v2";`}                        | ${(idx) => idx > -1}
+          ${3} | ${`"${DEBUG_CONFIG_NAME}";`}                           | ${(idx) => idx > -1}
+          ${4} | ${`"${DEBUG_CONFIG_NAME}.v2.single-root";`}            | ${(idx) => idx > -1}
         `('case $case: can position correct config entry', async ({ text, validateIndex }) => {
           expect.hasAssertions();
 
+          debugConfigProvider.getDebugConfigNames.mockReturnValue({
+            sorted: [
+              `${DEBUG_CONFIG_NAME}.v2.single-root`,
+              `${DEBUG_CONFIG_NAME}.v2`,
+              `${DEBUG_CONFIG_NAME}.single-root`,
+              `${DEBUG_CONFIG_NAME}`,
+            ],
+          });
           // if both config exist, the v2 will be focus
           mockTextDocument.getText.mockReturnValueOnce(text);
           await setupJestDebug(context);

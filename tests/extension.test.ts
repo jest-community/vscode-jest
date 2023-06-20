@@ -28,6 +28,7 @@ const extensionManager = {
   unregisterAllWorkspaces: jest.fn(),
   activate: jest.fn(),
   register: jest.fn(() => []),
+  deleteAllExtensions: jest.fn(),
 };
 
 // tslint:disable-next-line: variable-name
@@ -36,22 +37,21 @@ const mockExtensionManager = {
   getExtensionWindowSettings: jest.fn(() => ({})),
 };
 
-jest.mock('../src/extensionManager', () => mockExtensionManager);
+jest.mock('../src/extension-manager', () => mockExtensionManager);
 
 import { activate, deactivate } from '../src/extension';
 
 describe('Extension', () => {
+  const context: any = {
+    subscriptions: {
+      push: jest.fn(),
+    },
+  };
   beforeEach(() => {
     jest.clearAllMocks();
     // ExtensionManager.mockImplementation(() => extensionManager);
   });
   describe('activate()', () => {
-    const context: any = {
-      subscriptions: {
-        push: jest.fn(),
-      },
-    };
-
     beforeEach(() => {
       context.subscriptions.push.mockReset();
     });
@@ -74,8 +74,9 @@ describe('Extension', () => {
 
   describe('deactivate()', () => {
     it('should call unregisterAll on instancesManager', () => {
+      activate(context);
       deactivate();
-      expect(extensionManager.unregisterAllWorkspaces).toHaveBeenCalled();
+      expect(extensionManager.deleteAllExtensions).toHaveBeenCalled();
     });
   });
 });

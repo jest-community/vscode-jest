@@ -9,11 +9,14 @@ import {
   getWizardSettings,
   createSaveConfig,
   validateCommandLine,
-  selectWorkspace,
+  selectWorkspaceFolder,
   toActionButton,
   validateRootPath,
+  toVirtualFolderSettings,
 } from '../wizard-helper';
-import { WizardStatus, ActionableMenuItem, SetupTask, WizardContext } from '../types';
+import { WizardStatus, ActionableMenuItem, SetupTask, WizardContext, ConfigEntry } from '../types';
+import { enabledWorkspaceFolders } from '../../workspace-manager';
+import { isVirtualWorkspaceFolder } from '../../virtual-workspace-folder';
 
 export const CLSetupActionId = {
   jestCommandLine: 0,
@@ -28,7 +31,7 @@ export const setupJestCmdLine: SetupTask = async (
   context: WizardContext
 ): Promise<WizardStatus> => {
   const { workspace: _ws, message } = context;
-  const workspace = _ws ?? (await selectWorkspace());
+  const workspace = _ws ?? (await selectWorkspaceFolder(enabledWorkspaceFolders()));
   if (!workspace) {
     return 'abort';
   }
@@ -36,19 +39,24 @@ export const setupJestCmdLine: SetupTask = async (
 
   const saveConfig = createSaveConfig(context);
   const settings = getWizardSettings(workspace);
+  const isVirtualFolder = isVirtualWorkspaceFolder(workspace);
 
   const save = async (): Promise<WizardStatus> => {
-    await saveConfig({
-      name: `jest.jestCommandLine`,
-      value: settings.jestCommandLine,
-    });
-    message(`jestCommandLine saved: ${settings.jestCommand}`);
-    await saveConfig({
-      name: `jest.rootPath`,
-      value: settings.rootPath,
-    });
-    message(`rootPath saved: ${settings.rootPath}`);
-
+    let entries: ConfigEntry[] = [
+      {
+        name: `jest.jestCommandLine`,
+        value: settings.jestCommandLine,
+      },
+      {
+        name: `jest.rootPath`,
+        value: settings.rootPath,
+      },
+    ];
+    if (isVirtualFolder) {
+      entries = [toVirtualFolderSettings(workspace, ...entries)];
+    }
+    await saveConfig(...entries);
+    message(`jestCommandLine and rootPath saved`);
     return 'exit';
   };
 
@@ -65,12 +73,15 @@ export const setupJestCmdLine: SetupTask = async (
   };
   const editRootPath = async (): Promise<WizardStatus> => {
     const editedValue = await showActionInputBox<string>({
-      title: 'Enter Root Path (if different from workspace root)',
+      title: isVirtualFolder
+        ? 'Enter Root Path for the VirtualFolder'
+        : 'Enter Root Path (if different from workspace root)',
       value: settings.rootPath,
       prompt: 'the directory to start jest command',
       enableBackButton: true,
       verbose: context.verbose,
     });
+
     settings.rootPath = editedValue;
     return 'success';
   };
@@ -109,9 +120,11 @@ export const setupJestCmdLine: SetupTask = async (
 
     menuItems.push(
       {
-        id: CLSetupActionId.jestCommandLine,
+        id: CLSetupActionId.rootPath,
         label: `${settings.rootPath}`,
-        detail: 'rootPath: the directory to start jest test from, if differ from workspace root',
+        detail: isVirtualFolder
+          ? 'rootPath: the directory where the virtual folder is'
+          : 'rootPath: the directory to start jest test from, if differ from workspace root',
         buttons: [editRootPathButton],
       },
       {
@@ -134,7 +147,7 @@ export const setupJestCmdLine: SetupTask = async (
     );
 
     const menuStatus = await showActionMenu<WizardStatus>(menuItems, {
-      title: 'Set up Jest Command Line and Root Path',
+      title: `[${workspace.name}] Set up Jest Command Line and Root Path`,
       placeholder: 'update rootPath and jestCommandLine settings below',
       enableBackButton: true,
       verbose: context.verbose,
