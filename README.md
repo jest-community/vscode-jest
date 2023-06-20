@@ -268,6 +268,7 @@ Users can use the following settings to tailor the extension for their environme
 |debugMode|Enable debug mode to diagnose plugin issues. (see developer console)|false|`"jest.debugMode": true`|
 |disabledWorkspaceFolders 💼|Disabled workspace folders names in multiroot environment|[]|`"jest.disabledWorkspaceFolders": ["package-a", "package-b"]`|
 |[autoRevealOutput](#autoRevealOutput)|Determine when to show test output|"on-run"|`"jest.autoRevealOutput": "on-exec-error"`|
+|autoClearTerminal|Clear the terminal output at the start of any new test run.|false|`"jest.autoClearTerminal": true`|
 
 #### Details
 ##### jestCommandLine
