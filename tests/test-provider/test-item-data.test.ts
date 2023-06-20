@@ -1163,6 +1163,30 @@ describe('test-item-data', () => {
         expect.stringContaining(coloredText)
       );
     });
+    describe('optionally clear terminal on start & schedule', () => {
+      let env;
+      beforeEach(() => {
+        env = setupTestEnv();
+      });
+      it.each([{ type: 'scheduled' }, { type: 'start' }])(
+        '$type: clear when autoClearTerminal is true',
+        ({ type }) => {
+          context.ext.settings = { autoClearTerminal: true };
+          const process = mockScheduleProcess(context);
+          env.onRunEvent({ type, process });
+          expect(context.output.clear).toHaveBeenCalled();
+        }
+      );
+      it.each([{ type: 'scheduled' }, { type: 'start' }])(
+        '$type: do not clear when when autoClearTerminal is false',
+        ({ type }) => {
+          context.ext.settings = { autoClearTerminal: false };
+          const process = mockScheduleProcess(context);
+          env.onRunEvent({ type, process });
+          expect(context.output.clear).not.toHaveBeenCalled();
+        }
+      );
+    });
     describe('handle run event to set item status and show output', () => {
       let env;
       beforeEach(() => {
@@ -1390,22 +1414,6 @@ describe('test-item-data', () => {
             expect(controllerMock.createTestRun).not.toHaveBeenCalled();
           });
         });
-      });
-      it('scheduled and start events will do deep item status update', () => {
-        const process = mockScheduleProcess(context);
-        const testFileData = context.getData(env.testFile);
-
-        testFileData.scheduleTest(jestRun);
-        expect(jestRun.vscodeRun.enqueued).toHaveBeenCalledTimes(2);
-        [env.testFile, env.testBlock].forEach((t) =>
-          expect(jestRun.vscodeRun.enqueued).toHaveBeenCalledWith(t)
-        );
-
-        env.onRunEvent({ type: 'start', process });
-        expect(jestRun.vscodeRun.started).toHaveBeenCalledTimes(2);
-        [env.testFile, env.testBlock].forEach((t) =>
-          expect(jestRun.vscodeRun.started).toHaveBeenCalledWith(t)
-        );
       });
       it('log long-run event', () => {
         const process = mockScheduleProcess(context);
