@@ -1,9 +1,9 @@
-import { JestProcess } from './JestProcess';
-import { TaskArrayFunctions, JestProcessRequest, QueueType, Task, JestProcessInfo } from './types';
-import { Logging } from '../logging';
-import { createTaskQueue, TaskQueue } from './task-queue';
-import { isDup, requestString } from './helper';
 import { JestExtContext } from '../JestExt';
+import { Logging } from '../logging';
+import { JestProcess } from './JestProcess';
+import { isDup, requestString } from './helper';
+import { TaskQueue, createTaskQueue } from './task-queue';
+import { JestProcessInfo, JestProcessRequest, QueueType, Task, TaskArrayFunctions } from './types';
 
 export class JestProcessManager implements TaskArrayFunctions<JestProcess> {
   private extContext: JestExtContext;
@@ -26,7 +26,7 @@ export class JestProcessManager implements TaskArrayFunctions<JestProcess> {
   }
 
   private foundDup(request: JestProcessRequest): boolean {
-    if (!request.schedule.dedup) {
+    if (!request.schedule.dedupe) {
       return false;
     }
     const queue = this.getQueue(request.schedule.queue);
@@ -42,7 +42,7 @@ export class JestProcessManager implements TaskArrayFunctions<JestProcess> {
     return false;
   }
   /**
-   * schedule a jest process and handle duplication process if dedup is requested.
+   * schedule a jest process and handle duplication process if dedupe is requested.
    * @param request
    * @returns a jest process id if successfully scheduled, otherwise undefined
    */

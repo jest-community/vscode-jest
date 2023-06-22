@@ -20,8 +20,8 @@ jest.mock('vscode', () => {
   };
 });
 
-import { GutterFormatter } from '../../../src/Coverage/Formatters/GutterFormatter';
 import * as vscode from 'vscode';
+import { GutterFormatter } from '../../../src/Coverage/Formatters/GutterFormatter';
 
 const makeRange = (line: number) => ({
   start: { line, character: 0 },
@@ -52,7 +52,7 @@ describe('GutterFormatter', () => {
     jest.clearAllMocks();
   });
 
-  describe('decoractors', () => {
+  describe('decorators', () => {
     beforeEach(() => {
       mockGetColorString.mockReturnValue('some-color');
       GutterFormatter.prototype.getColorString = mockGetColorString;

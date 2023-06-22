@@ -156,7 +156,7 @@ const createMessaging =
   (fileName: string, _verbose: boolean) =>
   (info: MessagingInfo): void => {
     const build = (msg: string): Parameters<typeof console.log> => [
-      `[test resut matching] ${info.type} : ${msg} : "${fileName}"\n`,
+      `[test result matching] ${info.type} : ${msg} : "${fileName}"\n`,
       info,
     ];
     switch (info.type) {

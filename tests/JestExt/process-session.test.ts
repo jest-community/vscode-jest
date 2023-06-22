@@ -3,10 +3,10 @@ jest.unmock('../../src/JestExt/helper');
 jest.unmock('../../src/JestExt/auto-run');
 jest.unmock('../test-helper');
 
-import { createProcessSession } from '../../src/JestExt/process-session';
-import * as listeners from '../../src/JestExt/process-listeners';
-import { JestProcessManager } from '../../src/JestProcessManagement';
 import { AutoRun } from '../../src/JestExt/auto-run';
+import * as listeners from '../../src/JestExt/process-listeners';
+import { createProcessSession } from '../../src/JestExt/process-session';
+import { JestProcessManager } from '../../src/JestProcessManagement';
 import { mockJestProcessContext } from '../test-helper';
 
 const mockProcessManager = JestProcessManager as jest.Mocked<any>;
@@ -48,16 +48,16 @@ describe('ProcessSession', () => {
       expect(context.onRunEvent.fire).toHaveBeenCalledWith({ type: 'scheduled', process });
     });
     it.each`
-      type                      | inputProperty                                                | expectedSchedule                                                                          | expectedExtraProperty
-      ${'all-tests'}            | ${undefined}                                                 | ${{ queue: 'blocking', dedup: { filterByStatus: ['pending'] } }}                          | ${undefined}
-      ${'all-tests'}            | ${{ transform }}                                             | ${{ queue: 'blocking-2', dedup: { filterByStatus: ['pending'] } }}                        | ${undefined}
-      ${'watch-tests'}          | ${undefined}                                                 | ${{ queue: 'blocking', dedup: { filterByStatus: ['pending'] } }}                          | ${undefined}
-      ${'watch-all-tests'}      | ${undefined}                                                 | ${{ queue: 'blocking', dedup: { filterByStatus: ['pending'] } }}                          | ${undefined}
-      ${'by-file'}              | ${{ testFileName: 'abc' }}                                   | ${{ queue: 'blocking-2', dedup: { filterByStatus: ['pending'] } }}                        | ${undefined}
-      ${'by-file-test'}         | ${{ testFileName: 'abc', testNamePattern: 'a test' }}        | ${{ queue: 'blocking-2', dedup: { filterByStatus: ['pending'], filterByContent: true } }} | ${undefined}
-      ${'by-file-pattern'}      | ${{ testFileNamePattern: 'abc' }}                            | ${{ queue: 'blocking-2', dedup: { filterByStatus: ['pending'] } }}                        | ${undefined}
-      ${'by-file-test-pattern'} | ${{ testFileNamePattern: 'abc', testNamePattern: 'a test' }} | ${{ queue: 'blocking-2', dedup: { filterByStatus: ['pending'], filterByContent: true } }} | ${undefined}
-      ${'list-test-files'}      | ${undefined}                                                 | ${{ queue: 'non-blocking', dedup: { filterByStatus: ['pending'] } }}                      | ${{ type: 'not-test', args: ['--listTests', '--json', '--watchAll=false'] }}
+      type                      | inputProperty                                                | expectedSchedule                                                                           | expectedExtraProperty
+      ${'all-tests'}            | ${undefined}                                                 | ${{ queue: 'blocking', dedupe: { filterByStatus: ['pending'] } }}                          | ${undefined}
+      ${'all-tests'}            | ${{ transform }}                                             | ${{ queue: 'blocking-2', dedupe: { filterByStatus: ['pending'] } }}                        | ${undefined}
+      ${'watch-tests'}          | ${undefined}                                                 | ${{ queue: 'blocking', dedupe: { filterByStatus: ['pending'] } }}                          | ${undefined}
+      ${'watch-all-tests'}      | ${undefined}                                                 | ${{ queue: 'blocking', dedupe: { filterByStatus: ['pending'] } }}                          | ${undefined}
+      ${'by-file'}              | ${{ testFileName: 'abc' }}                                   | ${{ queue: 'blocking-2', dedupe: { filterByStatus: ['pending'] } }}                        | ${undefined}
+      ${'by-file-test'}         | ${{ testFileName: 'abc', testNamePattern: 'a test' }}        | ${{ queue: 'blocking-2', dedupe: { filterByStatus: ['pending'], filterByContent: true } }} | ${undefined}
+      ${'by-file-pattern'}      | ${{ testFileNamePattern: 'abc' }}                            | ${{ queue: 'blocking-2', dedupe: { filterByStatus: ['pending'] } }}                        | ${undefined}
+      ${'by-file-test-pattern'} | ${{ testFileNamePattern: 'abc', testNamePattern: 'a test' }} | ${{ queue: 'blocking-2', dedupe: { filterByStatus: ['pending'], filterByContent: true } }} | ${undefined}
+      ${'list-test-files'}      | ${undefined}                                                 | ${{ queue: 'non-blocking', dedupe: { filterByStatus: ['pending'] } }}                      | ${{ type: 'not-test', args: ['--listTests', '--json', '--watchAll=false'] }}
     `(
       "can schedule '$type' request with ProcessManager",
       ({ type, inputProperty, expectedSchedule, expectedExtraProperty }) => {
@@ -108,7 +108,7 @@ describe('ProcessSession', () => {
         expect(defaultListener).toHaveBeenCalledTimes(1);
       });
     });
-    it('can pass custom requet', () => {
+    it('can pass custom request', () => {
       const sm = createProcessSession(context);
       expect(mockProcessManager).toHaveBeenCalledTimes(1);
       const extraInfo = 'whatever';

@@ -676,7 +676,7 @@ Every project and developer are different. Experiment and pick the autoRun setti
 
 </details>
 
-### Intermittent errors for (npm/yarn/node) command not found during test run or debugging
+### intermittent errors for (npm/yarn/node) command not found during test run or debugging
 
 This should only happen in Linux or MacOS, and is due to vscode not able to fully initialize the shell env when it starts up (more details [here](https://code.visualstudio.com/docs/supporting/faq#_resolving-shell-environment-fails)).
 

@@ -34,17 +34,17 @@ jest.mock('path', () => {
   return path;
 });
 
+import { ItBlock, TestAssertionStatus, TestReconcilationState } from 'jest-editor-support';
 import * as vscode from 'vscode';
+import { TestReconciliationState } from '../../src/TestResults';
 import {
   TestResultProvider,
   TestResultProviderOptions,
 } from '../../src/TestResults/TestResultProvider';
-import { TestReconciliationState } from '../../src/TestResults';
-import * as helper from '../test-helper';
-import { ItBlock, TestAssertionStatus, TestReconcilationState } from 'jest-editor-support';
 import * as match from '../../src/TestResults/match-by-context';
-import { mockJestExtEvents } from '../test-helper';
 import { ExtSnapshotBlock, SnapshotProvider } from '../../src/TestResults/snapshot-provider';
+import * as helper from '../test-helper';
+import { mockJestExtEvents } from '../test-helper';
 
 const setupMockParse = (itBlocks: ItBlock[]) => {
   mockParse.mockReturnValue({
@@ -446,7 +446,7 @@ describe('TestResultProvider', () => {
         ]);
 
         // the parameterized test use the first failed results as its "primary" result and
-        // put the other 2 tests in "extraResults" sorted by test precedence: fail > sucess
+        // put the other 2 tests in "extraResults" sorted by test precedence: fail > success
         const pResult = actual[1];
         expect(pResult.multiResults).toHaveLength(2);
         expect(pResult.multiResults!.map((a) => [a.name, a.status])).toEqual([
@@ -524,7 +524,7 @@ describe('TestResultProvider', () => {
         expect(pResult.multiResults!.map((a) => a.name)).toEqual(['p-test-success-2']);
       });
     });
-    describe('paramertized describes', () => {
+    describe('parameterized describes', () => {
       const tBlock = helper.makeItBlock('p-test-$count', [8, 0, 20, 20], { lastProperty: 'each' });
       const dBlock = helper.makeDescribeBlock('p-describe-scount', [tBlock], {
         lastProperty: 'each',
@@ -716,7 +716,7 @@ describe('TestResultProvider', () => {
 
       // now let's update "file 1"
       mockReconciler.updateFileWithJestStatus.mockReturnValueOnce([
-        { file: 'file 1', status: 'KnownSuceess' },
+        { file: 'file 1', status: 'KnownSuccess' },
       ]);
       sut.updateTestResults({} as any, {} as any);
 
@@ -956,7 +956,7 @@ describe('TestResultProvider', () => {
         sut.updateTestFileList(testFiles);
       }
       if (testResults) {
-        const mockResults = testResults.map((file) => ({ file, status: 'KnownSuceess' }));
+        const mockResults = testResults.map((file) => ({ file, status: 'KnownSuccess' }));
         mockReconciler.updateFileWithJestStatus.mockReturnValueOnce(mockResults);
         sut.updateTestResults({} as any, {} as any);
       }

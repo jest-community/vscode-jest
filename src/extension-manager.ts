@@ -1,20 +1,20 @@
 import * as vscode from 'vscode';
-import { JestExt } from './JestExt';
-import { DebugConfigurationProvider } from './DebugConfigurationProvider';
-import { statusBar } from './StatusBar';
 import { CoverageCodeLensProvider } from './Coverage';
+import { DebugConfigurationProvider } from './DebugConfigurationProvider';
+import { JestExt } from './JestExt';
+import { statusBar } from './StatusBar';
 import { extensionId, extensionName } from './appGlobals';
 import {
+  IgnoreWorkspaceChanges,
   PendingSetupTask,
   PendingSetupTaskKey,
-  startWizard,
   StartWizardOptions,
   WizardTaskId,
-  IgnoreWorkspaceChanges,
+  startWizard,
 } from './setup-wizard';
 import { ItemCommand } from './test-provider/types';
-import { enabledWorkspaceFolders } from './workspace-manager';
 import { VirtualFolderBasedCache } from './virtual-workspace-folder';
+import { enabledWorkspaceFolders } from './workspace-manager';
 
 export type GetJestExtByURI = (uri: vscode.Uri) => JestExt[];
 
@@ -241,13 +241,13 @@ export class ExtensionManager {
               );
               return;
             }
-            let targeteExt;
+            let targetExt;
             if (extensions.length > 1) {
-              targeteExt = await this.selectExtensions(extensions);
+              targetExt = await this.selectExtensions(extensions);
             } else if (extensions.length === 1) {
-              targeteExt = extensions;
+              targetExt = extensions;
             }
-            targeteExt?.forEach((ext) => command.callback.call(thisArg, ext, editor, ...args));
+            targetExt?.forEach((ext) => command.callback.call(thisArg, ext, editor, ...args));
           }
         );
       }
@@ -283,7 +283,7 @@ export class ExtensionManager {
   ): void {
     const uriList = Array.isArray(uri) ? uri : [uri];
     const extension = uriList.flatMap((uri) => this.getByDocUri(uri));
-    // dedup
+    // dedupe
     const set = new Set(extension);
     set.forEach(handler);
   }

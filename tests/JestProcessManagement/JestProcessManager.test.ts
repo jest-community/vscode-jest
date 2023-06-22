@@ -3,11 +3,11 @@ jest.unmock('../../src/JestProcessManagement/task-queue');
 jest.unmock('../../src/JestProcessManagement/helper');
 jest.unmock('../test-helper');
 
-import { JestProcessManager } from '../../src/JestProcessManagement/JestProcessManager';
 import { JestProcess } from '../../src/JestProcessManagement/JestProcess';
-import { mockJestProcessContext, mockProcessRequest } from '../test-helper';
+import { JestProcessManager } from '../../src/JestProcessManagement/JestProcessManager';
 import * as taskQueue from '../../src/JestProcessManagement/task-queue';
 import { ScheduleStrategy } from '../../src/JestProcessManagement/types';
+import { mockJestProcessContext, mockProcessRequest } from '../test-helper';
 
 interface ProcessState {
   inQ?: boolean;
@@ -262,12 +262,12 @@ describe('JestProcessManager', () => {
         expect(getState(pm, processes[3])).toEqual({ inQ: true, started: true, qSize: 3 });
       });
     });
-    describe('dedup', () => {
+    describe('dedupe', () => {
       it('will not schedule if process is already running', () => {
         expect.hasAssertions();
         const schedule: ScheduleStrategy = {
           queue: 'blocking',
-          dedup: { filterByStatus: ['running'] },
+          dedupe: { filterByStatus: ['running'] },
         };
         const request = mockProcessRequest('watch-tests', { schedule });
         const process = mockJestProcess(request);
@@ -290,7 +290,7 @@ describe('JestProcessManager', () => {
         expect.hasAssertions();
         const schedule: ScheduleStrategy = {
           queue: 'blocking',
-          dedup: { filterByStatus: ['pending'] },
+          dedupe: { filterByStatus: ['pending'] },
         };
         const request = mockProcessRequest('watch-tests', { schedule });
         const process = mockJestProcess(request);
@@ -320,7 +320,7 @@ describe('JestProcessManager', () => {
         expect.hasAssertions();
         const schedule: ScheduleStrategy = {
           queue: 'blocking',
-          dedup: { filterByStatus: ['pending'], filterByContent: true },
+          dedupe: { filterByStatus: ['pending'], filterByContent: true },
         };
         const request1 = mockProcessRequest('by-file', {
           testFileName: '/file/1',

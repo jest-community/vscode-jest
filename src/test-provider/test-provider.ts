@@ -33,7 +33,7 @@ export class JestTestProvider {
 
   private updateMenuContext() {
     const autoRunOn = !this.context.ext.settings.autoRun.isOff;
-    const withConverage = this.context.ext.settings.showCoverageOnLoad;
+    const withCoverage = this.context.ext.settings.showCoverageOnLoad;
     tiContextManager.setItemContext({
       workspace: this.context.ext.workspace,
       key: 'jest.autoRun',
@@ -43,7 +43,7 @@ export class JestTestProvider {
     tiContextManager.setItemContext({
       workspace: this.context.ext.workspace,
       key: 'jest.coverage',
-      value: withConverage,
+      value: withCoverage,
       itemIds: [this.workspaceRoot.item.id],
     });
     tiContextManager.setItemContext({
@@ -90,7 +90,7 @@ export class JestTestProvider {
       return;
     }
     const run = this.context.createTestRun(new vscode.TestRunRequest([theItem]), {
-      name: `disoverTest: ${this.controller.id}`,
+      name: `discoverTest: ${this.controller.id}`,
     });
     try {
       const data = this.context.getData(theItem);

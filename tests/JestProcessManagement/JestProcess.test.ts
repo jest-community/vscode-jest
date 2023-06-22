@@ -82,7 +82,7 @@ describe('JestProcess', () => {
     });
   });
   describe('when start', () => {
-    it('reeturns a promise that resolved when process closed', async () => {
+    it('returns a promise that resolved when process closed', async () => {
       expect.hasAssertions();
       const request = mockRequest('all-tests');
       const jp = new JestProcess(extContext, request);
@@ -245,7 +245,7 @@ describe('JestProcess', () => {
       expect(mockRunner.start).toHaveBeenCalledTimes(1);
       expect(p1).toBe(p2);
     });
-    describe('can prepare testNamePattern for used in correspoding spawned shell', () => {
+    describe('can prepare testNamePattern for used in corresponding spawned shell', () => {
       it.each`
         platform    | shell           | testNamePattern                   | expected
         ${'win32'}  | ${undefined}    | ${'with special $character.abc*'} | ${'"with special \\$character\\.abc\\*"'}

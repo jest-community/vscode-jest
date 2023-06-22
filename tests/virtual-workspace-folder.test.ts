@@ -1,15 +1,15 @@
 jest.unmock('../src/virtual-workspace-folder');
 jest.unmock('./test-helper');
 
-import * as vscode from 'vscode';
 import * as path from 'path';
+import * as vscode from 'vscode';
+import { toAbsoluteRootPath } from '../src/helpers';
 import {
+  VirtualFolderBasedCache,
   VirtualWorkspaceFolder,
   isVirtualWorkspaceFolder,
-  VirtualFolderBasedCache,
 } from '../src/virtual-workspace-folder';
-import { makeWorkspaceFolder, makeUri } from './test-helper';
-import { toAbsoluteRootPath } from '../src/helpers';
+import { makeUri, makeWorkspaceFolder } from './test-helper';
 
 describe('virtual-workspace-folder', () => {
   beforeEach(() => {
@@ -141,7 +141,7 @@ describe('virtual-workspace-folder', () => {
         expect(cache.getItemByFolderName('folder3')).toBe(item3);
       });
 
-      it('deletiing the virtual folder item will also remove the byActualFolderName entry', () => {
+      it('deleting the virtual folder item will also remove the byActualFolderName entry', () => {
         cache.addItem(item2);
         cache.addItem(item3);
         expect(cache.size).toBe(2);
@@ -151,7 +151,7 @@ describe('virtual-workspace-folder', () => {
         expect(cache.getItemsByActualFolderName('folder1')).toEqual([item3]);
         expect(cache.getItemByFolderName('folder2')).toBeUndefined();
       });
-      it('can delete items by atualFolder', () => {
+      it('can delete items by actualFolder', () => {
         cache.addItem(item2);
         cache.addItem(item3);
         expect(cache.getItemByFolderName('folder2')).toBe(item2);

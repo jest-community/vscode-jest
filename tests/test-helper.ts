@@ -1,12 +1,12 @@
 /* istanbul ignore file */
-import { Location, LocationRange, TestResult } from '../src/TestResults/TestResult';
-import { TestReconciliationStateType } from '../src/TestResults';
 import { ItBlock, TestAssertionStatus } from 'jest-editor-support';
+import * as path from 'path';
+import { AutoRun } from '../src/JestExt';
 import { JestProcessRequest } from '../src/JestProcessManagement';
 import { JestTestProcessType } from '../src/Settings';
+import { TestReconciliationStateType } from '../src/TestResults';
+import { Location, LocationRange, TestResult } from '../src/TestResults/TestResult';
 import { MatchEvent } from '../src/TestResults/match-node';
-import { AutoRun } from '../src/JestExt';
-import * as path from 'path';
 
 export const EmptyLocation = {
   line: 0,
@@ -145,7 +145,7 @@ export const mockProjectWorkspace = (...args: any[]): any => {
   };
 };
 
-export const mockWworkspaceLogging = (): any => ({ create: () => jest.fn() });
+export const mockWorkspaceLogging = (): any => ({ create: () => jest.fn() });
 
 export const mockEvent = (): any => ({
   event: jest.fn().mockReturnValue({ dispose: jest.fn() }),

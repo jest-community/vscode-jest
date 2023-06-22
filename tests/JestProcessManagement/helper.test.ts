@@ -1,4 +1,4 @@
-import { isRequestEqual, isDup } from '../../src/JestProcessManagement/helper';
+import { isDup, isRequestEqual } from '../../src/JestProcessManagement/helper';
 
 jest.unmock('../../src/JestProcessManagement/helper');
 
@@ -41,8 +41,8 @@ describe('isDup', () => {
       data: { request: { type: 'watch-tests' } },
       status: 'pending',
     };
-    const request1: any = { type: 'watch-tests', schedule: { dedup: {} } };
-    const request2: any = { type: 'all-tests', schedule: { dedup: {} } };
+    const request1: any = { type: 'watch-tests', schedule: { dedupe: {} } };
+    const request2: any = { type: 'all-tests', schedule: { dedupe: {} } };
     expect(isDup(task, request1)).toBeTruthy();
     expect(isDup(task, request2)).toBeFalsy();
   });
@@ -59,7 +59,7 @@ describe('isDup', () => {
     };
     const request: any = {
       type,
-      schedule: { dedup: { filterByStatus: status } },
+      schedule: { dedupe: { filterByStatus: status } },
     };
 
     expect(isDup(task, request)).toEqual(expected);
@@ -82,7 +82,7 @@ describe('isDup', () => {
       const request: any = {
         type,
         testFileName,
-        schedule: { dedup: { filterByStatus: status, filterByContent: true } },
+        schedule: { dedupe: { filterByStatus: status, filterByContent: true } },
       };
 
       expect(isDup(task, request)).toEqual(expected);

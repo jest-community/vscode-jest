@@ -1,7 +1,7 @@
-import { CoverageMapProvider } from '../CoverageMapProvider';
-import * as vscode from 'vscode';
-import { CoverageColors, CoverageStatus } from '../CoverageOverlay';
 import { FileCoverage } from 'istanbul-lib-coverage';
+import * as vscode from 'vscode';
+import { CoverageMapProvider } from '../CoverageMapProvider';
+import { CoverageColors, CoverageStatus } from '../CoverageOverlay';
 
 export type CoverageRanges = Partial<Record<CoverageStatus, vscode.Range[]>>;
 
@@ -16,9 +16,9 @@ export abstract class AbstractFormatter {
   }
 
   abstract format(editor: vscode.TextEditor): void;
-  /** remove decoractors for the given editor */
+  /** remove decorators for the given editor */
   abstract clear(editor: vscode.TextEditor): void;
-  /** dispose decoractors for all editors */
+  /** dispose decorators for all editors */
   abstract dispose(): void;
 
   /**
@@ -66,14 +66,14 @@ export abstract class AbstractFormatter {
       return ranges;
     }
     const lineCoverage = fileCoverage.getLineCoverage();
-    const branchCoveravge = fileCoverage.getBranchCoverageByLine();
+    const branchCoverage = fileCoverage.getBranchCoverageByLine();
     const funcCoverage = this.getFunctionCoverageByLine(fileCoverage);
 
     // consolidate the coverage by line
     for (let line = 1; line <= editor.document.lineCount; line++) {
       const zeroBasedLineNumber = line - 1;
       const lc = lineCoverage[line];
-      const bc = branchCoveravge[line];
+      const bc = branchCoverage[line];
       const fc = funcCoverage[line];
       const statusList: CoverageStatus[] = [];
       if (fc != null) {

@@ -28,33 +28,36 @@ jest.mock('../../src/workspace-manager', () => ({
   isInFolder: mockIsInFolder,
 }));
 
-import * as vscode from 'vscode';
-import { JestExt } from '../../src/JestExt/core';
-import { AutoRun } from '../../src/JestExt/auto-run';
-import { createProcessSession } from '../../src/JestExt/process-session';
-import { updateCurrentDiagnostics, updateDiagnostics } from '../../src/diagnostics';
-import { CoverageMapProvider } from '../../src/Coverage';
-import * as helper from '../../src/helpers';
-import { TestIdentifier, resultsWithLowerCaseWindowsDriveLetters } from '../../src/TestResults';
-import * as messaging from '../../src/messaging';
-import { PluginResourceSettings } from '../../src/Settings';
-import * as extHelper from '../..//src/JestExt/helper';
-import { workspaceLogging } from '../../src/logging';
 import { ProjectWorkspace } from 'jest-editor-support';
+import * as vscode from 'vscode';
+import * as extHelper from '../..//src/JestExt/helper';
+import { CoverageMapProvider } from '../../src/Coverage';
+import { AutoRun } from '../../src/JestExt/auto-run';
+import { JestExt } from '../../src/JestExt/core';
+import { JestOutputTerminal } from '../../src/JestExt/output-terminal';
+import { createProcessSession } from '../../src/JestExt/process-session';
+import { RunShell } from '../../src/JestExt/run-shell';
+import { PluginResourceSettings } from '../../src/Settings';
+import {
+  TestIdentifier,
+  TestResultProvider,
+  resultsWithLowerCaseWindowsDriveLetters,
+} from '../../src/TestResults';
+import { updateCurrentDiagnostics, updateDiagnostics } from '../../src/diagnostics';
+import * as errors from '../../src/errors';
+import { addFolderToDisabledWorkspaceFolders } from '../../src/extension-manager';
+import * as helper from '../../src/helpers';
+import { workspaceLogging } from '../../src/logging';
+import * as messaging from '../../src/messaging';
+import { MessageAction } from '../../src/messaging';
+import { JestTestProvider } from '../../src/test-provider';
+import { ItemCommand } from '../../src/test-provider/types';
 import {
   makeUri,
   makeWorkspaceFolder,
   mockProjectWorkspace,
-  mockWworkspaceLogging,
+  mockWorkspaceLogging,
 } from '../test-helper';
-import { JestTestProvider } from '../../src/test-provider';
-import { MessageAction } from '../../src/messaging';
-import { addFolderToDisabledWorkspaceFolders } from '../../src/extension-manager';
-import { JestOutputTerminal } from '../../src/JestExt/output-terminal';
-import { RunShell } from '../../src/JestExt/run-shell';
-import * as errors from '../../src/errors';
-import { ItemCommand } from '../../src/test-provider/types';
-import { TestResultProvider } from '../../src/TestResults';
 
 /* eslint jest/expect-expect: ["error", { "assertFunctionNames": ["expect", "expectItTakesNoAction"] }] */
 const mockHelpers = helper as jest.Mocked<any>;
@@ -138,7 +141,7 @@ describe('JestExt', () => {
 
     (createProcessSession as jest.Mocked<any>).mockReturnValue(mockProcessSession);
     (ProjectWorkspace as jest.Mocked<any>).mockImplementation(mockProjectWorkspace);
-    (workspaceLogging as jest.Mocked<any>).mockImplementation(mockWworkspaceLogging);
+    (workspaceLogging as jest.Mocked<any>).mockImplementation(mockWorkspaceLogging);
     (JestTestProvider as jest.Mocked<any>).mockImplementation(() => mockTestProvider);
     (JestOutputTerminal as jest.Mocked<any>).mockImplementation(() => mockOutputTerminal);
     (vscode.EventEmitter as jest.Mocked<any>) = jest.fn().mockImplementation(() => {
@@ -283,7 +286,7 @@ describe('JestExt', () => {
       });
     });
     describe('should run the supplied test', () => {
-      it.each([[document], ['fileName']])('support document paramter: %s', async (doc) => {
+      it.each([[document], ['fileName']])('support document parameter: %s', async (doc) => {
         const testNamePattern = 'testNamePattern';
         await sut.debugTests(doc, testNamePattern);
         expect(vscode.debug.startDebugging).toHaveBeenCalledWith(
@@ -363,7 +366,7 @@ describe('JestExt', () => {
         expect(vscode.debug.startDebugging).not.toHaveBeenCalled();
       }
     });
-    describe('paramerterized test', () => {
+    describe('parameterized test', () => {
       describe.each`
         desc                 | tId1                                 | tId2                                 | tId3                                 | selectIdx
         ${'testIdentifiers'} | ${makeIdentifier('test-1', ['d-1'])} | ${makeIdentifier('test-2', ['d-1'])} | ${makeIdentifier('test-3', ['d-1'])} | ${0}
@@ -383,7 +386,7 @@ describe('JestExt', () => {
           const [items] = mockShowQuickPick.mock.calls[0];
           expect(items).toHaveLength(3);
           const hasIds = () => {
-            // id string is called 4 times: 3 to construt the quickPickIems, the last one is for jest test fullName
+            // id string is called 4 times: 3 to construct the quickPickItems, the last one is for jest test fullName
             expect(mockHelpers.testIdString).toHaveBeenCalledTimes(identifierIdCount + 1);
             const calls = mockHelpers.testIdString.mock.calls;
             expect(
@@ -874,7 +877,7 @@ describe('JestExt', () => {
               expectedTestFiles
             );
 
-            // stats will be updated in status baar accordingly
+            // stats will be updated in status bar accordingly
             expect(sut.testResultProvider.getTestSuiteStats).toHaveBeenCalled();
             expect(sbUpdateMock).toHaveBeenCalledWith({ stats });
           }
@@ -931,7 +934,7 @@ describe('JestExt', () => {
         expect(mockTestProvider.dispose).toHaveBeenCalledTimes(1);
         expect(JestTestProvider).toHaveBeenCalledTimes(1);
       });
-      it('updatae statusBar status', async () => {
+      it('update statusBar status', async () => {
         const sut = createJestExt();
         await sut.stopSession();
         expect(sbUpdateMock).toHaveBeenCalledWith({ state: 'stopped' });
@@ -1250,7 +1253,7 @@ describe('JestExt', () => {
         }
       );
     });
-    it('events are disposed when extensioin deactivated', () => {
+    it('events are disposed when extension deactivated', () => {
       sut.deactivate();
       expect(sut.events.onRunEvent.dispose).toHaveBeenCalled();
     });

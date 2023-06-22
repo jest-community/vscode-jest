@@ -161,7 +161,7 @@ export class WorkspaceManager {
     return result;
   }
   /** validate if given workspace is a valid jest workspace
-   * @retrun WorkspaceInfo if jest root is different from project root; otherwise undefined.
+   * @return WorkspaceInfo if jest root is different from project root; otherwise undefined.
    */
   async validateWorkspaceFolder(
     workspace: vscode.WorkspaceFolder,
@@ -200,7 +200,7 @@ export class WorkspaceManager {
       }
     }
 
-    // check jest config within wotkspace's package.json
+    // check jest config within workspace's package.json
     if (types.includes('jest-in-package')) {
       const packageJson = getPackageJson(workspace.uri.fsPath);
       if (packageJson && packageJson.jest) {

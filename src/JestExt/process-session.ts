@@ -1,14 +1,14 @@
 import {
+  JestProcessInfo,
   JestProcessManager,
   JestProcessRequest,
   JestProcessRequestBase,
+  JestProcessRequestTransform,
   ScheduleStrategy,
   requestString,
-  JestProcessInfo,
-  JestProcessRequestTransform,
 } from '../JestProcessManagement';
 import { JestTestProcessType } from '../Settings';
-import { RunTestListener, ListTestFileListener } from './process-listeners';
+import { ListTestFileListener, RunTestListener } from './process-listeners';
 import { JestExtProcessContext } from './types';
 
 type InternalProcessType = 'list-test-files';
@@ -34,33 +34,33 @@ const getTransform = (request: JestExtRequestType): JestProcessRequestTransform 
 
 const ProcessScheduleStrategy: Record<JestTestProcessType, ScheduleStrategy> = {
   // abort if there is already an pending request
-  'all-tests': { queue: 'blocking', dedup: { filterByStatus: ['pending'] } },
-  'watch-tests': { queue: 'blocking', dedup: { filterByStatus: ['pending'] } },
+  'all-tests': { queue: 'blocking', dedupe: { filterByStatus: ['pending'] } },
+  'watch-tests': { queue: 'blocking', dedupe: { filterByStatus: ['pending'] } },
   'watch-all-tests': {
     queue: 'blocking',
-    dedup: { filterByStatus: ['pending'] },
+    dedupe: { filterByStatus: ['pending'] },
   },
 
   // abort if there is already identical pending request
   'by-file': {
     queue: 'blocking-2',
-    dedup: { filterByStatus: ['pending'] },
+    dedupe: { filterByStatus: ['pending'] },
   },
   'by-file-test': {
     queue: 'blocking-2',
-    dedup: { filterByStatus: ['pending'], filterByContent: true },
+    dedupe: { filterByStatus: ['pending'], filterByContent: true },
   },
   'by-file-pattern': {
     queue: 'blocking-2',
-    dedup: { filterByStatus: ['pending'] },
+    dedupe: { filterByStatus: ['pending'] },
   },
   'by-file-test-pattern': {
     queue: 'blocking-2',
-    dedup: { filterByStatus: ['pending'], filterByContent: true },
+    dedupe: { filterByStatus: ['pending'], filterByContent: true },
   },
   'not-test': {
     queue: 'non-blocking',
-    dedup: { filterByStatus: ['pending'] },
+    dedupe: { filterByStatus: ['pending'] },
   },
 };
 
@@ -85,7 +85,7 @@ export const createProcessSession = (context: JestExtProcessContext): ProcessSes
   /**
    *
    * @param type
-   * @param stoppRunning if true, will stop and remove processes with the same type, default is false
+   * @param stopRunning if true, will stop and remove processes with the same type, default is false
    */
   const scheduleProcess = <T extends JestExtRequestType = JestExtRequestType>(
     request: T
@@ -157,7 +157,7 @@ export const createProcessSession = (context: JestExtProcessContext): ProcessSes
    */
   const start = async (): Promise<void> => {
     if (jestProcessManager.numberOfProcesses() > 0) {
-      logging('debug', `${jestProcessManager.numberOfProcesses} queued, stoping all...`);
+      logging('debug', `${jestProcessManager.numberOfProcesses} queued, stopping all...`);
       await stop();
     }
 
