@@ -17,7 +17,7 @@ describe('JestTestRun', () => {
     vRun = controllerMock.createTestRun({}, 'whatever');
     item = {};
   });
-  it('can deetect status update after run is closed', () => {
+  it('can detect status update after run is closed', () => {
     const jestRun = new JestTestRun(context, vRun);
     jestRun.enqueued(item);
     expect(vRun.enqueued).toHaveBeenCalled();

@@ -157,7 +157,7 @@ describe('buildSourceContainer', () => {
       ${'Whatever'}        | ${true}
       ${'Literal'}         | ${false}
       ${'StringLiteral'}   | ${false}
-    `('$nameType => nonLiteralName? $inonLiteralName', ({ nameType, nonLiteralName }) => {
+    `('$nameType => nonLiteralName? $nonLiteralName', ({ nameType, nonLiteralName }) => {
       const t1 = helper.makeItBlock('test-1', [1, 0, 5, 0], { nameType });
       const sourceRoot = helper.makeRoot([t1]);
       const root = match.buildSourceContainer(sourceRoot);
@@ -271,7 +271,7 @@ describe('matchTestAssertions', () => {
         ['d-1 test-2', 'Unknown'],
       ]);
     });
-    it('empty desecribe block', () => {
+    it('empty describe block', () => {
       const t1 = helper.makeItBlock('test-1', [1, 0, 5, 0]); // under root
       const d11 = helper.makeDescribeBlock('d-1-1', []);
       const d1 = helper.makeDescribeBlock('d-1', [d11]);
@@ -670,7 +670,7 @@ describe('matchTestAssertions', () => {
     const tTodo = helper.makeItBlock('a todo test', [30, 0, 30, 0]);
     const d3 = helper.makeDescribeBlock('wrapper-3', [t3, tTodo]);
 
-    describe('when all tests have the same loation: i.e. they will be grouped incorrectly', () => {
+    describe('when all tests have the same location: i.e. they will be grouped incorrectly', () => {
       const a0 = helper.makeAssertion('first test', 'KnownSuccess', undefined, [1, 0]);
       const a1 = helper.makeAssertion('test.each 1', 'KnownSuccess', undefined, [1, 0]);
       const a2 = helper.makeAssertion('test.each 2', 'KnownFail', undefined, [1, 0]);

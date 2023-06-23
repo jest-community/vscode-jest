@@ -23,7 +23,7 @@
 ---
 ## v5.0 (pre-release) (roll-up)
 
-v5 mainly focuses on addressing performance, stablity and ease of use. The goal is to help new and experienced users fully utilize the extension features to make testing a fun experience.
+v5 mainly focuses on addressing performance, stability and ease of use. The goal is to help new and experienced users fully utilize the extension features to make testing a fun experience.
 
 We have also decided to make TestExplorer a preferred UI outlet instead of our custom UI developed before TestExplorer. For example, we no longer support the inline decorator for test status as TestExplorer provided a much more powerful gutter status/menu.
 ### Main Features
@@ -96,7 +96,7 @@ On non-windows platforms, vscode sometimes fails to initialize its process env u
 
 The extension can auto generate login shell for `bash`, `zsh`, and `fish`. Users can also configure custom login shells by expanding the current ["jest.shell"](../README.md#shell) setting, such as: `"jest.shell": {"path:": "/bin/bash", "args": ["-l"]}`. This will instruct the extension to always use the login shell.
 
-Please note these changes only apply to test runs; you might experience similar issues when debugging tests, as we do not control how the vscode debugger is launched. But fortunately, a similar solution (login shell) will work for debugging as well - by customizing `"terminal.integrated.automationProfile.<platform>"`; see instruction in [intermitten error troubleshooting](../README.md##intermittent-errors-for-npmyarnnode-command-not-found-during-test-run-or-debugging)
+Please note these changes only apply to test runs; you might experience similar issues when debugging tests, as we do not control how the vscode debugger is launched. But fortunately, a similar solution (login shell) will work for debugging as well - by customizing `"terminal.integrated.automationProfile.<platform>"`; see instruction in [intermittent error troubleshooting](../README.md##intermittent-errors-for-npmyarnnode-command-not-found-during-test-run-or-debugging)
 
 
 ([v5.0.0](https://github.com/jest-community/vscode-jest/releases/tag/v5.0.0): [#874](https://github.com/jest-community/vscode-jest/pull/874) - @connectdotz)

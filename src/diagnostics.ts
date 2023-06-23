@@ -52,7 +52,7 @@ export function updateCurrentDiagnostics(
         const textLine = editor.document.lineAt(line);
         const name = testIdString('display', r.identifier);
         return createDiagnosticWithRange(
-          r.shortMessage || r.terseMessage || 'unknown errorr',
+          r.shortMessage || r.terseMessage || 'unknown error',
           textLine.range,
           name
         );

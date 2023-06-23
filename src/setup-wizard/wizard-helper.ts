@@ -261,7 +261,7 @@ export const validateCommandLine = (cmdLine: string): string | undefined => {
 };
 
 /**
- * get releveant settings from vscode config (settings.json and launch.json) of the given workspace
+ * get relevant settings from vscode config (settings.json and launch.json) of the given workspace
  * @param workspace
  */
 export const getWizardSettings = (workspaceFolder: vscode.WorkspaceFolder): WizardSettings => {
