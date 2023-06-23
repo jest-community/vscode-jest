@@ -205,7 +205,7 @@ export class LongRunMonitor {
       return;
     }
     if (this.timer) {
-      this.logging('warn', `LongRunMonitor is already runninng`);
+      this.logging('warn', `LongRunMonitor is already running`);
       this.cancel();
     }
     this.timer = setTimeout(() => {

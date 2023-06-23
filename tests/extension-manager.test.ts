@@ -97,13 +97,13 @@ const createExtensionContext = () => ({
   },
 });
 const initWorkspaces = (all: string[], enabled?: string[]): any[] => {
-  const allWorspaces = all.map((name) => makeWorkspaceFolder(name));
-  (vscode.workspace as any).workspaceFolders = allWorspaces;
+  const allWorkspaces = all.map((name) => makeWorkspaceFolder(name));
+  (vscode.workspace as any).workspaceFolders = allWorkspaces;
   const enabledWorkspaces = enabled
-    ? allWorspaces.filter((w) => enabled.includes(w.name))
-    : allWorspaces;
+    ? allWorkspaces.filter((w) => enabled.includes(w.name))
+    : allWorkspaces;
   mockEnabledWorkspaceFolders.mockReturnValue(enabledWorkspaces);
-  return allWorspaces;
+  return allWorkspaces;
 };
 
 const createExtensionManager = (
@@ -165,7 +165,7 @@ describe('ExtensionManager', () => {
   });
 
   describe('constructor()', () => {
-    it('should register extensions for all wrokspace folders', () => {
+    it('should register extensions for all workspace folders', () => {
       new ExtensionManager(context);
       expect(registerSpy).toHaveBeenCalledTimes(1);
     });
@@ -283,7 +283,7 @@ describe('ExtensionManager', () => {
     });
 
     describe('deleteExtension', () => {
-      it('should unregister instance by wokspaceFolder', () => {
+      it('should unregister instance by workspaceFolder', () => {
         extensionManager.addExtension(workspaceFolder1);
         const ext = extensionManager.getByName(workspaceFolder1.name);
         expect(ext).not.toBeUndefined();
@@ -294,7 +294,7 @@ describe('ExtensionManager', () => {
     });
 
     describe('deleteExtensionByFolder', () => {
-      it('should unregister instance by wokspaceFolder name', () => {
+      it('should unregister instance by workspaceFolder name', () => {
         extensionManager.addExtension(workspaceFolder1);
         const ext = extensionManager.getByName('workspaceFolder1');
         expect(ext).not.toBeUndefined();
@@ -470,13 +470,13 @@ describe('ExtensionManager', () => {
           );
           const registeredCallback = (vscode.commands.registerCommand as jest.Mocked<any>).mock
             .calls[0][1];
-          registeredCallback('addtional argument');
+          registeredCallback('additional argument');
 
           expect(callback).toHaveBeenCalledTimes(vscode.workspace.workspaceFolders.length);
           ['ws-1', 'ws-2'].forEach((ws) =>
             expect(callback).toHaveBeenCalledWith(
               extensionManager.getByName(ws),
-              'addtional argument'
+              'additional argument'
             )
           );
         });
@@ -594,12 +594,12 @@ describe('ExtensionManager', () => {
           const registeredCallback = (vscode.commands.registerTextEditorCommand as jest.Mocked<any>)
             .mock.calls[0][1];
 
-          registeredCallback(editor, {}, 'addtional argument');
+          registeredCallback(editor, {}, 'additional argument');
           expect(callback).toHaveBeenCalledTimes(1);
           expect(callback).toHaveBeenCalledWith(
             extensionManager.getByName('ws-1'),
             editor,
-            'addtional argument'
+            'additional argument'
           );
         });
         it('can skip command if active workspace is unknown', () => {
@@ -613,7 +613,7 @@ describe('ExtensionManager', () => {
           const registeredCallback = (vscode.commands.registerTextEditorCommand as jest.Mocked<any>)
             .mock.calls[0][1];
 
-          registeredCallback(editor, {}, 'addtional argument');
+          registeredCallback(editor, {}, 'additional argument');
           expect(callback).not.toHaveBeenCalled();
         });
         it('will prompt a chooser if the active workspace has multiple virtual folders', async () => {
@@ -631,7 +631,7 @@ describe('ExtensionManager', () => {
           const registeredCallback = (vscode.commands.registerTextEditorCommand as jest.Mocked<any>)
             .mock.calls[0][1];
           const editor = makeEditor(ws2.name);
-          await registeredCallback(editor, {}, 'addtional argument');
+          await registeredCallback(editor, {}, 'additional argument');
 
           expect(vscode.window.showQuickPick).toHaveBeenCalledTimes(1);
           expect(vscode.window.showQuickPick).toHaveBeenCalledWith([ws2_v1.name, ws2_v2.name], {
@@ -641,7 +641,7 @@ describe('ExtensionManager', () => {
           expect(callback).toHaveBeenCalledWith(
             extensionManager.getByName(ws2_v2.name),
             editor,
-            'addtional argument'
+            'additional argument'
           );
         });
         it('will show warning if no extension supports the given editor file', async () => {
@@ -657,7 +657,7 @@ describe('ExtensionManager', () => {
           const registeredCallback = (vscode.commands.registerTextEditorCommand as jest.Mocked<any>)
             .mock.calls[0][1];
           const editor = makeEditor(ws2.name);
-          await registeredCallback(editor, {}, 'addtional argument');
+          await registeredCallback(editor, {}, 'additional argument');
           expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
         });
       });
@@ -712,7 +712,7 @@ describe('ExtensionManager', () => {
         );
       });
       describe('when enabled workspace is changed', () => {
-        it('will unregister disabled workpsaces', () => {
+        it('will unregister disabled workspaces', () => {
           expect(extensionManager.getByName('ws-1')).not.toBeUndefined();
           expect(extensionManager.getByName('ws-2')).not.toBeUndefined();
 

@@ -100,7 +100,7 @@ describe('TestItemContextManager', () => {
           context.itemIds
         );
       });
-      it('new context will override the olde one', () => {
+      it('new context will override the old one', () => {
         const workspace: any = { name: 'ws' };
         const manager = new TestItemContextManager();
         const context1: any = {

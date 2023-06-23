@@ -795,7 +795,7 @@ describe('test-item-data', () => {
           expect(runMock.passed).toHaveBeenCalledWith(aItem, undefined);
           expect(runMock.end).toHaveBeenCalledTimes(1);
         });
-        it('for exporer-triggered runs, only the resolve function will be invoked', () => {
+        it('for explorer-triggered runs, only the resolve function will be invoked', () => {
           // simulate an internal run has been scheduled
           const process = mockScheduleProcess(context);
 
@@ -1529,7 +1529,7 @@ describe('test-item-data', () => {
       beforeEach(() => {
         createTestRunSpy = jest.spyOn(context, 'createTestRun');
       });
-      it('wawtch-test run', () => {
+      it('watch-test run', () => {
         const request: any = { type: 'watch-tests' };
         const process = { id: 'whatever', request };
         const item = env.wsRoot.item;

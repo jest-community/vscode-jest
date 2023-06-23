@@ -89,7 +89,7 @@ export class JestExt {
 
   private workspaceManager: WorkspaceManager;
   private output: JestOutputTerminal;
-  private deubgConfig?: vscode.DebugConfiguration;
+  private debugConfig?: vscode.DebugConfiguration;
 
   constructor(
     vscodeContext: vscode.ExtensionContext,
@@ -437,7 +437,7 @@ export class JestExt {
     );
 
     this.extContext = createJestExtContext(this.extContext.workspace, updatedSettings, this.output);
-    this.deubgConfig = undefined;
+    this.debugConfig = undefined;
 
     await this.startSession(true);
   }
@@ -633,7 +633,7 @@ export class JestExt {
     );
 
     let debugConfig =
-      getDebugConfig(this.extContext.workspace) ?? getDebugConfig() ?? this.deubgConfig;
+      getDebugConfig(this.extContext.workspace) ?? getDebugConfig() ?? this.debugConfig;
 
     if (!debugConfig) {
       this.logging(
@@ -652,7 +652,7 @@ export class JestExt {
         )[0];
       }
 
-      this.deubgConfig = debugConfig;
+      this.debugConfig = debugConfig;
       this.extContext.output.write('auto config debug config:', 'info');
       this.extContext.output.write(JSON.stringify(debugConfig, undefined, '  '), 'new-line');
     }
@@ -770,7 +770,7 @@ export class JestExt {
       return;
     }
 
-    // there is a bit redudant since didSave already handle the save changes
+    // there is a bit redundant since didSave already handle the save changes
     // but not sure if there are other non-editor related change we are trying
     // to capture, so leave it be for now...
     this.refreshDocumentChange(event.document);

@@ -94,7 +94,7 @@ export const setupJestDebug: SetupTask = async (context: WizardContext): Promise
   };
 
   const generate = async (): Promise<WizardStatus> => {
-    // check prerequsite
+    // check prerequisite
     let jestCommandLine = settings.jestCommandLine;
     let rootPath = settings.rootPath;
 

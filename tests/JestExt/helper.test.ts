@@ -232,7 +232,7 @@ describe('getExtensionResourceSettings()', () => {
 });
 describe('prefixWorkspace', () => {
   const context: any = { workspace: { name: 'ws' } };
-  it('whill not prefix if not multi-root', () => {
+  it('will not prefix if not multi-root', () => {
     (vscode.workspace as any).workspaceFolders = [{}];
     expect(prefixWorkspace(context, 'a message')).toEqual('a message');
   });
