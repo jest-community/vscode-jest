@@ -241,13 +241,13 @@ export class ExtensionManager {
               );
               return;
             }
-            let targeteExt;
+            let targetExt;
             if (extensions.length > 1) {
-              targeteExt = await this.selectExtensions(extensions);
+              targetExt = await this.selectExtensions(extensions);
             } else if (extensions.length === 1) {
-              targeteExt = extensions;
+              targetExt = extensions;
             }
-            targeteExt?.forEach((ext) => command.callback.call(thisArg, ext, editor, ...args));
+            targetExt?.forEach((ext) => command.callback.call(thisArg, ext, editor, ...args));
           }
         );
       }
@@ -283,7 +283,7 @@ export class ExtensionManager {
   ): void {
     const uriList = Array.isArray(uri) ? uri : [uri];
     const extension = uriList.flatMap((uri) => this.getByDocUri(uri));
-    // dedup
+    // dedupe
     const set = new Set(extension);
     set.forEach(handler);
   }

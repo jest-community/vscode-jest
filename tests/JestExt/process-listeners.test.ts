@@ -274,7 +274,7 @@ describe('jest process listeners', () => {
           expect(mockSession.context.onRunEvent.fire).not.toHaveBeenCalled();
         }
       });
-      it('from stderr: eventyType=$stderr', () => {
+      it('from stderr: eventType=$stderr', () => {
         expect.hasAssertions();
         const listener = new RunTestListener(mockSession);
         listener.onEvent(mockProcess, 'executableStdErr', Buffer.from(output));

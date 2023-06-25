@@ -1,5 +1,5 @@
 /**
- * collection of stateless utility functions for declutter and easy to test
+ * collection of stateless utility functions for de-clutter and easy to test
  */
 import * as vscode from 'vscode';
 import { ProjectWorkspace, LoginShell, JESParserPluginOptions } from 'jest-editor-support';

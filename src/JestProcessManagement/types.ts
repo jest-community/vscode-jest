@@ -6,7 +6,7 @@ export type JestProcessEvent = RunnerEvent | 'processStarting';
 export interface JestProcessListener {
   onEvent: (process: JestProcess, event: JestProcessEvent, ...args: unknown[]) => unknown;
 }
-export type JestProcessStatus = 'pending' | 'running' | 'stopping' | 'stoppped';
+export type JestProcessStatus = 'pending' | 'running' | 'stopping' | 'stopped';
 export interface JestProcessInfo {
   readonly id: string;
   readonly request: JestProcessRequest;
@@ -32,11 +32,11 @@ export interface TaskPredicate {
 /**
  * define the eligibility for process scheduling
  * @param queue the type of the queue
- * @param dedup a predicate to match the task in queue.
+ * @param dedupe a predicate to match the task in queue.
  */
 export interface ScheduleStrategy {
   queue: QueueType;
-  dedup?: TaskPredicate;
+  dedupe?: TaskPredicate;
 }
 
 interface JestProcessRequestCommon {

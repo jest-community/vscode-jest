@@ -47,7 +47,7 @@ describe('CoverageOverlay', () => {
       expect(DefaultFormatter).toHaveBeenCalledWith(coverageMapProvider, undefined);
       expect(sut.formatter).toBeInstanceOf(DefaultFormatter);
     });
-    it('can be cutomized', () => {
+    it('can be customized', () => {
       const colors = { covered: 'red' };
       const sut = new CoverageOverlay(null, coverageMapProvider, false, 'GutterFormatter', colors);
 

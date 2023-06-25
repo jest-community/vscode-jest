@@ -145,7 +145,7 @@ export const mockProjectWorkspace = (...args: any[]): any => {
   };
 };
 
-export const mockWworkspaceLogging = (): any => ({ create: () => jest.fn() });
+export const mockWorkspaceLogging = (): any => ({ create: () => jest.fn() });
 
 export const mockEvent = (): any => ({
   event: jest.fn().mockReturnValue({ dispose: jest.fn() }),

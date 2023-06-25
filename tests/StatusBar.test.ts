@@ -139,7 +139,7 @@ describe('StatusBar', () => {
   });
 
   describe('bind()', () => {
-    it('returns binded helpers for each workspace (source) to update its status', () => {
+    it('returns bound helpers for each workspace (source) to update its status', () => {
       const source = makeWorkspaceFolder('testSource');
       const helpers = statusBar.bind(source);
       ['initial', 'running', 'success', 'failed', 'stopped'].forEach((state) => {
@@ -419,7 +419,7 @@ describe('StatusBar', () => {
       ${2} | ${[true, false]}
       ${3} | ${[false, false]}
     `(
-      'case $case: will only show status bar items if the uri is in the specific worksppace folder',
+      'case $case: will only show status bar items if the uri is in the specific workspace folder',
       ({ inWorkspaceFolder }) => {
         // active document are in both v1 and v2 folders
         (isInFolder as jest.Mocked<any>)
@@ -494,7 +494,7 @@ describe('StatusBar', () => {
       expect(ws2Item.workspaceFolder).toBe(ws2);
       const disposeSpy = jest.spyOn(ws2Item, 'dispose');
 
-      // rmeove ws2 folder
+      // remove ws2 folder
       statusBar.removeWorkspaceFolder(ws2);
       expect(disposeSpy).toHaveBeenCalled();
 
