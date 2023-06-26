@@ -224,7 +224,7 @@ describe('QuickInput Proxy', () => {
         p = showActionMenu(items, { allowNoAction: true });
         // no ops
         await triggerItemButton(button2);
-        // triggr button1 to exit
+        // trigger button1 to exit
         await triggerItemButton(button1);
 
         await expect(p).resolves.toEqual('success');
@@ -246,7 +246,7 @@ describe('QuickInput Proxy', () => {
         p = showActionMenu([item], { allowNoAction: true });
         // no ops
         await triggerSelection(item);
-        // triggr button1 to exit
+        // trigger button1 to exit
         await triggerItemButton(exitButton);
         await expect(p).resolves.toEqual('success');
       });
@@ -275,7 +275,7 @@ describe('QuickInput Proxy', () => {
       ${1}          | ${true}
       ${100}        | ${false}
     `(
-      'can change quickPick selection programatically with $selectItemIdx => $isValidIndex',
+      'can change quickPick selection programmatically with $selectItemIdx => $isValidIndex',
       async ({ selectItemIdx, isValidIndex }) => {
         expect.hasAssertions();
 
@@ -349,7 +349,7 @@ describe('QuickInput Proxy', () => {
 
     const options = {
       prompt: 'a title',
-      value: 'initial vlaue',
+      value: 'initial value',
       title: 'an inputBox',
       rightButtons: [mockButton()],
     };
@@ -471,7 +471,7 @@ describe('QuickInput Proxy', () => {
         console.log = jest.fn();
         verboseOptions = {
           prompt: 'a title',
-          value: 'initial vlaue',
+          value: 'initial value',
           title: 'an inputBox',
           verbose: true,
           enableBackButton: true,
@@ -730,7 +730,7 @@ describe('createSaveConfig', () => {
       vscode.ConfigurationTarget.Workspace
     );
   });
-  it('will svae to actual workspace folder for vertual workspace folder', async () => {
+  it('will save to actual workspace folder for virtual workspace folder', async () => {
     expect.hasAssertions();
     mockUpdate.mockReturnValue(Promise.resolve());
     const ws = makeWorkspaceFolder('ws');

@@ -53,7 +53,7 @@ export class JestTestProviderContext {
    *
    * @param item
    * @param childId id of the child item
-   * @returns data of the child item, casting for easy usage but does not guarentee type safety.
+   * @returns data of the child item, casting for easy usage but does not guarantee type safety.
    */
   getChildData = <T extends TestItemData = TestItemData>(
     item: vscode.TestItem,
@@ -61,7 +61,7 @@ export class JestTestProviderContext {
   ): T | undefined => {
     const cItem = item.children.get(childId);
 
-    // Note: casting for easy usage but does not guarentee type safety.
+    // Note: casting for easy usage but does not guarantee type safety.
     return cItem && (this.testItemData.get(cItem) as T);
   };
 
@@ -69,10 +69,10 @@ export class JestTestProviderContext {
    * get data associated with the item. All item used here should have some data associated with, otherwise
    * an exception will be thrown
    *
-   * @returns casting for easy usage but does not guarentee type safety
+   * @returns casting for easy usage but does not guarantee type safety
    */
   getData = <T extends TestItemData>(item: vscode.TestItem): T | undefined => {
-    // Note: casting for easy usage but does not guarentee type safety.
+    // Note: casting for easy usage but does not guarantee type safety.
     return this.testItemData.get(item) as T | undefined;
   };
 

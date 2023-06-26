@@ -201,7 +201,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
   }
 
   /**
-   * generate a debug config incorperating commandLine and rootPath. Throw exception if error.
+   * generate a debug config incorporating commandLine and rootPath. Throw exception if error.
    * @param cmdLine
    * @param rootPath
    * @returns a debug config.

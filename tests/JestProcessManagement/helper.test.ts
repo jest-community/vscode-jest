@@ -1,4 +1,4 @@
-import { isRequestEqual, isDup } from '../../src/JestProcessManagement/helper';
+import { isRequestEqual, isDupe } from '../../src/JestProcessManagement/helper';
 
 jest.unmock('../../src/JestProcessManagement/helper');
 
@@ -34,17 +34,17 @@ describe('isDup', () => {
       status: 'pending',
     };
     const request1: any = { type: 'watch-tests', schedule: {} };
-    expect(isDup(task, request1)).toBeFalsy();
+    expect(isDupe(task, request1)).toBeFalsy();
   });
   it('can check by request type', () => {
     const task: any = {
       data: { request: { type: 'watch-tests' } },
       status: 'pending',
     };
-    const request1: any = { type: 'watch-tests', schedule: { dedup: {} } };
-    const request2: any = { type: 'all-tests', schedule: { dedup: {} } };
-    expect(isDup(task, request1)).toBeTruthy();
-    expect(isDup(task, request2)).toBeFalsy();
+    const request1: any = { type: 'watch-tests', schedule: { dedupe: {} } };
+    const request2: any = { type: 'all-tests', schedule: { dedupe: {} } };
+    expect(isDupe(task, request1)).toBeTruthy();
+    expect(isDupe(task, request2)).toBeFalsy();
   });
   it.each`
     type                 | status                    | expected
@@ -59,10 +59,10 @@ describe('isDup', () => {
     };
     const request: any = {
       type,
-      schedule: { dedup: { filterByStatus: status } },
+      schedule: { dedupe: { filterByStatus: status } },
     };
 
-    expect(isDup(task, request)).toEqual(expected);
+    expect(isDupe(task, request)).toEqual(expected);
   });
   it.each`
     type                 | status         | testFileName | expected
@@ -82,10 +82,10 @@ describe('isDup', () => {
       const request: any = {
         type,
         testFileName,
-        schedule: { dedup: { filterByStatus: status, filterByContent: true } },
+        schedule: { dedupe: { filterByStatus: status, filterByContent: true } },
       };
 
-      expect(isDup(task, request)).toEqual(expected);
+      expect(isDupe(task, request)).toEqual(expected);
     }
   );
 });

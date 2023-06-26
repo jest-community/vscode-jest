@@ -16,7 +16,7 @@ import { JestExtOutput } from '../JestExt/output-terminal';
 import { tiContextManager } from './test-item-context-manager';
 import { toAbsoluteRootPath } from '../helpers';
 
-interface JestRunable {
+interface JestRunnable {
   getJestRunRequest: () => JestExtRequestType;
 }
 
@@ -31,7 +31,7 @@ type TypedRunEvent = RunEventBase & { type: string };
 const isJestTestRunRequest = (arg: any): arg is JestTestRunRequest =>
   arg.run instanceof JestTestRun;
 
-abstract class TestItemDataBase implements TestItemData, JestRunable, WithUri {
+abstract class TestItemDataBase implements TestItemData, JestRunnable, WithUri {
   item!: vscode.TestItem;
   log: Logging;
 
@@ -65,7 +65,7 @@ abstract class TestItemDataBase implements TestItemData, JestRunable, WithUri {
       if (parent) {
         return parent.scheduleTest(run, itemCommand);
       }
-      this.context.output.write(`running an unresolvled parameterized test might fail`, 'warn');
+      this.context.output.write(`running an unresolved parameterized test might fail`, 'warn');
     }
 
     const jestRequest = this.getJestRunRequest(itemCommand);
@@ -209,7 +209,7 @@ export class WorkspaceRoot extends TestItemDataBase {
     return folders.reduce(this.addFolder, undefined);
   };
   /**
-   * create a test item hierarchy for the given the test file based on its reltive path. If the file is not
+   * create a test item hierarchy for the given the test file based on its relative path. If the file is not
    * a test file, exception will be thrown.
    */
   private addTestFile = (

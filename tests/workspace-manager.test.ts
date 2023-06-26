@@ -117,21 +117,21 @@ describe('workspace-manager', () => {
       isInWorkspaceFolderSpy = jest.spyOn(VirtualWorkspaceFolder.prototype, 'isInWorkspaceFolder');
     });
     it.each`
-      case | inActualFolder | inVirutalFolder | expected
+      case | inActualFolder | inVirtualFolder | expected
       ${1} | ${true}        | ${true}         | ${true}
       ${2} | ${true}        | ${false}        | ${false}
       ${3} | ${false}       | ${false}        | ${false}
       ${3} | ${false}       | ${true}         | ${true}
     `(
       'case $case: checks if file is in virtual or actual workspace folder',
-      ({ inActualFolder, inVirutalFolder, expected }) => {
+      ({ inActualFolder, inVirtualFolder, expected }) => {
         const folder = makeWorkspaceFolder('ws1');
         const v1 = new VirtualWorkspaceFolder(folder, 'v1');
 
         vscode.workspace.getWorkspaceFolder = jest
           .fn()
           .mockReturnValue(inActualFolder ? folder : undefined);
-        isInWorkspaceFolderSpy.mockReturnValue(inVirutalFolder);
+        isInWorkspaceFolderSpy.mockReturnValue(inVirtualFolder);
         const uri = makeUri('file');
         expect(isInFolder(uri, v1)).toEqual(expected);
         expect(isInFolder(uri, folder)).toEqual(inActualFolder);
@@ -207,7 +207,7 @@ describe('workspace-manager', () => {
           });
         });
       });
-      it('if no folder is found, returns empyt list', async () => {
+      it('if no folder is found, returns empty list', async () => {
         (vscode.workspace as any).workspaceFolders = [];
         mockFindFiles.mockReturnValue(Promise.resolve([]));
         const wsManager = new WorkspaceManager();

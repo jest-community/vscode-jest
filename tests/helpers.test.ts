@@ -43,7 +43,7 @@ import {
 import * as helper from '../src/helpers';
 import { makeUri, makeWorkspaceFolder } from './test-helper';
 
-// Manually (forcefully) set the executable's file extension to test its addition independendly of the operating system.
+// Manually (forcefully) set the executable's file extension to test its addition independently of the operating system.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 (nodeBinExtension as string) = '.TEST';
 
@@ -352,7 +352,7 @@ describe('getDefaultJestCommand', () => {
   });
 });
 
-describe('plateform specific tests', () => {
+describe('platform-specific tests', () => {
   const canRunTest = (isWin32: boolean) =>
     (isWin32 && os.platform() === 'win32') || (!isWin32 && os.platform() !== 'win32');
 
@@ -405,7 +405,7 @@ describe('plateform specific tests', () => {
         ${"'c:\\quoted root\\window\\command'"}      | ${'c:\\quoted root\\window\\command'}
         ${"'\\quoted root\\window\\command'"}        | ${'\\quoted root\\window\\command'}
       `(
-        'uses cleanupCommand to remove surrouding quotes for command: $command',
+        'uses cleanupCommand to remove surrounding quotes for command: $command',
         ({ command, expected }) => {
           expect(removeSurroundingQuote(command)).toEqual(expected);
         }

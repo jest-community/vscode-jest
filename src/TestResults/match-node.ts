@@ -162,7 +162,7 @@ export class BaseNode {
 
   /**
    * returns true if the node is a group node, i.e. either has non-zero group member or lastProperty === 'each'.
-   * If the node can not know it determinstically before matching, it should return "maybe".
+   * If the node can not know it deterministically before matching, it should return "maybe".
    */
   isGroupNode(): 'yes' | 'no' | 'maybe' {
     if (this.group.length > 0 && this.attrs.isGroup !== 'no') {
@@ -177,7 +177,7 @@ export class BaseNode {
 
   private maybeNonLiteralName(): boolean {
     // a group node (such as test.each) could have a literal name that contains variable therefore could
-    // genrate different test names per parameter set
+    // generate different test names per parameter set
     return this.attrs.nonLiteralName || this.isGroupNode() !== 'no';
   }
 
@@ -218,7 +218,7 @@ export class BaseNode {
   /**
    * check if a node is structurally "valid", i.e. is the ancestorTitle, location info are populated. This does not check
    * across the nodes, just the node itself.
-   * @returns true if no itegrity issue otherwise false and the node.history will be updated accordingly
+   * @returns true if no integrity issue otherwise false and the node.history will be updated accordingly
    */
   checkIntegrity(): boolean {
     const issues: MatchEvent[] = [];
