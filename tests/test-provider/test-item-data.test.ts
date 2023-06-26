@@ -1423,6 +1423,22 @@ describe('test-item-data', () => {
           });
         });
       });
+      it('scheduled and start events will do deep item status update', () => {
+        const process = mockScheduleProcess(context);
+        const testFileData = context.getData(env.testFile);
+
+        testFileData.scheduleTest(jestRun);
+        expect(jestRun.vscodeRun.enqueued).toHaveBeenCalledTimes(2);
+        [env.testFile, env.testBlock].forEach((t) =>
+          expect(jestRun.vscodeRun.enqueued).toHaveBeenCalledWith(t)
+        );
+
+        env.onRunEvent({ type: 'start', process });
+        expect(jestRun.vscodeRun.started).toHaveBeenCalledTimes(2);
+        [env.testFile, env.testBlock].forEach((t) =>
+          expect(jestRun.vscodeRun.started).toHaveBeenCalledWith(t)
+        );
+      });
       it('log long-run event', () => {
         const process = mockScheduleProcess(context);
 
