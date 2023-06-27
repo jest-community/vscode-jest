@@ -128,6 +128,26 @@ describe('DebugConfigurationProvider', () => {
       expect(configuration).toBeDefined();
       expect(configuration.args).toEqual(expected);
     });
+    it('will translate multiple variables in a single arg', () => {
+      (toFilePath as unknown as jest.Mock<{}>).mockReturnValueOnce(fileName);
+      (escapeRegExp as unknown as jest.Mock<{}>).mockReturnValueOnce(fileNamePattern);
+
+      let configuration: any = {
+        name: 'vscode-jest-tests.v2',
+        args: ['--testNamePattern "${jest.testNamePattern}" --runTestsByPath "${jest.testFile}"'],
+      };
+
+      const sut = new DebugConfigurationProvider();
+      const ws = makeWorkspaceFolder('whatever');
+      sut.prepareTestRun(fileName, testName, ws);
+
+      configuration = sut.resolveDebugConfiguration(undefined, configuration);
+
+      expect(configuration).toBeDefined();
+      expect(configuration.args).toEqual([
+        `--testNamePattern "${testName}" --runTestsByPath "${fileName}"`,
+      ]);
+    });
   });
   describe('can generate debug config with jestCommandLine and rootPath', () => {
     const canRunTest = (isWin32: boolean) =>
