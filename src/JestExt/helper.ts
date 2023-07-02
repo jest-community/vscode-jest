@@ -1,5 +1,5 @@
 /**
- * collection of stateless utility functions for declutter and easy to test
+ * collection of stateless utility functions for de-clutter and easy to test
  */
 import * as vscode from 'vscode';
 import { ProjectWorkspace, LoginShell, JESParserPluginOptions } from 'jest-editor-support';
@@ -111,6 +111,7 @@ export const getExtensionResourceSettings = (
 
   return {
     jestCommandLine: getSetting<string>('jestCommandLine'),
+    autoClearTerminal: getSetting<boolean>('autoClearTerminal') ?? false,
     rootPath: toAbsoluteRootPath(workspaceFolder, getSetting<string>('rootPath')),
     showCoverageOnLoad: getSetting<boolean>('showCoverageOnLoad') ?? false,
     coverageFormatter: getSetting<string>('coverageFormatter') ?? 'DefaultFormatter',

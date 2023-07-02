@@ -128,6 +128,26 @@ describe('DebugConfigurationProvider', () => {
       expect(configuration).toBeDefined();
       expect(configuration.args).toEqual(expected);
     });
+    it('will translate multiple variables in a single arg', () => {
+      (toFilePath as unknown as jest.Mock<{}>).mockReturnValueOnce(fileName);
+      (escapeRegExp as unknown as jest.Mock<{}>).mockReturnValueOnce(fileNamePattern);
+
+      let configuration: any = {
+        name: 'vscode-jest-tests.v2',
+        args: ['--testNamePattern "${jest.testNamePattern}" --runTestsByPath "${jest.testFile}"'],
+      };
+
+      const sut = new DebugConfigurationProvider();
+      const ws = makeWorkspaceFolder('whatever');
+      sut.prepareTestRun(fileName, testName, ws);
+
+      configuration = sut.resolveDebugConfiguration(undefined, configuration);
+
+      expect(configuration).toBeDefined();
+      expect(configuration.args).toEqual([
+        `--testNamePattern "${testName}" --runTestsByPath "${fileName}"`,
+      ]);
+    });
   });
   describe('can generate debug config with jestCommandLine and rootPath', () => {
     const canRunTest = (isWin32: boolean) =>
@@ -207,7 +227,7 @@ describe('DebugConfigurationProvider', () => {
           ${19} | ${true}  | ${'"\\dir with space\\jest" --arg1=1 --arg2 2 "some string"'} | ${{ cmd: '\\dir with space\\jest', args: ['--arg1=1', '--arg2', '2', '"some string"'], program: '\\dir with space\\jest' }}
           ${20} | ${true}  | ${'c:\\jest --arg1 "escaped \\"this\\" string" --arg2 2'}     | ${{ cmd: 'c:\\jest', args: ['--arg1', '"escaped \\"this\\" string"', '--arg2', '2'], program: 'c:\\jest' }}
         `('case $case', ({ cmdLine, expected, isWin32 }) => {
-          it('can incoperate jestCommandLine  (for win32 only? $isWin32)', () => {
+          it('can incorporate jestCommandLine  (for win32 only? $isWin32)', () => {
             if (!canRunTest(isWin32)) {
               return;
             }

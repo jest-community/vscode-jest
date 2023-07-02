@@ -78,6 +78,11 @@
           "type": "string",
           "scope": "resource"
         },
+        "jest.autoClearTerminal": {
+          "description": "Clear the terminal output at the start of any new test run.",
+          "type": "boolean",
+          "scope": "resource"
+        },
         "jest.rootPath": {
           "description": "The path to your frontend src folder",
           "type": "string",
@@ -85,7 +90,7 @@
           "scope": "resource"
         },
         "jest.nodeEnv": {
-          "markdownDescription": "The env passed to runner process in addtion to `process.env`",
+          "markdownDescription": "The env passed to runner process in addition to `process.env`",
           "type": "object",
           "default": null,
           "scope": "resource"

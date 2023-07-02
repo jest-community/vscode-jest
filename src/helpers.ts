@@ -79,7 +79,7 @@ function checkPackageTestScript(rootPath: string): string | undefined {
     isCreateReactAppTestCommand(testCommand) ||
     testCommand.includes('jest') ||
     // for react apps, even if we don't recognize the test script pattern, still better to use the test script
-    // than running the binary with hard coded parameters outselves.
+    // than running the binary with hard coded parameters ourselves.
     hasReactBinary(rootPath)
   ) {
     const pm = getPM(rootPath) ?? 'npm';
@@ -355,7 +355,7 @@ export const getValidJestCommand = async (
     return Promise.resolve({ validSettings: [{ rootPath: absoluteRootPath, jestCommandLine }] });
   }
 
-  // see if we can get a valid command by examing the file system
+  // see if we can get a valid command by examining the file system
   const uris = await workspaceManager.getFoldersFromFilesystem(workspace);
 
   const validSettings: JestCommandSettings[] = [];

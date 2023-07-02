@@ -281,7 +281,7 @@ describe('JestTestProvider', () => {
         // a run is created
         expect(controllerMock.createTestRun).toHaveBeenCalled();
 
-        // verify seerial execution
+        // verify serial execution
         expect(extExplorerContextMock.debugTests).toHaveBeenCalledTimes(1);
 
         await finishDebug();
@@ -468,7 +468,7 @@ describe('JestTestProvider', () => {
         const p = testProvider.runTests(request, cancelToken);
 
         const runMock = controllerMock.lastRunMock();
-        // cacnel after run
+        // cancel after run
         cancelToken.isCancellationRequested = true;
 
         // a run is already created
@@ -505,7 +505,7 @@ describe('JestTestProvider', () => {
         };
         const p = testProvider.runTests(request, cancelToken);
 
-        // cacnel after run
+        // cancel after run
         cancelToken.isCancellationRequested = true;
 
         // a run is already created

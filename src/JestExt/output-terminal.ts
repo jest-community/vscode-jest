@@ -37,7 +37,7 @@ export class PendingOutput {
   }
 }
 
-/** termerinal per workspace */
+/** terminal per workspace */
 export class ExtOutputTerminal implements JestExtOutput {
   private pendingMessages: PendingOutput;
   private ptyIsOpen: boolean;
@@ -63,10 +63,10 @@ export class ExtOutputTerminal implements JestExtOutput {
       this._terminal = undefined;
     },
   };
-  constructor(private name: string, visibile?: boolean) {
+  constructor(private name: string, visible?: boolean) {
     this.ptyIsOpen = false;
     this.pendingMessages = new PendingOutput();
-    this.canReveal = visibile ?? false;
+    this.canReveal = visible ?? false;
     this.revealOnError = true;
   }
 
@@ -132,6 +132,13 @@ export class ExtOutputTerminal implements JestExtOutput {
   dispose(): void {
     this.writeEmitter.dispose();
     this._terminal?.dispose();
+  }
+
+  /**
+   * Clear the terminal
+   */
+  clear(): void {
+    this.write('\x1bc');
   }
 }
 export class JestOutputTerminal extends ExtOutputTerminal {

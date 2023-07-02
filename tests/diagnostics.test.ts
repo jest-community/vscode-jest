@@ -318,7 +318,7 @@ describe('test diagnostics', () => {
       expect(msg).toContain('d-1 test-1');
       expect(msg).toContain(shortMessage);
     });
-    it('creates diagnostics for all failed parametertized tests', () => {
+    it('creates diagnostics for all failed parameterized tests', () => {
       const mockDiagnostics = new MockDiagnosticCollection();
       const testResult1 = helper.makeTestResult('test-1', 'KnownFail', ['d-1'], [1, 0, 10, 0], {
         shortMessage: 'fail-1',

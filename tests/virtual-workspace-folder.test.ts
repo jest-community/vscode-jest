@@ -141,7 +141,7 @@ describe('virtual-workspace-folder', () => {
         expect(cache.getItemByFolderName('folder3')).toBe(item3);
       });
 
-      it('deletiing the virtual folder item will also remove the byActualFolderName entry', () => {
+      it('deleting the virtual folder item will also remove the byActualFolderName entry', () => {
         cache.addItem(item2);
         cache.addItem(item3);
         expect(cache.size).toBe(2);
@@ -151,7 +151,7 @@ describe('virtual-workspace-folder', () => {
         expect(cache.getItemsByActualFolderName('folder1')).toEqual([item3]);
         expect(cache.getItemByFolderName('folder2')).toBeUndefined();
       });
-      it('can delete items by atualFolder', () => {
+      it('can delete items by actualFolder', () => {
         cache.addItem(item2);
         cache.addItem(item3);
         expect(cache.getItemByFolderName('folder2')).toBe(item2);

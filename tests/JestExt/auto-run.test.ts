@@ -63,7 +63,7 @@ describe('AutoRun', () => {
     expect(autoRun.isOff).toBe(false);
     expect(autoRun.config).toEqual(original);
   });
-  it('for original settog "off", toggle on means to switch to "on-save" mode', () => {
+  it('for original setting "off", toggle on means to switch to "on-save" mode', () => {
     const original: any = { watch: false };
     const autoRun = new AutoRun(original);
     expect(autoRun.isOff).toBe(true);

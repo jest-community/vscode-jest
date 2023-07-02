@@ -52,7 +52,7 @@ describe('GutterFormatter', () => {
     jest.clearAllMocks();
   });
 
-  describe('decoractors', () => {
+  describe('decorators', () => {
     beforeEach(() => {
       mockGetColorString.mockReturnValue('some-color');
       GutterFormatter.prototype.getColorString = mockGetColorString;

@@ -109,20 +109,10 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
       if (typeof arg !== 'string') {
         return arg;
       }
-      switch (true) {
-        case testFileRegex.test(arg): {
-          return arg.replace(testFileRegex, toFilePath(this.fileNameToRun));
-        }
-        case testFilePatternRegex.test(arg): {
-          return arg.replace(testFilePatternRegex, escapeRegExp(this.fileNameToRun));
-        }
-        case testNamePatternRegex.test(arg): {
-          return arg.replace(testNamePatternRegex, this.testToRun);
-        }
-
-        default:
-          return arg;
-      }
+      return arg
+        .replace(testFileRegex, toFilePath(this.fileNameToRun))
+        .replace(testFilePatternRegex, escapeRegExp(this.fileNameToRun))
+        .replace(testNamePatternRegex, this.testToRun);
     });
     debugConfiguration.args = args;
 
@@ -201,7 +191,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
   }
 
   /**
-   * generate a debug config incorperating commandLine and rootPath. Throw exception if error.
+   * generate a debug config incorporating commandLine and rootPath. Throw exception if error.
    * @param cmdLine
    * @param rootPath
    * @returns a debug config.

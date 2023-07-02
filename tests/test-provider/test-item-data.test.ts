@@ -795,7 +795,7 @@ describe('test-item-data', () => {
           expect(runMock.passed).toHaveBeenCalledWith(aItem, undefined);
           expect(runMock.end).toHaveBeenCalledTimes(1);
         });
-        it('for exporer-triggered runs, only the resolve function will be invoked', () => {
+        it('for explorer-triggered runs, only the resolve function will be invoked', () => {
           // simulate an internal run has been scheduled
           const process = mockScheduleProcess(context);
 
@@ -1171,6 +1171,30 @@ describe('test-item-data', () => {
         expect.stringContaining(coloredText)
       );
     });
+    describe('optionally clear terminal on start & schedule', () => {
+      let env;
+      beforeEach(() => {
+        env = setupTestEnv();
+      });
+      it.each([{ type: 'scheduled' }, { type: 'start' }])(
+        '$type: clear when autoClearTerminal is true',
+        ({ type }) => {
+          context.ext.settings = { autoClearTerminal: true };
+          const process = mockScheduleProcess(context);
+          env.onRunEvent({ type, process });
+          expect(context.output.clear).toHaveBeenCalled();
+        }
+      );
+      it.each([{ type: 'scheduled' }, { type: 'start' }])(
+        '$type: do not clear when when autoClearTerminal is false',
+        ({ type }) => {
+          context.ext.settings = { autoClearTerminal: false };
+          const process = mockScheduleProcess(context);
+          env.onRunEvent({ type, process });
+          expect(context.output.clear).not.toHaveBeenCalled();
+        }
+      );
+    });
     describe('handle run event to set item status and show output', () => {
       let env;
       beforeEach(() => {
@@ -1529,7 +1553,7 @@ describe('test-item-data', () => {
       beforeEach(() => {
         createTestRunSpy = jest.spyOn(context, 'createTestRun');
       });
-      it('wawtch-test run', () => {
+      it('watch-test run', () => {
         const request: any = { type: 'watch-tests' };
         const process = { id: 'whatever', request };
         const item = env.wsRoot.item;
