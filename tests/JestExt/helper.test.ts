@@ -169,6 +169,7 @@ describe('getExtensionResourceSettings()', () => {
       showCoverageOnLoad: false,
       debugMode: false,
       coverageColors: null,
+      autoClearTerminal: false,
       autoRun: expect.objectContaining({ config: { watch: true } }),
       testExplorer: {},
       monitorLongRun: 60000,

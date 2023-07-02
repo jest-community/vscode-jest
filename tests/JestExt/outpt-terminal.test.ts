@@ -125,6 +125,12 @@ describe('JestOutputTerminal', () => {
     expect(mockTerminal.dispose).toHaveBeenCalled();
     expect(mockEmitter.dispose).not.toHaveBeenCalled();
   });
+  it('can clear the terminal', () => {
+    const output = new JestOutputTerminal('a');
+    output.write = jest.fn().mockImplementation(() => 'test');
+    output.clear();
+    expect(output.write).toHaveBeenCalledWith('\x1bc');
+  });
   describe('can write output with options', () => {
     it.each`
       case | text                        | options

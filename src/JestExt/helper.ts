@@ -111,6 +111,7 @@ export const getExtensionResourceSettings = (
 
   return {
     jestCommandLine: getSetting<string>('jestCommandLine'),
+    autoClearTerminal: getSetting<boolean>('autoClearTerminal') ?? false,
     rootPath: toAbsoluteRootPath(workspaceFolder, getSetting<string>('rootPath')),
     showCoverageOnLoad: getSetting<boolean>('showCoverageOnLoad') ?? false,
     coverageFormatter: getSetting<string>('coverageFormatter') ?? 'DefaultFormatter',

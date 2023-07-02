@@ -133,6 +133,13 @@ export class ExtOutputTerminal implements JestExtOutput {
     this.writeEmitter.dispose();
     this._terminal?.dispose();
   }
+
+  /**
+   * Clear the terminal
+   */
+  clear(): void {
+    this.write('\x1bc');
+  }
 }
 export class JestOutputTerminal extends ExtOutputTerminal {
   constructor(workspaceName: string, visible?: boolean) {
