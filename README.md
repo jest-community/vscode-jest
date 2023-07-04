@@ -254,6 +254,7 @@ Users can use the following settings to tailor the extension for their environme
 |setting|description|default|example/notes|
 |---|---|---|---|
 |**Process**|
+|enable|Enable/disable jest extension for the given workspace folder/virtual-folder|true|`"jest.enable": false`|
 |[jestCommandLine](#jestCommandLine)|The command line to start jest tests|undefined|`"jest.jestCommandLine": "npm test --"` or `"jest.jestCommandLine": "yarn test"` or `"jest.jestCommandLine": "node_modules/.bin/jest --config custom-config.js"`|
 |nodeEnv|Add additional env variables to spawned jest process|null|`"jest.nodeEnv": {"PORT": "9800", "BAR":"true"}` |
 |[shell](#shell)|shell (path or LoginShell) for executing jest|null|`"jest.shell": "/bin/bash"` or `"jest.shell": "powershell"` or `"jest.shell": {"path": "/bin/bash"; args: ["--login"]}`  |
@@ -270,7 +271,6 @@ useDashedArgs| Determine if to use dashed arguments for jest processes |undefine
 |[coverageFormatter](#coverageFormatter)|Determine the coverage overlay style|"DefaultFormatter"|`"jest.coverageFormatter": "GutterFormatter"`|
 |[coverageColors](#coverageColors)|Coverage indicator color override|undefined|`"jest.coverageColors": { "uncovered": "rgba(255,99,71, 0.2)", "partially-covered": "rgba(255,215,0, 0.2)"}`|
 |**Misc**|
-|enable|Enable/disable jest extension for the given workspace folder|true|`"jest.enable": false`|
 |debugMode|Enable debug mode to diagnose plugin issues. (see developer console)|false|`"jest.debugMode": true`|
 |disabledWorkspaceFolders 💼|Disabled workspace folders names in multi-root environment|[]|`"jest.disabledWorkspaceFolders": ["package-a", "package-b"]`|
 |[autoRevealOutput](#autoRevealOutput)|Determine when to show test output|"on-run"|`"jest.autoRevealOutput": "on-exec-error"`|

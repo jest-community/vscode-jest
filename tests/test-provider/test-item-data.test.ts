@@ -1165,6 +1165,7 @@ describe('test-item-data', () => {
       expect(listener.dispose).toHaveBeenCalled();
     });
     it('can adapt raw output to terminal output', () => {
+      // cSpell: ignore myarn
       const coloredText = '[2K[1G[1myarn run v1.22.5[22m\n';
       jestRun.write(coloredText);
       expect(jestRun.vscodeRun.appendOutput).toHaveBeenCalledWith(
