@@ -26,6 +26,7 @@ You can see the full [features](#features) and learn more details in the [How-To
 Happy testing!
 
 ## Releases 
+- **Next** ([v6.0.0](https://github.com/jest-community/vscode-jest/releases/tag/v6.0.0)): [release note](release-notes/release-note-v6.md#v600-pre-release)
 - **Current** ([v5.2.3](https://github.com/jest-community/vscode-jest/releases/tag/v5.2.3)): [release note](release-notes/release-note-v5.x.md#v523)
 - **Previous** ([v5.1.0](https://github.com/jest-community/vscode-jest/releases/tag/v5.1.0)): [release note](release-notes/release-note-v5.x.md#v510)
  
