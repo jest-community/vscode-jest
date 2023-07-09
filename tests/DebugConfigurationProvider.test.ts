@@ -290,33 +290,38 @@ describe('DebugConfigurationProvider', () => {
         ${'yarn'} | ${['test', '--config', 'test-jest.json']}       | ${false}
         ${'npm'}  | ${['run', 'test']}                              | ${true}
         ${'npm'}  | ${['test', '--', '--config', 'test-jest.json']} | ${false}
-      `('can merge yarn or npm command line: $cmd $cArgs', ({ cmd, cArgs, appendExtraArg }) => {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { args, program, windows, ...restConfig } = config;
-        const sut = new DebugConfigurationProvider();
-        const spy = jest.spyOn(sut, 'provideDebugConfigurations');
-        spy.mockImplementation(() => [config]);
+        ${'pnpm'} | ${['run', 'test']}                              | ${true}
+        ${'pnpm'} | ${['test', '--', '--config', 'test-jest.json']} | ${false}
+      `(
+        'can merge yarn or npm or pnpmcommand line: $cmd $cArgs',
+        ({ cmd, cArgs, appendExtraArg }) => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { args, program, windows, ...restConfig } = config;
+          const sut = new DebugConfigurationProvider();
+          const spy = jest.spyOn(sut, 'provideDebugConfigurations');
+          spy.mockImplementation(() => [config]);
 
-        const cmdLine = [cmd, ...cArgs].join(' ');
-        const {
-          args: newArgs,
-          program: newProgram,
-          runtimeExecutable,
-          ...restNewConfig
-        } = sut.withCommandLine(workspace, cmdLine);
-        expect(newArgs).toContain('--runInBand');
-        expect(runtimeExecutable).toEqual(cmd);
-        expect(newProgram).toBeUndefined();
+          const cmdLine = [cmd, ...cArgs].join(' ');
+          const {
+            args: newArgs,
+            program: newProgram,
+            runtimeExecutable,
+            ...restNewConfig
+          } = sut.withCommandLine(workspace, cmdLine);
+          expect(newArgs).toContain('--runInBand');
+          expect(runtimeExecutable).toEqual(cmd);
+          expect(newProgram).toBeUndefined();
 
-        const expectArgs = [...cArgs];
-        if (appendExtraArg) {
-          expectArgs.push('--');
+          const expectArgs = [...cArgs];
+          if (appendExtraArg) {
+            expectArgs.push('--');
+          }
+          expectArgs.push(...args);
+
+          expect(newArgs).toEqual(expectArgs);
+          expect(restNewConfig).toEqual(restConfig);
         }
-        expectArgs.push(...args);
-
-        expect(newArgs).toEqual(expectArgs);
-        expect(restNewConfig).toEqual(restConfig);
-      });
+      );
 
       it('platform specific sections are removed.', () => {
         const sut = new DebugConfigurationProvider();
