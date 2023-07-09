@@ -293,7 +293,7 @@ describe('DebugConfigurationProvider', () => {
         ${'pnpm'} | ${['run', 'test']}                              | ${true}
         ${'pnpm'} | ${['test', '--', '--config', 'test-jest.json']} | ${false}
       `(
-        'can merge yarn or npm or pnpmcommand line: $cmd $cArgs',
+        'can merge yarn or npm or pnpm command line: $cmd $cArgs',
         ({ cmd, cArgs, appendExtraArg }) => {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           const { args, program, windows, ...restConfig } = config;
