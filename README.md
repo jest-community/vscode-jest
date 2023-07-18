@@ -481,8 +481,8 @@ You can configure multiple virtual folders within any given vscode workspace fol
    // settings.json for unit and integration test environments under the root folder:
    {
      "jest.virtualFolders": [
-       {"name": "unit-tests", "jestCommandLine": "--config=jest.unit.config.js", "autoRun": "watch"},
-       {"name": "integration-tests", "jestCommandLine": "--config=jest.integration.config.js", "autoRun": "off"}
+       {"name": "unit-tests", "jestCommandLine": "yarn test --config jest.unit.config.js", "autoRun": "watch"},
+       {"name": "integration-tests", "jestCommandLine": "yarn test --config jest.integration.config.js", "autoRun": "off"}
      ]
    }
    ```
