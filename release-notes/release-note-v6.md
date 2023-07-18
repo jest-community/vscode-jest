@@ -30,12 +30,12 @@ For example, the unit vs. integration tests can now be set up as the following:
      "jest.virtualFolders": [
        {
         "name": "unit-tests", 
-        "jestCommandLine": "--config=jest.unit.config.js", 
+        "jestCommandLine": "yarn test --config=jest.unit.config.js", 
         "autoRun": "watch"
       },
       {
         "name": "integration-tests", 
-        "jestCommandLine": "--config=jest.integration.config.js", 
+        "jestCommandLine": "yarn test --config=jest.integration.config.js", 
         "autoRun": "off"
       }
      ]
