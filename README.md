@@ -26,6 +26,7 @@ You can see the full [features](#features) and learn more details in the [How-To
 Happy testing!
 
 ## Releases 
+- **Next** ([v6.0.0](https://github.com/jest-community/vscode-jest/releases/tag/v6.0.0)): [release note](release-notes/release-note-v6.md#v600-pre-release)
 - **Current** ([v5.2.3](https://github.com/jest-community/vscode-jest/releases/tag/v5.2.3)): [release note](release-notes/release-note-v5.x.md#v523)
 - **Previous** ([v5.1.0](https://github.com/jest-community/vscode-jest/releases/tag/v5.1.0)): [release note](release-notes/release-note-v5.x.md#v510)
  
@@ -255,7 +256,7 @@ Users can use the following settings to tailor the extension for their environme
 |---|---|---|---|
 |**Process**|
 |enable|Enable/disable jest extension for the given workspace folder/virtual-folder|true|`"jest.enable": false`|
-|[jestCommandLine](#jestCommandLine)|The command line to start jest tests|undefined|`"jest.jestCommandLine": "npm test --"` or `"jest.jestCommandLine": "yarn test"` or `"jest.jestCommandLine": "node_modules/.bin/jest --config custom-config.js"`|
+|[jestCommandLine](#jestcommandline)|The command line to start jest tests|undefined|`"jest.jestCommandLine": "npm test --"` or `"jest.jestCommandLine": "yarn test"` or `"jest.jestCommandLine": "node_modules/.bin/jest --config custom-config.js"`|
 |nodeEnv|Add additional env variables to spawned jest process|null|`"jest.nodeEnv": {"PORT": "9800", "BAR":"true"}` |
 |[shell](#shell)|shell (path or LoginShell) for executing jest|null|`"jest.shell": "/bin/bash"` or `"jest.shell": "powershell"` or `"jest.shell": {"path": "/bin/bash"; args: ["--login"]}`  |
 |[autoRun](#autorun)|Controls when and what tests should be run|undefined|`"jest.autoRun": "off"` or `"jest.autoRun": "watch"` or `"jest.autoRun": {"watch": false, "onSave":"test-only"}`|
@@ -480,8 +481,8 @@ You can configure multiple virtual folders within any given vscode workspace fol
    // settings.json for unit and integration test environments under the root folder:
    {
      "jest.virtualFolders": [
-       {"name": "unit-tests", "jestCommandLine": "--config=jest.unit.config.js", "autoRun": "watch"},
-       {"name": "integration-tests", "jestCommandLine": "--config=jest.integration.config.js", "autoRun": "off"}
+       {"name": "unit-tests", "jestCommandLine": "yarn test --config jest.unit.config.js", "autoRun": "watch"},
+       {"name": "integration-tests", "jestCommandLine": "yarn test --config jest.integration.config.js", "autoRun": "off"}
      ]
    }
    ```
