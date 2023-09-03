@@ -38,11 +38,6 @@ export class CoverageOverlay {
     return this._enabled;
   }
 
-  set enabled(value: boolean) {
-    this._enabled = value;
-    this.updateVisibleEditors();
-  }
-
   /** give formatter opportunity to dispose the decorators */
   dispose(): void {
     this.formatter.dispose();

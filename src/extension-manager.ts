@@ -354,17 +354,17 @@ export class ExtensionManager {
       this.registerCommand({
         type: 'all-workspaces',
         name: 'toggle-coverage',
-        callback: (extension) => extension.toggleCoverageOverlay(),
+        callback: (extension) => extension.toggleCoverage(),
       }),
       this.registerCommand({
         type: 'select-workspace',
         name: 'toggle-coverage',
-        callback: (extension) => extension.toggleCoverageOverlay(),
+        callback: (extension) => extension.toggleCoverage(),
       }),
       this.registerCommand({
         type: 'active-text-editor-workspace',
         name: 'toggle-coverage',
-        callback: (extension) => extension.toggleCoverageOverlay(),
+        callback: (extension) => extension.toggleCoverage(),
       }),
       this.registerCommand({
         type: 'all-workspaces',
@@ -396,16 +396,16 @@ export class ExtensionManager {
       // with-workspace commands
       this.registerCommand({
         type: 'workspace',
-        name: 'toggle-auto-run',
+        name: 'change-run-mode',
         callback: (extension) => {
-          extension.toggleAutoRun();
+          extension.changeRunMode();
         },
       }),
       this.registerCommand({
         type: 'workspace',
         name: 'toggle-coverage',
         callback: (extension) => {
-          extension.toggleCoverageOverlay();
+          extension.toggleCoverage();
         },
       }),
       this.registerCommand({

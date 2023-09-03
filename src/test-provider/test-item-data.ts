@@ -141,7 +141,7 @@ export class WorkspaceRoot extends TestItemDataBase {
       undefined,
       ['run']
     );
-    item.description = `(${this.context.ext.settings.autoRun.mode})`;
+    item.description = `(${this.context.ext.settings.runMode.config.type})`;
 
     item.canResolveChildren = true;
     return item;

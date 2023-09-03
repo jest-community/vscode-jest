@@ -13,7 +13,7 @@ export interface SnapshotItem {
 }
 export type ItemContext =
   | {
-      key: 'jest.autoRun' | 'jest.coverage';
+      key: 'jest.runMode' | 'jest.coverage';
       workspace: vscode.WorkspaceFolder;
       /** the current value of the itemId */
       value: boolean;
@@ -30,8 +30,13 @@ export class TestItemContextManager {
   private cache = new Map<TEItemContextKey, ItemContext[]>();
   private wsCache: Record<string, vscode.WorkspaceFolder> = {};
 
-  private contextKey(key: TEItemContextKey, value: boolean): string {
-    return `${key}.${value ? 'on' : 'off'}`;
+  private contextKey(key: 'jest.runMode' | 'jest.coverage', value: boolean): string {
+    switch (key) {
+      case 'jest.runMode':
+        return `${key}.${value ? 'modified' : 'not-modified'}`;
+      case 'jest.coverage':
+        return `${key}.${value ? 'on' : 'off'}`;
+    }
   }
   // context are stored by key, one per workspace
   private updateContextCache(context: ItemContext): ItemContext[] {
@@ -48,7 +53,7 @@ export class TestItemContextManager {
   public setItemContext(context: ItemContext): void {
     const list = this.updateContextCache(context);
     switch (context.key) {
-      case 'jest.autoRun':
+      case 'jest.runMode':
       case 'jest.coverage': {
         //set context for both on and off
         let itemIds = list
@@ -60,6 +65,7 @@ export class TestItemContextManager {
           .flatMap((c) => (c.key === context.key && c.value === false ? c.itemIds : undefined))
           .filter((c) => c !== undefined);
         vscode.commands.executeCommand('setContext', this.contextKey(context.key, false), itemIds);
+
         break;
       }
       case 'jest.editor-view-snapshot':
@@ -94,19 +100,19 @@ export class TestItemContextManager {
         }
       }
     );
-    const autoRunCommands = ['test-item.auto-run.toggle-off', 'test-item.auto-run.toggle-on'].map(
+    const runModeCommand = ['test-item.run-mode.change', 'test-item.run-mode.modified.change'].map(
       (n) =>
         vscode.commands.registerCommand(`${extensionName}.${n}`, (testItem: vscode.TestItem) => {
           const workspace = this.getItemWorkspace(testItem);
           if (workspace) {
             vscode.commands.executeCommand(
-              `${extensionName}.with-workspace.toggle-auto-run`,
+              `${extensionName}.with-workspace.change-run-mode`,
               workspace
             );
           }
         })
     );
-    const coverageCommands = ['test-item.coverage.toggle-off', 'test-item.coverage.toggle-on'].map(
+    const coverageCommands = ['test-item.coverage.toggle-on', 'test-item.coverage.toggle-off'].map(
       (n) =>
         vscode.commands.registerCommand(`${extensionName}.${n}`, (testItem: vscode.TestItem) => {
           const workspace = this.getItemWorkspace(testItem);
@@ -118,6 +124,7 @@ export class TestItemContextManager {
           }
         })
     );
+
     const viewSnapshotCommand = vscode.commands.registerCommand(
       `${extensionName}.test-item.view-snapshot`,
       (testItem: vscode.TestItem) => {
@@ -148,7 +155,7 @@ export class TestItemContextManager {
     );
 
     return [
-      ...autoRunCommands,
+      ...runModeCommand,
       ...coverageCommands,
       viewSnapshotCommand,
       updateSnapshotCommand,

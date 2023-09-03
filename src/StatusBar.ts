@@ -4,6 +4,7 @@ import { JestExt } from './JestExt';
 import { TestStats, TestStatsCategory } from './types';
 import { VirtualFolderBasedCache } from './virtual-workspace-folder';
 import { isInFolder } from './workspace-manager';
+import { RunMode, runModeIcon } from './JestExt/run-mode';
 
 export enum StatusType {
   active,
@@ -11,18 +12,11 @@ export enum StatusType {
 }
 
 export type ProcessState = 'running' | 'success' | 'exec-error' | 'stopped' | 'initial' | 'done';
-export type AutoRunMode =
-  | 'auto-run-watch'
-  | 'auto-run-on-save'
-  | 'auto-run-on-save-test'
-  | 'auto-run-off';
-export type Mode = AutoRunMode | 'coverage';
-
 type SummaryState = 'summary-warning' | 'summary-pass' | 'stats-not-sync';
 
 export type SBTestStats = TestStats & { isDirty?: boolean; state?: ProcessState };
 export interface ExtensionStatus {
-  mode?: Mode[];
+  mode?: RunMode;
   stats?: SBTestStats;
   state?: ProcessState;
 }
@@ -334,27 +328,17 @@ export class StatusBar {
   ): string {
     return this.getStateInfo(state, showIcon).label;
   }
-  private getModes(modes?: Mode[], showIcon = true): string {
-    if (!modes || modes.length <= 0) {
+  private getModes(mode?: RunMode, showIcon = true): string {
+    if (!mode) {
       return '';
     }
-    const modesStrings = modes.map((m) => {
-      if (!showIcon) {
-        return m;
-      }
-      switch (m) {
-        case 'coverage':
-          return '$(color-mode)';
-        case 'auto-run-watch':
-          return '$(eye)';
-        case 'auto-run-on-save':
-          return '$(save-all)';
-        case 'auto-run-on-save-test':
-          return '$(save)';
-        case 'auto-run-off':
-          return '$(wrench)';
-      }
-    });
+
+    const modesStrings = [];
+
+    if (mode.config.coverage) {
+      modesStrings.push(showIcon ? '$(color-mode)' : 'coverage');
+    }
+    modesStrings.push(showIcon ? runModeIcon(mode.config) : mode.config.type);
     return modesStrings.join(showIcon ? ' ' : ', ');
   }
 

@@ -161,10 +161,10 @@ export const createProcessSession = (context: JestExtProcessContext): ProcessSes
       await stop();
     }
 
-    if (context.settings.autoRun.onStartup) {
-      context.settings.autoRun.onStartup.forEach((type) => scheduleProcess({ type }));
+    if (context.settings.runMode.config.runAllTestsOnStartup) {
+      scheduleProcess({ type: 'all-tests' });
     }
-    if (context.settings.autoRun.isWatch) {
+    if (context.settings.runMode.config.type === 'watch') {
       scheduleProcess({ type: 'watch-tests' });
     }
   };

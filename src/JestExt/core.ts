@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { JestTotalResults } from 'jest-editor-support';
 
-import { statusBar, StatusBar, Mode, StatusBarUpdate, SBTestStats } from '../StatusBar';
+import { statusBar, StatusBar, StatusBarUpdate, SBTestStats } from '../StatusBar';
 import {
   TestResultProvider,
   resultsWithLowerCaseWindowsDriveLetters,
@@ -116,7 +116,7 @@ export class JestExt {
     this.coverageOverlay = new CoverageOverlay(
       vscodeContext,
       this.coverageMapProvider,
-      pluginSettings.showCoverageOnLoad,
+      pluginSettings.runMode.config.coverage,
       pluginSettings.coverageFormatter,
       pluginSettings.coverageColors
     );
@@ -163,7 +163,7 @@ export class JestExt {
   ): PluginResourceSettings {
     const pluginSettings = getExtensionResourceSettings(workspaceFolder);
 
-    if (pluginSettings.enable === false) {
+    if (pluginSettings.runMode.config.type === 'disabled') {
       throw new Error(`Jest is disabled for workspace ${workspaceFolder.name}`);
     }
     return pluginSettings;
@@ -221,7 +221,7 @@ export class JestExt {
       }
       switch (event.type) {
         case 'start': {
-          if (this.extContext.settings.autoRevealOutput === 'on-run') {
+          if (this.extContext.settings.runMode.config.revealOutput === 'on-run') {
             this.output.reveal();
           }
           this.updateStatusBar({ state: 'running' });
@@ -400,7 +400,7 @@ export class JestExt {
   }
 
   private updateOutputSetting(settings: PluginResourceSettings): void {
-    this.output.revealOnError = settings.autoRevealOutput !== 'off';
+    this.output.revealOnError = settings.runMode.config.revealOutput !== 'manual';
     this.output.close();
   }
   private testResultProviderOptions(settings: PluginResourceSettings): TestResultProviderOptions {
@@ -416,7 +416,10 @@ export class JestExt {
       newSettings ?? this.getExtensionResourceSettings(this.extContext.workspace);
 
     // output
-    if (this.extContext.settings.autoRevealOutput !== updatedSettings.autoRevealOutput) {
+    if (
+      this.extContext.settings.runMode.config.revealOutput !==
+      updatedSettings.runMode.config.revealOutput
+    ) {
       this.updateOutputSetting(updatedSettings);
     }
 
@@ -424,14 +427,11 @@ export class JestExt {
     this.testResultProvider.options = this.testResultProviderOptions(updatedSettings);
 
     // coverage
-    const showCoverage = this.coverageOverlay.enabled ?? updatedSettings.showCoverageOnLoad;
-    updatedSettings.showCoverageOnLoad = showCoverage;
-
     this.coverageOverlay.dispose();
     this.coverageOverlay = new CoverageOverlay(
       this.vscodeContext,
       this.coverageMapProvider,
-      updatedSettings.showCoverageOnLoad,
+      updatedSettings.runMode.config.coverage,
       updatedSettings.coverageFormatter,
       updatedSettings.coverageColors
     );
@@ -715,21 +715,23 @@ export class JestExt {
   }
 
   private handleOnSaveRun(document: vscode.TextDocument): void {
-    if (!this.isSupportedDocument(document) || this.extContext.settings.autoRun.isWatch) {
+    if (
+      !this.isSupportedDocument(document) ||
+      this.extContext.settings.runMode.config.type !== 'on-save'
+    ) {
       return;
     }
     const isTestFile = this.testResultProvider.isTestFile(document.fileName);
-    if (
-      this.extContext.settings.autoRun.onSave &&
-      (this.extContext.settings.autoRun.onSave === 'test-src-file' || isTestFile !== 'no')
-    ) {
+
+    if (isTestFile === 'no' && this.extContext.settings.runMode.config.testFileOnly) {
+      // not a test file and configured not to re-run test for non-test files => mark the workspace dirty
+      this.dirtyFiles.add(document.fileName);
+    } else {
       this.processSession.scheduleProcess({
         type: 'by-file',
         testFileName: document.fileName,
         notTestFile: isTestFile !== 'yes',
       });
-    } else {
-      this.dirtyFiles.add(document.fileName);
     }
   }
 
@@ -814,17 +816,18 @@ export class JestExt {
     this.updateTestFileList();
   }
 
-  toggleCoverageOverlay(): Promise<void> {
-    this.coverageOverlay.toggleVisibility();
-
-    // restart jest since coverage condition has changed
+  toggleCoverage(): Promise<void> {
+    this.extContext.settings.runMode.toggleCoverage();
     return this.triggerUpdateSettings(this.extContext.settings);
   }
-  toggleAutoRun(): Promise<void> {
-    this.extContext.settings.autoRun.toggle();
-
-    // restart jest since coverage condition has changed
-    return this.triggerUpdateSettings(this.extContext.settings);
+  async changeRunMode(): Promise<void> {
+    // why preserveCoverage? this is invoked by TestExplorer UI, which presents runMode and coverage as separated actions/attributes.
+    // So we will preserve the coverage upon quick switch runMode to be consistent.
+    const success = await this.extContext.settings.runMode.quickSwitch({ preserveCoverage: true });
+    if (success) {
+      // restart jest since coverage condition has changed
+      return this.triggerUpdateSettings(this.extContext.settings);
+    }
   }
   runItemCommand(testItem: vscode.TestItem, itemCommand: ItemCommand): void {
     this.testProvider?.runItemCommand(testItem, itemCommand);
@@ -846,13 +849,11 @@ export class JestExt {
   }
 
   private resetStatusBar(): void {
-    const modes: Mode[] = [];
-    if (this.coverageOverlay.enabled) {
-      modes.push('coverage');
-    }
-    modes.push(this.extContext.settings.autoRun.mode);
-
-    this.updateStatusBar({ state: 'initial', mode: modes, stats: emptyTestStats() });
+    this.updateStatusBar({
+      state: 'initial',
+      mode: this.extContext.settings.runMode,
+      stats: emptyTestStats(),
+    });
   }
   private updateStatusBar(status: StatusBarUpdate): void {
     this.status.update(status);

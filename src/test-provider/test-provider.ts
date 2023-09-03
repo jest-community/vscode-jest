@@ -32,18 +32,16 @@ export class JestTestProvider {
   }
 
   private updateMenuContext() {
-    const autoRunOn = !this.context.ext.settings.autoRun.isOff;
-    const withCoverage = this.context.ext.settings.showCoverageOnLoad;
     tiContextManager.setItemContext({
       workspace: this.context.ext.workspace,
-      key: 'jest.autoRun',
-      value: autoRunOn,
+      key: 'jest.runMode',
+      value: this.context.ext.settings.runMode.isModified,
       itemIds: [this.workspaceRoot.item.id],
     });
     tiContextManager.setItemContext({
       workspace: this.context.ext.workspace,
       key: 'jest.coverage',
-      value: withCoverage,
+      value: this.context.ext.settings.runMode.config.coverage ?? false,
       itemIds: [this.workspaceRoot.item.id],
     });
     tiContextManager.setItemContext({
@@ -65,23 +63,21 @@ export class JestTestProvider {
   private createProfiles = (controller: vscode.TestController): vscode.TestRunProfile[] => {
     const runTag = new vscode.TestTag(TestTagId.Run);
     const debugTag = new vscode.TestTag(TestTagId.Debug);
-    const profiles = [
-      controller.createRunProfile(
-        'run',
-        vscode.TestRunProfileKind.Run,
-        this.runTests,
-        true,
-        runTag
-      ),
-      controller.createRunProfile(
-        'debug',
-        vscode.TestRunProfileKind.Debug,
-        this.runTests,
-        true,
-        debugTag
-      ),
-    ];
-    return profiles;
+    const runProfile = controller.createRunProfile(
+      'run',
+      vscode.TestRunProfileKind.Run,
+      this.runTests,
+      true,
+      runTag
+    );
+    const debugProfile = controller.createRunProfile(
+      'debug',
+      vscode.TestRunProfileKind.Debug,
+      this.runTests,
+      true,
+      debugTag
+    );
+    return [runProfile, debugProfile];
   };
 
   private discoverTest = (item: vscode.TestItem | undefined): void => {

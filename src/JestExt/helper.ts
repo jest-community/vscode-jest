@@ -13,13 +13,16 @@ import {
   JestExtAutoRunSetting,
   AutoRevealOutputType,
   createJestSettingGetter,
+  JestRunModeType,
+  JestRunMode,
+  DeprecatedPluginResourceSettings,
 } from '../Settings';
 import { workspaceLogging } from '../logging';
 import { JestExtContext, RunnerWorkspaceOptions } from './types';
 import { CoverageColors } from '../Coverage';
 import { userInfo } from 'os';
 import { JestOutputTerminal } from './output-terminal';
-import { AutoRun } from './auto-run';
+import { RunMode } from './run-mode';
 import { RunShell } from './run-shell';
 import { toAbsoluteRootPath, toFilePath } from '../helpers';
 
@@ -63,7 +66,7 @@ export const createJestExtContext = (
       '',
       currentJestVersion,
       outputFileSuffix(ws, options?.outputFileSuffix),
-      options?.collectCoverage ?? settings.showCoverageOnLoad,
+      options?.collectCoverage ?? settings.runMode.config.coverage ?? false,
       settings.debugMode,
       settings.nodeEnv,
       settings.shell.toSetting(),
@@ -109,11 +112,17 @@ export const getExtensionResourceSettings = (
 ): PluginResourceSettings => {
   const getSetting = createJestSettingGetter(workspaceFolder);
 
+  const deprecatedSettings: DeprecatedPluginResourceSettings = {
+    showCoverageOnLoad: getSetting<boolean>('showCoverageOnLoad') ?? false,
+    autoRevealOutput: getSetting<AutoRevealOutputType>('autoRevealOutput') ?? 'on-run',
+    autoRun: getSetting<JestExtAutoRunSetting | null>('autoRun'),
+    enable: getSetting<boolean>('enable'),
+  };
+
   return {
     jestCommandLine: getSetting<string>('jestCommandLine'),
     autoClearTerminal: getSetting<boolean>('autoClearTerminal') ?? false,
     rootPath: toAbsoluteRootPath(workspaceFolder, getSetting<string>('rootPath')),
-    showCoverageOnLoad: getSetting<boolean>('showCoverageOnLoad') ?? false,
     coverageFormatter: getSetting<string>('coverageFormatter') ?? 'DefaultFormatter',
     debugMode: getSetting<boolean>('debugMode'),
     coverageColors: getSetting<CoverageColors>('coverageColors'),
@@ -123,10 +132,11 @@ export const getExtensionResourceSettings = (
     nodeEnv: getSetting<NodeEnv | null>('nodeEnv') ?? undefined,
     shell: new RunShell(getSetting<string | LoginShell>('shell')),
     monitorLongRun: getSetting<MonitorLongRun>('monitorLongRun') ?? undefined,
-    autoRun: new AutoRun(getSetting<JestExtAutoRunSetting | null>('autoRun')),
-    autoRevealOutput: getSetting<AutoRevealOutputType>('autoRevealOutput') ?? 'on-run',
+    runMode: new RunMode(
+      getSetting<JestRunModeType | JestRunMode | null>('runMode'),
+      deprecatedSettings
+    ),
     parserPluginOptions: getSetting<JESParserPluginOptions>('parserPluginOptions'),
-    enable: getSetting<boolean>('enable'),
     useDashedArgs: getSetting<boolean>('useDashedArgs') ?? false,
   };
 };
