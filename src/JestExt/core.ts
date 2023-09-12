@@ -62,6 +62,8 @@ interface JestCommandSettings {
   jestCommandLine: string;
 }
 
+const RunStartEvents: JestRunEvent['type'][] = ['start', 'process-start'];
+
 /** extract lines starts and end with [] */
 export class JestExt {
   coverageMapProvider: CoverageMapProvider;
@@ -219,11 +221,16 @@ export class JestExt {
       if (event.process.request.type === 'not-test') {
         return;
       }
+      // handle output
+      if (
+        this.extContext.settings.runMode.config.revealOutput === 'on-run' &&
+        RunStartEvents.includes(event.type)
+      ) {
+        this.output.enable();
+      }
+
       switch (event.type) {
         case 'start': {
-          if (this.extContext.settings.runMode.config.revealOutput === 'on-run') {
-            this.output.reveal();
-          }
           this.updateStatusBar({ state: 'running' });
           break;
         }
@@ -408,7 +415,7 @@ export class JestExt {
 
   private updateOutputSetting(settings: PluginResourceSettings): void {
     this.output.revealOnError =
-      !settings.runMode.config.deferred && settings.runMode.config.revealOutput !== 'manual';
+      !settings.runMode.config.deferred && settings.runMode.config.revealOutput === 'on-exec-error';
     this.output.close();
   }
   private testResultProviderOptions(settings: PluginResourceSettings): TestResultProviderOptions {
@@ -849,6 +856,10 @@ export class JestExt {
         return this.testProvider?.runTests(trigger.request, trigger.token);
       }
     }
+  }
+
+  async saveRunMode(): Promise<void> {
+    this.extContext.settings.runMode.save(this.extContext.workspace);
   }
 
   // this method is invoked by the TestExplorer UI

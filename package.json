@@ -243,6 +243,10 @@
         "title": "Jest: Run All Tests (Select Workspace)"
       },
       {
+        "command": "io.orta.jest.workspace.save-run-mode",
+        "title": "Jest: Save Current RunMode"
+      },
+      {
         "command": "io.orta.jest.run-all-tests",
         "title": "Jest: Run All Tests"
       },

@@ -6,6 +6,7 @@ import {
   JestRunMode,
   JestRunModeSetting,
   JestRunModeType,
+  updateSetting,
 } from '../Settings';
 import { NoOpFileSystemProvider } from '../noop-fs-provider';
 
@@ -276,8 +277,12 @@ export class RunMode {
     return false;
   }
 
-  public saveCurrentConfig = async (): Promise<boolean> => {
-    return Promise.reject(new Error('not implemented'));
+  /**
+   * save runMode to the workspace settings
+   * @returns
+   */
+  public save = async (workspaceFolder: vscode.WorkspaceFolder): Promise<boolean> => {
+    return updateSetting(workspaceFolder, 'runMode', this.config);
   };
 }
 

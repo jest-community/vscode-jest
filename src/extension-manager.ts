@@ -393,6 +393,11 @@ export class ExtensionManager {
           extension.debugTests(editor.document, ...identifiers);
         },
       }),
+      this.registerCommand({
+        type: 'select-workspace',
+        name: 'save-run-mode',
+        callback: (extension) => extension.saveRunMode(),
+      }),
       // with-workspace commands
       this.registerCommand({
         type: 'workspace',
