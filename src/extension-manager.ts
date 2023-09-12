@@ -422,6 +422,13 @@ export class ExtensionManager {
           extension.runItemCommand(testItem, itemCommand);
         },
       }),
+      this.registerCommand({
+        type: 'workspace',
+        name: 'exit-defer-mode',
+        callback: (extension, ...args) => {
+          extension.exitDeferMode(...args);
+        },
+      }),
 
       // setup tool
       vscode.commands.registerCommand(`${extensionName}.setup-extension`, this.startWizard),

@@ -28,20 +28,22 @@ export type JestExtAutoRunConfig =
     };
 export type JestExtAutoRunSetting = JestExtAutoRunShortHand | JestExtAutoRunConfig;
 
-interface JestRunModeCommon {
+interface JestRunModeOptions {
   runAllTestsOnStartup?: boolean;
   coverage?: boolean;
   revealOutput?: 'on-run' | 'on-exec-error' | 'manual';
+  deferred?: boolean;
 }
-export type JestTypedRunMode =
+export type JestRunMode = (
   | { type: 'watch' }
   | { type: 'manual' }
   | { type: 'on-save'; testFileOnly?: boolean }
-  | { type: 'deferred'; deferredRunMode: JestRunMode }
-  | { type: 'disabled' };
-export type JestRunMode = JestTypedRunMode & JestRunModeCommon;
+) &
+  JestRunModeOptions;
 
 export type JestRunModeType = JestRunMode['type'];
+export type JestPredefinedRunModeType = JestRunModeType | 'deferred';
+export type JestRunModeSetting = JestRunMode | JestPredefinedRunModeType;
 
 export type TestExplorerConfigLegacy =
   | { enabled: false }
@@ -66,6 +68,7 @@ export interface PluginResourceSettings {
   nodeEnv?: NodeEnv;
   shell: RunShell;
   monitorLongRun?: MonitorLongRun;
+  enable?: boolean;
   parserPluginOptions?: JESParserPluginOptions;
   useDashedArgs?: boolean;
 }
@@ -112,7 +115,12 @@ export const createJestSettingGetter = (
 
   // get setting from virtual folder first, fallback to workspace setting if not found
   const getSetting = <T>(key: VirtualFolderSettingKey): T | undefined => {
-    return (vFolder?.[key] ?? config.get<T>(key)) as T | undefined;
+    if (key === 'enable') {
+      // if any of the folders is disabled, then the whole workspace is disabled
+      return (config.get<boolean>(key) !== false && vFolder?.enable !== false) as T;
+    }
+
+    return (vFolder?.[key] as T) ?? config.get<T>(key);
   };
   return getSetting;
 };

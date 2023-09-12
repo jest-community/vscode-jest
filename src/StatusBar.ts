@@ -4,7 +4,7 @@ import { JestExt } from './JestExt';
 import { TestStats, TestStatsCategory } from './types';
 import { VirtualFolderBasedCache } from './virtual-workspace-folder';
 import { isInFolder } from './workspace-manager';
-import { RunMode, runModeIcon } from './JestExt/run-mode';
+import { RunMode, runModeDescription } from './JestExt/run-mode';
 
 export enum StatusType {
   active,
@@ -333,12 +333,9 @@ export class StatusBar {
       return '';
     }
 
-    const modesStrings = [];
-
-    if (mode.config.coverage) {
-      modesStrings.push(showIcon ? '$(color-mode)' : 'coverage');
-    }
-    modesStrings.push(showIcon ? runModeIcon(mode.config) : mode.config.type);
+    const modesStrings = Object.values(runModeDescription(mode.config))
+      .map((desc) => (showIcon ? desc.icon : desc.label))
+      .filter((s) => s);
     return modesStrings.join(showIcon ? ' ' : ', ');
   }
 

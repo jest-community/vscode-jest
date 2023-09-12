@@ -15,6 +15,7 @@ import { GENERIC_ERROR, getExitErrorDef, LONG_RUNNING_TESTS } from '../errors';
 import { JestExtOutput } from '../JestExt/output-terminal';
 import { tiContextManager } from './test-item-context-manager';
 import { toAbsoluteRootPath } from '../helpers';
+import { runModeDescription } from '../JestExt/run-mode';
 
 interface JestRunnable {
   getJestRunRequest: () => JestExtRequestType;
@@ -141,7 +142,8 @@ export class WorkspaceRoot extends TestItemDataBase {
       undefined,
       ['run']
     );
-    item.description = `(${this.context.ext.settings.runMode.config.type})`;
+    const desc = runModeDescription(this.context.ext.settings.runMode.config);
+    item.description = `(${desc.deferred?.label ?? desc.type.label})`;
 
     item.canResolveChildren = true;
     return item;

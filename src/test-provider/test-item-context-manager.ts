@@ -13,7 +13,7 @@ export interface SnapshotItem {
 }
 export type ItemContext =
   | {
-      key: 'jest.runMode' | 'jest.coverage';
+      key: 'jest.runMode';
       workspace: vscode.WorkspaceFolder;
       /** the current value of the itemId */
       value: boolean;
@@ -30,12 +30,10 @@ export class TestItemContextManager {
   private cache = new Map<TEItemContextKey, ItemContext[]>();
   private wsCache: Record<string, vscode.WorkspaceFolder> = {};
 
-  private contextKey(key: 'jest.runMode' | 'jest.coverage', value: boolean): string {
+  private contextKey(key: 'jest.runMode', value: boolean): string {
     switch (key) {
       case 'jest.runMode':
         return `${key}.${value ? 'modified' : 'not-modified'}`;
-      case 'jest.coverage':
-        return `${key}.${value ? 'on' : 'off'}`;
     }
   }
   // context are stored by key, one per workspace
@@ -53,8 +51,7 @@ export class TestItemContextManager {
   public setItemContext(context: ItemContext): void {
     const list = this.updateContextCache(context);
     switch (context.key) {
-      case 'jest.runMode':
-      case 'jest.coverage': {
+      case 'jest.runMode': {
         //set context for both on and off
         let itemIds = list
           .flatMap((c) => (c.key === context.key && c.value === true ? c.itemIds : undefined))
@@ -112,18 +109,6 @@ export class TestItemContextManager {
           }
         })
     );
-    const coverageCommands = ['test-item.coverage.toggle-on', 'test-item.coverage.toggle-off'].map(
-      (n) =>
-        vscode.commands.registerCommand(`${extensionName}.${n}`, (testItem: vscode.TestItem) => {
-          const workspace = this.getItemWorkspace(testItem);
-          if (workspace) {
-            vscode.commands.executeCommand(
-              `${extensionName}.with-workspace.toggle-coverage`,
-              workspace
-            );
-          }
-        })
-    );
 
     const viewSnapshotCommand = vscode.commands.registerCommand(
       `${extensionName}.test-item.view-snapshot`,
@@ -154,13 +139,7 @@ export class TestItemContextManager {
       }
     );
 
-    return [
-      ...runModeCommand,
-      ...coverageCommands,
-      viewSnapshotCommand,
-      updateSnapshotCommand,
-      revealOutputCommand,
-    ];
+    return [...runModeCommand, viewSnapshotCommand, updateSnapshotCommand, revealOutputCommand];
   }
 }
 

@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { JestTestProviderContext, JestTestRun } from './test-provider-helper';
 import { WorkspaceRoot } from './test-item-data';
 import { Debuggable, ItemCommand, JestExtExplorerContext, TestItemData, TestTagId } from './types';
-import { extensionId } from '../appGlobals';
+import { extensionId, extensionName } from '../appGlobals';
 import { Logging } from '../logging';
 import { toErrorString } from '../helpers';
 import { tiContextManager } from './test-item-context-manager';
@@ -40,12 +40,6 @@ export class JestTestProvider {
     });
     tiContextManager.setItemContext({
       workspace: this.context.ext.workspace,
-      key: 'jest.coverage',
-      value: this.context.ext.settings.runMode.config.coverage ?? false,
-      itemIds: [this.workspaceRoot.item.id],
-    });
-    tiContextManager.setItemContext({
-      workspace: this.context.ext.workspace,
       key: 'jest.workspaceRoot',
       itemIds: [this.workspaceRoot.item.id],
     });
@@ -70,6 +64,12 @@ export class JestTestProvider {
       true,
       runTag
     );
+    runProfile.configureHandler = async () => {
+      vscode.commands.executeCommand(
+        `${extensionName}.with-workspace.change-run-mode`,
+        this.context.ext.workspace
+      );
+    };
     const debugProfile = controller.createRunProfile(
       'debug',
       vscode.TestRunProfileKind.Debug,
@@ -142,6 +142,13 @@ export class JestTestProvider {
       const message = 'not supporting runRequest without profile';
       this.log('error', message, request);
       return Promise.reject(message);
+    }
+    if (this.context.ext.settings.runMode.config.deferred) {
+      return vscode.commands.executeCommand(
+        `${extensionName}.with-workspace.exit-defer-mode`,
+        this.context.ext.workspace,
+        { request, cancelToken }
+      );
     }
     const run = this.context.createTestRun(request, { name: this.controller.id });
     const tests = (request.include ?? this.getAllItems()).filter(

@@ -18,7 +18,7 @@ import {
 import { CoverageMapProvider, CoverageCodeLensProvider } from '../Coverage';
 import { updateDiagnostics, updateCurrentDiagnostics, resetDiagnostics } from '../diagnostics';
 import { DebugConfigurationProvider } from '../DebugConfigurationProvider';
-import { TestStats } from '../types';
+import { TestExplorerRunRequest, TestStats } from '../types';
 import { CoverageOverlay } from '../Coverage/CoverageOverlay';
 import { resultsWithoutAnsiEscapeSequence } from '../TestResults/TestResult';
 import { CoverageMapData } from 'istanbul-lib-coverage';
@@ -163,7 +163,7 @@ export class JestExt {
   ): PluginResourceSettings {
     const pluginSettings = getExtensionResourceSettings(workspaceFolder);
 
-    if (pluginSettings.runMode.config.type === 'disabled') {
+    if (pluginSettings.enable === false) {
       throw new Error(`Jest is disabled for workspace ${workspaceFolder.name}`);
     }
     return pluginSettings;
@@ -307,6 +307,13 @@ export class JestExt {
    */
   public async startSession(newSession = false): Promise<void> {
     try {
+      if (this.extContext.settings.runMode.config.deferred) {
+        // in deferred mode, we only start the test provider and nothing else
+        this.testProvider?.dispose();
+        this.testProvider = new JestTestProvider(this.getExtExplorerContext());
+        this.resetStatusBar();
+        return;
+      }
       const readyState = await this.validateJestCommandLine();
       if (readyState !== 'pass') {
         return;
@@ -328,7 +335,7 @@ export class JestExt {
 
       this.events.onTestSessionStarted.fire({ ...this.extContext, session: this.processSession });
 
-      this.updateTestFileList();
+      await this.updateTestFileList();
 
       if (vscode.window.activeTextEditor) {
         this.triggerUpdateActiveEditor(vscode.window.activeTextEditor);
@@ -400,7 +407,8 @@ export class JestExt {
   }
 
   private updateOutputSetting(settings: PluginResourceSettings): void {
-    this.output.revealOnError = settings.runMode.config.revealOutput !== 'manual';
+    this.output.revealOnError =
+      !settings.runMode.config.deferred && settings.runMode.config.revealOutput !== 'manual';
     this.output.close();
   }
   private testResultProviderOptions(settings: PluginResourceSettings): TestResultProviderOptions {
@@ -418,7 +426,8 @@ export class JestExt {
     // output
     if (
       this.extContext.settings.runMode.config.revealOutput !==
-      updatedSettings.runMode.config.revealOutput
+        updatedSettings.runMode.config.revealOutput ||
+      this.extContext.settings.runMode.config.deferred !== updatedSettings.runMode.config.deferred
     ) {
       this.updateOutputSetting(updatedSettings);
     }
@@ -658,7 +667,9 @@ export class JestExt {
     }
     await vscode.debug.startDebugging(this.extContext.workspace, debugConfig);
   };
-  public runAllTests(editor?: vscode.TextEditor): void {
+  public async runAllTests(editor?: vscode.TextEditor): Promise<void> {
+    await this.exitDeferMode();
+
     if (!editor) {
       if (this.processSession.scheduleProcess({ type: 'all-tests' })) {
         this.dirtyFiles.clear();
@@ -717,6 +728,7 @@ export class JestExt {
   private handleOnSaveRun(document: vscode.TextDocument): void {
     if (
       !this.isSupportedDocument(document) ||
+      this.extContext.settings.runMode.config.deferred ||
       this.extContext.settings.runMode.config.type !== 'on-save'
     ) {
       return;
@@ -788,21 +800,29 @@ export class JestExt {
     this.refreshDocumentChange(document);
   }
 
-  private updateTestFileList(): void {
-    this.processSession.scheduleProcess({
-      type: 'list-test-files',
-      onResult: (files, error, exitCode) => {
-        this.setTestFiles(files);
-        this.logging('debug', `found ${files?.length} testFiles`);
-        if (error) {
-          const msg =
-            'failed to retrieve test file list. TestExplorer might show incomplete test items';
-          this.extContext.output.write(error, 'new-line');
-          const errorType = getExitErrorDef(exitCode) ?? 'error';
-          this.extContext.output.write(msg, errorType);
-          this.logging('error', msg, error);
-        }
-      },
+  private async updateTestFileList(): Promise<void> {
+    if (this.extContext.settings.runMode.config.deferred) {
+      return;
+    }
+    return new Promise((resolve, reject) => {
+      this.processSession.scheduleProcess({
+        type: 'list-test-files',
+        onResult: (files, error, exitCode) => {
+          this.setTestFiles(files);
+          this.logging('debug', `found ${files?.length} testFiles`);
+          if (error) {
+            const msg =
+              'failed to retrieve test file list. TestExplorer might show incomplete test items';
+            this.extContext.output.write(error, 'new-line');
+            const errorType = getExitErrorDef(exitCode) ?? 'error';
+            this.extContext.output.write(msg, errorType);
+            this.logging('error', msg, error);
+            reject(error);
+          } else {
+            resolve();
+          }
+        },
+      });
     });
   }
 
@@ -820,17 +840,28 @@ export class JestExt {
     this.extContext.settings.runMode.toggleCoverage();
     return this.triggerUpdateSettings(this.extContext.settings);
   }
+  // exit defer runMode
+  async exitDeferMode(trigger?: TestExplorerRunRequest): Promise<void> {
+    if (this.extContext.settings.runMode.config.deferred) {
+      this.extContext.settings.runMode.exitDeferMode();
+      await this.triggerUpdateSettings(this.extContext.settings);
+      if (trigger) {
+        return this.testProvider?.runTests(trigger.request, trigger.token);
+      }
+    }
+  }
+
+  // this method is invoked by the TestExplorer UI
   async changeRunMode(): Promise<void> {
-    // why preserveCoverage? this is invoked by TestExplorer UI, which presents runMode and coverage as separated actions/attributes.
-    // So we will preserve the coverage upon quick switch runMode to be consistent.
-    const success = await this.extContext.settings.runMode.quickSwitch({ preserveCoverage: true });
+    const success = await this.extContext.settings.runMode.quickSwitch(this.vscodeContext);
     if (success) {
       // restart jest since coverage condition has changed
       return this.triggerUpdateSettings(this.extContext.settings);
     }
   }
-  runItemCommand(testItem: vscode.TestItem, itemCommand: ItemCommand): void {
-    this.testProvider?.runItemCommand(testItem, itemCommand);
+  async runItemCommand(testItem: vscode.TestItem, itemCommand: ItemCommand): Promise<void> {
+    await this.exitDeferMode();
+    return this.testProvider?.runItemCommand(testItem, itemCommand);
   }
   enableLoginShell(): void {
     if (this.extContext.settings.shell.useLoginShell) {

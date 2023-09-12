@@ -4,6 +4,7 @@ import { statusBar } from './StatusBar';
 import { ExtensionManager } from './extension-manager';
 import { tiContextManager } from './test-provider/test-item-context-manager';
 import * as languageProvider from './language-provider';
+import { noOpFileSystemProvider } from './noop-fs-provider';
 
 let extensionManager: ExtensionManager;
 
@@ -23,7 +24,8 @@ const addSubscriptions = (context: vscode.ExtensionContext): void => {
     ...extensionManager.register(),
     vscode.languages.registerCodeLensProvider(languages, extensionManager.coverageCodeLensProvider),
     ...tiContextManager.registerCommands(),
-    ...languageProvider.register()
+    ...languageProvider.register(),
+    noOpFileSystemProvider.register()
   );
 };
 

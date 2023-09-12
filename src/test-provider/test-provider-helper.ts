@@ -38,6 +38,7 @@ export class JestTestProviderContext {
     this.testItemData.set(testItem, data);
     const collection = parent ? parent.children : this.controller.items;
     collection.add(testItem);
+
     tagIds?.forEach((tId) => {
       const tag = this.getTag(tId);
       if (tag) {

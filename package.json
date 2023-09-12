@@ -2,7 +2,7 @@
   "name": "vscode-jest",
   "displayName": "Jest",
   "description": "Use Facebook's Jest With Pleasure.",
-  "version": "6.0.1",
+  "version": "6.0.2",
   "publisher": "Orta",
   "engines": {
     "vscode": "^1.68.1"
@@ -71,9 +71,7 @@
           "markdownDescription": "enable/disable jest extension for the workspace folder. Default is true",
           "type": "boolean",
           "scope": "resource",
-          "default": true,
-          "markdownDeprecationMessage": "**Deprecated**: Please use [runMode](https://github.com/jest-community/vscode-jest/blob/master/README.md#runmode) instead.",
-          "deprecationMessage": "Deprecated: Please use jest.runMode instead."
+          "default": true
         },
         "jest.jestCommandLine": {
           "description": "The command line to start jest tests. It should be the same command line users run jest tests from a terminal/shell, with ability to append extra arguments (by the extension at runtime)",
@@ -278,19 +276,6 @@
         }
       },
       {
-        "command": "io.orta.jest.test-item.coverage.toggle-on",
-        "title": "Toggle Coverage On",
-        "icon":"$(color-mode)" 
-      },
-      {
-        "command": "io.orta.jest.test-item.coverage.toggle-off",
-        "title": "Toggle Coverage Off",
-        "icon": {
-          "light": "icons/coverage-on-16.svg",
-          "dark": "icons/coverage-on-16.svg"
-        }
-      },
-      {
         "command": "io.orta.jest.test-item.reveal-output",
         "title": "Reveal Test Output",
         "icon": "$(terminal)"
@@ -345,14 +330,6 @@
           "when": "jest.never"
         },
         {
-          "command": "io.orta.jest.test-item.coverage.toggle-on",
-          "when": "jest.never"
-        },
-        {
-          "command": "io.orta.jest.test-item.coverage.toggle-off",
-          "when": "jest.never"
-        },
-        {
           "command": "io.orta.jest.test-item.reveal-output",
           "when": "jest.never"
         },
@@ -382,16 +359,6 @@
           "command": "io.orta.jest.test-item.run-mode.change",
           "group": "inline@1",
           "when": "testId in jest.runMode.not-modified"
-        },
-        {
-          "command": "io.orta.jest.test-item.coverage.toggle-on",
-          "group": "inline@2",
-          "when": "testId in jest.coverage.off"
-        },
-        {
-          "command": "io.orta.jest.test-item.coverage.toggle-off",
-          "group": "inline@2",
-          "when": "testId in jest.coverage.on"
         },
         {
           "command": "io.orta.jest.test-item.reveal-output",

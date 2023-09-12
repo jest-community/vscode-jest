@@ -137,6 +137,7 @@ export const getExtensionResourceSettings = (
       deprecatedSettings
     ),
     parserPluginOptions: getSetting<JESParserPluginOptions>('parserPluginOptions'),
+    enable: getSetting<boolean>('enable'),
     useDashedArgs: getSetting<boolean>('useDashedArgs') ?? false,
   };
 };
