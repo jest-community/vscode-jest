@@ -116,7 +116,6 @@ export const getExtensionResourceSettings = (
     showCoverageOnLoad: getSetting<boolean>('showCoverageOnLoad') ?? false,
     autoRevealOutput: getSetting<AutoRevealOutputType>('autoRevealOutput') ?? 'on-run',
     autoRun: getSetting<JestExtAutoRunSetting | null>('autoRun'),
-    enable: getSetting<boolean>('enable'),
   };
 
   return {

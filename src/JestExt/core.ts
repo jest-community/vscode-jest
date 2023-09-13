@@ -864,10 +864,10 @@ export class JestExt {
 
   // this method is invoked by the TestExplorer UI
   async changeRunMode(): Promise<void> {
-    const success = await this.extContext.settings.runMode.quickSwitch(this.vscodeContext);
-    if (success) {
-      // restart jest since coverage condition has changed
-      return this.triggerUpdateSettings(this.extContext.settings);
+    const runMode = await this.extContext.settings.runMode.quickSwitch(this.vscodeContext);
+    if (runMode) {
+      const newSettings = { ...this.extContext.settings, runMode };
+      return this.triggerUpdateSettings(newSettings);
     }
   }
   async runItemCommand(testItem: vscode.TestItem, itemCommand: ItemCommand): Promise<void> {

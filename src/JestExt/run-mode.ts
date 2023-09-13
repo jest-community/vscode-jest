@@ -138,7 +138,7 @@ export class RunMode {
     legacySettings?: DeprecatedPluginResourceSettings
   ): JestRunMode {
     if (isJestRunMode(setting)) {
-      return setting;
+      return { ...setting };
     }
 
     try {
@@ -182,11 +182,17 @@ export class RunMode {
     }
   }
 
+  protected clone(config: JestRunMode): RunMode {
+    const newRunMode = new RunMode(this.setting, this.legacySettings);
+    newRunMode._config = { ...config };
+    return newRunMode;
+  }
+
   /**
-   * pop up a chooser to allow user change runMode types
-   * @returns true if runMode is changed, false if runMode didn't change
+   * pop up a chooser to allow user change runMode
+   * @returns the new runMode or undefined if nothing is changed
    */
-  public async quickSwitch(context: vscode.ExtensionContext): Promise<boolean> {
+  public async quickSwitch(context: vscode.ExtensionContext): Promise<RunMode | undefined> {
     const runModeEditor = new RunModeEditor();
     const itemButtons = (mode: JestRunMode): RunModeQuickPickButton[] => {
       const coverageIcon = mode.coverage
@@ -228,7 +234,7 @@ export class RunMode {
 
       const isCurrent = mode.type === this.config.type;
       if (isCurrent) {
-        mode = { ...this.config };
+        mode = { ...this._config };
       }
 
       const typeLabel = runModeDescription(mode).type;
@@ -265,16 +271,14 @@ export class RunMode {
     runModeEditor.close();
 
     if (pickedItem) {
-      this._config = pickedItem.mode;
+      const newRunMode = this.clone(pickedItem.mode);
       if (pickedItem === restoreOriginalItem) {
-        this.isModified = false;
+        newRunMode.isModified = false;
       } else {
-        this.isModified = true;
+        newRunMode.isModified = true;
       }
-      return true;
+      return newRunMode;
     }
-
-    return false;
   }
 
   /**
