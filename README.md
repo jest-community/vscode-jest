@@ -63,6 +63,7 @@ Content
         - [monitorLongRun](#monitorlongrun)
         - [autoRevealOutput](#autorevealoutput)
         - [parserPluginOptions](#parserpluginoptions)
+        - [useDashedArgs](#usedashedargs)
         - [virtualFolders](#virtualfolders)
     - [Debug Config](#debug-config)
       - [Debug Config v2](#debug-config-v2)
@@ -252,19 +253,19 @@ Users can use the following settings to tailor the extension for their environme
 - settings marked with 💼 apply to the whole project, otherwise per workspace.
 
 
-|setting|description|default|example/notes|
-|---|---|---|---|
+|setting|description|default|example/notes|available since|
+|---|---|---|---|---|
 |**Process**|
-|enable|Enable/disable jest extension for the given workspace folder/virtual-folder|true|`"jest.enable": false`|
+|enable|Enable/disable jest extension for the given workspace folder/virtual-folder|true|`"jest.enable": false`| >= v6.0.0|
 |[jestCommandLine](#jestcommandline)|The command line to start jest tests|undefined|`"jest.jestCommandLine": "npm test --"` or `"jest.jestCommandLine": "yarn test"` or `"jest.jestCommandLine": "node_modules/.bin/jest --config custom-config.js"`|
 |nodeEnv|Add additional env variables to spawned jest process|null|`"jest.nodeEnv": {"PORT": "9800", "BAR":"true"}` |
-|[shell](#shell)|shell (path or LoginShell) for executing jest|null|`"jest.shell": "/bin/bash"` or `"jest.shell": "powershell"` or `"jest.shell": {"path": "/bin/bash"; args: ["--login"]}`  |
-|[autoRun](#autorun)|Controls when and what tests should be run|undefined|`"jest.autoRun": "off"` or `"jest.autoRun": "watch"` or `"jest.autoRun": {"watch": false, "onSave":"test-only"}`|
-|[rootPath](#rootPath)|The path to your frontend src folder|""|`"jest.rootPath":"packages/app"` or `"jest.rootPath":"/apps/my-app"`|
-useDashedArgs| Determine if to use dashed arguments for jest processes |undefined|`"jest.useDashedArgs":true`|
-|[monitorLongRun](#monitorlongrun)| monitor long running tests based on given threshold in ms|60000|`"jest.monitorLongRun": 120000`|
-|[parserPluginOptions](#parserpluginoptions)|Configure babel parser plugins|null|`"jest.parserPluginOptions": {decorators: 'legacy'}`|
-|[virtualFolders](#virtual-folders)|defines multiple jest runs in a given vscode workspace folder|undefined|`"jest.virtualFolders": "[{"name": "front-end", "rootPath': "packages/front-end"}, {"name": "back-end", "rootPath': "packages/back-end"} ]"`|
+|[shell](#shell)|shell (path or LoginShell) for executing jest|null|`"jest.shell": "/bin/bash"` or `"jest.shell": "powershell"` or `"jest.shell": {"path": "/bin/bash"; args: ["--login"]}`  ||
+|[autoRun](#autorun)|Controls when and what tests should be run|undefined|`"jest.autoRun": "off"` or `"jest.autoRun": "watch"` or `"jest.autoRun": {"watch": false, "onSave":"test-only"}`||
+|[rootPath](#rootPath)|The path to your frontend src folder|""|`"jest.rootPath":"packages/app"` or `"jest.rootPath":"/apps/my-app"`||
+[useDashedArgs](#usedashedargs)| Determine if to use dashed arguments for jest processes |undefined|`"jest.useDashedArgs":true`| >= v6.0.0 |
+|[monitorLongRun](#monitorlongrun)| monitor long running tests based on given threshold in ms|60000|`"jest.monitorLongRun": 120000`||
+|[parserPluginOptions](#parserpluginoptions)|Configure babel parser plugins|null|`"jest.parserPluginOptions": {decorators: 'legacy'}`||
+|[virtualFolders](#virtual-folders)|defines multiple jest runs in a given vscode workspace folder|undefined|`"jest.virtualFolders": "[{"name": "front-end", "rootPath': "packages/front-end"}, {"name": "back-end", "rootPath': "packages/back-end"} ]"`| >= v6.0.0|
 |**Editor**|
 |[testExplorer](#testexplorer) |Configure jest test explorer|null|`{"showInlineError": "true"}`|
 |**Coverage**|
@@ -275,7 +276,7 @@ useDashedArgs| Determine if to use dashed arguments for jest processes |undefine
 |debugMode|Enable debug mode to diagnose plugin issues. (see developer console)|false|`"jest.debugMode": true`|
 |disabledWorkspaceFolders 💼|Disabled workspace folders names in multi-root environment|[]|`"jest.disabledWorkspaceFolders": ["package-a", "package-b"]`|
 |[autoRevealOutput](#autoRevealOutput)|Determine when to show test output|"on-run"|`"jest.autoRevealOutput": "on-exec-error"`|
-|autoClearTerminal|Clear the terminal output at the start of any new test run.|false|`"jest.autoClearTerminal": true`|
+|autoClearTerminal|Clear the terminal output at the start of any new test run.|false|`"jest.autoClearTerminal": true`| >= v6.0.0 |
 
 #### Details
 ##### jestCommandLine
@@ -469,6 +470,14 @@ This extension uses babel to parse the test files. For decorators [plugin option
 
 "jest.parserPluginOptions": {"decorators": {"decoratorsBeforeExport": false}}
 ```
+
+##### useDashedArgs
+If true, use dashed arguments for spawned jest processes.
+
+Please bear in mind that you might encounter compatibility issue with other tools/systems. For instance, we've identified an issue in react-script where `"watch-all"=false` (an argument the extension appended) isn't recognized (see [facebook/react-script#12801](https://github.com/facebook/create-react-app/issues/12801) for more details). Please report them if you encounter any.
+
+Also note this flag does not apply to debug config, which can be changed manually since the [debug config v2](#debug-config-v2) was introduced a while back. 
+
 ##### virtualFolders
 
 Much like a vscode workspace folder, which manages a runtime environment for a specific folder, a virtualFolder manages a custom Jest runtime environment. Each virtualFolder can have its own resource-level [settings](#settings), such as `jestCommandLine` and `rootPath`.
@@ -529,6 +538,7 @@ However, there are some key differences between virtual folders and multi-root w
 3. The StatusBar might display the status of multiple Jest runtime environments if the active editor document is shared by multiple virtual folders, such as a source code file that both unit and integration tests depend on.
 4. You might receive additional prompts to select target folders when running commands for shared files.
 5. virtualFolders only contains jest settings. If your project require non-jest settings from the package's own `.vscode/settings.json` (like in a multi-root workspace), then you are probably better off continue with multi-root workspace.
+
 
 
 ### Debug Config
