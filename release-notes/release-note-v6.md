@@ -21,7 +21,7 @@ This major release introduces the 'Virtual Folders' feature. Much like a VSCode 
 ### Main Features
 #### 1. Virtual Folders 
 
-Supporting multiple jest configs is a common use cases for monorepo projects and projects with multiple test environments, such as unit and integration tests. We introduced monorepo support with vscode multi-root workspaces a few years ago. While it works well for most use cases, it fell short for multi-test-environment that share the same code base (folder). This version will close this gap with the [Virtual Folders](README.md#virtualfolders).
+Supporting multiple jest configs is a common use cases for monorepo projects and projects with multiple test environments, such as unit and integration tests. We introduced monorepo support with vscode multi-root workspaces a few years ago. While it works well for most use cases, it fell short for multi-test-environment that share the same code base (folder). This version will close this gap with the [Virtual Folders](https://github.com/jest-community/vscode-jest#virtualfolders).
 
 For example, the unit vs. integration tests can now be set up as the following:
 ```json
@@ -53,7 +53,7 @@ And yes you can indeed use virtual folders with monorepo projects. For example, 
 }
 ```
 
-So when to use multi-root workspaces vs. virtual folders? In short, if you created a multi-root workspace simply for running different jest config - you could probably just use `"jest.virtualFolders"` instead. If you do require different non-jest vscode settings for each folder, continue to use multi-root workspace. More details in [Virtual Folders](README.md#virtualfolders).
+So when to use multi-root workspaces vs. virtual folders? In short, if you created a multi-root workspace simply for running different jest config - you could probably just use `"jest.virtualFolders"` instead. If you do require different non-jest vscode settings for each folder, continue to use multi-root workspace. More details in [Virtual Folders](https://github.com/jest-community/vscode-jest#virtualfolders).
 
 
 - [#1035](https://github.com/jest-community/vscode-jest/pull/1035) - @connectdotz
@@ -64,7 +64,7 @@ In light of Angular's decision to drop support for CamelCase arguments, we've be
 
 However, bear in mind that you might encounter compatibility issue with other tools/systems. For instance, we've identified an issue in react-script where `"watch-all"=false` (an argument the extension appended) isn't recognized (see facebook/react-script#12801 for more details). Please report them if you encounter any.
 
-See [Customization](README.md#customization) for more details.
+See [useDashedArgs](https://github.com/jest-community/vscode-jest#usedashedargs) for more details.
 
 
 <!-- cSpell:ignore mjamin -->
@@ -76,7 +76,7 @@ A new setting`"jest.enable"` is added as a quick way to turn off the extension f
 
 This is indeed similar to `"jest.disabledWorkspaceFolders"`, which is a "window" level setting (on the root of the workspace). Given the target is the folder itself, we believe it makes more sense to put the control `"jest.enable"` in folder level instead. It could also provide better extensibility down the road, such as "deferred-activation". We hope `"jest.enable"` will eventually replace `"jest.disabledWorkspaceFolders"`.
 
-See [Customization](README.md#customization) for more details.
+See [Customization](https://github.com/jest-community/vscode-jest#customization) for more details.
 
 - [#1009](https://github.com/jest-community/vscode-jest/pull/1009) - @connectdotz
 
@@ -84,7 +84,7 @@ See [Customization](README.md#customization) for more details.
 
 Introduced a new setting - `"jest.autoClearOutput"` - to clear the output terminal before each test run. Default is false for backward compatibility. This is useful when you want to see only the last run output. 
 
-See [Customization](README.md#customization) for more details.
+See [Customization](https://github.com/jest-community/vscode-jest#customization) for more details.
 
 <!-- cSpell:ignore jgillick -->
 - [#1014](https://github.com/jest-community/vscode-jest/pull/1014) - @jgillick
