@@ -165,6 +165,7 @@ describe('getExtensionResourceSettings()', () => {
     expect(getExtensionResourceSettings(folder)).toEqual({
       coverageFormatter: 'DefaultFormatter',
       jestCommandLine: undefined,
+      clearTestResults: false,
       rootPath: 'workspaceFolder1',
       showCoverageOnLoad: false,
       debugMode: false,

@@ -78,6 +78,11 @@
           "type": "string",
           "scope": "resource"
         },
+        "jest.clearTestResults": {
+          "type": "boolean",
+          "description": "Clear previous test results at the start of any new test run.",
+          "default": false
+        },
         "jest.autoClearTerminal": {
           "description": "Clear the terminal output at the start of any new test run.",
           "type": "boolean",

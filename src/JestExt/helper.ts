@@ -125,6 +125,7 @@ export const getExtensionResourceSettings = (
     monitorLongRun: getSetting<MonitorLongRun>('monitorLongRun') ?? undefined,
     autoRun: new AutoRun(getSetting<JestExtAutoRunSetting | null>('autoRun')),
     autoRevealOutput: getSetting<AutoRevealOutputType>('autoRevealOutput') ?? 'on-run',
+    clearTestResults: getSetting<boolean>('clearTestResults') ?? false,
     parserPluginOptions: getSetting<JESParserPluginOptions>('parserPluginOptions'),
     enable: getSetting<boolean>('enable'),
     useDashedArgs: getSetting<boolean>('useDashedArgs') ?? false,

@@ -53,6 +53,7 @@ export interface PluginResourceSettings {
   shell: RunShell;
   monitorLongRun?: MonitorLongRun;
   autoRevealOutput: AutoRevealOutputType;
+  clearTestResults: boolean;
   parserPluginOptions?: JESParserPluginOptions;
   enable?: boolean;
   useDashedArgs?: boolean;

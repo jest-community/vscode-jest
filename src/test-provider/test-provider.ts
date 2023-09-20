@@ -147,6 +147,11 @@ export class JestTestProvider {
       this.log('error', message, request);
       return Promise.reject(message);
     }
+
+    if (this.context.ext.settings.clearTestResults) {
+      vscode.commands.executeCommand('testing.clearTestResults');
+    }
+
     const run = this.context.createTestRun(request, { name: this.controller.id });
     const tests = (request.include ?? this.getAllItems()).filter(
       (t) => !request.exclude?.includes(t)

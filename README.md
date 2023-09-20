@@ -277,6 +277,7 @@ Users can use the following settings to tailor the extension for their environme
 |disabledWorkspaceFolders 💼|Disabled workspace folders names in multi-root environment|[]|`"jest.disabledWorkspaceFolders": ["package-a", "package-b"]`|
 |[autoRevealOutput](#autoRevealOutput)|Determine when to show test output|"on-run"|`"jest.autoRevealOutput": "on-exec-error"`|
 |autoClearTerminal|Clear the terminal output at the start of any new test run.|false|`"jest.autoClearTerminal": true`| >= v6.0.0 |
+|clearTestResults|Clear previous test results at the start of any new test run.|false|`"jest.clearTestResults": true`| >= v6.0.2 |
 
 #### Details
 ##### jestCommandLine
