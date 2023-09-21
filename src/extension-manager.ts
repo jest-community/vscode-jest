@@ -15,15 +15,10 @@ import {
 import { ItemCommand } from './test-provider/types';
 import { enabledWorkspaceFolders } from './workspace-manager';
 import { VirtualFolderBasedCache } from './virtual-workspace-folder';
+import { updateSetting } from './Settings';
 
 export type GetJestExtByURI = (uri: vscode.Uri) => JestExt[];
 
-export function addFolderToDisabledWorkspaceFolders(folder: string): void {
-  const config = vscode.workspace.getConfiguration('jest');
-  const disabledWorkspaceFolders = new Set(config.get<string[]>('disabledWorkspaceFolders') ?? []);
-  disabledWorkspaceFolders.add(folder);
-  config.update('disabledWorkspaceFolders', [...disabledWorkspaceFolders]);
-}
 
 export type RegisterCommand =
   | {
@@ -153,12 +148,13 @@ export class ExtensionManager {
   public getByDocUri: GetJestExtByURI = (uri: vscode.Uri): JestExt[] => {
     return this.extCache.findRelatedItems(uri) ?? [];
   };
-  private getExtensionsByFolder(folder: vscode.WorkspaceFolder): JestExt[] {
-    const ext = this.extCache.getItemByFolderName(folder.name);
+  private getExtensionsByFolder(folder: vscode.WorkspaceFolder | string): JestExt[] {
+    const name = typeof folder === 'string' ? folder : folder.name;
+    const ext = this.extCache.getItemByFolderName(name);
     if (ext) {
       return [ext];
     }
-    return this.extCache.getItemsByActualFolderName(folder.name) ?? [];
+    return this.extCache.getItemsByActualFolderName(name) ?? [];
   }
 
   async selectExtension(fromExtensions?: JestExt[]): Promise<JestExt | undefined> {
@@ -215,7 +211,7 @@ export class ExtensionManager {
       case 'workspace': {
         return vscode.commands.registerCommand(
           commandName,
-          async (workspace: vscode.WorkspaceFolder, ...args) => {
+          async (workspace: vscode.WorkspaceFolder | string, ...args) => {
             const extensions = this.getExtensionsByFolder(workspace);
             let ext;
             if (extensions.length > 1) {
@@ -432,6 +428,32 @@ export class ExtensionManager {
         name: 'exit-defer-mode',
         callback: (extension, ...args) => {
           extension.exitDeferMode(...args);
+        },
+      }),
+      this.registerCommand({
+        type: 'workspace',
+        name: 'setup-extension',
+        callback: (extension, ...args) => {
+          extension.setupExtensionForFolder(...args);
+        },
+      }),
+      this.registerCommand({
+        type: 'workspace',
+        name: 'disable',
+        callback: async (extension) => {
+          const success = await updateSetting(extension.workspaceFolder, 'enable', false);
+          if (success) {
+            this.applySettings();
+          }
+        },
+      }),
+      this.registerCommand({
+        type: 'workspace',
+        name: 'outputActionMessages',
+        callback: (extension, ...args) => {
+          extension.outputActionMessages(
+            ...(args as Parameters<typeof JestExt.prototype.outputActionMessages>)
+          );
         },
       }),
 

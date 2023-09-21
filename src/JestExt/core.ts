@@ -39,11 +39,10 @@ import { WizardTaskId } from '../setup-wizard';
 import { ItemCommand, JestExtExplorerContext } from '../test-provider/types';
 import { JestTestProvider } from '../test-provider';
 import { JestProcessInfo } from '../JestProcessManagement';
-import { addFolderToDisabledWorkspaceFolders } from '../extension-manager';
-import { MessageAction } from '../messaging';
 import { getExitErrorDef } from '../errors';
 import { WorkspaceManager, isInFolder } from '../workspace-manager';
-import { ansiEsc, JestOutputTerminal } from './output-terminal';
+import { ansiEsc, JestExtOutput, JestOutputTerminal } from './output-terminal';
+import { executableTerminalLinkProvider } from '../terminal-link-provider';
 
 interface RunTestPickItem extends vscode.QuickPickItem {
   id: DebugTestIdentifier;
@@ -53,6 +52,7 @@ type MessageActionType =
   | 'help'
   | 'wizard'
   | 'disable-folder'
+  | 'defer'
   | 'help-long-run'
   | 'setup-cmdline'
   | 'setup-monorepo';
@@ -61,8 +61,6 @@ interface JestCommandSettings {
   rootPath: string;
   jestCommandLine: string;
 }
-
-const RunStartEvents: JestRunEvent['type'][] = ['start', 'process-start'];
 
 /** extract lines starts and end with [] */
 export class JestExt {
@@ -184,27 +182,16 @@ export class JestExt {
       debugTests: this.debugTests,
     };
   }
-  private setupWizardAction(taskId?: WizardTaskId): messaging.MessageAction {
+
+  public setupExtensionForFolder(args?: { taskId: WizardTaskId }): Thenable<void> {
     const command = `${extensionName}.setup-extension`;
-    return {
-      title: 'Fix',
-      action: (): unknown =>
-        vscode.commands.executeCommand(command, {
-          workspace: this.extContext.workspace,
-          taskId,
-          verbose: this.extContext.settings.debugMode,
-        }),
-    };
+    return vscode.commands.executeCommand(command, {
+      workspace: this.extContext.workspace,
+      taskId: args?.taskId,
+      verbose: this.extContext.settings.debugMode,
+    });
   }
 
-  private setupIgnoreAction(): messaging.MessageAction {
-    return {
-      title: 'Ignore Folder',
-      action: (): void => {
-        addFolderToDisabledWorkspaceFolders(this.extContext.workspace.name);
-      },
-    };
-  }
   private longRunMessage(event: Extract<JestRunEvent, { type: 'long-run' }>): string {
     const messages = [`Long Running Tests Warning: Jest process "${event.process.request.type}"`];
     if (event.numTotalTestSuites != null) {
@@ -215,19 +202,21 @@ export class JestExt {
     return messages.join(' ');
   }
 
+  private enableOutputOnRun(): void {
+    if (
+      !this.extContext.settings.runMode.config.revealOutput ||
+      this.extContext.settings.runMode.config.revealOutput === 'on-run'
+    ) {
+      this.output.enable();
+    }
+  }
   private setupRunEvents(events: JestSessionEvents): void {
     events.onRunEvent.event((event: JestRunEvent) => {
       // only process the test running event
       if (event.process.request.type === 'not-test') {
         return;
       }
-      // handle output
-      if (
-        this.extContext.settings.runMode.config.revealOutput === 'on-run' &&
-        RunStartEvents.includes(event.type)
-      ) {
-        this.output.enable();
-      }
+      this.enableOutputOnRun();
 
       switch (event.type) {
         case 'start': {
@@ -242,10 +231,16 @@ export class JestExt {
         case 'exit':
           if (event.error) {
             this.updateStatusBar({ state: 'exec-error' });
-            messaging.systemErrorMessage(
-              prefixWorkspace(this.extContext, event.error),
-              ...this.buildMessageActions(['wizard', 'disable-folder', 'help'])
-            );
+            if (!event.process.userData?.errorReported) {
+              this.outputActionMessages(
+                'Jest process exited unexpectedly',
+                this.extContext.output,
+                ['wizard', 'defer', 'disable-folder', 'help'],
+                true,
+                event.error
+              );
+              event.process.userData = { ...(event.process.userData ?? {}), errorReported: true };
+            }
           } else {
             this.updateStatusBar({ state: 'done' });
           }
@@ -257,43 +252,91 @@ export class JestExt {
           break;
         }
         case 'long-run': {
-          const msg = prefixWorkspace(this.extContext, this.longRunMessage(event));
-          messaging.systemWarningMessage(msg, ...this.buildMessageActions(['help-long-run']));
-          this.logging('warn', msg);
+          this.outputActionMessages(
+            this.longRunMessage(event),
+            this.extContext.output,
+            ['help-long-run'],
+            false
+          );
           break;
         }
       }
     });
   }
 
-  private buildMessageActions = (types: MessageActionType[]): MessageAction[] => {
-    const actions: MessageAction[] = [];
+  public outputActionMessages = (
+    errorMessage: string,
+    output: JestExtOutput = this.extContext.output,
+    actionTypes: MessageActionType[] = ['wizard', 'defer', 'disable-folder', 'help'],
+    isError = true,
+    extra?: unknown
+  ): void => {
+    const msg = prefixWorkspace(this.extContext, errorMessage);
+    this.logging(isError ? 'error' : 'warn', `${msg}:`, extra);
+    output.write(errorMessage, isError ? 'error' : 'new-line');
+    output.write('\r\n-------\r\n\r\n');
+    output.write('Quick Fix Options:\r\n', 'bold');
+    const actionMessages = this.buildActionMessages(actionTypes).map(
+      (msg, idx) => `${idx + 1}. ${msg}`
+    );
+    output.write(actionMessages.join('\r\n\r\n'), 'new-line');
+    output.write('\r\n-------\r\n');
+  };
+
+  private buildActionMessages = (types: MessageActionType[]): string[] => {
+    const setupToolLink = (taskId?: WizardTaskId): string => {
+      const prefix = 'Customize extension if you can run jest via CLI but not via the extension';
+      const link = executableTerminalLinkProvider.executableLink(
+        this.extContext.workspace.name,
+        `${extensionName}.with-workspace.setup-extension`,
+        taskId && { taskId }
+      );
+      return `${prefix} \u2192 ${link}`;
+    };
+    const disableFolderLink = executableTerminalLinkProvider.executableLink(
+      this.extContext.workspace.name,
+      `${extensionName}.with-workspace.disable`
+    );
+    const changeRunModeLink = executableTerminalLinkProvider.executableLink(
+      this.extContext.workspace.name,
+      `${extensionName}.with-workspace.change-run-mode`
+    );
+
+    const messages: string[] = [];
     for (const t of types) {
       switch (t) {
         case 'help':
-          actions.push(messaging.showTroubleshootingAction);
+          messages.push(`See general Troubleshooting: ${messaging.TROUBLESHOOTING_URL}`);
           break;
         case 'wizard':
-          actions.push(this.setupWizardAction());
+          messages.push(setupToolLink());
           break;
         case 'setup-cmdline':
-          actions.push(this.setupWizardAction('cmdLine'));
+          messages.push(setupToolLink('cmdLine'));
           break;
         case 'setup-monorepo':
-          actions.push(this.setupWizardAction('monorepo'));
+          messages.push(setupToolLink('monorepo'));
           break;
         case 'disable-folder':
-          if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 1) {
-            actions.push(this.setupIgnoreAction());
-          }
+          messages.push(
+            `Disable the extension if you don't intend to run jest in this folder ever \u2192 ${disableFolderLink}`
+          );
+          break;
+        case 'defer':
+          messages.push(
+            `Defer or change the runMode if you are not ready to run jest yet \u2192 ${changeRunModeLink}`
+          );
           break;
         case 'help-long-run':
-          actions.push(messaging.showLongRunTroubleshootingAction);
+          messages.push(
+            `See LongRun Troubleshooting \u2192 ${messaging.LONG_RUN_TROUBLESHOOTING_URL}`
+          );
           break;
       }
     }
-    return actions;
+    return messages;
   };
+
   private createProcessSession(): ProcessSession {
     const sessionContext = {
       ...this.extContext,
@@ -319,6 +362,10 @@ export class JestExt {
         this.testProvider?.dispose();
         this.testProvider = new JestTestProvider(this.getExtExplorerContext());
         this.resetStatusBar();
+
+        vscode.window.visibleTextEditors.forEach((editor) => {
+          this.triggerUpdateActiveEditor(editor);
+        });
         return;
       }
       const readyState = await this.validateJestCommandLine();
@@ -344,17 +391,19 @@ export class JestExt {
 
       await this.updateTestFileList();
 
-      if (vscode.window.activeTextEditor) {
-        this.triggerUpdateActiveEditor(vscode.window.activeTextEditor);
-      }
+      // update visible editors that belong to this folder
+      vscode.window.visibleTextEditors.forEach((editor) => {
+        this.triggerUpdateActiveEditor(editor);
+      });
     } catch (e) {
-      const msg = prefixWorkspace(this.extContext, 'Failed to start jest session');
-      this.logging('error', `${msg}:`, e);
-      this.extContext.output.write('Failed to start jest session', 'error');
-      messaging.systemErrorMessage(
-        `${msg}...`,
-        ...this.buildMessageActions(['wizard', 'disable-folder', 'help'])
+      this.outputActionMessages(
+        'Failed to start jest session',
+        this.extContext.output,
+        ['wizard', 'defer', 'disable-folder', 'help'],
+        true,
+        e
       );
+      this.updateStatusBar({ state: 'exec-error' });
     }
   }
 
@@ -369,10 +418,14 @@ export class JestExt {
 
       this.updateStatusBar({ state: 'stopped' });
     } catch (e) {
-      const msg = prefixWorkspace(this.extContext, 'Failed to stop jest session');
-      this.logging('error', `${msg}:`, e);
-      this.extContext.output.write('Failed to stop jest session', 'error');
-      messaging.systemErrorMessage('${msg}...', ...this.buildMessageActions(['help']));
+      this.outputActionMessages(
+        'Failed to stop jest session',
+        this.extContext.output,
+        ['defer', 'disable-folder', 'help'],
+        true,
+        e
+      );
+      this.updateStatusBar({ state: 'exec-error' });
     }
   }
 
@@ -560,11 +613,12 @@ export class JestExt {
       }
     }
 
-    messaging.systemErrorMessage(
-      prefixWorkspace(this.extContext, msg),
-      ...this.buildMessageActions([actionType, 'disable-folder', 'help'])
+    this.outputActionMessages(
+      msg,
+      this.extContext.output,
+      [actionType, 'defer', 'disable-folder', 'help'],
+      true
     );
-    this.extContext.output.write(`Abort jest session: ${msg}`, 'error');
     this.updateStatusBar({ state: 'exec-error' });
     return 'fail';
   }
@@ -675,6 +729,7 @@ export class JestExt {
     await vscode.debug.startDebugging(this.extContext.workspace, debugConfig);
   };
   public async runAllTests(editor?: vscode.TextEditor): Promise<void> {
+    this.enableOutputOnRun();
     await this.exitDeferMode();
 
     if (!editor) {
@@ -849,11 +904,23 @@ export class JestExt {
   }
   // exit defer runMode
   async exitDeferMode(trigger?: TestExplorerRunRequest): Promise<void> {
+    if (trigger) {
+      this.enableOutputOnRun();
+    }
     if (this.extContext.settings.runMode.config.deferred) {
       this.extContext.settings.runMode.exitDeferMode();
+      this.extContext.output.write('exit defer mode', 'info');
       await this.triggerUpdateSettings(this.extContext.settings);
-      if (trigger) {
-        return this.testProvider?.runTests(trigger.request, trigger.token);
+      if (trigger && this.testProvider) {
+        try {
+          await this.testProvider.runTests(trigger.request, trigger.token, true);
+        } catch (e) {
+          this.logging('error', 'failed to resume runs prior to defer mode', e);
+          this.extContext.output.write(
+            'failed to resume runs prior to defer mode, you might need to trigger the run again',
+            'error'
+          );
+        }
       }
     }
   }
@@ -871,6 +938,7 @@ export class JestExt {
     }
   }
   async runItemCommand(testItem: vscode.TestItem, itemCommand: ItemCommand): Promise<void> {
+    this.enableOutputOnRun();
     await this.exitDeferMode();
     return this.testProvider?.runItemCommand(testItem, itemCommand);
   }

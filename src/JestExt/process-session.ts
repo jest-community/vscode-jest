@@ -6,6 +6,7 @@ import {
   requestString,
   JestProcessInfo,
   JestProcessRequestTransform,
+  UserDataType,
 } from '../JestProcessManagement';
 import { JestTestProcessType } from '../Settings';
 import { RunTestListener, ListTestFileListener } from './process-listeners';
@@ -68,7 +69,8 @@ export interface ProcessSession {
   start: () => Promise<void>;
   stop: () => Promise<void>;
   scheduleProcess: <T extends JestExtRequestType = JestExtRequestType>(
-    request: T
+    request: T,
+    userData?: UserDataType
   ) => JestProcessInfo | undefined;
 }
 export interface ListenerSession {
@@ -88,13 +90,14 @@ export const createProcessSession = (context: JestExtProcessContext): ProcessSes
    * @param stopRunning if true, will stop and remove processes with the same type, default is false
    */
   const scheduleProcess = <T extends JestExtRequestType = JestExtRequestType>(
-    request: T
+    request: T,
+    userData?: UserDataType
   ): JestProcessInfo | undefined => {
     logging('debug', `scheduling jest process: ${request.type}`);
     try {
       const pRequest = createProcessRequest(request);
 
-      const process = jestProcessManager.scheduleJestProcess(pRequest);
+      const process = jestProcessManager.scheduleJestProcess(pRequest, userData);
       if (!process) {
         logging('warn', `request schedule failed: ${requestString(pRequest)}`);
         return;

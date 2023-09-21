@@ -1,15 +1,23 @@
 import { RunnerEvent } from 'jest-editor-support';
 import { JestTestProcessType } from '../Settings';
 import { JestProcess } from './JestProcess';
+import { JestTestRun } from '../test-provider/test-provider-helper';
 
 export type JestProcessEvent = RunnerEvent | 'processStarting';
 export interface JestProcessListener {
   onEvent: (process: JestProcess, event: JestProcessEvent, ...args: unknown[]) => unknown;
 }
 export type JestProcessStatus = 'pending' | 'running' | 'stopping' | 'stopped';
+export interface UserDataType {
+  run?: JestTestRun;
+  errorReported?: boolean;
+}
 export interface JestProcessInfo {
   readonly id: string;
   readonly request: JestProcessRequest;
+  // user data is a way to store data that is outside of the process managed by the processManager.
+  // subsequent use of this data is up to the user but should be aware that multiple components might contribute to this data.
+  userData?: UserDataType;
 }
 
 export type TaskStatus = 'running' | 'pending';

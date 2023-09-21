@@ -134,15 +134,18 @@ export class JestTestProvider {
     return Promise.resolve();
   };
 
+  /**
+   * Runs tests for the given test run request.
+   * @param request - The test run request.
+   * @param cancelToken - Optional cancellation token.
+   * @param refreshRequest - Whether to rebuild the request based on current test tree. Defaults to false.
+   * @returns A promise that resolves when all tests have been run.
+   */
   runTests = async (
     request: vscode.TestRunRequest,
-    cancelToken: vscode.CancellationToken
+    cancelToken?: vscode.CancellationToken,
+    refreshRequest = false
   ): Promise<void> => {
-    if (!request.profile) {
-      const message = 'not supporting runRequest without profile';
-      this.log('error', message, request);
-      return Promise.reject(message);
-    }
     if (this.context.ext.settings.runMode.config.deferred) {
       return vscode.commands.executeCommand(
         `${extensionName}.with-workspace.exit-defer-mode`,
@@ -150,21 +153,25 @@ export class JestTestProvider {
         { request, cancelToken }
       );
     }
-    const run = this.context.createTestRun(request, { name: this.controller.id });
-    const tests = (request.include ?? this.getAllItems()).filter(
-      (t) => !request.exclude?.includes(t)
-    );
+    const req = refreshRequest ? this.context.requestFrom(request) : request;
+    if (!req.profile) {
+      const message = 'not supporting runRequest without profile';
+      this.log('error', message, request);
+      return Promise.reject(message);
+    }
+
+    const run = this.context.createTestRun(req, { name: this.controller.id });
+    const tests = (req.include ?? this.getAllItems()).filter((t) => !req.exclude?.includes(t));
 
     const promises: Promise<void>[] = [];
     try {
       for (const test of tests) {
         const tData = this.context.getData(test);
-        if (!tData || cancelToken.isCancellationRequested) {
+        if (!tData || cancelToken?.isCancellationRequested) {
           run.skipped(test);
           continue;
         }
-        this.log('debug', `executing profile: "${request.profile.label}" for ${test.id}...`);
-        if (request.profile.kind === vscode.TestRunProfileKind.Debug) {
+        if (req.profile.kind === vscode.TestRunProfileKind.Debug) {
           await this.debugTest(tData, run);
         } else {
           promises.push(
@@ -186,7 +193,7 @@ export class JestTestProvider {
         }
       }
     } catch (e) {
-      const msg = `failed to execute profile "${request.profile.label}": ${JSON.stringify(e)}`;
+      const msg = `failed to execute profile "${req.profile.label}": ${e}`;
       run.write(msg, 'error');
     }
 

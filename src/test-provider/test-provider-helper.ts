@@ -92,6 +92,45 @@ export class JestTestProviderContext {
     }
     return tag;
   };
+
+  /**
+   * Create a new request based on the given one, which could be based on outdated data.
+   * This is mainly used to support deferred mode: when the request is created during deferred mode on, it will need to be updated with new test items after existing deferred mode because the test tree has been rebuilt.
+   * @param request
+   * @returns
+   */
+  requestFrom = (request: vscode.TestRunRequest): vscode.TestRunRequest => {
+    const findItem = (item: vscode.TestItem, collection: vscode.TestItemCollection) => {
+      let found = collection.get(item.id);
+      if (!found) {
+        collection.forEach((cItem) => {
+          if (!found && cItem.children) {
+            found = findItem(item, cItem.children);
+          }
+        });
+      }
+      return found;
+    };
+    const mapItems = (items?: readonly vscode.TestItem[]) =>
+      items &&
+      items.map((i) => {
+        const found = findItem(i, this.controller.items);
+        if (found) {
+          return found;
+        }
+        throw new Error(`failed to find item ${i.id}`);
+      });
+
+    const include = mapItems(request.include);
+    const exclude = mapItems(request.exclude);
+    const profile =
+      request.profile && this.profiles.find((p) => p.label === request.profile?.label);
+    if (request.profile && !profile) {
+      throw new Error(`failed to find profile ${request.profile.label}`);
+    }
+
+    return new vscode.TestRunRequest(include, exclude, profile);
+  };
 }
 
 export interface JestTestRunOptions {

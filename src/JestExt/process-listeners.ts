@@ -356,11 +356,14 @@ export class RunTestListener extends AbstractProcessListener {
 
   protected onProcessClose(process: JestProcess, code?: number, signal?: string): void {
     this.runEnded();
-    const error = this.handleWatchProcessCrash(process);
+    let error = this.handleWatchProcessCrash(process);
 
     if (code && code > 1) {
       if (this.retryWithLoginShell(process, code, signal)) {
         return;
+      }
+      if (!error) {
+        error = `process ${process.id} exited with code= ${code}`;
       }
     }
     this.onRunEvent.fire({ type: 'exit', process, error, code });

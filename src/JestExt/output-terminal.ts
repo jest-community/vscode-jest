@@ -208,16 +208,13 @@ const applyAnsiSeq = (text: string, opt: OutputOptionShort, useLite = false): st
   }
 };
 
-export const toAnsi = (msg: string, options?: OutputOptions): string =>
-  _toAnsi(msg, options, false);
-const _toAnsi = (msg: string, options?: OutputOptions, useLite = false): string => {
+export const toAnsi = (msg: string, options?: OutputOptions, useLite = false): string => {
   let text = msg.replace(/\n/g, '\r\n');
   if (!options) {
     return text;
   }
   if (Array.isArray(options)) {
-    const _useLite = useLite || options.includes('lite');
-    return options.reduce((t, opt) => _toAnsi(t, opt, _useLite), msg);
+    return options.reduce((t, opt) => toAnsi(t, opt, useLite || options.includes('lite')), msg);
   }
 
   if (typeof options === 'string') {
