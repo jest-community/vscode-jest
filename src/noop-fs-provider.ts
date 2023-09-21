@@ -1,7 +1,6 @@
 /* istanbul ignore file */
 /* eslint-disable @typescript-eslint/no-empty-function */
 import * as vscode from 'vscode';
-import { extensionName } from './appGlobals';
 
 /**
  * This class is a dummy file system provider, which is used to silence the default file system provider
@@ -9,7 +8,7 @@ import { extensionName } from './appGlobals';
  */
 
 export class NoOpFileSystemProvider implements vscode.FileSystemProvider {
-  public static scheme = `${extensionName}-noop`;
+  public static scheme = `vscode-jest-noop`;
   private _onDidChangeFile: vscode.EventEmitter<vscode.FileChangeEvent[]> =
     new vscode.EventEmitter();
   readonly onDidChangeFile: vscode.Event<vscode.FileChangeEvent[]> = this._onDidChangeFile.event;

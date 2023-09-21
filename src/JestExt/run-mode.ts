@@ -209,6 +209,9 @@ export class RunMode {
       const deferredIcon = mode.deferred
         ? vscode.Uri.file(context.asAbsolutePath('icons/pause-on-20.svg'))
         : new vscode.ThemeIcon('debug-pause');
+      const runModeSchemaUri = vscode.Uri.file(
+        context.asAbsolutePath('syntaxes/jestRunModeSchema.json')
+      );
       const deferredButton = {
         iconPath: deferredIcon,
         tooltip: `toggle deferred ${mode.deferred ? 'off' : 'on'}`,
@@ -221,8 +224,8 @@ export class RunMode {
         iconPath: new vscode.ThemeIcon('edit'),
         tooltip: `edit the runMode`,
         action: async () => {
-          const edited = await runModeEditor.edit(mode);
-          return edited ?? mode;
+          const edited = await runModeEditor.edit(mode, runModeSchemaUri);
+          return edited ? this.toRunMode(edited) : mode;
         },
       };
 
@@ -319,19 +322,27 @@ const showRunModeQuickPick = async (
       const item = e.item;
       if (item) {
         active = item;
-        quickPick.activeItems = [item];
+        quickPick.activeItems = [active];
 
         const m = await (e.button as RunModeQuickPickButton).action();
-        item.mode = m;
-        item.buttons = itemButtons(item.mode);
+        const found = items.find((item) => item.mode.type === m.type);
+        if (!found) {
+          vscode.window.showErrorMessage(`Disregard changes: invalid runMode type: ${m.type}.`);
+          return;
+        }
+        // active might have changed, so we need to update it
+        active = found;
+        quickPick.activeItems = [active];
+
+        found.mode = m;
+        found.buttons = itemButtons(found.mode);
         quickPick.items = [...items];
 
         // hack to fix the active item not showing up after items being reset
         // see issue: https://github.com/microsoft/vscode/issues/75005
         fixActiveHack = 2;
 
-        quickPick.activeItems = [item];
-        // quickPick.selectedItems = [item];
+        quickPick.activeItems = [active];
       }
     });
     quickPick.onDidChangeActive(() => {
@@ -358,6 +369,12 @@ const showRunModeQuickPick = async (
   });
 };
 
+const RunModeEditInstruction = `
+// Save the file to accept the change.
+// close without saving to cancel the change.
+// RunMode reference: https://github.com/jest-community/vscode-jest/blob/master/README.md#runmode
+`;
+
 class RunModeEditor {
   // private doc?: vscode.TextDocument;
   private disposables: vscode.Disposable[] = [];
@@ -367,16 +384,14 @@ class RunModeEditor {
     this.disposables.forEach((d) => d.dispose());
     this.disposables = [];
   };
-  async edit(config: JestRunMode): Promise<JestRunMode | undefined> {
-    const content = `
-// Save the file to accept the change.
-// close without saving to cancel the change.
-// RunMode reference: https://github.com/jest-community/vscode-jest/blob/master/README.md#runmode
-
-${JSON.stringify(config, null, 4)}
-`;
-    // noOpFileSystemProvider.content = content;
+  async edit(config: JestRunMode, schemaUri: vscode.Uri): Promise<JestRunModeSetting | undefined> {
     this.dispose();
+
+    const jsonObject = {
+      $schema: schemaUri.toString(),
+      'jest.runMode': config,
+    };
+    const content = RunModeEditInstruction + JSON.stringify(jsonObject, null, 4);
 
     const doc = await vscode.workspace.openTextDocument(this.docUri);
     await vscode.languages.setTextDocumentLanguage(doc, 'jsonc');
@@ -394,17 +409,22 @@ ${JSON.stringify(config, null, 4)}
     await doc.save();
 
     return new Promise((resolve) => {
-      let edited: JestRunMode | undefined;
+      let edited: JestRunModeSetting | undefined;
 
       this.disposables.push(
         vscode.workspace.onDidSaveTextDocument((document) => {
           if (document === doc) {
             try {
               // Remove the comments from the document text
-              const jsonText = document.getText().replace(/\/\/.*\n/g, '');
+              let jsonText = document.getText();
+              jsonText = jsonText.slice(jsonText.indexOf('{'));
+              if (!jsonText) {
+                throw new Error('not finding json object open bracket');
+              }
 
               // Parse the JSON content to validate it
-              edited = JSON.parse(jsonText);
+              const jsonObject = JSON.parse(jsonText);
+              edited = jsonObject['jest.runMode'];
               resolve(edited);
               this.dispose();
 

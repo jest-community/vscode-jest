@@ -203,13 +203,82 @@
           "default": null
         },
         "jest.runMode": {
-          "markdownDescription": "Control when tests should be run and what corresponding pre-process should be performed. See details in [runMode](https://github.com/jest-community/vscode-jest#runmode)",
-          "type": [
-            "string",
-            "object"
-          ],
+          "markdownDescription": "Control when and how jest tests should be run. See details in [runMode](https://github.com/jest-community/vscode-jest#runmode)",
           "default": null,
-          "scope": "resource"
+          "scope": "resource",
+          "oneOf": [
+            {
+              "type": "string",
+              "enum": [
+                "watch",
+                "manual",
+                "on-save",
+                "deferred"
+              ],
+              "markdownDescription": "A predefined Jest run mode. See details in [runMode](https://github.com/jest-community/vscode-jest#runmode)"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "watch",
+                    "manual",
+                    "on-save"
+                  ],
+                  "description": "Specifies the jest run mode type."
+                },
+                "runAllTestsOnStartup": {
+                  "type": "boolean",
+                  "description": "Specifies whether to run all tests on startup."
+                },
+                "coverage": {
+                  "type": "boolean",
+                  "description": "Specifies whether to collect and report coverage information."
+                },
+                "revealOutput": {
+                  "type": "string",
+                  "enum": [
+                    "on-run",
+                    "on-exec-error",
+                    "manual"
+                  ],
+                  "description": "Determines when to reveal the test run output."
+                },
+                "deferred": {
+                  "type": "boolean",
+                  "description": "Specifies whether the run mode is deferred."
+                }
+              },
+              "required": ["type"],
+              "additionalProperties": true,
+              "if": {
+                "properties": {
+                  "type": {
+                    "const": "on-save"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "testFileOnly": {
+                    "type": "boolean",
+                    "description": "if true, will run tests only when saving test files."
+                  }
+                },
+                "additionalProperties":true 
+              },
+              "else": {
+                "not": {
+                  "required": ["testFileOnly"]
+                },
+                "errorMessage": "The property 'testFileOnly' should only be present when 'type' is 'on-save'.",
+                "additionalProperties":true 
+              },
+              "markdownDescription": "A detailed runMode configuration. See details in [runMode](https://github.com/jest-community/vscode-jest#runmode)"
+            }
+          ]
         }
       }
     },

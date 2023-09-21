@@ -19,7 +19,6 @@ import { updateSetting } from './Settings';
 
 export type GetJestExtByURI = (uri: vscode.Uri) => JestExt[];
 
-
 export type RegisterCommand =
   | {
       type: 'all-workspaces';
