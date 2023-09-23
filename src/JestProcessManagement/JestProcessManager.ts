@@ -10,14 +10,14 @@ import {
 import { Logging } from '../logging';
 import { createTaskQueue, TaskQueue } from './task-queue';
 import { isDupe, requestString } from './helper';
-import { JestExtContext } from '../JestExt';
+import { JestExtProcessContext } from '../JestExt';
 
 export class JestProcessManager implements TaskArrayFunctions<JestProcess> {
-  private extContext: JestExtContext;
+  private extContext: JestExtProcessContext;
   private queues: Map<QueueType, TaskQueue<JestProcess>>;
   private logging: Logging;
 
-  constructor(extContext: JestExtContext) {
+  constructor(extContext: JestExtProcessContext) {
     this.extContext = extContext;
     this.logging = extContext.loggingFactory.create('JestProcessManager');
     this.queues = new Map([
@@ -82,8 +82,14 @@ export class JestProcessManager implements TaskArrayFunctions<JestProcess> {
 
     try {
       await process.start();
+      this.extContext.onRunEvent.fire({ type: 'process-start', process });
     } catch (e) {
       this.logging('error', `${queue.name}: process failed:`, process, e);
+      this.extContext.onRunEvent.fire({
+        type: 'exit',
+        process,
+        error: `Process failed to start: ${e}`,
+      });
     } finally {
       queue.remove(task);
     }

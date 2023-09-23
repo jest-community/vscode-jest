@@ -160,7 +160,7 @@ export class JestTestRun implements JestExtOutput, TestRunProtocol {
   private parentRun?: ParentRun;
 
   constructor(
-    context: JestTestProviderContext,
+    private context: JestTestProviderContext,
     parentRun: ParentRun,
     private options?: JestTestRunOptions
   ) {
@@ -211,14 +211,16 @@ export class JestTestRun implements JestExtOutput, TestRunProtocol {
     message: vscode.TestMessage | readonly vscode.TestMessage[],
     duration?: number | undefined
   ): void => {
-    this.updateState((pRun) => pRun.errored(test, message, duration));
+    const _msg = this.context.ext.settings.testExplorer.showInlineError ? message : [];
+    this.updateState((pRun) => pRun.errored(test, _msg, duration));
   };
   public failed = (
     test: vscode.TestItem,
     message: vscode.TestMessage | readonly vscode.TestMessage[],
     duration?: number | undefined
   ): void => {
-    this.updateState((pRun) => pRun.failed(test, message, duration));
+    const _msg = this.context.ext.settings.testExplorer.showInlineError ? message : [];
+    this.updateState((pRun) => pRun.failed(test, _msg, duration));
   };
   public passed = (test: vscode.TestItem, duration?: number | undefined): void => {
     this.updateState((pRun) => pRun.passed(test, duration));

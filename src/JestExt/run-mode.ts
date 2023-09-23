@@ -20,9 +20,6 @@ interface RunModeQuickPickItem extends vscode.QuickPickItem {
 interface RunModeQuickPickButton extends vscode.QuickInputButton {
   action: () => Promise<JestRunMode>;
 }
-// export interface RunModeQuickSwitchOptions {
-//   preserveCoverage?: boolean;
-// }
 
 export interface RunModeIcon {
   icon: string;
@@ -38,17 +35,14 @@ export const RunModeIcons: Record<string, RunModeIcon> = {
   watch: { icon: '$(eye)', label: 'watch' },
   'on-save': { icon: '$(save-all)', label: 'on-save' },
   'on-save-test-file-only': { icon: '$(save)', label: 'on-save-test-file-only' },
-  manual: { icon: '$(run)', label: 'manual' },
+  'on-demand': { icon: '$(run)', label: 'on-demand' },
   coverage: { icon: '$(color-mode)', label: 'coverage' },
   deferred: { icon: '$(debug-pause)', label: 'deferred' },
 };
 
 export class RunMode {
   private _config: JestRunMode;
-  // indicate if the runMode.type is changed
-  public isModified = false;
-
-  // altConfig is used to store the user's runtime config, if different from the original config
+  private _isModified = false;
 
   constructor(
     private setting?: JestRunMode | JestRunModeType | null,
@@ -63,15 +57,18 @@ export class RunMode {
   public get config(): Readonly<JestRunMode> {
     return this._config;
   }
+  public get isModified(): Readonly<boolean> {
+    return this._isModified;
+  }
 
   public exitDeferMode() {
     this._config.deferred = false;
-    this.isModified = true;
+    this._isModified = true;
   }
 
   public toggleCoverage() {
     this._config.coverage = !this._config.coverage;
-    this.isModified = true;
+    this._isModified = true;
   }
 
   private getDefaultRunMode(setting: JestPredefinedRunModeType): JestRunMode {
@@ -80,11 +77,11 @@ export class RunMode {
         return { type: 'watch', revealOutput: 'on-run' };
       case 'on-save':
         return { type: 'on-save', revealOutput: 'on-run' };
-      case 'manual':
-        return { type: 'manual', revealOutput: 'on-run' };
+      case 'on-demand':
+        return { type: 'on-demand', revealOutput: 'on-run' };
       case 'deferred':
         return {
-          ...this.getDefaultRunMode('manual'),
+          ...this.getDefaultRunMode('on-demand'),
           deferred: true,
         };
       default: {
@@ -108,7 +105,7 @@ export class RunMode {
           runMode.runAllTestsOnStartup = true;
           break;
         case 'off':
-          runMode = this.getDefaultRunMode('manual');
+          runMode = this.getDefaultRunMode('on-demand');
           break;
         default:
           throw new Error(`invalid autoRun ${setting}`);
@@ -117,7 +114,7 @@ export class RunMode {
       if (setting.watch) {
         runMode = this.getDefaultRunMode('watch');
       } else {
-        runMode = this.getDefaultRunMode('manual');
+        runMode = this.getDefaultRunMode('on-demand');
         if (setting.onSave) {
           runMode = this.getDefaultRunMode('on-save');
           if (runMode.type === 'on-save' && setting.onSave === 'test-file') {
@@ -130,7 +127,7 @@ export class RunMode {
     if ((setting as any).onStartup?.includes('all-tests')) {
       runMode.runAllTestsOnStartup = true;
     }
-    console.log(`"autoRun" is deprecated and replaced by "runMode": ${JSON.stringify(runMode)}`);
+    console.warn(`"autoRun" is deprecated and replaced by "runMode": ${JSON.stringify(runMode)}`);
     return runMode;
   }
   private toRunMode(
@@ -165,7 +162,7 @@ export class RunMode {
             base.revealOutput = legacySettings.autoRevealOutput;
             break;
           case 'off':
-            base.revealOutput = 'manual';
+            base.revealOutput = 'on-demand';
             break;
           default:
             throw new Error(`invalid autoRevealOutput ${legacySettings.autoRevealOutput}`);
@@ -243,7 +240,7 @@ export class RunMode {
       const typeLabel = runModeDescription(mode).type;
 
       return {
-        label: `${typeLabel.icon} ${typeLabel.label}`,
+        label: `${typeLabel.icon} ${mode.type}`,
         description: isCurrent ? '(current)' : undefined,
         isCurrent,
         mode,
@@ -252,11 +249,11 @@ export class RunMode {
     };
 
     // create items
-    const runModeTypes: JestRunModeType[] = ['watch', 'on-save', 'manual'];
+    const runModeTypes: JestRunModeType[] = ['watch', 'on-save', 'on-demand'];
     const items: RunModeQuickPickItem[] = runModeTypes.map((type) => runModeItem(type));
     let restoreOriginalItem: RunModeQuickPickItem | undefined;
 
-    if (this.isModified) {
+    if (this._isModified) {
       const orig = this.toRunMode(this.setting, this.legacySettings);
       restoreOriginalItem = {
         label: '$(sync) Restore original runMode',
@@ -276,9 +273,9 @@ export class RunMode {
     if (pickedItem) {
       const newRunMode = this.clone(pickedItem.mode);
       if (pickedItem === restoreOriginalItem) {
-        newRunMode.isModified = false;
+        newRunMode._isModified = false;
       } else {
-        newRunMode.isModified = true;
+        newRunMode._isModified = true;
       }
       return newRunMode;
     }
@@ -473,7 +470,7 @@ export const runModeDescription = (config: JestRunMode): RunModeDescription => {
   let description: RunModeDescription;
   switch (config.type) {
     case 'watch':
-    case 'manual':
+    case 'on-demand':
       description = { type: RunModeIcons[config.type] };
       break;
     case 'on-save':

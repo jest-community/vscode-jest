@@ -3,9 +3,8 @@ import { JestTestProcessType } from '../Settings';
 import { JestProcess } from './JestProcess';
 import { JestTestRun } from '../test-provider/test-provider-helper';
 
-export type JestProcessEvent = RunnerEvent | 'processStarting';
 export interface JestProcessListener {
-  onEvent: (process: JestProcess, event: JestProcessEvent, ...args: unknown[]) => unknown;
+  onEvent: (process: JestProcess, event: RunnerEvent, ...args: unknown[]) => unknown;
 }
 export type JestProcessStatus = 'pending' | 'running' | 'stopping' | 'stopped';
 export interface UserDataType {

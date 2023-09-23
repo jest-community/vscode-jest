@@ -31,12 +31,12 @@ export type JestExtAutoRunSetting = JestExtAutoRunShortHand | JestExtAutoRunConf
 interface JestRunModeOptions {
   runAllTestsOnStartup?: boolean;
   coverage?: boolean;
-  revealOutput?: 'on-run' | 'on-exec-error' | 'manual';
+  revealOutput?: 'on-run' | 'on-exec-error' | 'on-demand';
   deferred?: boolean;
 }
 export type JestRunMode = (
   | { type: 'watch' }
-  | { type: 'manual' }
+  | { type: 'on-demand' }
   | { type: 'on-save'; testFileOnly?: boolean }
 ) &
   JestRunModeOptions;

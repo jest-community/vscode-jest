@@ -189,7 +189,6 @@ export class JestProcess implements JestProcessInfo {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     this.task = { ...taskInfo!, promise };
 
-    this.request.listener.onEvent(this, 'processStarting');
     runner.start(this.watchMode !== WatchMode.None, this.watchMode === WatchMode.WatchAll);
 
     return promise;

@@ -233,7 +233,7 @@ export class JestExt {
             this.updateStatusBar({ state: 'exec-error' });
             if (!event.process.userData?.errorReported) {
               this.outputActionMessages(
-                'Jest process exited unexpectedly',
+                `Jest process exited unexpectedly: ${event.error}`,
                 this.extContext.output,
                 ['wizard', 'defer', 'disable-folder', 'help'],
                 true,

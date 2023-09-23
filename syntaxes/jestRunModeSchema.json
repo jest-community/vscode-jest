@@ -11,7 +11,7 @@
           "type": "string",
           "enum": [
             "watch",
-            "manual",
+            "on-demand",
             "on-save",
             "deferred"
           ],
@@ -24,7 +24,7 @@
               "type": "string",
               "enum": [
                 "watch",
-                "manual",
+                "on-demand",
                 "on-save"
               ],
               "description": "Specifies the jest run mode type."
@@ -42,7 +42,7 @@
               "enum": [
                 "on-run",
                 "on-exec-error",
-                "manual"
+                "on-demand"
               ],
               "description": "Determines when to reveal the test run output."
             },

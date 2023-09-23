@@ -142,7 +142,7 @@
           "scope": "window"
         },
         "jest.autoRun": {
-          "markdownDescription": "Control when jest should run (changed) tests. It supports multiple models, such as fully automated, fully manual and onSave... See [AutoRun](https://github.com/jest-community/vscode-jest/blob/master/README.md#how-to-trigger-the-test-run) for details and examples",
+          "markdownDescription": "Control when jest should run (changed) tests. It supports multiple models, such as fully automated, onSave, and on-demand... See [AutoRun](https://github.com/jest-community/vscode-jest/blob/master/README.md#how-to-trigger-the-test-run) for details and examples",
           "type": [
             "object",
             "string"
@@ -199,11 +199,14 @@
         },
         "jest.virtualFolders": {
           "markdownDescription": "Allows multiple jest run config for a given (physical) folder. See valid [format](https://github.com/jest-community/vscode-jest#virtualfolders)",
-          "type": "array",
-          "default": null
+          "type": ["array", "null"],
+          "default": null,
+          "items": {
+            "type": "object"
+          }
         },
         "jest.runMode": {
-          "markdownDescription": "Control when and how jest tests should be run. See details in [runMode](https://github.com/jest-community/vscode-jest#runmode)",
+          "markdownDescription": "Control when to run jest tests and present the results. See details in [runMode](https://github.com/jest-community/vscode-jest#runmode)",
           "default": null,
           "scope": "resource",
           "oneOf": [
@@ -211,7 +214,7 @@
               "type": "string",
               "enum": [
                 "watch",
-                "manual",
+                "on-demand",
                 "on-save",
                 "deferred"
               ],
@@ -224,7 +227,7 @@
                   "type": "string",
                   "enum": [
                     "watch",
-                    "manual",
+                    "on-demand",
                     "on-save"
                   ],
                   "description": "Specifies the jest run mode type."
@@ -242,7 +245,7 @@
                   "enum": [
                     "on-run",
                     "on-exec-error",
-                    "manual"
+                    "on-demand"
                   ],
                   "description": "Determines when to reveal the test run output."
                 },

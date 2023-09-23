@@ -558,16 +558,12 @@ abstract class TestResultData extends TestItemDataBase {
         run.skipped(this.item);
         break;
       case 'KnownFail': {
-        if (this.context.ext.settings.testExplorer.showInlineError) {
-          const message = new vscode.TestMessage(result.message);
-          if (errorLocation) {
-            message.location = errorLocation;
-          }
-
-          run.failed(this.item, message);
-        } else {
-          run.failed(this.item, []);
+        const message = new vscode.TestMessage(result.message);
+        if (errorLocation) {
+          message.location = errorLocation;
         }
+
+        run.failed(this.item, message);
         break;
       }
     }
