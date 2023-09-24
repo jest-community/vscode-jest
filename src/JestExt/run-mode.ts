@@ -10,6 +10,8 @@ import {
 } from '../Settings';
 import { NoOpFileSystemProvider } from '../noop-fs-provider';
 
+const runModeTypes: JestRunModeType[] = ['watch', 'on-save', 'on-demand'];
+
 const isJestRunMode = (obj: JestRunModeSetting | null | undefined): obj is JestRunMode =>
   obj != null && typeof obj !== 'string' && 'type' in obj;
 
@@ -42,15 +44,15 @@ export const RunModeIcons: Record<string, RunModeIcon> = {
 
 export class RunMode {
   private _config: JestRunMode;
+  private origConfig: Readonly<JestRunMode>;
   private _isModified = false;
 
   constructor(
-    private setting?: JestRunMode | JestRunModeType | null,
-    private legacySettings?: DeprecatedPluginResourceSettings
+    setting?: JestRunMode | JestRunModeType | null,
+    legacySettings?: DeprecatedPluginResourceSettings
   ) {
     this._config = this.toRunMode(setting, legacySettings);
-
-    console.log(`runMode = ${JSON.stringify(this._config)}`);
+    this.origConfig = { ...this._config };
   }
 
   /** returns readonly config */
@@ -69,6 +71,14 @@ export class RunMode {
   public toggleCoverage() {
     this._config.coverage = !this._config.coverage;
     this._isModified = true;
+  }
+
+  private validate(config: JestRunMode): void {
+    if (!runModeTypes.includes(config.type)) {
+      throw new Error(
+        `Invalid type "${config.type}" in jest.runMode setting: ${JSON.stringify(config)}`
+      );
+    }
   }
 
   private getDefaultRunMode(setting: JestPredefinedRunModeType): JestRunMode {
@@ -135,6 +145,7 @@ export class RunMode {
     legacySettings?: DeprecatedPluginResourceSettings
   ): JestRunMode {
     if (isJestRunMode(setting)) {
+      this.validate(setting);
       return { ...setting };
     }
 
@@ -180,7 +191,7 @@ export class RunMode {
   }
 
   protected clone(config: JestRunMode): RunMode {
-    const newRunMode = new RunMode(this.setting, this.legacySettings);
+    const newRunMode = new RunMode(this.origConfig);
     newRunMode._config = { ...config };
     return newRunMode;
   }
@@ -249,16 +260,14 @@ export class RunMode {
     };
 
     // create items
-    const runModeTypes: JestRunModeType[] = ['watch', 'on-save', 'on-demand'];
     const items: RunModeQuickPickItem[] = runModeTypes.map((type) => runModeItem(type));
     let restoreOriginalItem: RunModeQuickPickItem | undefined;
 
     if (this._isModified) {
-      const orig = this.toRunMode(this.setting, this.legacySettings);
       restoreOriginalItem = {
         label: '$(sync) Restore original runMode',
-        description: ` ("${typeIcon(orig).label}")`,
-        mode: orig,
+        description: ` ("${typeIcon(this.origConfig).label}")`,
+        mode: { ...this.origConfig },
       };
       items.push({ label: '', mode: { type: 'watch' }, kind: vscode.QuickPickItemKind.Separator });
       items.push(restoreOriginalItem);

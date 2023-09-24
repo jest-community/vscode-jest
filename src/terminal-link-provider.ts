@@ -3,18 +3,18 @@ import * as vscode from 'vscode';
 type ExecutableTerminalLink = vscode.TerminalLink & { data: string };
 
 export const ExecutableLinkScheme = 'vscode-jest';
-export type ExecutableLinkArgs = Record<string, string | boolean | number> | undefined;
 
 /**
- * provide terminal links for commands that can be executed in the terminal
- * the link data is a vscode uri with the following format:
+ * provide terminal links for commands that can be executed in the terminal.
+ *
+ * The link data is a vscode uri with the following format:
  * vscode-jest://<folderName>/<command>?<args>
  *
- * both folderName and command should be encoded using encodeURIComponent
- * if there is any args, the command should expect to receive them as an object
+ * Note the folderName, command, and args should be encoded using encodeURIComponent
+ * The args should be a JSON.stringify-able object and the command should expect to receive them accordingly.
  *
  * example:
- * vscode-jest://workspace%20name/io.orta.jest.with-workspace.setup-extension?taskId=cmdLine
+ * vscode-jest://workspace%20name/io.orta.jest.with-workspace.setup-extension
  */
 export class ExecutableTerminalLinkProvider
   implements vscode.TerminalLinkProvider<ExecutableTerminalLink>
@@ -24,26 +24,10 @@ export class ExecutableTerminalLinkProvider
       const uri = vscode.Uri.parse(link.data);
       const folderName = decodeURIComponent(uri.authority);
       const command = decodeURIComponent(uri.path).substring(1);
-
-      let args: ExecutableLinkArgs;
-
-      if (uri.query) {
-        args = Object.fromEntries(new URLSearchParams(uri.query).entries()); // Convert query string to an object
-
-        // Convert string values to appropriate types
-        for (const [key, value] of Object.entries(args)) {
-          if (value === 'true') {
-            args[key] = true;
-          } else if (value === 'false') {
-            args[key] = false;
-          } else if (!isNaN(Number(value))) {
-            args[key] = Number(value);
-          }
-        }
-      }
+      const args = uri.query && JSON.parse(decodeURIComponent(uri.query));
       await vscode.commands.executeCommand(command, folderName, args);
     } catch (error) {
-      vscode.window.showErrorMessage(`Failed to execute command: ${error}`);
+      vscode.window.showErrorMessage(`Failed to handle link "${link.data}": ${error}`);
     }
   }
 
@@ -72,18 +56,24 @@ export class ExecutableTerminalLinkProvider
   register(): vscode.Disposable {
     return vscode.window.registerTerminalLinkProvider(this);
   }
-  public executableLink(folderName: string, command: string, args?: ExecutableLinkArgs): string {
+
+  /**
+   * create a link that can be executed in the terminal
+   * @param folderName
+   * @param command
+   * @param arg any JSON.stringify-able object
+   * @returns
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  public executableLink(folderName: string, command: string, arg?: any): string {
     const baseLink = `${ExecutableLinkScheme}://${encodeURIComponent(
       folderName
     )}/${encodeURIComponent(command)}`;
-    if (!args) {
+    if (!arg) {
       return baseLink;
     }
-    const searchParams = new URLSearchParams();
-    for (const [key, value] of Object.entries(args)) {
-      searchParams.append(key, value.toString());
-    }
-    return baseLink + '?' + searchParams.toString();
+    const encodedQuery = encodeURIComponent(JSON.stringify(arg));
+    return `${baseLink}?${encodedQuery}`;
   }
 }
 

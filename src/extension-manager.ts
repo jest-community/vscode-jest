@@ -16,6 +16,7 @@ import { ItemCommand } from './test-provider/types';
 import { enabledWorkspaceFolders } from './workspace-manager';
 import { VirtualFolderBasedCache } from './virtual-workspace-folder';
 import { updateSetting } from './Settings';
+import { showQuickFix } from './quick-fix';
 
 export type GetJestExtByURI = (uri: vscode.Uri) => JestExt[];
 
@@ -114,14 +115,21 @@ export class ExtensionManager {
       return;
     }
 
-    const jestExt = new JestExt(
-      this.context,
-      workspaceFolder,
-      this.debugConfigurationProvider,
-      this.coverageCodeLensProvider
-    );
-    this.extCache.addItem(jestExt);
-    jestExt.startSession();
+    try {
+      const jestExt = new JestExt(
+        this.context,
+        workspaceFolder,
+        this.debugConfigurationProvider,
+        this.coverageCodeLensProvider
+      );
+      this.extCache.addItem(jestExt);
+      jestExt.startSession();
+    } catch (e) {
+      console.error(`Failed to activate extension for "${workspaceFolder.name}":`, e);
+      vscode.window.showErrorMessage(
+        `Failed to activate extension for "${workspaceFolder.name}": ${e}`
+      );
+    }
   }
 
   deleteExtensionByFolder(workspaceFolder: vscode.WorkspaceFolder): void {
@@ -448,11 +456,9 @@ export class ExtensionManager {
       }),
       this.registerCommand({
         type: 'workspace',
-        name: 'outputActionMessages',
+        name: 'show-quick-fix',
         callback: (extension, ...args) => {
-          extension.outputActionMessages(
-            ...(args as Parameters<typeof JestExt.prototype.outputActionMessages>)
-          );
+          showQuickFix(extension.workspaceFolder.name, args[0]);
         },
       }),
 

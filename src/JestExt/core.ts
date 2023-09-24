@@ -31,7 +31,6 @@ import {
   JestRunEvent,
   DebugTestIdentifier,
 } from './types';
-import * as messaging from '../messaging';
 import { extensionName, SupportedLanguageIds } from '../appGlobals';
 import { createJestExtContext, getExtensionResourceSettings, prefixWorkspace } from './helper';
 import { PluginResourceSettings } from '../Settings';
@@ -41,21 +40,13 @@ import { JestTestProvider } from '../test-provider';
 import { JestProcessInfo } from '../JestProcessManagement';
 import { getExitErrorDef } from '../errors';
 import { WorkspaceManager, isInFolder } from '../workspace-manager';
-import { ansiEsc, JestExtOutput, JestOutputTerminal } from './output-terminal';
+import { ansiEsc, JestOutputTerminal } from './output-terminal';
+import { QuickFixActionType } from '../quick-fix';
 import { executableTerminalLinkProvider } from '../terminal-link-provider';
 
 interface RunTestPickItem extends vscode.QuickPickItem {
   id: DebugTestIdentifier;
 }
-
-type MessageActionType =
-  | 'help'
-  | 'wizard'
-  | 'disable-folder'
-  | 'defer'
-  | 'help-long-run'
-  | 'setup-cmdline'
-  | 'setup-monorepo';
 
 interface JestCommandSettings {
   rootPath: string;
@@ -73,8 +64,6 @@ export class JestExt {
 
   // The ability to show fails in the problems section
   private failDiagnostics: vscode.DiagnosticCollection;
-
-  // We have to keep track of our inline assert fails to remove later
 
   private processSession: ProcessSession;
   private vscodeContext: vscode.ExtensionContext;
@@ -98,9 +87,9 @@ export class JestExt {
     coverageCodeLensProvider: CoverageCodeLensProvider
   ) {
     this.vscodeContext = vscodeContext;
-    const pluginSettings = this.getExtensionResourceSettings(workspaceFolder);
-
     this.output = new JestOutputTerminal(workspaceFolder.name);
+
+    const pluginSettings = this.getExtensionResourceSettings(workspaceFolder);
     this.updateOutputSetting(pluginSettings);
 
     this.extContext = createJestExtContext(workspaceFolder, pluginSettings, this.output);
@@ -162,10 +151,13 @@ export class JestExt {
     workspaceFolder: vscode.WorkspaceFolder
   ): PluginResourceSettings {
     const pluginSettings = getExtensionResourceSettings(workspaceFolder);
-
     if (pluginSettings.enable === false) {
       throw new Error(`Jest is disabled for workspace ${workspaceFolder.name}`);
     }
+    this.output.write(
+      `RunMode: ${JSON.stringify(pluginSettings.runMode.config, undefined, 4)}`,
+      'info'
+    );
     return pluginSettings;
   }
 
@@ -234,7 +226,6 @@ export class JestExt {
             if (!event.process.userData?.errorReported) {
               this.outputActionMessages(
                 `Jest process exited unexpectedly: ${event.error}`,
-                this.extContext.output,
                 ['wizard', 'defer', 'disable-folder', 'help'],
                 true,
                 event.error
@@ -252,12 +243,7 @@ export class JestExt {
           break;
         }
         case 'long-run': {
-          this.outputActionMessages(
-            this.longRunMessage(event),
-            this.extContext.output,
-            ['help-long-run'],
-            false
-          );
+          this.outputActionMessages(this.longRunMessage(event), ['help-long-run'], false);
           break;
         }
       }
@@ -266,75 +252,19 @@ export class JestExt {
 
   public outputActionMessages = (
     errorMessage: string,
-    output: JestExtOutput = this.extContext.output,
-    actionTypes: MessageActionType[] = ['wizard', 'defer', 'disable-folder', 'help'],
+    actionTypes: QuickFixActionType[] = ['wizard', 'defer', 'disable-folder', 'help'],
     isError = true,
     extra?: unknown
   ): void => {
     const msg = prefixWorkspace(this.extContext, errorMessage);
     this.logging(isError ? 'error' : 'warn', `${msg}:`, extra);
-    output.write(errorMessage, isError ? 'error' : 'new-line');
-    output.write('\r\n-------\r\n\r\n');
-    output.write('Quick Fix Options:\r\n', 'bold');
-    const actionMessages = this.buildActionMessages(actionTypes).map(
-      (msg, idx) => `${idx + 1}. ${msg}`
-    );
-    output.write(actionMessages.join('\r\n\r\n'), 'new-line');
-    output.write('\r\n-------\r\n');
-  };
-
-  private buildActionMessages = (types: MessageActionType[]): string[] => {
-    const setupToolLink = (taskId?: WizardTaskId): string => {
-      const prefix = 'Customize extension if you can run jest via CLI but not via the extension';
-      const link = executableTerminalLinkProvider.executableLink(
-        this.extContext.workspace.name,
-        `${extensionName}.with-workspace.setup-extension`,
-        taskId && { taskId }
-      );
-      return `${prefix} \u2192 ${link}`;
-    };
-    const disableFolderLink = executableTerminalLinkProvider.executableLink(
+    this.output.write(errorMessage, isError ? 'error' : 'new-line');
+    const quickFixLink = executableTerminalLinkProvider.executableLink(
       this.extContext.workspace.name,
-      `${extensionName}.with-workspace.disable`
+      `${extensionName}.with-workspace.show-quick-fix`,
+      actionTypes
     );
-    const changeRunModeLink = executableTerminalLinkProvider.executableLink(
-      this.extContext.workspace.name,
-      `${extensionName}.with-workspace.change-run-mode`
-    );
-
-    const messages: string[] = [];
-    for (const t of types) {
-      switch (t) {
-        case 'help':
-          messages.push(`See general Troubleshooting: ${messaging.TROUBLESHOOTING_URL}`);
-          break;
-        case 'wizard':
-          messages.push(setupToolLink());
-          break;
-        case 'setup-cmdline':
-          messages.push(setupToolLink('cmdLine'));
-          break;
-        case 'setup-monorepo':
-          messages.push(setupToolLink('monorepo'));
-          break;
-        case 'disable-folder':
-          messages.push(
-            `Disable the extension if you don't intend to run jest in this folder ever \u2192 ${disableFolderLink}`
-          );
-          break;
-        case 'defer':
-          messages.push(
-            `Defer or change the runMode if you are not ready to run jest yet \u2192 ${changeRunModeLink}`
-          );
-          break;
-        case 'help-long-run':
-          messages.push(
-            `See LongRun Troubleshooting \u2192 ${messaging.LONG_RUN_TROUBLESHOOTING_URL}`
-          );
-          break;
-      }
-    }
-    return messages;
+    this.output.write(`Open Quick Fix: \u2192 ${quickFixLink}`, 'info');
   };
 
   private createProcessSession(): ProcessSession {
@@ -397,8 +327,7 @@ export class JestExt {
       });
     } catch (e) {
       this.outputActionMessages(
-        'Failed to start jest session',
-        this.extContext.output,
+        `Failed to start jest session: ${e}`,
         ['wizard', 'defer', 'disable-folder', 'help'],
         true,
         e
@@ -419,8 +348,7 @@ export class JestExt {
       this.updateStatusBar({ state: 'stopped' });
     } catch (e) {
       this.outputActionMessages(
-        'Failed to stop jest session',
-        this.extContext.output,
+        `Failed to stop jest session: ${e}`,
         ['defer', 'disable-folder', 'help'],
         true,
         e
@@ -586,7 +514,7 @@ export class JestExt {
     }
 
     let msg = 'Not able to auto detect a valid jest command';
-    let actionType: MessageActionType = 'setup-cmdline';
+    let actionType: QuickFixActionType = 'setup-cmdline';
 
     switch (result.validSettings.length) {
       case 1:
@@ -613,12 +541,7 @@ export class JestExt {
       }
     }
 
-    this.outputActionMessages(
-      msg,
-      this.extContext.output,
-      [actionType, 'defer', 'disable-folder', 'help'],
-      true
-    );
+    this.outputActionMessages(msg, [actionType, 'defer', 'disable-folder', 'help'], true);
     this.updateStatusBar({ state: 'exec-error' });
     return 'fail';
   }
