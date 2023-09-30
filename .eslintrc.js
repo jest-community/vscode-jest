@@ -21,7 +21,6 @@ module.exports = {
     '@typescript-eslint/ban-types': 'off',
     // customize argument ignore pattern
     'no-unused-vars': 'off',
-    '@typescript-config/strict': 'off',
     '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
   },
   overrides: [
