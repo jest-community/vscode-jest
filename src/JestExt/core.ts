@@ -1,6 +1,4 @@
 import * as vscode from 'vscode';
-import { JestTotalResults } from 'jest-editor-support';
-
 import { statusBar, StatusBar, Mode, StatusBarUpdate, SBTestStats } from '../StatusBar';
 import {
   TestResultProvider,
@@ -44,6 +42,7 @@ import { MessageAction } from '../messaging';
 import { getExitErrorDef } from '../errors';
 import { WorkspaceManager, isInFolder } from '../workspace-manager';
 import { ansiEsc, JestOutputTerminal } from './output-terminal';
+import type { AggregatedResult } from '@jest/reporters';
 
 interface RunTestPickItem extends vscode.QuickPickItem {
   id: DebugTestIdentifier;
@@ -864,10 +863,10 @@ export class JestExt {
       this.coverageOverlay.updateVisibleEditors();
     });
   }
-  private updateWithData(data: JestTotalResults, process: JestProcessInfo): void {
+  private updateWithData(data: AggregatedResult, process: JestProcessInfo): void {
     const noAnsiData = resultsWithoutAnsiEscapeSequence(data);
     const normalizedData = resultsWithLowerCaseWindowsDriveLetters(noAnsiData);
-    this._updateCoverageMap(normalizedData.coverageMap);
+    this._updateCoverageMap(normalizedData.coverageMap?.data);
 
     const statusList = this.testResultProvider.updateTestResults(normalizedData, process);
 

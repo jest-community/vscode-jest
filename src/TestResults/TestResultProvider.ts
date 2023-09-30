@@ -1,6 +1,5 @@
 import {
   TestReconciler,
-  JestTotalResults,
   TestFileAssertionStatus,
   IParseResults,
   parse,
@@ -9,6 +8,7 @@ import {
   ItBlock,
   SnapshotParserOptions,
 } from 'jest-editor-support';
+import type { AggregatedResult } from '@jest/reporters';
 import { TestReconciliationState, TestReconciliationStateType } from './TestReconciliationState';
 import { TestResult, TestResultStatusInfo } from './TestResult';
 import * as match from './match-by-context';
@@ -361,16 +361,12 @@ export class TestResultProvider {
    * @param filePath
    * @returns valid sorted test result or undefined if the file is not a test.
    */
-
   getSortedResults(filePath: string): SortedTestResults | undefined {
     if (this.isTestFile(filePath) === 'no') {
       return;
     }
 
     const record = this.testSuites.get(filePath) ?? this.addTestSuiteRecord(filePath);
-    if (record.sorted) {
-      return record.sorted;
-    }
 
     const sorted: SortedTestResults = {
       fail: [],
@@ -398,7 +394,7 @@ export class TestResultProvider {
     return sorted;
   }
 
-  updateTestResults(data: JestTotalResults, process: JestProcessInfo): TestFileAssertionStatus[] {
+  updateTestResults(data: AggregatedResult, process: JestProcessInfo): TestFileAssertionStatus[] {
     const results = this.reconciler.updateFileWithJestStatus(data);
     results?.forEach((r) => {
       const record = this.testSuites.get(r.file) ?? this.addTestSuiteRecord(r.file);

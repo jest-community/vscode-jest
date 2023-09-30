@@ -1,4 +1,4 @@
-import { JestTotalResults, ProjectWorkspace } from 'jest-editor-support';
+import { ProjectWorkspace } from 'jest-editor-support';
 
 import * as vscode from 'vscode';
 import { LoggingFactory } from '../logging';
@@ -7,6 +7,8 @@ import { ProcessSession } from './process-session';
 import { JestProcessInfo } from '../JestProcessManagement';
 import { JestOutputTerminal } from './output-terminal';
 import { TestIdentifier } from '../TestResults';
+
+import type { AggregatedResult } from '@jest/reporters';
 
 export enum WatchMode {
   None = 'none',
@@ -31,6 +33,9 @@ export interface JestExtSessionContext extends JestExtContext {
 export interface RunEventBase {
   process: JestProcessInfo;
 }
+export type TestResultJestRunEventArguments = {
+  aggregatedResult: AggregatedResult;
+};
 export type JestRunEvent = RunEventBase &
   (
     | { type: 'scheduled' }
@@ -47,7 +52,7 @@ export interface JestSessionEvents {
   onTestSessionStopped: vscode.EventEmitter<void>;
 }
 export interface JestExtProcessContextRaw extends JestExtContext {
-  updateWithData: (data: JestTotalResults, process: JestProcessInfo) => void;
+  updateWithData: (data: AggregatedResult, process: JestProcessInfo) => void;
   onRunEvent: vscode.EventEmitter<JestRunEvent>;
 }
 export type JestExtProcessContext = Readonly<JestExtProcessContextRaw>;
