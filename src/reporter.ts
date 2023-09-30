@@ -1,10 +1,17 @@
 // Custom Jest reporter used by jest-vscode extension
 
-import type { AggregatedResult } from '@jest/test-result';
-import { Reporter, TestContext } from '@jest/reporters';
+import {
+  Reporter,
+  TestContext,
+  ReporterOnStartOptions,
+  Test,
+  TestResult,
+  AggregatedResult,
+} from '@jest/reporters';
+import type { TestResultJestRunEventArguments } from './JestExt';
 
 class VSCodeJestReporter implements Reporter {
-  onRunStart(aggregatedResults: AggregatedResult): void {
+  onRunStart(aggregatedResults: AggregatedResult, _options: ReporterOnStartOptions): void {
     process.stderr.write(
       `onRunStart: numTotalTestSuites: ${aggregatedResults.numTotalTestSuites}\r\n`
     );
@@ -18,8 +25,15 @@ class VSCodeJestReporter implements Reporter {
       process.stderr.write('onRunComplete\r\n');
     }
   }
+
   getLastError(): Error | undefined {
     return;
+  }
+
+  onTestResult(_test: Test, _testResult: TestResult, aggregatedResult: AggregatedResult): void {
+    process.stderr.write(
+      `onTestResult: test: ${JSON.stringify({ aggregatedResult: aggregatedResult } as TestResultJestRunEventArguments)}\r\n`
+    );
   }
 }
 

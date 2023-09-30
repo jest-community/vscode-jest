@@ -191,11 +191,8 @@ export class JestTestRun implements JestExtOutput, TestRunProtocol {
       return this.options.end();
     }
 
-    if (this.parentRun) {
-      this.parentRun.end();
-      if (isVscodeRun(this.parentRun)) {
-        this.parentRun = undefined;
-      }
+    if (this.parentRun && isVscodeRun(this.parentRun)) {
+      this.parentRun = undefined;
     }
 
     this.options?.onEnd?.();

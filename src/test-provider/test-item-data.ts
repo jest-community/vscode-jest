@@ -532,7 +532,6 @@ const isEmpty = (node?: ItemNodeType): boolean => {
   return true;
 };
 
-// type AssertNode = NodeType<TestAssertionStatus>;
 abstract class TestResultData extends TestItemDataBase {
   constructor(readonly context: JestTestProviderContext, name: string) {
     super(context, name);

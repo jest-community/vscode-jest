@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
-import { JestTotalResults } from 'jest-editor-support';
 import { cleanAnsi, toErrorString } from '../helpers';
 import { JestProcess, JestProcessEvent } from '../JestProcessManagement';
 import { ListenerSession, ListTestFilesCallback } from './process-session';
 import { Logging } from '../logging';
-import { JestRunEvent } from './types';
+import { JestRunEvent, TestResultJestRunEventArguments } from './types';
 import { MonitorLongRun } from '../Settings';
 import { extensionName } from '../appGlobals';
 import { RunShell } from './run-shell';
+import type { AggregatedResult } from '@jest/reporters';
 
 // command not found error for anything but "jest", as it most likely not be caused by env issue
 const POSSIBLE_ENV_ERROR_REGEX =
@@ -45,7 +45,7 @@ export class AbstractProcessListener {
         break;
       }
       case 'executableJSON': {
-        this.onExecutableJSON(jestProcess, args[0] as JestTotalResults);
+        this.onExecutableJSON(jestProcess, args[0] as AggregatedResult);
         break;
       }
       case 'executableOutput': {
@@ -85,7 +85,7 @@ export class AbstractProcessListener {
       this.CmdNotFoundEnv = true;
     }
   }
-  protected onExecutableJSON(_process: JestProcess, _data: JestTotalResults): void {
+  protected onExecutableJSON(_process: JestProcess, _data: AggregatedResult): void {
     // no default behavior...
   }
   protected onExecutableOutput(_process: JestProcess, _data: string, _raw: string): void {
@@ -180,6 +180,7 @@ const IS_OUTSIDE_REPOSITORY_REGEXP =
 const WATCH_IS_NOT_SUPPORTED_REGEXP =
   /^s*--watch is not supported without git\/hg, please use --watchAlls*/im;
 const RUN_EXEC_ERROR = /onRunComplete: execError: (.*)/im;
+const ON_TEST_RESULT = /onTestResult: test: (.*)/im;
 const RUN_START_TEST_SUITES_REGEX = /onRunStart: numTotalTestSuites: ((\d)+)/im;
 const CONTROL_MESSAGES = /^(onRunStart|onRunComplete|Test results written to)[^\n]+\n/gim;
 
@@ -299,7 +300,7 @@ export class RunTestListener extends AbstractProcessListener {
   }
 
   //=== event handlers ===
-  protected onExecutableJSON(process: JestProcess, data: JestTotalResults): void {
+  protected onExecutableJSON(process: JestProcess, data: AggregatedResult): void {
     this.session.context.updateWithData(data, process);
   }
 
@@ -313,6 +314,8 @@ export class RunTestListener extends AbstractProcessListener {
     this.handleRunStart(process, message);
 
     this.onRunEvent.fire({ type: 'data', process, text: message, raw: cleaned });
+
+    this.handleTestResult(process, message);
 
     this.handleRunComplete(process, message);
 
@@ -333,6 +336,17 @@ export class RunTestListener extends AbstractProcessListener {
       this.runStarted({ process, numTotalTestSuites: this.getNumTotalTestSuites(output) });
 
       this.onRunEvent.fire({ type: 'start', process });
+    }
+  }
+  protected handleTestResult(process: JestProcess, output: string) {
+    if (output.includes('onTestResult')) {
+      const data = output.match(ON_TEST_RESULT)?.[1];
+      if (!data) {
+        return;
+      }
+
+      const parsedData = JSON.parse(data) as TestResultJestRunEventArguments;
+      this.onExecutableJSON(process, parsedData.aggregatedResult);
     }
   }
   protected handleRunComplete(process: JestProcess, output: string): void {
