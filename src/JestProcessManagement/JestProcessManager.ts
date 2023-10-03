@@ -81,10 +81,11 @@ export class JestProcessManager implements TaskArrayFunctions<JestProcess> {
     const process = task.data;
 
     try {
-      await process.start();
+      const promise = process.start();
       this.extContext.onRunEvent.fire({ type: 'process-start', process });
+      await promise;
     } catch (e) {
-      this.logging('error', `${queue.name}: process failed:`, process, e);
+      this.logging('error', `${queue.name}: process failed to start:`, process, e);
       this.extContext.onRunEvent.fire({
         type: 'exit',
         process,

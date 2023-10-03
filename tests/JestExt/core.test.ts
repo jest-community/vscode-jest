@@ -1,7 +1,7 @@
 jest.unmock('events');
 jest.unmock('../../src/JestExt/core');
 jest.unmock('../../src/JestExt/helper');
-jest.unmock('../../src/JestExt/auto-run');
+jest.unmock('../../src/JestExt/run-mode');
 jest.unmock('../../src/appGlobals');
 jest.unmock('../../src/errors');
 jest.unmock('../test-helper');
@@ -30,7 +30,7 @@ jest.mock('../../src/workspace-manager', () => ({
 
 import * as vscode from 'vscode';
 import { JestExt } from '../../src/JestExt/core';
-import { AutoRun } from '../../src/JestExt/auto-run';
+import { RunMode } from '../../src/JestExt/run-mode';
 import { createProcessSession } from '../../src/JestExt/process-session';
 import { updateCurrentDiagnostics, updateDiagnostics } from '../../src/diagnostics';
 import { CoverageMapProvider } from '../../src/Coverage';
@@ -38,7 +38,7 @@ import * as helper from '../../src/helpers';
 import { TestIdentifier, resultsWithLowerCaseWindowsDriveLetters } from '../../src/TestResults';
 import * as messaging from '../../src/messaging';
 import { PluginResourceSettings } from '../../src/Settings';
-import * as extHelper from '../..//src/JestExt/helper';
+import * as extHelper from '../../src/JestExt/helper';
 import { workspaceLogging } from '../../src/logging';
 import { ProjectWorkspace } from 'jest-editor-support';
 import {
@@ -48,13 +48,13 @@ import {
   mockWorkspaceLogging,
 } from '../test-helper';
 import { JestTestProvider } from '../../src/test-provider';
-import { MessageAction } from '../../src/messaging';
-import { addFolderToDisabledWorkspaceFolders } from '../../src/extension-manager';
 import { JestOutputTerminal } from '../../src/JestExt/output-terminal';
 import { RunShell } from '../../src/JestExt/run-shell';
 import * as errors from '../../src/errors';
 import { ItemCommand } from '../../src/test-provider/types';
 import { TestResultProvider } from '../../src/TestResults';
+import { executableTerminalLinkProvider } from '../../src/terminal-link-provider';
+import { updateSetting } from '../../src/Settings';
 
 /* eslint jest/expect-expect: ["error", { "assertFunctionNames": ["expect", "expectItTakesNoAction"] }] */
 const mockHelpers = helper as jest.Mocked<any>;
@@ -63,8 +63,8 @@ const mockOutputTerminal = {
   write: jest.fn(),
   show: jest.fn(),
   close: jest.fn(),
-  reveal: jest.fn(),
   dispose: jest.fn(),
+  enable: jest.fn(),
 };
 
 const EmptySortedResult = {
@@ -123,6 +123,15 @@ describe('JestExt', () => {
   const mockTestProvider: any = {
     dispose: jest.fn(),
     runItemCommand: jest.fn(),
+    runTests: jest.fn(),
+  };
+
+  const mockListTestFiles = (files: string[] = [], error?: string, exitCode = 0) => {
+    mockProcessSession.scheduleProcess.mockImplementation((request) => {
+      if (request.type === 'list-test-files') {
+        return request.onResult(files, error, exitCode);
+      }
+    });
   };
 
   beforeEach(() => {
@@ -131,7 +140,7 @@ describe('JestExt', () => {
     mockSettings = {
       debugCodeLens: {},
       testExplorer: { enabled: true },
-      autoRun: { watch: true },
+      runMode: new RunMode(),
       jestCommandLine: 'jest',
     };
     getConfiguration.mockReturnValue({});
@@ -139,12 +148,13 @@ describe('JestExt', () => {
     (createProcessSession as jest.Mocked<any>).mockReturnValue(mockProcessSession);
     (ProjectWorkspace as jest.Mocked<any>).mockImplementation(mockProjectWorkspace);
     (workspaceLogging as jest.Mocked<any>).mockImplementation(mockWorkspaceLogging);
-    (JestTestProvider as jest.Mocked<any>).mockImplementation(() => mockTestProvider);
+    (JestTestProvider as jest.Mocked<any>).mockImplementation(() => ({ ...mockTestProvider }));
     (JestOutputTerminal as jest.Mocked<any>).mockImplementation(() => mockOutputTerminal);
     (vscode.EventEmitter as jest.Mocked<any>) = jest.fn().mockImplementation(() => {
       return { fire: jest.fn(), event: jest.fn(), dispose: jest.fn() };
     });
     (RunShell as jest.Mocked<any>).mockImplementation(() => ({ toSetting: jest.fn() }));
+    mockListTestFiles();
   });
 
   describe('debugTests()', () => {
@@ -603,23 +613,22 @@ describe('JestExt', () => {
   describe('onDidSaveTextDocument', () => {
     describe('should handle onSave run', () => {
       it.each`
-        runConfig                                    | languageId      | isTestFile   | shouldSchedule | isDirty
-        ${'off'}                                     | ${'javascript'} | ${'yes'}     | ${false}       | ${true}
-        ${{ watch: true }}                           | ${'javascript'} | ${'yes'}     | ${false}       | ${false}
-        ${{ watch: false }}                          | ${'javascript'} | ${'yes'}     | ${false}       | ${true}
-        ${{ watch: false, onSave: 'test-src-file' }} | ${'javascript'} | ${'no'}      | ${true}        | ${false}
-        ${{ watch: false, onSave: 'test-src-file' }} | ${'javascript'} | ${'unknown'} | ${true}        | ${false}
-        ${{ watch: false, onSave: 'test-src-file' }} | ${'javascript'} | ${'yes'}     | ${true}        | ${false}
-        ${{ watch: false, onSave: 'test-src-file' }} | ${'json'}       | ${'no'}      | ${false}       | ${false}
-        ${{ watch: false, onSave: 'test-file' }}     | ${'javascript'} | ${'no'}      | ${false}       | ${true}
-        ${{ watch: false, onSave: 'test-file' }}     | ${'javascript'} | ${'unknown'} | ${true}        | ${false}
-        ${{ watch: false, onSave: 'test-file' }}     | ${'javascript'} | ${'yes'}     | ${true}        | ${false}
-        ${{ watch: false, onSave: 'test-file' }}     | ${'javascript'} | ${'unknown'} | ${true}        | ${false}
-        ${{ watch: false, onSave: 'test-file' }}     | ${'json'}       | ${'unknown'} | ${false}       | ${false}
+        runConfig                                  | languageId      | isTestFile   | shouldSchedule | isDirty
+        ${'on-demand'}                             | ${'javascript'} | ${'yes'}     | ${false}       | ${false}
+        ${'watch'}                                 | ${'javascript'} | ${'yes'}     | ${false}       | ${false}
+        ${'on-save'}                               | ${'javascript'} | ${'no'}      | ${true}        | ${false}
+        ${'on-save'}                               | ${'javascript'} | ${'unknown'} | ${true}        | ${false}
+        ${'on-save'}                               | ${'javascript'} | ${'yes'}     | ${true}        | ${false}
+        ${'on-save'}                               | ${'json'}       | ${'no'}      | ${false}       | ${false}
+        ${{ type: 'on-save', testFileOnly: true }} | ${'javascript'} | ${'no'}      | ${false}       | ${true}
+        ${{ type: 'on-save', testFileOnly: true }} | ${'javascript'} | ${'unknown'} | ${true}        | ${false}
+        ${{ type: 'on-save', testFileOnly: true }} | ${'javascript'} | ${'yes'}     | ${true}        | ${false}
+        ${{ type: 'on-save', testFileOnly: true }} | ${'javascript'} | ${'unknown'} | ${true}        | ${false}
+        ${{ type: 'on-save', testFileOnly: true }} | ${'json'}       | ${'unknown'} | ${false}       | ${false}
       `(
-        'with autoRun: $runConfig $languageId $isTestFile => $shouldSchedule, $isDirty',
+        'with runMode: $runConfig $languageId $isTestFile => $shouldSchedule, $isDirty',
         ({ runConfig, languageId, isTestFile, shouldSchedule, isDirty }) => {
-          const sut: any = newJestExt({ settings: { autoRun: new AutoRun(runConfig) } });
+          const sut: any = newJestExt({ settings: { runMode: new RunMode(runConfig) } });
           const fileName = '/a/file;';
           const document: any = {
             uri: { scheme: 'file' },
@@ -652,19 +661,21 @@ describe('JestExt', () => {
       );
     });
   });
-  describe('toggleCoverageOverlay()', () => {
+  describe('toggleCoverage()', () => {
     it('should toggle the coverage overlay visibility', () => {
-      const sut = newJestExt();
+      const runMode = new RunMode('on-demand');
+      const sut = newJestExt({ settings: { runMode } });
 
       sut.triggerUpdateSettings = jest.fn();
-      sut.toggleCoverageOverlay();
+      sut.toggleCoverage();
 
-      expect(sut.coverageOverlay.toggleVisibility).toHaveBeenCalled();
+      expect(runMode.config.coverage).toBe(true);
       expect(sut.triggerUpdateSettings).toHaveBeenCalled();
     });
     it('overrides showCoverageOnLoad settings', async () => {
+      const runMode = new RunMode({ type: 'watch', coverage: true });
       const settings = {
-        showCoverageOnLoad: true,
+        runMode,
         shell: { toSetting: jest.fn() },
       } as any;
       const sut = newJestExt({ settings });
@@ -673,14 +684,12 @@ describe('JestExt', () => {
       let runnerWorkspace = createRunnerWorkspace();
       expect(runnerWorkspace.collectCoverage).toBe(true);
 
-      sut.coverageOverlay.enabled = false;
-      await sut.toggleCoverageOverlay();
+      await sut.toggleCoverage();
 
-      const { createRunnerWorkspace: f2, settings: settings2 } = (
-        createProcessSession as jest.Mocked<any>
-      ).mock.calls[1][0];
+      const { createRunnerWorkspace: f2 } = (createProcessSession as jest.Mocked<any>).mock
+        .calls[1][0];
       runnerWorkspace = f2();
-      expect(settings2.showCoverageOnLoad).toBe(false);
+      expect(runMode.config.coverage).toBe(false);
       expect(runnerWorkspace.collectCoverage).toBe(false);
     });
   });
@@ -815,7 +824,7 @@ describe('JestExt', () => {
           expect.objectContaining({ session: mockProcessSession })
         );
       });
-      it('will refresh the active editor, if any', async () => {
+      it('will refresh the visible editors, if any', async () => {
         const sut = createJestExt();
         const spy = jest.spyOn(sut, 'triggerUpdateActiveEditor').mockImplementation(() => {});
 
@@ -825,17 +834,21 @@ describe('JestExt', () => {
         expect(spy).not.toHaveBeenCalled();
 
         // with activeTextEditor
-        (vscode.window.activeTextEditor as any) = {
-          document: { uri: 'whatever' },
-        };
+        (vscode.window.visibleTextEditors as any) = [
+          {
+            document: { uri: 'whatever' },
+          },
+        ];
         await sut.startSession();
         expect(spy).toHaveBeenCalled();
       });
-      it('if failed to start session, show error', async () => {
+      it('if failed to start session, show error message and quick fix link', async () => {
         mockProcessSession.start.mockReturnValueOnce(Promise.reject('forced error'));
         const sut = createJestExt();
         await sut.startSession();
-        expect(messaging.systemErrorMessage).toHaveBeenCalled();
+
+        expect(mockOutputTerminal.write).toHaveBeenCalledWith(expect.anything(), 'error');
+        expect(executableTerminalLinkProvider.executableLink).toHaveBeenCalled();
       });
       it('dispose existing jestProvider before creating new one', async () => {
         expect.hasAssertions();
@@ -904,15 +917,14 @@ describe('JestExt', () => {
       it('will update statusBar', async () => {
         expect.hasAssertions();
 
-        const sut = newJestExt();
-        sut.coverageOverlay.enabled = true;
+        const runMode = new RunMode({ type: 'on-demand', coverage: true });
+        const sut = newJestExt({ settings: { runMode } });
         await sut.startSession();
-        expect(sbUpdateMock).toHaveBeenCalledWith(
-          expect.objectContaining({
-            state: 'initial',
-            mode: expect.arrayContaining(['coverage']),
-          })
-        );
+        const update = sbUpdateMock.mock.calls.find(
+          (call) => call[0].state === 'initial' && call[0].mode
+        )[0];
+        expect(update.state).toEqual('initial');
+        expect(update.mode.config.coverage).toEqual(true);
       });
     });
     describe('stopSession', () => {
@@ -936,11 +948,12 @@ describe('JestExt', () => {
         await sut.stopSession();
         expect(sbUpdateMock).toHaveBeenCalledWith({ state: 'stopped' });
       });
-      it('if failed to stop session, show error', async () => {
+      it('if failed to stop session, display error and quick fix link', async () => {
         mockProcessSession.stop.mockReturnValueOnce(Promise.reject('forced error'));
         const sut = createJestExt();
         await sut.stopSession();
-        expect(messaging.systemErrorMessage).toHaveBeenCalled();
+        expect(mockOutputTerminal.write).toHaveBeenCalledWith(expect.anything(), 'error');
+        expect(executableTerminalLinkProvider.executableLink).toHaveBeenCalled();
       });
     });
   });
@@ -967,12 +980,12 @@ describe('JestExt', () => {
       beforeEach(() => {
         mockProcessSession.scheduleProcess.mockReturnValueOnce(scheduleProcess);
       });
-      it('can run all test for the workspace', () => {
+      it('can run all test for the workspace', async () => {
         const sut = newJestExt();
         const dirtyFiles: any = sut['dirtyFiles'];
         dirtyFiles.clear = jest.fn();
 
-        sut.runAllTests();
+        await sut.runAllTests();
         expect(mockProcessSession.scheduleProcess).toHaveBeenCalledWith({ type: 'all-tests' });
         if (scheduleProcess) {
           expect(dirtyFiles.clear).toHaveBeenCalled();
@@ -980,7 +993,7 @@ describe('JestExt', () => {
           expect(dirtyFiles.clear).not.toHaveBeenCalled();
         }
       });
-      it('can run all test for the given editor', () => {
+      it('can run all test for the given editor', async () => {
         const sut = newJestExt();
 
         const dirtyFiles: any = sut['dirtyFiles'];
@@ -988,7 +1001,7 @@ describe('JestExt', () => {
 
         const editor: any = { document: { fileName: 'whatever' } };
 
-        sut.runAllTests(editor);
+        await sut.runAllTests(editor);
         expect(mockProcessSession.scheduleProcess).toHaveBeenCalledWith({
           type: 'by-file',
           testFileName: editor.document.fileName,
@@ -1008,13 +1021,13 @@ describe('JestExt', () => {
       ${'unknown'} | ${true}
     `(
       'treat unknown as notTestFile: isTestFile=$isTestFile => notTestFile=$notTestFile',
-      ({ isTestFile, notTestFile }) => {
+      async ({ isTestFile, notTestFile }) => {
         const sut = newJestExt();
         const editor: any = { document: { fileName: 'whatever' } };
 
         (sut.testResultProvider.isTestFile as jest.Mocked<any>).mockReturnValueOnce(isTestFile);
 
-        sut.runAllTests(editor);
+        await sut.runAllTests(editor);
         if (notTestFile) {
           expect(mockProcessSession.scheduleProcess).toHaveBeenCalledWith({
             type: 'by-file',
@@ -1061,7 +1074,7 @@ describe('JestExt', () => {
       expect(createProcessSession).toHaveBeenCalledTimes(1);
       const settings: any = {
         debugMode: true,
-        autoRun: { watch: true },
+        runMode: new RunMode('watch'),
         jestCommandLine: 'jest',
       };
       await jestExt.triggerUpdateSettings(settings);
@@ -1192,42 +1205,22 @@ describe('JestExt', () => {
           onRunEvent({ type: 'exit', process });
           expect(sbUpdateMock).toHaveBeenCalledWith({ state: 'done' });
         });
-        it('if error: status bar stopped and show error', () => {
-          onRunEvent({ type: 'exit', error: 'something is wrong', process });
-          expect(sbUpdateMock).toHaveBeenCalledWith({ state: 'exec-error' });
-          expect(messaging.systemErrorMessage).toHaveBeenCalledWith(
-            'something is wrong',
-            { action: expect.any(Function), title: 'Fix' },
-            { action: expect.any(Function), title: 'Help' }
-          );
-          const setupAction: MessageAction = (messaging.systemErrorMessage as jest.Mocked<any>).mock
-            .calls[0][1];
-
-          setupAction.action();
-
-          expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-            expect.stringContaining('setup-extension'),
-            expect.objectContaining({ workspace: workspaceFolder })
-          );
-        });
-        it('if error: status bar stopped and show error with ignore folder button', () => {
-          (vscode.workspace.workspaceFolders as any) = ['testfolder1', 'testfolder'];
-
-          onRunEvent({ type: 'exit', error: 'something is wrong', process });
-          expect(sbUpdateMock).toHaveBeenCalledWith({ state: 'exec-error' });
-          expect(messaging.systemErrorMessage).toHaveBeenCalledWith(
-            '(test-folder) something is wrong',
-            { action: expect.any(Function), title: 'Fix' },
-            { action: expect.any(Function), title: 'Ignore Folder' },
-            { action: expect.any(Function), title: 'Help' }
-          );
-
-          const ignoreAction: MessageAction = (messaging.systemErrorMessage as jest.Mocked<any>)
-            .mock.calls[0][2];
-
-          ignoreAction.action();
-
-          expect(addFolderToDisabledWorkspaceFolders).toHaveBeenCalledWith('test-folder');
+        describe('if error', () => {
+          it('if error: status bar stopped and display quick-fix link in output', () => {
+            onRunEvent({ type: 'exit', error: 'something is wrong', process });
+            expect(sbUpdateMock).toHaveBeenCalledWith({ state: 'exec-error' });
+            expect(executableTerminalLinkProvider.executableLink).toHaveBeenCalled();
+            expect(mockOutputTerminal.write).toHaveBeenCalledWith(expect.anything(), 'info');
+            expect(process.userData?.errorReported).toEqual(true);
+          });
+          it('will not report error if already reported', () => {
+            mockOutputTerminal.write.mockClear();
+            process.userData = { errorReported: true };
+            onRunEvent({ type: 'exit', error: 'something is wrong', process });
+            expect(sbUpdateMock).toHaveBeenCalledWith({ state: 'exec-error' });
+            expect(executableTerminalLinkProvider.executableLink).not.toHaveBeenCalled();
+            expect(mockOutputTerminal.write).not.toHaveBeenCalled();
+          });
         });
       });
       it.each`
@@ -1235,13 +1228,13 @@ describe('JestExt', () => {
         ${undefined}
         ${17}
       `(
-        'long-run event with $numTotalTestSuites numTotalTestSuites triggers system warning',
+        'long-run event with $numTotalTestSuites numTotalTestSuites output warnings',
         ({ numTotalTestSuites }) => {
+          mockOutputTerminal.write.mockClear();
           process = { ...process, request: { type: 'all-tests' } };
           onRunEvent({ type: 'long-run', numTotalTestSuites, threshold: 60000, process });
-          expect(messaging.systemWarningMessage).toHaveBeenCalledTimes(1);
-          const msg = (messaging.systemWarningMessage as jest.Mocked<any>).mock.calls[0][0];
-          expect(msg).toContain('all-tests');
+          expect(executableTerminalLinkProvider.executableLink).toHaveBeenCalled();
+          const msg = mockOutputTerminal.write.mock.calls[0][0];
           if (numTotalTestSuites) {
             expect(msg).toContain(`${numTotalTestSuites} suites`);
           } else {
@@ -1283,15 +1276,37 @@ describe('JestExt', () => {
     sut.showOutput();
     expect(mockOutputTerminal.show).toHaveBeenCalled();
   });
-  it('toggleAutoRun will trigger autoRun to toggle runtime config', () => {
-    const autoRun = new AutoRun('watch');
-    const sut: any = newJestExt({ settings: { autoRun } });
-    expect(autoRun.isWatch).toBeTruthy();
-    expect(autoRun.isOff).toBeFalsy();
+  describe('can change runMode', () => {
+    let sut, runMode, quickSwitchSpy, triggerUpdateSettingsSpy;
+    beforeEach(() => {
+      runMode = new RunMode('watch');
 
-    sut.toggleAutoRun();
-    expect(autoRun.isWatch).toBeFalsy();
-    expect(autoRun.isOff).toBeTruthy();
+      quickSwitchSpy = jest.spyOn(runMode, 'quickSwitch');
+
+      sut = newJestExt({ settings: { runMode } });
+      triggerUpdateSettingsSpy = jest.spyOn(sut, 'triggerUpdateSettings');
+    });
+    it('no op if runMode did not change', async () => {
+      quickSwitchSpy.mockImplementation(() => {
+        return undefined;
+      });
+
+      await sut.changeRunMode();
+      expect(quickSwitchSpy).toHaveBeenCalled();
+      expect(triggerUpdateSettingsSpy).not.toHaveBeenCalled();
+    });
+    it('restart session if runMode changed', async () => {
+      const runMode2 = new RunMode('on-demand');
+      quickSwitchSpy.mockImplementation(() => {
+        return runMode2;
+      });
+
+      await sut.changeRunMode();
+      expect(quickSwitchSpy).toHaveBeenCalled();
+      expect(triggerUpdateSettingsSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ runMode: runMode2 })
+      );
+    });
   });
   describe('enableLoginShell', () => {
     let mockShell;
@@ -1331,7 +1346,7 @@ describe('JestExt', () => {
     const jestExt = newJestExt();
     await jestExt.startSession();
     const testItem: any = {};
-    jestExt.runItemCommand(testItem, ItemCommand.updateSnapshot);
+    await jestExt.runItemCommand(testItem, ItemCommand.updateSnapshot);
     expect(mockTestProvider.runItemCommand).toHaveBeenCalledWith(
       testItem,
       ItemCommand.updateSnapshot
@@ -1393,11 +1408,11 @@ describe('JestExt', () => {
     });
     describe('when detection failed in a monorepo', () => {
       it.each`
-        case                     | folders       | actionId
-        ${'no workspaceFolders'} | ${undefined}  | ${'cmdLine'}
-        ${'single-root'}         | ${[ws1]}      | ${'monorepo'}
-        ${'multi-root'}          | ${[ws1, ws2]} | ${'cmdLine'}
-      `('$case', async ({ folders, actionId }) => {
+        case                     | folders       | actionType
+        ${'no workspaceFolders'} | ${undefined}  | ${'setup-cmdline'}
+        ${'single-root'}         | ${[ws1]}      | ${'setup-monorepo'}
+        ${'multi-root'}          | ${[ws1, ws2]} | ${'setup-cmdline'}
+      `('$case', async ({ folders, actionType }) => {
         (vscode.workspace as any).workspaceFolders = folders
           ? folders.map(() => makeWorkspaceFolder('whatever'))
           : undefined;
@@ -1410,44 +1425,44 @@ describe('JestExt', () => {
         updateSettingSpy.mockReturnValueOnce(Promise.resolve());
 
         await expect(jestExt.validateJestCommandLine()).resolves.toEqual('fail');
-        expect(messaging.systemErrorMessage).toHaveBeenCalledTimes(1);
-        const fixAction = (messaging.systemErrorMessage as jest.Mocked<any>).mock.calls[0][1];
-        expect(fixAction.title).toEqual('Fix');
-        fixAction.action();
-        expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-          expect.stringContaining('setup-extension'),
-          expect.objectContaining({
-            taskId: actionId,
-          })
-        );
+
+        const [wsName, command, actionTypes] = (
+          executableTerminalLinkProvider.executableLink as jest.Mocked<any>
+        ).mock.calls[0];
+        expect(wsName).toEqual(jestExt.workspaceFolder.name);
+        expect(command).toContain('show-quick-fix');
+        expect(actionTypes).toContain(actionType);
       });
     });
   });
   describe('autoRevealOutput', () => {
     it.each`
-      autoRevealOutput   | shouldReveal | revealOnError
-      ${'on-run'}        | ${true}      | ${true}
+      revealOutput       | shouldReveal | revealOnError
+      ${'on-run'}        | ${true}      | ${false}
       ${'on-exec-error'} | ${false}     | ${true}
-      ${'off'}           | ${false}     | ${false}
+      ${'on-demand'}     | ${false}     | ${false}
     `(
-      'autoRevealOutput = $autoRevealOutput, shouldReveal = $shouldReveal',
-      ({ autoRevealOutput, shouldReveal, revealOnError }) => {
-        const sut = newJestExt({ settings: { autoRevealOutput } });
+      'revealOutput = $revealOutput, shouldReveal = $shouldReveal',
+      ({ revealOutput, shouldReveal, revealOnError }) => {
+        const runMode = new RunMode({ type: 'watch', revealOutput });
+        const sut = newJestExt({ settings: { runMode } });
         const onRunEvent = (sut.events.onRunEvent.event as jest.Mocked<any>).mock.calls[0][0];
         const process = { id: 'a process id', request: { type: 'watch' } };
         onRunEvent({ type: 'start', process });
         if (shouldReveal) {
-          expect(mockOutputTerminal.reveal).toHaveBeenCalled();
+          expect(mockOutputTerminal.enable).toHaveBeenCalled();
         } else {
-          expect(mockOutputTerminal.reveal).not.toHaveBeenCalled();
+          expect(mockOutputTerminal.enable).not.toHaveBeenCalled();
         }
         expect(mockOutputTerminal.revealOnError).toEqual(revealOnError);
       }
     );
     it('when setting changed, output setting will change accordingly', () => {
-      const sut = newJestExt({ settings: { autoRevealOutput: 'on-exec-error' } });
+      const runMode = new RunMode({ type: 'watch', revealOutput: 'on-exec-error' });
+      const sut = newJestExt({ settings: { runMode } });
       expect(mockOutputTerminal.revealOnError).toEqual(true);
-      sut.triggerUpdateSettings({ autoRevealOutput: 'off' } as any);
+      const runMode2 = new RunMode({ type: 'watch', revealOutput: 'on-demand' });
+      sut.triggerUpdateSettings({ runMode: runMode2 } as any);
       expect(mockOutputTerminal.revealOnError).toEqual(false);
       expect(mockOutputTerminal.close).toHaveBeenCalled();
     });
@@ -1477,6 +1492,7 @@ describe('JestExt', () => {
       const settings: any = {
         debugMode: true,
         parserPluginOptions,
+        runMode: new RunMode('watch'),
       };
       await jestExt.triggerUpdateSettings(settings);
       expect(jestExt.testResultProvider.options).toEqual({
@@ -1486,7 +1502,7 @@ describe('JestExt', () => {
     });
   });
   describe('virtual folder related', () => {
-    it('added name and workspaceFolder properties}', () => {
+    it('added name and workspaceFolder properties', () => {
       const jestExt = newJestExt();
       expect(jestExt.name).toEqual(workspaceFolder.name);
       expect(jestExt.workspaceFolder).toEqual(workspaceFolder);
@@ -1494,5 +1510,182 @@ describe('JestExt', () => {
     it('instantiate a disabled JestExt will throw exception', () => {
       expect(() => newJestExt({ settings: { enable: false } })).toThrow('Jest is disabled');
     });
+  });
+  it('setupExtensionForFolder pass extension info via executeCommand', () => {
+    const jestExt = newJestExt();
+    jestExt.setupExtensionForFolder({ taskId: 'cmdLine' });
+
+    expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+      expect.stringContaining(`setup-extension`),
+      expect.objectContaining({
+        workspace: jestExt.workspaceFolder,
+        taskId: 'cmdLine',
+      })
+    );
+  });
+  describe('defer runMode', () => {
+    let doc: any;
+    let editor: any;
+    beforeEach(() => {
+      doc = { uri: 'whatever', languageId: 'javascript' };
+      editor = { document: doc };
+      vscode.window.visibleTextEditors = [editor];
+    });
+    it('will still create testProvider and parse test blocks while skipping the rest', async () => {
+      expect.hasAssertions();
+
+      const runMode = new RunMode({ type: 'watch', deferred: true });
+      const jestExt = newJestExt({ settings: { runMode } });
+
+      const validateJestCommandLineSpy = jest.spyOn(jestExt, 'validateJestCommandLine');
+
+      jestExt.triggerUpdateActiveEditor = jest.fn();
+
+      await jestExt.startSession();
+
+      expect(JestTestProvider).toHaveBeenCalledTimes(1);
+      expect(jestExt.triggerUpdateActiveEditor).toHaveBeenCalledWith(editor);
+
+      expect(validateJestCommandLineSpy).not.toHaveBeenCalled();
+      expect(mockProcessSession.scheduleProcess).not.toHaveBeenCalled();
+    });
+    it('will not show output even in exec-error', async () => {
+      expect.hasAssertions();
+
+      let runMode = new RunMode({ type: 'watch', revealOutput: 'on-exec-error', deferred: true });
+      newJestExt({ settings: { runMode } });
+      expect(mockOutputTerminal.revealOnError).toEqual(false);
+
+      // while in non-deferred mode, the revealOnError will be true
+      runMode = new RunMode({ type: 'watch', revealOutput: 'on-exec-error', deferred: false });
+      newJestExt({ settings: { runMode } });
+      expect(mockOutputTerminal.revealOnError).toEqual(true);
+    });
+    it('will not do any auto-run for on-save mode either', async () => {
+      expect.hasAssertions();
+      let runMode = new RunMode({ type: 'on-save', deferred: true });
+      let jestExt = newJestExt({ settings: { runMode } });
+
+      await jestExt.startSession();
+      jestExt.onDidSaveTextDocument(doc);
+
+      expect(mockProcessSession.scheduleProcess).not.toHaveBeenCalled();
+
+      // while in non-deferred mode, the run will be scheduled
+      runMode = new RunMode({ type: 'on-save', deferred: false });
+      jestExt = newJestExt({ settings: { runMode } });
+
+      await jestExt.startSession();
+      jestExt.onDidSaveTextDocument(doc);
+      expect(mockProcessSession.scheduleProcess).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'by-file' })
+      );
+    });
+    describe('will auto exit defer mode by any on-demand run', () => {
+      it('when runAllTest is called', async () => {
+        expect.hasAssertions();
+
+        const runMode = new RunMode({ type: 'watch', deferred: true });
+        const jestExt = newJestExt({ settings: { runMode } });
+        await jestExt.startSession();
+
+        expect(runMode.config.deferred).toBe(true);
+        expect(mockOutputTerminal.enable).not.toHaveBeenCalled();
+        expect(mockProcessSession.scheduleProcess).not.toHaveBeenCalled();
+
+        await jestExt.runAllTests();
+
+        expect(runMode.config.deferred).toBe(false);
+        expect(mockOutputTerminal.enable).toHaveBeenCalled();
+        expect(mockProcessSession.scheduleProcess).toHaveBeenCalledWith(
+          expect.objectContaining({ type: 'all-tests' })
+        );
+      });
+      it('when executing any itemCommand', async () => {
+        expect.hasAssertions();
+
+        const runMode = new RunMode({ type: 'on-demand', deferred: true });
+        const jestExt = newJestExt({ settings: { runMode } });
+        await jestExt.startSession();
+
+        expect(runMode.config.deferred).toBe(true);
+        expect(mockOutputTerminal.enable).not.toHaveBeenCalled();
+        expect(mockTestProvider.runItemCommand).not.toHaveBeenCalled();
+
+        const testItem: any = {};
+        const itemCommand: any = {};
+        await jestExt.runItemCommand(testItem, itemCommand);
+
+        expect(runMode.config.deferred).toBe(false);
+        expect(mockOutputTerminal.enable).toHaveBeenCalled();
+        expect(mockTestProvider.runItemCommand).toHaveBeenCalled();
+      });
+      describe('when triggered explicitly (by UI)', () => {
+        it.each`
+          trigger                       | runTestError
+          ${undefined}                  | ${false}
+          ${{ request: {}, token: {} }} | ${true}
+          ${{ request: {}, token: {} }} | ${false}
+        `(
+          'with trigger=$trigger, when runTest throws error=${runTestError}',
+          async ({ trigger, runTestError }) => {
+            expect.hasAssertions();
+
+            const runMode = new RunMode({ type: 'watch', deferred: true });
+            const jestExt = newJestExt({ settings: { runMode } });
+
+            jestExt.triggerUpdateSettings = jest.fn();
+
+            await jestExt.startSession();
+            expect(runMode.config.deferred).toBe(true);
+
+            if (runTestError) {
+              mockTestProvider.runTests.mockImplementation(() => {
+                throw new Error('force a test error');
+              });
+            }
+            await jestExt.exitDeferMode(trigger);
+
+            expect(runMode.config.deferred).toBe(false);
+            expect(jestExt.triggerUpdateSettings).toHaveBeenCalled();
+            if (trigger) {
+              expect(mockTestProvider.runTests).toHaveBeenCalled();
+            } else {
+              expect(mockTestProvider.runTests).not.toHaveBeenCalled();
+            }
+
+            // if not in deferred mode, no-ops
+            mockTestProvider.runTests.mockClear();
+            jestExt.triggerUpdateSettings = jest.fn();
+            await jestExt.exitDeferMode();
+            expect(runMode.config.deferred).toBe(false);
+            expect(jestExt.triggerUpdateSettings).not.toHaveBeenCalled();
+            expect(mockTestProvider.runTests).not.toHaveBeenCalled();
+          }
+        );
+      });
+    });
+  });
+  it.each`
+    withError
+    ${false}
+    ${true}
+  `('withError=$withError: can save current runMode to settings', async ({ withError }) => {
+    expect.hasAssertions();
+
+    const runMode = new RunMode('watch');
+    const jestExt = newJestExt({ settings: { runMode } });
+
+    if (withError) {
+      (updateSetting as jest.Mocked<any>).mockImplementation(() => {
+        throw new Error('forced error');
+      });
+    }
+    await jestExt.saveRunMode();
+    expect(updateSetting).toHaveBeenCalledWith(jestExt.workspaceFolder, 'runMode', runMode.config);
+
+    if (withError) {
+      expect(mockOutputTerminal.write).toHaveBeenCalledWith(expect.anything(), 'error');
+    }
   });
 });

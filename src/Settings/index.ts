@@ -130,24 +130,18 @@ export const updateSetting = async (
   workspaceFolder: vscode.WorkspaceFolder,
   key: VirtualFolderSettingKey,
   value: unknown
-): Promise<boolean> => {
+): Promise<void> => {
   const config = vscode.workspace.getConfiguration('jest', workspaceFolder.uri);
-  try {
-    if (!isVirtualWorkspaceFolder(workspaceFolder)) {
-      await config.update(key, value);
-      return true;
-    }
-    const virtualFolders = config.get<VirtualFolderSettings[]>('virtualFolders');
-    const vFolder = virtualFolders?.find((v) => v.name === workspaceFolder.name);
-    if (!vFolder) {
-      throw new Error(`[${workspaceFolder.name}] is missing corresponding virtual folder setting`);
-    }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (vFolder as any)[key] = value;
-    await config.update('virtualFolders', virtualFolders);
-    return true;
-  } catch (e) {
-    console.error(`failed to update jest config: ${key}:`, value, e);
-    return false;
+  if (!isVirtualWorkspaceFolder(workspaceFolder)) {
+    await config.update(key, value);
+    return;
   }
+  const virtualFolders = config.get<VirtualFolderSettings[]>('virtualFolders');
+  const vFolder = virtualFolders?.find((v) => v.name === workspaceFolder.name);
+  if (!vFolder) {
+    throw new Error(`[${workspaceFolder.name}] is missing corresponding virtual folder setting`);
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (vFolder as any)[key] = value;
+  await config.update('virtualFolders', virtualFolders);
 };

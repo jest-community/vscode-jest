@@ -18,5 +18,6 @@
   "cSpell.words": [
     "unmock"
   ],
+  "jest.autoClearTerminal": true,
   // "jest.jestCommandLine": "yarn test --watchAll",
 }

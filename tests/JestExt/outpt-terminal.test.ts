@@ -28,14 +28,14 @@ describe('JestOutputTerminal', () => {
     mockEmitter = { fire: jest.fn(), event: jest.fn(), dispose: jest.fn() };
     (vscode.EventEmitter as jest.Mocked<any>).mockImplementation(() => mockEmitter);
   });
-  it('will not create terminal until it is revealed', () => {
+  it('will not create terminal until it is enabled', () => {
     const output = new JestOutputTerminal('workspace');
     output.write('abc');
     expect(vscode.window.createTerminal).not.toHaveBeenCalled();
-    output.reveal();
+    output.enable();
     expect(vscode.window.createTerminal).toHaveBeenCalled();
   });
-  it('can be create with revealed by default', () => {
+  it('can be create with enabled by default', () => {
     const output = new JestOutputTerminal('workspace', true);
     output.write('abc');
     expect(vscode.window.createTerminal).toHaveBeenCalled();
@@ -48,7 +48,7 @@ describe('JestOutputTerminal', () => {
     expect(vscode.window.createTerminal).not.toHaveBeenCalled();
     expect(a.dispose).not.toHaveBeenCalled();
 
-    t.reveal();
+    t.enable();
     t.write('something');
     expect(vscode.window.createTerminal).toHaveBeenCalled();
     expect(a.dispose).toHaveBeenCalled();
@@ -57,7 +57,7 @@ describe('JestOutputTerminal', () => {
   it('can buffer output until terminal opened', () => {
     const output = new JestOutputTerminal('a');
     output.write('text 1');
-    output.reveal();
+    output.enable();
     expect(mockEmitter.fire).not.toHaveBeenCalled();
 
     // after open, the buffered text should be sent again
@@ -70,7 +70,7 @@ describe('JestOutputTerminal', () => {
   });
   it('if user close the terminal, it will be reopened on the next write', () => {
     const output = new JestOutputTerminal('a');
-    output.reveal();
+    output.enable();
     output.write('1');
     expect(vscode.window.createTerminal).toHaveBeenCalledTimes(1);
     const { pty } = (vscode.window.createTerminal as jest.Mocked<any>).mock.calls[0][0];
@@ -80,7 +80,7 @@ describe('JestOutputTerminal', () => {
 
     // user writes again
     output.write('1');
-    output.reveal();
+    output.enable();
     // terminal should be opened again with the same pty
     expect(vscode.window.createTerminal).toHaveBeenCalledTimes(2);
     const { pty: pty2 } = (vscode.window.createTerminal as jest.Mocked<any>).mock.calls[1][0];
@@ -111,7 +111,7 @@ describe('JestOutputTerminal', () => {
   });
   it('will properly dispose terminal and emitter', () => {
     const output = new JestOutputTerminal('a');
-    output.reveal();
+    output.enable();
     output.write('1');
     output.dispose();
     expect(mockTerminal.dispose).toHaveBeenCalled();
@@ -119,7 +119,7 @@ describe('JestOutputTerminal', () => {
   });
   it('can close the terminal', () => {
     const output = new JestOutputTerminal('a');
-    output.reveal();
+    output.enable();
     output.write('1');
     output.close();
     expect(mockTerminal.dispose).toHaveBeenCalled();

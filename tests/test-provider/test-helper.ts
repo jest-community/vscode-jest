@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { mockJestExtEvents } from '../test-helper';
+import { RunMode } from '../../src/JestExt/run-mode';
 
 export class TestItemCollectionMock {
   constructor(public parent?: vscode.TestItem) {}
@@ -40,7 +41,7 @@ export const mockExtExplorerContext = (wsName = 'ws-1', override: any = {}): any
     },
     debugTests: jest.fn(),
     sessionEvents: mockJestExtEvents(),
-    settings: { testExplorer: { enabled: true }, autoRun: {} },
+    settings: { testExplorer: { enabled: true }, runMode: new RunMode() },
     output: { write: jest.fn(), dispose: jest.fn(), clear: jest.fn() },
     ...override,
   };

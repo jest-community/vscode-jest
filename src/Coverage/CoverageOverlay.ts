@@ -43,11 +43,6 @@ export class CoverageOverlay {
     this.formatter.dispose();
   }
 
-  toggleVisibility(): void {
-    this._enabled = !this._enabled;
-    this.updateVisibleEditors();
-  }
-
   updateVisibleEditors(): void {
     for (const editor of vscode.window.visibleTextEditors) {
       this.update(editor);

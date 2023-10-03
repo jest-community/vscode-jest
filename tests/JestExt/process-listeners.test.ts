@@ -56,7 +56,6 @@ describe('jest process listeners', () => {
   describe('listener base class: AbstractProcessListener', () => {
     it.each`
       event                 | log
-      ${'processStarting'}  | ${false}
       ${'processClose'}     | ${false}
       ${'processExit'}      | ${false}
       ${'executableJSON'}   | ${false}
@@ -310,11 +309,6 @@ describe('jest process listeners', () => {
         expect.hasAssertions();
         const listener = new RunTestListener(mockSession);
         // stdout
-        listener.onEvent(mockProcess, 'processStarting');
-        expect(mockSession.context.onRunEvent.fire).toHaveBeenCalledTimes(1);
-        expect(mockSession.context.onRunEvent.fire).toHaveBeenCalledWith(
-          expect.objectContaining({ type: 'process-start' })
-        );
 
         mockSession.context.onRunEvent.fire.mockClear();
         listener.onEvent(mockProcess, 'processExit');

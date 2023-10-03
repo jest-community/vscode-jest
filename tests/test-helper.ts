@@ -5,8 +5,8 @@ import { ItBlock, TestAssertionStatus } from 'jest-editor-support';
 import { JestProcessRequest } from '../src/JestProcessManagement';
 import { JestTestProcessType } from '../src/Settings';
 import { MatchEvent } from '../src/TestResults/match-node';
-import { AutoRun } from '../src/JestExt';
 import * as path from 'path';
+import { RunMode } from '../src/JestExt/run-mode';
 
 export const EmptyLocation = {
   line: 0,
@@ -158,12 +158,12 @@ export const mockJestExtEvents: any = () => ({
   onTestSessionStopped: mockEvent(),
 });
 
-export const mockJestExtContext = (autoRun?: AutoRun): any => {
+export const mockJestExtContext = (runMode?: RunMode): any => {
   const baseSettings = { shell: { toSetting: jest.fn() } };
   return {
     workspace: jest.fn(),
     createRunnerWorkspace: jest.fn(),
-    settings: autoRun ? { ...baseSettings, autoRun } : baseSettings,
+    settings: runMode ? { ...baseSettings, runMode } : baseSettings,
     loggingFactory: { create: jest.fn(() => jest.fn()) },
     events: mockJestExtEvents(),
   };

@@ -250,10 +250,10 @@ export class JestExt {
     });
   }
 
-  public outputActionMessages = (
+  private outputActionMessages = (
     errorMessage: string,
-    actionTypes: QuickFixActionType[] = ['wizard', 'defer', 'disable-folder', 'help'],
-    isError = true,
+    actionTypes: QuickFixActionType[],
+    isError: boolean,
     extra?: unknown
   ): void => {
     const msg = prefixWorkspace(this.extContext, errorMessage);
@@ -786,9 +786,6 @@ export class JestExt {
   }
 
   private async updateTestFileList(): Promise<void> {
-    if (this.extContext.settings.runMode.config.deferred) {
-      return;
-    }
     return new Promise((resolve, reject) => {
       this.processSession.scheduleProcess({
         type: 'list-test-files',
@@ -832,7 +829,7 @@ export class JestExt {
     }
     if (this.extContext.settings.runMode.config.deferred) {
       this.extContext.settings.runMode.exitDeferMode();
-      this.extContext.output.write('exit defer mode', 'info');
+      this.extContext.output.write('exit defer mode', 'new-line');
       await this.triggerUpdateSettings(this.extContext.settings);
       if (trigger && this.testProvider) {
         try {
@@ -849,7 +846,15 @@ export class JestExt {
   }
 
   async saveRunMode(): Promise<void> {
-    this.extContext.settings.runMode.save(this.extContext.workspace);
+    try {
+      await this.extContext.settings.runMode.save(this.extContext.workspace);
+    } catch (e) {
+      this.logging('error', 'failed to save runMode', e);
+      this.extContext.output.write(
+        'failed to save the runMode settings. ${e}. \r\nPlease report this error.',
+        'error'
+      );
+    }
   }
 
   // this method is invoked by the TestExplorer UI

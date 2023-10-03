@@ -48,12 +48,12 @@ export class VirtualFolderBasedCache<T extends FolderAwareItem> {
     if (isVirtualWorkspaceFolder(workspaceFolder)) {
       // delete the virtual folder from the actual folder
       let items = this.byActualFolderName[workspaceFolder.actualWorkspaceFolder.name];
-      items = items.filter((i) => i.workspaceFolder.name !== workspaceFolder.name);
+      items = items?.filter((i) => i.workspaceFolder.name !== workspaceFolder.name);
       this.byActualFolderName[workspaceFolder.actualWorkspaceFolder.name] = items;
     } else {
       // delete all the virtual folders under the actual folder
       const items = this.byActualFolderName[workspaceFolder.name];
-      items.forEach((item) => delete this.byFolderName[item.workspaceFolder.name]);
+      items?.forEach((item) => delete this.byFolderName[item.workspaceFolder.name]);
       delete this.byActualFolderName[workspaceFolder.name];
     }
   }

@@ -1,5 +1,5 @@
 jest.unmock('../../src/JestExt/helper');
-jest.unmock('../../src/JestExt/auto-run');
+jest.unmock('../../src/JestExt/run-mode');
 jest.unmock('../../src/virtual-workspace-folder');
 jest.unmock('../test-helper');
 
@@ -16,6 +16,7 @@ import {
   outputFileSuffix,
   prefixWorkspace,
 } from '../../src/JestExt/helper';
+import { RunMode } from '../../src/JestExt/run-mode';
 import { ProjectWorkspace } from 'jest-editor-support';
 import { workspaceLogging } from '../../src/logging';
 import { makeWorkspaceFolder, mockProjectWorkspace } from '../test-helper';
@@ -33,7 +34,7 @@ describe('createJestExtContext', () => {
     console.warn = jest.fn();
   });
   const baseSettings = {
-    autoRun: { watch: true },
+    runMode: new RunMode('watch'),
     shell: { toSetting: jest.fn() },
     jestCommandLine: 'jest',
   };
@@ -140,6 +141,7 @@ describe('isWatchRequest', () => {
 
 describe('getExtensionResourceSettings()', () => {
   let userSettings: any;
+  let mockShell: any;
   beforeEach(() => {
     userSettings = {};
     (toAbsoluteRootPath as jest.Mocked<any>).mockImplementation(
@@ -157,24 +159,22 @@ describe('getExtensionResourceSettings()', () => {
       }
       return jest.fn().mockImplementation((key) => userSettings[key] ?? defaults[`jest.${key}`]);
     });
+    mockShell = jest.fn();
+    (RunShell as jest.Mocked<any>).mockImplementation(() => mockShell);
   });
   it('should return the extension resource configuration', async () => {
-    const mockShell = jest.fn();
-    (RunShell as jest.Mocked<any>).mockImplementation(() => mockShell);
     const folder = makeWorkspaceFolder('workspaceFolder1');
     expect(getExtensionResourceSettings(folder)).toEqual({
       coverageFormatter: 'DefaultFormatter',
       jestCommandLine: undefined,
       rootPath: 'workspaceFolder1',
-      showCoverageOnLoad: false,
       debugMode: false,
       coverageColors: null,
       autoClearTerminal: false,
-      autoRun: expect.objectContaining({ config: { watch: true } }),
+      runMode: expect.objectContaining({ config: { type: 'watch', revealOutput: 'on-run' } }),
       testExplorer: {},
       monitorLongRun: 60000,
       shell: mockShell,
-      autoRevealOutput: 'on-run',
       parserPluginOptions: null,
       enable: true,
       nodeEnv: undefined,
@@ -183,51 +183,74 @@ describe('getExtensionResourceSettings()', () => {
     expect(createJestSettingGetter).toHaveBeenCalledWith(folder);
   });
 
-  describe('can read user settings', () => {
-    let mockShell;
-    beforeEach(() => {
-      mockShell = jest.fn();
-      (RunShell as jest.Mocked<any>).mockImplementation(() => mockShell);
-    });
-    it('with nodeEnv and shell path', () => {
+  it('with nodeEnv and shell path', () => {
+    userSettings = {
+      nodeEnv: { whatever: '1' },
+      shell: mockShell,
+    };
+    const folder = makeWorkspaceFolder('workspaceFolder1');
+    const settings = getExtensionResourceSettings(folder);
+    expect(settings).toEqual(
+      expect.objectContaining({
+        ...userSettings,
+      })
+    );
+  });
+  describe('testExplorer', () => {
+    it.each`
+      testExplorer                                                         | showWarning | converted
+      ${{ enabled: true }}                                                 | ${false}    | ${{}}
+      ${{ enabled: false }}                                                | ${true}     | ${{}}
+      ${{ enabled: true, showClassicStatus: true }}                        | ${true}     | ${{}}
+      ${{ enabled: true, showClassicStatus: true, showInlineError: true }} | ${true}     | ${{}}
+      ${{ showInlineError: true }}                                         | ${false}    | ${{ showInlineError: true }}
+      ${{}}                                                                | ${false}    | ${{}}
+      ${null}                                                              | ${false}    | ${{}}
+    `(
+      'testExplorer: $testExplorer => show legacy warning? $showWarning',
+      ({ testExplorer, showWarning, converted }) => {
+        userSettings = { testExplorer };
+        const folder = makeWorkspaceFolder('workspaceFolder1');
+        const settings = getExtensionResourceSettings(folder);
+        expect(settings).toEqual(
+          expect.objectContaining({
+            testExplorer: converted,
+          })
+        );
+        if (showWarning) {
+          expect(vscode.window.showWarningMessage).toHaveBeenCalled();
+        }
+      }
+    );
+  });
+  describe('runMode', () => {
+    it('pass along legacy settings', () => {
       userSettings = {
-        nodeEnv: { whatever: '1' },
-        shell: mockShell,
+        showCoverageOnLoad: true,
+        autoRevealOutput: 'off',
+        autoRun: 'off',
       };
       const folder = makeWorkspaceFolder('workspaceFolder1');
       const settings = getExtensionResourceSettings(folder);
-      expect(settings).toEqual(
-        expect.objectContaining({
-          ...userSettings,
-        })
-      );
+      expect(settings.runMode.config).toEqual({
+        type: 'on-demand',
+        revealOutput: 'on-demand',
+        coverage: true,
+      });
     });
-    describe('testExplorer', () => {
-      it.each`
-        testExplorer                                                         | showWarning | converted
-        ${{ enabled: true }}                                                 | ${false}    | ${{}}
-        ${{ enabled: false }}                                                | ${true}     | ${{}}
-        ${{ enabled: true, showClassicStatus: true }}                        | ${true}     | ${{}}
-        ${{ enabled: true, showClassicStatus: true, showInlineError: true }} | ${true}     | ${{}}
-        ${{ showInlineError: true }}                                         | ${false}    | ${{ showInlineError: true }}
-        ${{}}                                                                | ${false}    | ${{}}
-        ${null}                                                              | ${false}    | ${{}}
-      `(
-        'testExplorer: $testExplorer => show legacy warning? $showWarning',
-        ({ testExplorer, showWarning, converted }) => {
-          userSettings = { testExplorer };
-          const folder = makeWorkspaceFolder('workspaceFolder1');
-          const settings = getExtensionResourceSettings(folder);
-          expect(settings).toEqual(
-            expect.objectContaining({
-              testExplorer: converted,
-            })
-          );
-          if (showWarning) {
-            expect(vscode.window.showWarningMessage).toHaveBeenCalled();
-          }
-        }
-      );
+    it('if there is runMode, it will ignore the legacy settings', () => {
+      userSettings = {
+        showCoverageOnLoad: true,
+        autoRevealOutput: 'off',
+        autoRun: 'off',
+        runMode: 'on-save',
+      };
+      const folder = makeWorkspaceFolder('workspaceFolder1');
+      const settings = getExtensionResourceSettings(folder);
+      expect(settings.runMode.config).toEqual({
+        type: 'on-save',
+        revealOutput: 'on-run',
+      });
     });
   });
 });

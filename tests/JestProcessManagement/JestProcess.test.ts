@@ -94,16 +94,6 @@ describe('JestProcess', () => {
       await expect(p).resolves.not.toThrow();
       expect(jp.stopReason).toEqual('process-end');
     });
-    it('will emit processStart event upon starting', () => {
-      expect.hasAssertions();
-      const request = mockRequest('all-tests');
-      const jp = new JestProcess(extContext, request);
-      jp.start();
-
-      expect(RunnerClassMock).toHaveBeenCalled();
-      const [, event] = mockListener.onEvent.mock.calls[0];
-      expect(event).toEqual('processStarting');
-    });
     it.each`
       event                 | willEndProcess
       ${'processClose'}     | ${true}
@@ -124,7 +114,7 @@ describe('JestProcess', () => {
         expect(mockRunner.on).toHaveBeenCalledTimes(RunnerEvents.length);
 
         eventEmitter.emit(event);
-        const [process, _event] = mockListener.onEvent.mock.calls[1];
+        const [process, _event] = mockListener.onEvent.mock.calls[0];
         expect(process).toBe(jp);
         expect(_event).toEqual(event);
 

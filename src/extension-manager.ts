@@ -125,6 +125,7 @@ export class ExtensionManager {
       this.extCache.addItem(jestExt);
       jestExt.startSession();
     } catch (e) {
+      this.extCache.deleteItemByFolder(workspaceFolder);
       console.error(`Failed to activate extension for "${workspaceFolder.name}":`, e);
       vscode.window.showErrorMessage(
         `Failed to activate extension for "${workspaceFolder.name}": ${e}`
@@ -448,9 +449,14 @@ export class ExtensionManager {
         type: 'workspace',
         name: 'disable',
         callback: async (extension) => {
-          const success = await updateSetting(extension.workspaceFolder, 'enable', false);
-          if (success) {
+          try {
+            await updateSetting(extension.workspaceFolder, 'enable', false);
             this.applySettings();
+          } catch (e) {
+            console.error(`Failed to disable folder "${extension.workspaceFolder.name}`, e);
+            vscode.window.showErrorMessage(
+              `Failed to disable folder "${extension.workspaceFolder.name}: ${e}"`
+            );
           }
         },
       }),

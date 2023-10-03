@@ -192,12 +192,12 @@ export class JestTestProvider {
           );
         }
       }
+
+      await Promise.allSettled(promises);
     } catch (e) {
       const msg = `failed to execute profile "${req.profile.label}": ${e}`;
       run.write(msg, 'error');
     }
-
-    await Promise.allSettled(promises);
     run.end();
   };
 

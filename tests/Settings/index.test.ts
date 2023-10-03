@@ -3,7 +3,11 @@ jest.unmock('../test-helper');
 jest.unmock('../../src/virtual-workspace-folder');
 
 import * as vscode from 'vscode';
-import { createJestSettingGetter } from '../../src/Settings/index';
+import {
+  VirtualFolderSettingKey,
+  createJestSettingGetter,
+  updateSetting,
+} from '../../src/Settings/index';
 import { VirtualWorkspaceFolder } from '../../src/virtual-workspace-folder';
 import { makeWorkspaceFolder } from '../test-helper';
 
@@ -81,4 +85,59 @@ describe('createJestSettingGetter', () => {
       expect(getSetting('enable')).toEqual(expected);
     }
   );
+});
+
+describe('updateSetting', () => {
+  const workspaceFolder: vscode.WorkspaceFolder = {
+    uri: vscode.Uri.parse('file:///path/to/workspace'),
+    name: 'workspace',
+    index: 0,
+  };
+  const mockConfig = {
+    update: jest.fn(),
+    get: jest.fn(),
+  };
+  beforeEach(() => {
+    jest.resetAllMocks();
+
+    vscode.workspace.getConfiguration = jest.fn().mockReturnValue(mockConfig);
+  });
+
+  it('updates the setting for a non-virtual workspace folder', async () => {
+    const key: VirtualFolderSettingKey = 'enable';
+    const value = false;
+
+    await updateSetting(workspaceFolder, key, value);
+
+    expect(vscode.workspace.getConfiguration).toHaveBeenCalledWith('jest', workspaceFolder.uri);
+    expect(mockConfig.update).toHaveBeenCalledWith(key, value);
+  });
+
+  it('updates the setting for a virtual workspace folder', async () => {
+    const v1Folder = { name: 'v1', rootPath: '/path/to/v1', enable: true };
+    mockConfig.get.mockReturnValueOnce([v1Folder]);
+    const key: VirtualFolderSettingKey = 'enable';
+    const value = false;
+
+    const v1 = new VirtualWorkspaceFolder(workspaceFolder, 'v1');
+    await updateSetting(v1, key, value);
+
+    expect(vscode.workspace.getConfiguration).toHaveBeenCalledWith('jest', workspaceFolder.uri);
+    expect(mockConfig.get).toHaveBeenCalledWith('virtualFolders');
+
+    expect(mockConfig.update).toHaveBeenCalledWith('virtualFolders', [
+      { ...v1Folder, enable: false },
+    ]);
+  });
+
+  it('throws an error if the virtual folder setting is missing', async () => {
+    const v1Folder = { name: 'v1', rootPath: '/path/to/v1', enable: true };
+    mockConfig.get.mockReturnValueOnce([v1Folder]);
+
+    const key: VirtualFolderSettingKey = 'enable';
+    const value = false;
+
+    const v2 = new VirtualWorkspaceFolder(workspaceFolder, 'v2');
+    await expect(updateSetting(v2, key, value)).rejects.toThrow();
+  });
 });

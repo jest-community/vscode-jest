@@ -1,5 +1,6 @@
 jest.unmock('../src/StatusBar');
 jest.unmock('../src/virtual-workspace-folder');
+jest.unmock('../src/JestExt/run-mode');
 jest.unmock('./test-helper');
 jest.useFakeTimers();
 
@@ -11,6 +12,7 @@ import { TestStats } from '../src/types';
 import { makeUri, makeWorkspaceFolder } from './test-helper';
 import { VirtualWorkspaceFolder } from '../src/virtual-workspace-folder';
 import { isInFolder } from '../src/workspace-manager';
+import { RunMode } from '../src/JestExt/run-mode';
 
 const mockSummaryChannel = {
   append: jest.fn(),
@@ -189,17 +191,17 @@ describe('StatusBar', () => {
         const emptyStatsString = `$(pass) 0 $(error) 0 $(question) 0`;
 
         it.each`
-          seq  | update                                                    | active                    | summary             | backgroundColor
-          ${1} | ${{ state: 'running' }}                                   | ${'$(sync~spin)'}         | ${emptyStatsString} | ${undefined}
-          ${2} | ${{ state: 'done' }}                                      | ${''}                     | ${emptyStatsString} | ${undefined}
-          ${3} | ${{ mode: ['auto-run-watch', 'coverage'] }}               | ${'$(eye) $(color-mode)'} | ${emptyStatsString} | ${undefined}
-          ${4} | ${{ stats: alertStats }}                                  | ${''}                     | ${alertSummary}     | ${undefined}
-          ${5} | ${{ mode: ['auto-run-off'], stats: passStats }}           | ${'$(wrench)'}            | ${'$(check)'}       | ${undefined}
-          ${6} | ${{ state: 'exec-error' }}                                | ${'alert'}                | ${emptyStatsString} | ${'statusBarItem.errorBackground'}
-          ${7} | ${{ state: 'initial' }}                                   | ${'...'}                  | ${emptyStatsString} | ${undefined}
-          ${8} | ${{ state: 'stopped' }}                                   | ${'stopped'}              | ${emptyStatsString} | ${'statusBarItem.errorBackground'}
-          ${9} | ${{ mode: ['auto-run-on-save-test'], stats: alertStats }} | ${'$(save)'}              | ${alertSummary}     | ${undefined}
-        `('update: $update', ({ update, active, summary, backgroundColor }) => {
+          seq  | update                                                                               | active                    | summary             | backgroundColor
+          ${1} | ${{ state: 'running' }}                                                              | ${'$(sync~spin)'}         | ${emptyStatsString} | ${undefined}
+          ${2} | ${{ state: 'done' }}                                                                 | ${''}                     | ${emptyStatsString} | ${undefined}
+          ${3} | ${{ mode: new RunMode({ type: 'watch', coverage: true }) }}                          | ${'$(eye) $(color-mode)'} | ${emptyStatsString} | ${undefined}
+          ${4} | ${{ stats: alertStats }}                                                             | ${''}                     | ${alertSummary}     | ${undefined}
+          ${5} | ${{ mode: new RunMode('on-demand'), stats: passStats }}                              | ${'$(run)'}               | ${'$(check)'}       | ${undefined}
+          ${6} | ${{ state: 'exec-error' }}                                                           | ${'alert'}                | ${emptyStatsString} | ${'statusBarItem.errorBackground'}
+          ${7} | ${{ state: 'initial' }}                                                              | ${'...'}                  | ${emptyStatsString} | ${undefined}
+          ${8} | ${{ state: 'stopped' }}                                                              | ${'stopped'}              | ${emptyStatsString} | ${'statusBarItem.errorBackground'}
+          ${9} | ${{ mode: new RunMode({ type: 'on-save', testFileOnly: true }), stats: alertStats }} | ${'$(save)'}              | ${alertSummary}     | ${undefined}
+        `('$seq: update: $update', ({ update, active, summary, backgroundColor }) => {
           statusBar.bind(makeWorkspaceFolder('testSource1')).update(update);
           expect(renderSpy).toHaveBeenCalledTimes(2);
           expect(mockActiveSBItems[0].text).toContain(active);
@@ -228,8 +230,8 @@ describe('StatusBar', () => {
         it('shows tooltip by the actual status', () => {
           statusBar
             .bind(makeWorkspaceFolder('testSource1'))
-            .update({ mode: ['auto-run-on-save'], stats: { success: 1, fail: 2, unknown: 3 } });
-          expect(mockActiveSBItems[0].tooltip).toContain('auto-run-on-save');
+            .update({ mode: new RunMode('on-save'), stats: { success: 1, fail: 2, unknown: 3 } });
+          expect(mockActiveSBItems[0].tooltip).toContain('on-save');
           expect(mockSummarySBItems[0].tooltip).toContain('success 1, fail 2, unknown 3');
         });
       });
@@ -340,15 +342,15 @@ describe('StatusBar', () => {
         setupWorkspace('testSource1', 'testSource2', 'testSource3');
         statusBar.bind(makeWorkspaceFolder('testSource1')).update({
           state: 'initial',
-          mode: ['auto-run-off'],
+          mode: new RunMode('on-demand'),
         });
         statusBar.bind(makeWorkspaceFolder('testSource2')).update({
           state: 'running',
-          mode: ['auto-run-watch', 'coverage'],
+          mode: new RunMode({ type: 'watch', coverage: true }),
         });
         statusBar.bind(makeWorkspaceFolder('testSource3')).update({
           state: 'done',
-          mode: ['auto-run-on-save-test', 'coverage'],
+          mode: new RunMode({ type: 'on-save', testFileOnly: true, coverage: true }),
         });
       });
       it.each`
@@ -367,14 +369,14 @@ describe('StatusBar', () => {
           mockSummaryChannel.append.mockClear();
           statusBar.bind(makeWorkspaceFolder('testSource1')).update({
             state: 'running',
-            mode: ['auto-run-watch', 'coverage'],
+            mode: new RunMode({ type: 'watch', coverage: true }),
             stats: makeStats(1, 2, 3),
           });
           const output = mockSummaryChannel.append.mock.calls[0][0];
           expect(output).toMatchInlineSnapshot(`
-            "testSource1:		warning | success 1, fail 2, unknown 3; mode: auto-run-watch, coverage; state: running
-            testSource2:		mode: auto-run-watch, coverage; state: running
-            testSource3:		mode: auto-run-on-save-test, coverage; state: idle"
+            "testSource1:		warning | success 1, fail 2, unknown 3; mode: watch, coverage; state: running
+            testSource2:		mode: watch, coverage; state: running
+            testSource3:		mode: on-save-test-file-only, coverage; state: idle"
           `);
         });
       });

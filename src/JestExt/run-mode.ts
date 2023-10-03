@@ -11,6 +11,7 @@ import {
 import { NoOpFileSystemProvider } from '../noop-fs-provider';
 
 const runModeTypes: JestRunModeType[] = ['watch', 'on-save', 'on-demand'];
+const predefinedRunModeTypes: JestPredefinedRunModeType[] = [...runModeTypes, 'deferred'];
 
 const isJestRunMode = (obj: JestRunModeSetting | null | undefined): obj is JestRunMode =>
   obj != null && typeof obj !== 'string' && 'type' in obj;
@@ -73,10 +74,17 @@ export class RunMode {
     this._isModified = true;
   }
 
-  private validate(config: JestRunMode): void {
-    if (!runModeTypes.includes(config.type)) {
+  static validate(config: JestRunModeSetting): void {
+    let errConfigType: string | undefined;
+    if (isJestRunMode(config) && !runModeTypes.includes(config.type)) {
+      errConfigType = config.type;
+    } else if (typeof config === 'string' && !predefinedRunModeTypes.includes(config)) {
+      errConfigType = config;
+    }
+
+    if (errConfigType) {
       throw new Error(
-        `Invalid type "${config.type}" in jest.runMode setting: ${JSON.stringify(config)}`
+        `Invalid type "${errConfigType}" in jest.runMode setting: ${JSON.stringify(config)}`
       );
     }
   }
@@ -125,7 +133,7 @@ export class RunMode {
         runMode = this.getDefaultRunMode('watch');
       } else {
         runMode = this.getDefaultRunMode('on-demand');
-        if (setting.onSave) {
+        if ('onSave' in setting && setting.onSave) {
           runMode = this.getDefaultRunMode('on-save');
           if (runMode.type === 'on-save' && setting.onSave === 'test-file') {
             runMode.testFileOnly = true;
@@ -144,21 +152,23 @@ export class RunMode {
     setting?: JestRunModeSetting | null,
     legacySettings?: DeprecatedPluginResourceSettings
   ): JestRunMode {
-    if (isJestRunMode(setting)) {
-      this.validate(setting);
-      return { ...setting };
-    }
-
     try {
+      if (setting) {
+        RunMode.validate(setting);
+
+        if (isJestRunMode(setting)) {
+          return { ...setting };
+        }
+        return this.getDefaultRunMode(setting);
+      }
+
       // Determine the base run mode based on the provided setting, or fallback to legacy settings or default 'watch' mode.
       // If a setting is provided, use the default run mode for that setting.
       // If no setting is provided, check if legacy autoRun is enabled and use its run mode.
       // If neither setting nor legacy autoRun is available, use the default 'watch' mode.
 
       const base = (
-        setting
-          ? this.getDefaultRunMode(setting)
-          : legacySettings?.autoRun
+        legacySettings?.autoRun
           ? this.fromAutoRun(legacySettings.autoRun)
           : this.getDefaultRunMode('watch')
       ) as JestRunMode;
@@ -181,6 +191,9 @@ export class RunMode {
       }
       return base;
     } catch (e) {
+      // sever user error, while we can fallback to the default, it might not be what the user intended.
+      // therefore raise a prominent error message.
+      // This should only happen when experienced user specified a runMode with the wrong value, i.e. rare, and should not happen to new users.
       const message = `invalid runMode ${JSON.stringify(
         setting
       )}, will use default RunMode instead`;
@@ -277,7 +290,7 @@ export class RunMode {
     const pickedItem = await showRunModeQuickPick(items, itemButtons);
 
     // make sure any open runMode editor is closed
-    runModeEditor.close();
+    await runModeEditor.close();
 
     if (pickedItem) {
       const newRunMode = this.clone(pickedItem.mode);
@@ -294,7 +307,7 @@ export class RunMode {
    * save runMode to the workspace settings
    * @returns
    */
-  public save = async (workspaceFolder: vscode.WorkspaceFolder): Promise<boolean> => {
+  public save = (workspaceFolder: vscode.WorkspaceFolder): Promise<void> => {
     return updateSetting(workspaceFolder, 'runMode', this.config);
   };
 }
@@ -332,6 +345,10 @@ const showRunModeQuickPick = async (
 
         const m = await (e.button as RunModeQuickPickButton).action();
         const found = items.find((item) => item.mode.type === m.type);
+
+        /* this following condition should not happen, and can't really be tested based on today's implementation, */
+        /* but decided to leave it here anyway for error proof... */
+        /* istanbul ignore next */
         if (!found) {
           vscode.window.showErrorMessage(`Disregard changes: invalid runMode type: ${m.type}.`);
           return;
@@ -381,7 +398,7 @@ const RunModeEditInstruction = `
 // RunMode reference: https://github.com/jest-community/vscode-jest/blob/master/README.md#runmode
 `;
 
-class RunModeEditor {
+export class RunModeEditor {
   // private doc?: vscode.TextDocument;
   private disposables: vscode.Disposable[] = [];
   private docUri = vscode.Uri.parse(`${NoOpFileSystemProvider.scheme}://workspace/runMode.json`);
@@ -389,7 +406,10 @@ class RunModeEditor {
   private dispose = () => {
     this.disposables.forEach((d) => d.dispose());
     this.disposables = [];
+    this.cancelEdit = undefined;
   };
+  private cancelEdit: (() => void) | undefined;
+
   async edit(config: JestRunMode, schemaUri: vscode.Uri): Promise<JestRunModeSetting | undefined> {
     this.dispose();
 
@@ -414,8 +434,18 @@ class RunModeEditor {
     // do this to make sure the document didn't show up as changed
     await doc.save();
 
-    return new Promise((resolve) => {
-      let edited: JestRunModeSetting | undefined;
+    return new Promise((_resolve) => {
+      // let edited: JestRunModeSetting | undefined;
+      let resolved = false;
+
+      const resolve = (value?: JestRunModeSetting) => {
+        if (!resolved) {
+          _resolve(value);
+          resolved = true;
+          this.dispose();
+        }
+      };
+      this.cancelEdit = () => resolve(undefined);
 
       this.disposables.push(
         vscode.workspace.onDidSaveTextDocument((document) => {
@@ -424,21 +454,22 @@ class RunModeEditor {
               // Remove the comments from the document text
               let jsonText = document.getText();
               jsonText = jsonText.slice(jsonText.indexOf('{'));
-              if (!jsonText) {
-                throw new Error('not finding json object open bracket');
+              if (jsonText) {
+                // Parse the JSON content to validate it
+                const jsonObject = JSON.parse(jsonText);
+                const edited = jsonObject['jest.runMode'];
+                if (edited) {
+                  RunMode.validate(edited);
+                  resolve(edited);
+                  // Close the active editor
+                  vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+                  return;
+                }
               }
-
-              // Parse the JSON content to validate it
-              const jsonObject = JSON.parse(jsonText);
-              edited = jsonObject['jest.runMode'];
-              resolve(edited);
-              this.dispose();
-
-              // Close the active editor
-              vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+              throw new Error(`invalid runMode JSON content`);
             } catch (error) {
               // Show parse error
-              vscode.window.showErrorMessage('JSON is invalid: ' + error);
+              vscode.window.showErrorMessage('RunMode is invalid: ' + error);
             }
           }
         })
@@ -446,32 +477,30 @@ class RunModeEditor {
       this.disposables.push(
         vscode.workspace.onDidCloseTextDocument(async (closedDoc) => {
           if (closedDoc.uri.toString() === doc.uri.toString()) {
-            this.dispose();
-            resolve(edited);
+            resolve();
           }
         })
       );
     });
   }
-  async close(ignoreUnsaved = true) {
+  async close() {
+    this.cancelEdit?.();
+
     // find the editor for the docUri
     const uri = this.docUri.toString();
     const editor = vscode.window.visibleTextEditors.find(
       (editor) => editor.document.uri.toString() === uri
     );
     if (editor) {
-      this.disposables.forEach((d) => d.dispose());
-      this.disposables = [];
-      if (ignoreUnsaved) {
-        // force save the document to noop fs so we can close the editor without prompt
-        await editor.document.save();
-      }
+      // force save the document to noop fs so we can close the editor without prompt
+      await editor.document.save();
 
       // since there didn't seem to have a way to close the given editor, we have to work around by
       // making the target editor active then close the activeEditor
       await vscode.window.showTextDocument(editor.document, editor.viewColumn);
       await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
     }
+    this.dispose();
   }
 }
 

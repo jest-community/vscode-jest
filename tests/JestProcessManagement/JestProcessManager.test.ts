@@ -93,10 +93,14 @@ describe('JestProcessManager', () => {
         expect.hasAssertions();
 
         const process = pm.scheduleJestProcess(request);
+
         expect(process.id).toEqual(expect.stringContaining(request.type));
         expect(jestProcessMock).toHaveBeenCalledTimes(1);
         expect(mockProcess.start).toHaveBeenCalledTimes(1);
 
+        expect(extContext.onRunEvent.fire).toHaveBeenCalledWith(
+          expect.objectContaining({ type: 'process-start' })
+        );
         expect(getState(pm, mockProcess)).toEqual({ inQ: true, started: true, qSize: 1 });
       });
       it('the queue will be cleared when the process exit upon completion', async () => {
