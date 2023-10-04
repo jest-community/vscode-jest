@@ -502,12 +502,26 @@ describe('jest process listeners', () => {
           mockSession.context.workspace = { name: 'workspace-xyz' };
           mockProcess.request = { type: 'watch-tests' };
         });
-        it('will fire exit with error', () => {
+        it('will fire exit with error for watch run', () => {
           expect.hasAssertions();
 
           const listener = new RunTestListener(mockSession);
 
           listener.onEvent(mockProcess, 'processClose', 1);
+          expect(mockSession.context.onRunEvent.fire).toHaveBeenCalledWith(
+            expect.objectContaining({
+              type: 'exit',
+              error: expect.anything(),
+            })
+          );
+        });
+        it('will always file error if error code > 1, regardless of request type', () => {
+          expect.hasAssertions();
+
+          mockProcess.request = { type: 'all-tests' };
+          const listener = new RunTestListener(mockSession);
+
+          listener.onEvent(mockProcess, 'processClose', 127);
           expect(mockSession.context.onRunEvent.fire).toHaveBeenCalledWith(
             expect.objectContaining({
               type: 'exit',

@@ -64,12 +64,6 @@ export class AbstractProcessListener {
         this.onProcessExit(jestProcess, code ?? undefined, signal ?? undefined);
         break;
       }
-      default:
-        this.logging(
-          'warn',
-          `received unexpected event "${event}" for process:`,
-          jestProcess.request
-        );
     }
   }
 
