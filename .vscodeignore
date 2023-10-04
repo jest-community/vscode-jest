@@ -28,3 +28,8 @@ generated-icons/
 release-notes/
 setup-wizard.md
 *.zip
+coverage*/
+scripts/**
+icons/**
+coverage_comparison_report.html
+
