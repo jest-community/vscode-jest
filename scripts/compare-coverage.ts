@@ -98,7 +98,9 @@ function generateHTMLReport(
   html += '</table>';
   html += '</body></html>';
 
-  fs.writeFileSync('coverage_comparison_report.html', html);
+  const fName = 'coverage_comparison_report.html';
+  fs.writeFileSync(fName, html);
+  console.log(`Report generated: ${fName}`);
 }
 
 async function main(): Promise<void> {

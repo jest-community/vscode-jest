@@ -1,7 +1,6 @@
 'use strict';
 
 const path = require('path');
-const CopyPlugin = require('copy-webpack-plugin'); // Import the plugin
 
 /**@returns {import('webpack').Configuration}*/
 module.exports = () => {
@@ -56,16 +55,5 @@ module.exports = () => {
         },
       ],
     },
-    plugins: [
-      // Add this plugin to your existing configuration
-      new CopyPlugin({
-        patterns: [
-          {
-            from: path.resolve(__dirname, 'icons'), // Replace with your specific folder
-            to: path.resolve(__dirname, 'out/icons'), // Replace with your output folder
-          },
-        ],
-      }),
-    ],
   };
 };

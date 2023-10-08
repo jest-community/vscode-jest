@@ -607,7 +607,6 @@ describe('JestTestProvider', () => {
         expect.objectContaining({
           workspace: extExplorerContextMock.workspace,
           key: 'jest.runMode',
-          value: false,
           itemIds: [workspaceRootMock.item.id],
         })
       );

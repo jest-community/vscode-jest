@@ -35,7 +35,6 @@ export class JestTestProvider {
     tiContextManager.setItemContext({
       workspace: this.context.ext.workspace,
       key: 'jest.runMode',
-      value: this.context.ext.settings.runMode.isModified,
       itemIds: [this.workspaceRoot.item.id],
     });
     tiContextManager.setItemContext({

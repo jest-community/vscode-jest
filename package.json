@@ -351,14 +351,6 @@
         "icon": "$(gear)"
       },
       {
-        "command": "io.orta.jest.test-item.run-mode.modified.change",
-        "title": "Change RunMode (modified)",
-        "icon": {
-          "light": "icons/run-mode-alt-16.svg",
-          "dark": "icons/run-mode-alt-16.svg"
-        }
-      },
-      {
         "command": "io.orta.jest.test-item.reveal-output",
         "title": "Reveal Test Output",
         "icon": "$(terminal)"
@@ -409,10 +401,6 @@
           "when": "jest.never"
         },
         {
-          "command": "io.orta.jest.test-item.run-mode.modified.change",
-          "when": "jest.never"
-        },
-        {
           "command": "io.orta.jest.test-item.reveal-output",
           "when": "jest.never"
         },
@@ -434,18 +422,13 @@
       ],
       "testing/item/context": [
         {
-          "command": "io.orta.jest.test-item.run-mode.modified.change",
-          "group": "inline@1",
-          "when": "testId in jest.runMode.modified"
-        },
-        {
           "command": "io.orta.jest.test-item.run-mode.change",
           "group": "inline@1",
-          "when": "testId in jest.runMode.not-modified"
+          "when": "testId in jest.runMode"
         },
         {
           "command": "io.orta.jest.test-item.reveal-output",
-          "group": "inline@3",
+          "group": "inline@2",
           "when": "testId in jest.workspaceRoot"
         },
         {
@@ -610,7 +593,6 @@
     "@typescript-eslint/eslint-plugin": "^5.48.1",
     "@typescript-eslint/parser": "^5.48.1",
     "@vscode/test-electron": "^2.2.2",
-    "copy-webpack-plugin": "^11.0.0",
     "eslint": "^8.31.0",
     "eslint-config-prettier": "^8.6.0",
     "eslint-plugin-jest": "^27.2.1",

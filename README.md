@@ -18,7 +18,7 @@ If the extension can find the jest command, by default it will automatically run
 If you have a more sophisticated project configuration or prefer to run tests differently, fear not, the extension supports extensive [customization settings](#customization). For example:
 
 - you can use [jest.jestCommandLine](#jestcommandline) to tell the extension to use `yarn test` instead of the default jest command.
-- you can use [jest.autoRun](#autorun) to optimize performance and control when the extension should run your tests. 
+- you can use [jest.runMode](#runmode) to optimize performance and control when the extension should run your tests. 
 - you can use the extension with monorepo projects, see [monorepo project support](#how-to-use-the-extension-with-monorepo-projects) for details.
 
 You can see the full [features](#features) and learn more details in the [How-To](#how-to) section. If you encounter an unexpected error, feel free to checkout the [Troubleshooting](#troubleshooting) or file an [issue](https://github.com/jest-community/vscode-jest/issues). 
@@ -40,30 +40,33 @@ Content
   - [Releases](#releases)
   - [Features](#features)
   - [Installation](#installation)
+  - [User Interface](#user-interface)
   - [How To?](#how-to)
     - [How to set up the extension?](#how-to-set-up-the-extension)
-    - [How to trigger the test run?](#how-to-trigger-the-test-run)
+    - [How to change runMode for the current session?](#how-to-change-runmode-for-the-current-session)
+    - [How to trigger a test run?](#how-to-trigger-a-test-run)
     - [How to debug tests?](#how-to-debug-tests)
     - [How to use code coverage?](#how-to-use-code-coverage)
+      - [How to read coverage scheme and customize it](#how-to-read-coverage-scheme-and-customize-it)
     - [How to update and view snapshots](#how-to-update-and-view-snapshots)
     - [How to use the extension with monorepo projects?](#how-to-use-the-extension-with-monorepo-projects)
     - [How to read the StatusBar?](#how-to-read-the-statusbar)
-    - [How to use the Test Explorer?](#how-to-use-the-test-explorer)
+    - [How to perform Quick-Fix?](#how-to-perform-quick-fix)
     - [How to see more debug info (self-diagnosis)?](#how-to-see-more-debug-info-self-diagnosis)
   - [Customization](#customization)
     - [Settings](#settings)
-      - [Details](#details)
-        - [jestCommandLine](#jestcommandline)
-        - [rootPath](#rootpath)
-        - [coverageFormatter](#coverageformatter)
-        - [coverageColors](#coveragecolors)
-        - [autoRun](#autorun)
-        - [testExplorer](#testexplorer)
-        - [shell](#shell)
-        - [monitorLongRun](#monitorlongrun)
-        - [autoRevealOutput](#autorevealoutput)
-        - [parserPluginOptions](#parserpluginoptions)
-        - [virtualFolders](#virtualfolders)
+      - [jestCommandLine](#jestcommandline)
+      - [rootPath](#rootpath)
+      - [coverageFormatter](#coverageformatter)
+      - [coverageColors](#coveragecolors)
+      - [runMode](#runmode)
+      - [autoRun](#autorun)
+      - [testExplorer](#testexplorer)
+      - [shell](#shell)
+      - [monitorLongRun](#monitorlongrun)
+      - [autoRevealOutput](#autorevealoutput)
+      - [parserPluginOptions](#parserpluginoptions)
+      - [virtualFolders](#virtualfolders)
     - [Debug Config](#debug-config)
       - [Debug Config v2](#debug-config-v2)
   - [Commands](#commands)
@@ -100,31 +103,74 @@ Alternatively open Visual Studio Code, go to the extension view and search for "
 
 For detailed releases and migration help, please see [releases](https://github.com/jest-community/vscode-jest/releases).
 
+## User Interface 
+
+This extension fully integrates with the VSCode testing framework, supporting both automatic and on-demand test runs. In addition to the standard VSCode Test Explorer interface, the extension provides additional UI elements to simplify the development workflow:
+
+<img src="images/testExplorer-6.0.2.png" alt="testExplorer.png" width="1000"/>
+
+1. **Run Mode**: [Run mode](#runmode) dictates the overall user experience, determining when tests should run, how test outputs are displayed or cleared, etc. Different run modes may have different performance implications, particularly for larger projects. The run mode is visible in the Test Explorer (on the folder item) and on the status bar (refer to point 4). Users can change this setting either in `settings.json` (for all runs) or through the UI components mentioned below (for the current session):
+   - **1.1** Adjust the RunMode using the Test Explorer's run configuration dropdown by selecting "Configure Test Profiles".
+   - **1.2** Alternatively, alter the RunMode via the Test Explorer's inline menu (associated with the folder item).
+
+   More info:
+    - [How to change runMode](#runmode-chooser).
+    - [RunMode performance tradeoff](#runmode-tradeoff)
+
+2. **Test Menu**: Besides automatic test executions (if configured), users can initiate test actions on-demand via:
+   - **2.1** The Test Explorer inline menu for individual test items. A right/alt click on an item also displays a context menu similar to the editor's gutter menu below.
+   - **2.2** Right/Alt clicking on the test status indicator in the editor's gutter shows a context menu with relevant test actions, such as run, debug, view, or update snapshots.
+  
+    More info: 
+      - [How to trigger a test run](#how-to-trigger-the-test-run)  
+      - [How to update and view snapshots](#how-to-update-and-view-snapshots).
+
+3. **Test Output**: Alongside the test status visible in the editor and TestExplorer tree view, the extension offers native jest run outputs, extension configuration details, and [quick-fix](#quick-fix-chooser) suggestions through vscode terminals (labeled as "Jest (folder-name)"). By default, the output automatically appears when tests run, but this can be adjusted via the [runMode](#runmode) setting.
+   - **3.1** The output terminal can be accessed on-demand using the TestExplorer inline menu (on the folder item) or the status bar item (refer to point 4).
+
+4. **Extension Status**: Upon successful launch of the extension, it displays the active folder run status and the aggregated workspace test stats in the status bar. Clicking on the item reveals the associated output window.  
+
+    More info: 
+       - [How to read the StatusBar](#how-to-read-the-statusbar)
+  
+
 ## How To?
 ### How to set up the extension?
 
 Hopefully, you don't have to do anything. If you can run jest from the terminal, you should be able to use this extension.
 
-The extension will try to auto-config a jest command and debug config when needed. If the auto-config fails, users should see an error panel with the `"Fix"` option to help them fix the settings.
-
-A few known failure scenarios:
-- PNP without node_modules nor a "test" script in package.json will need to set up jest.jestCommandLine explicitly.
-- Multi-root monorepo project in a single-root workspace will need to be converted to a multi-root project first. From v5, you can quickly perform this with the [monorepo setup tool](setup-wizard.md#setup-monorepo-project).
+The extension will try to auto-config a jest command and debug config when needed. If the auto-config fails, or any  non-test error occurred, users should see an [quick-fix-chooser](#quick-fix-chooser) link in the output terminal to  help resolving the issues. 
 
 For more details see the [setup tool](setup-wizard.md) and the complete customization options in [settings](#settings).
 
-### How to trigger the test run?
+### How to change runMode for the current session?
+<a id='runmode-chooser'></a>
+To adjust the runMode during your current session:
 
-By default, the extension uses jest watch mode that automatically runs tests upon related file changes. In addition, users can also trigger individual tests/suites interactively:
+1. Click on the runMode buttons referenced in the [User Interface](#user-interface) section. This action will prompt a runMode chooser.
+
+2. Within the chooser, you can swiftly switch the runMode type, toggle coverage, opt for deferred mode, or directly edit the runMode within an editor.
+
+<img src="images/runmode-chooser.png" alt="runMode Chooser Interface" width="800"/>
+
+3. Confirm your adjustments by clicking the "Apply" button located on the top right. Or discard changes with the "Return" button on the top left.
+
+Note: Changes to runMode using the UI will apply only to the ongoing session. Upon restarting the extension or reloading the window, the runMode will revert to the value in settings.json. However, you can write the current runMode value to `settings.json` with command: `"Jest: Save Current RunMode"` via command palette.
+
+For an in-depth understanding of each type and the available options, refer to [runMode](#runmode).
+
+### How to trigger a test run?
+
+By default, the extension uses jest watch mode that automatically runs tests upon related file changes. In addition, users can also trigger individual tests/suites on-demand:
 
 <img src="images/run-test.png" alt="run-test" width="800"/>
 
 1. trigger test runs via the gutter menu of each test and describe blocks.
-2. trigger test runs via the test tree inline menu.
+2. trigger test runs via the TestExplorer tree item's inline menu.
 3. trigger test runs via command palette, such as `Jest: Run All Tests`
 4. trigger test runs via the editor context menu: `Jest: Run Related Tests`
 
-The extension will try to auto-config a jest runner, if it fails, you can try the `"Fix"` button in the error panel or checkout the [troubleshooting](#troubleshooting).
+The extension will try to auto-config a jest runner, if it fails, you can try the [quick-fix-chooser](#quick-fix-chooser).
 ### How to debug tests?
 
 There are 2 ways to debug a specific test:
@@ -139,31 +185,27 @@ The extension will try to generate a debug config, but if you encounter a debug 
 ### How to use code coverage?
 
 Code coverage can be triggered via
-1. test tree item inline menu (see [toggle coverage](how-to-toggle-coverage))
+1. change [runMode](#runmode) config via [chooser](#run-modoe-chooser) or settings.
 2. [Command Palette](https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette), select command like **Jest: Toggle Coverage** to activate or deactivate code coverage (see full list in [commands](#commands). 
   
-The coverage state is reflected in test tree toggle menu, as well as  StatusBar:
+The coverage stats will be displayed at the source code editor: summary at the top and inline coverage indicator based on the formatter selected.
 
-<img src="images/status-bar-watch-coverage.png" alt="status-bar-modes" width="500"/>
+<img src="images/coverage-screen-shot.png" alt="coverage-screen-shot" width="500"/>
 
-This extension supports both `babel` and `v8` coverageProviders. However, please note the coverage might not be exactly the same, see [facebook/jest#11188](https://github.com/facebook/jest/issues/11188) for more details.
+To verify the coverage mode is on, one can check the [runMode chooser](#run-mode-choose) or the status bar (see [how to read the status bar](#how-to-read-the-statusbar))
 
-<details>
+Note: this extension supports both `babel` and `v8` coverageProviders. However, please note the coverage might not be exactly the same, see [facebook/jest#11188](https://github.com/facebook/jest/issues/11188) for more details.
 
-<summary>How to read coverage scheme and customize it</summary>
+#### How to read coverage scheme and customize it
 
 In addition to the coverage summary that is shown on the top of the file, each line will be marked by its coverage status according to the coverage formatter configured. There are 3 types of coverage you might see in your source code, distinguished by colors:
 
 - "covered": if the code is covered. Either not marked or "green" by default, depends on the formatter.
 - "not-covered": if the code is not covered. Marked as "red" by default.
 - "partially-covered": Usually this mean the branch (such as if, switch statements) only partially tested. Marked as "yellow" by default.
-  - _Please note, istanbuljs (the library jest used to generate coverage info) reports switch branch coverage with the first "case" statement instead of the "switch" statement._
-
-![coverage-screen-shot](images/coverage-screen-shot.png)
+  - Please note, istanbuljs (the library jest used to generate coverage info) reports switch branch coverage with the first "case" statement instead of the "switch" statement.
 
 You can customize coverage start up behavior, style and colors, see [customization](#customization) for more details.
-
-</details>
 
 ### How to update and view snapshots
 
@@ -188,54 +230,29 @@ For option 1 and 2, the easiest way to setup the monorepo projects is to use the
 Please note, a working jest environment is a prerequisite for this extension. If you are having problem running the tests from a terminal, please follow [jest](https://jestjs.io/docs/configuration) instruction to set it up first.
    
 ### How to read the StatusBar?
-StatusBar shows 2 kinds of information:
-`Jest` shows the mode and state of the "active" workspace folder or virtual folder(s).
-`Jest-WS` shows the total test suite stats for the whole workspace.
-Clicking on each of these button will reveal the corresponding output window with more details.
 
-<details>
-<summary>Illustration</summary>
+StatusBar shows 2 types of information, illustrated below:
 
-<img src='images/status-bar-manual.png' width="600" />
+<img src="images/status-bar-overview.png" alt="snapshot-menu" width="500"/>
 
+1. `Jest (folder-name)`: shows the mode and state of the "active" workspace folder or virtual folder (based on the active editor). As the hovering text showed, the "active" folder "react-ts" is in "watch" mode with coverage on.
+2. `Jest-WS`: shows the total test suite stats (pass, failed, unknown) for the whole workspace. Unknown test suites usually mean the test files are not yet run.
 
-<img src='images/status-bar-watch-coverage.png' width="600" />
-shows the active workspace has coverage on.
-<img src='images/status-bar-save-test-unsync.png' width="600" />
+Hovering over the status items will show tooltips with descriptions; clicking on the items open the corresponding output window. 
 
-shows the active workspace has onSave for test file only, and that the workspace stats is out of sync with the code, such as when the source file is changed but the related tests are not run yet.
+### How to perform Quick-Fix?
+<a id="quick-fix-chooser"></a>
+Upon non-test errors, such as jest command not found, the extension can help user fix common errors with quick fix:
 
-<img src='images/status-bar-save-all.png' width="600" />
+<img src="images/quick-fix-chooser.png" alt="coverage-screen-shot" width="800"/>
 
-shows the autoRun will be triggered by either test or source file changes.
-
-<img src='images/status-bar-error.png' width="600" />
-
-shows active workspace has an execution error.
-</details>
-
-### How to use the Test Explorer?
-Users with `vscode` v1.59 and `vscode-jest` v4.1 and up will start to see tests appearing in the test explorer automatically. Test explorer provides a "test-centric" view, allows users to run/debug tests directly from the explorer, and provides a native terminal output experience (with colors!):
-
-<img src="images/testExplorer-5.1.1.png" alt="testExplorer.png" width="800"/>
-
-<a id='how-to-toggle-auto-run'>**How to toggle autoRun for the workspace?**</a>
-- In TestExplorer, click on the root of the test tree, i.e. the one with the workspace name and the current autoRun mode. You will see a list of buttons to its right.
-- Click on the [autoRun](#autorun) button (see image above) to toggle it on or off.
-  - If autoRun is originally on, the button will turn it off and users can use the run menu (in both editor gutter and test explorer tree) to trigger test run(s).
-  - If the autoRun is originally off, the button will turn it on by restoring to your original autoRun setting, if it is not "off", otherwise it will switch to ["on-save"](#autorun) mode instead.
-
-<a id='how-to-toggle-coverage'>**How to toggle test coverage for the workspace?**</a>
-- In TestExplorer, click on the root of the test tree, i.e. the one with the workspace name and the current autoRun mode. You will see a list of buttons to its right.
-- Click on the coverage button (see image above) to toggle on or off.
-  - The next test run (auto or manual) will start reporting test coverage.
-
-<a id='how-to-reveal-output'>**How to reveal test output for the workspace?**</a>
-- In TestExplorer, click on the root of the test tree, i.e. the one with the workspace name and the current autoRun mode. You will see a list of buttons to its right.
-- Click on the terminal button (see image above) to reveal the test output terminal.
-
-
-You can further customize the explorer with [jest.testExplorer](#testexplorer) in [settings](#settings).
+1. `cmd + click` on the quick fix link in the output terminal will open a quick-fix chooser.
+2. A quick-fix chooser listed the fixes and hints to help resolve common errors:
+   - **Customize Extensions**: If you can run jest with CLI in the terminal but not with the extension, chances are you might need to configure the `jest.jestCommandLine`, `jest.rootPath`, monorepo settings, etc. This action will open the [setup tools](setup-wizard.md) to continue. 
+   - **Defer or Change Run Mode**: If the project has not yet ready to run jest, you can use this action to defer the test run or change the [runMode](#runmode) to on-demand mode. This action brings up a [runMode chooser](#runmode-chooser) to continue. 
+   - **Disable Extension**: If you do not intend to run jest for this folder, you can choose this action to disable the extension. This action will set `"jest.enable": false` in the `.vscode/settings.json` file.
+   - **Help**: If you are not sure what to do, you can choose this action to open the [troubleshooting](#troubleshooting) page.
+   
 
 ### How to see more debug info (self-diagnosis)?
 
@@ -248,46 +265,49 @@ It is sometimes helpful to see the actual command and shell environment spawned,
 ### Settings
 Users can use the following settings to tailor the extension for their environments.
 - All settings are prefixed with `jest` and saved in standard `.vscode/settings.json`.
-- settings crossed out are to be deprecated in the future
-- settings marked with 💼 apply to the whole project, otherwise per workspace.
+- settings marked with :x: are deprecated and subject to removal in the future.
+- settings marked with 💼 apply to the whole workspace, otherwise on workspace-folder level.
 
 
-|setting|description|default|example/notes|
-|---|---|---|---|
+|setting|description|default|example/notes|available|
+|---|---|---|---|---|
 |**Process**|
-|enable|Enable/disable jest extension for the given workspace folder/virtual-folder|true|`"jest.enable": false`|
 |[jestCommandLine](#jestcommandline)|The command line to start jest tests|undefined|`"jest.jestCommandLine": "npm test --"` or `"jest.jestCommandLine": "yarn test"` or `"jest.jestCommandLine": "node_modules/.bin/jest --config custom-config.js"`|
+|[rootPath](#rootPath)|The path to your frontend src folder|""|`"jest.rootPath":"packages/app"` or `"jest.rootPath":"/apps/my-app"`|
 |nodeEnv|Add additional env variables to spawned jest process|null|`"jest.nodeEnv": {"PORT": "9800", "BAR":"true"}` |
 |[shell](#shell)|shell (path or LoginShell) for executing jest|null|`"jest.shell": "/bin/bash"` or `"jest.shell": "powershell"` or `"jest.shell": {"path": "/bin/bash"; args: ["--login"]}`  |
-|[autoRun](#autorun)|Controls when and what tests should be run|undefined|`"jest.autoRun": "off"` or `"jest.autoRun": "watch"` or `"jest.autoRun": {"watch": false, "onSave":"test-only"}`|
-|[rootPath](#rootPath)|The path to your frontend src folder|""|`"jest.rootPath":"packages/app"` or `"jest.rootPath":"/apps/my-app"`|
-useDashedArgs| Determine if to use dashed arguments for jest processes |undefined|`"jest.useDashedArgs":true`|
-|[monitorLongRun](#monitorlongrun)| monitor long running tests based on given threshold in ms|60000|`"jest.monitorLongRun": 120000`|
+useDashedArgs| Determine if to use dashed arguments for jest processes |undefined|`"jest.useDashedArgs":true`| >= v6.0.0
 |[parserPluginOptions](#parserpluginoptions)|Configure babel parser plugins|null|`"jest.parserPluginOptions": {decorators: 'legacy'}`|
-|[virtualFolders](#virtual-folders)|defines multiple jest runs in a given vscode workspace folder|undefined|`"jest.virtualFolders": "[{"name": "front-end", "rootPath': "packages/front-end"}, {"name": "back-end", "rootPath': "packages/back-end"} ]"`|
-|**Editor**|
+|[virtualFolders](#virtual-folders)|defines multiple jest runs in a given vscode workspace folder|undefined|`"jest.virtualFolders": "[{"name": "front-end", "rootPath': "packages/front-end"}, {"name": "back-end", "rootPath': "packages/back-end"} ]"`| >= v6.0.0 
+|**UX**|
+|[runMode](#runmode)|Controls most test UX, including when tests should be run, output management, etc|undefined|`"jest.runMode": "watch"` or `"jest.runMode": "on-demand"` or `"jest.runMode": {"type": "on-demand", "deferred": true}`| >= v6.0.2
+|autoClearTerminal|Clear the terminal output at the start of any new test run.|false|`"jest.autoClearTerminal": true`| >= v6.0.0
 |[testExplorer](#testexplorer) |Configure jest test explorer|null|`{"showInlineError": "true"}`|
+|:x: [autoRun](#autorun)|Controls when and what tests should be run|undefined|`"jest.autoRun": "off"` or `"jest.autoRun": "watch"` or `"jest.autoRun": {"watch": false, "onSave":"test-only"}`| <= v6.0.2 (replaced by runMode)
+|:x: [autoRevealOutput](#autoRevealOutput)|Determine when to show test output|"on-run"|`"jest.autoRevealOutput": "on-exec-error"`| <= v6.0.2 (replaced by runMode)
 |**Coverage**|
-|showCoverageOnLoad|Show code coverage when extension starts|false|`"jest.showCoverageOnLoad": true`|
+|:x: showCoverageOnLoad|Show code coverage when extension starts|false|`"jest.showCoverageOnLoad": true`| <= v6.0.2 (replaced by runMode)
 |[coverageFormatter](#coverageFormatter)|Determine the coverage overlay style|"DefaultFormatter"|`"jest.coverageFormatter": "GutterFormatter"`|
 |[coverageColors](#coverageColors)|Coverage indicator color override|undefined|`"jest.coverageColors": { "uncovered": "rgba(255,99,71, 0.2)", "partially-covered": "rgba(255,215,0, 0.2)"}`|
 |**Misc**|
-|debugMode|Enable debug mode to diagnose plugin issues. (see developer console)|false|`"jest.debugMode": true`|
+|enable|Enable/disable jest extension for the given workspace folder/virtual-folder|true|`"jest.enable": false`|>=6.0.0|
 |disabledWorkspaceFolders 💼|Disabled workspace folders names in multi-root environment|[]|`"jest.disabledWorkspaceFolders": ["package-a", "package-b"]`|
-|[autoRevealOutput](#autoRevealOutput)|Determine when to show test output|"on-run"|`"jest.autoRevealOutput": "on-exec-error"`|
-|autoClearTerminal|Clear the terminal output at the start of any new test run.|false|`"jest.autoClearTerminal": true`|
+|debugMode|Enable debug mode to diagnose plugin issues. (see developer console)|false|`"jest.debugMode": true`|
+|[monitorLongRun](#monitorlongrun)| monitor long running tests based on given threshold in ms|60000|`"jest.monitorLongRun": 120000`|
 
-#### Details
-##### jestCommandLine
+
+#### jestCommandLine
 
 This should be the command users used to kick off the jest tests in the terminal. However, since the extension will append additional options at run time, please make sure the command line can pass along these options, which usually just means if you uses npm, add an additional "--" at the end (e.g. `"npm run test --"`) if you haven't already in your script.
 It is recommended not to add the following options as they are managed by the extension: `--watch`, `--watchAll`, `--coverage`
 
-##### rootPath
+---
+#### rootPath
 
 If your project doesn't live in the root of your repository, you may want to customize the `jest.rootPath` setting to enlighten the extension as to where to look. For instance: `"jest.rootPath": "src/client-app"` will direct the extension to use the `src/client-app` folder as the root for Jest.
 
-##### coverageFormatter
+---
+#### coverageFormatter
 
 There are 2 formatters to choose from:
   <details>
@@ -306,7 +326,10 @@ There are 2 formatters to choose from:
 
 
 _(Note, there is an known issue in vscode (microsoft/vscode#5923) that gutter decorators could interfere with debug breakpoints visibility. Therefore, you probably want to disable coverage before debugging or switch to DefaultFormatter)_
-##### coverageColors
+
+---
+
+#### coverageColors
 
 Besides the formatter, user can also customize the color via `jest.coverageColors` to change color for 3 coverage categories: `"uncovered", "covered", or "partially-covered"`,
 <details>
@@ -329,7 +352,134 @@ for example:
   ```
 </details>
 
-##### autoRun
+---
+
+#### runMode
+
+The `runMode` controls test UX, determining when tests should run, test output options, and common run-time toggles like coverage. 
+
+**runMode type**
+```ts
+interface JestRunModeOptions {
+  runAllTestsOnStartup?: boolean;
+  coverage?: boolean;
+  revealOutput?: 'on-run' | 'on-exec-error' | 'on-demand';
+  deferred?: boolean;
+}
+export type JestRunMode = JestRunModeOptions & (
+  | { type: 'watch' }
+  | { type: 'on-demand' }
+  | { type: 'on-save'; testFileOnly?: boolean }
+);
+```
+- **JestRunMode**: Here's what each type does:
+  - **watch**: Automatically triggers tests using watchman.
+  - **on-demand**: Manually run tests through the UI.
+  - **on-save**: Triggers tests every time you save a test or source file.
+  
+- **JestRunModeOptions**: Options applicable for all `runMode` types:
+  - **runAllTestsOnStartup**: Want to run all tests as soon as the extension starts? Use this.
+  - **coverage**: To get those coverage metrics, turn this on.
+  - **revealOutput**: Control when your test output window shows up:
+    - "on-run": Default behavior, pops up as tests begin.
+    - "on-exec-error": Shows up only if there's an execution glitch.
+    - "on-demand": Displays only when you ask it to via the UI.
+  - **deferred**: Usually, the extension sets things up before any test run, verifying the Jest env and discovering tests. This process is generally quick, but if you've got a hefty project or your setup isn't Jest-ready, this option helps:
+    - `true`: Suspend the initial setup. Most UI components remain active. If you toggle `runMode.deferred` or manually trigger a test run, the setup will resume, deferred option will be set to false, and the runMode will operate as usual.
+    - `false`: Default behavior, the setup process gets going before any test run.
+
+**runMode type**
+```ts
+interface JestRunModeOptions {
+  runAllTestsOnStartup?: boolean;
+  coverage?: boolean;
+  revealOutput?: 'on-run' | 'on-exec-error' | 'on-demand';
+  deferred?: boolean;
+}
+export type JestRunMode = JestRunModeOptions & (
+  | { type: 'watch' }
+  | { type: 'on-demand' }
+  | { type: 'on-save'; testFileOnly?: boolean }
+);
+```
+- JestRunMode: The actual `runMode` type, which is a union of the following types:
+  - **watch**: Run tests automatically by watchman
+  - **on-demand**: Run tests on-demand through UI
+  - **on-save**: Run tests automatically when test or source files are saved
+  
+- JestRunModeOptions: Optional flags applicable to all `runMode` types:
+  - **runAllTestsOnStartup**: Run all tests in the workspace upon extension startup. 
+  - **coverage**: Enable coverage for the runMode.
+  - **revealOutput**: When to auto reveal the test output window. 
+    - "on-run": the default, which means the output window will be revealed when the test run starts. 
+    - "on-exec-error": the output window will be revealed only when there is an execution error (not test errors) during test run. 
+    - "on-demand": the output window will only be made visible by explicit UI interaction. 
+  - **deferred**: The extension usually starts a setup process before any test run to ensure the env is ready. This includes tasks like validating the jest env, conducting test discovery. While these tasks are often swift and lightweight, they could potentially cause performance issue for projects with many folders/packages, or error-prone for projects not yet ready to run jest.  The `deferred` option provides flexibility in managing this setup process.
+    - true: By activating this mode, the initial setup process is suspended. However, most UI components will still be available, so users can exit the deferred mode by either changing the runMode (turn off deferred) or explicitly trigger test run via UI. 
+    - false: The default setting. The setup process will be executed as described. 
+
+    <div style="background-color: #e8e8e8; padding: 10px; color: black; border-radius: 5px; margin-top: 10px;">
+    📌 Note: There's a distinction between the deferred mode and disabling the extension via "jest.enable: false". Disabling the extension will remove all test features for the given workspace-folder. In contrast, deferred just delays the setup but most UI features are still visible.
+    </div>
+
+**Predefined RunMode**
+
+The following are the predefined `runMode` configurations for convenience. They are mapped to the specified `JestRunMode` type at run time.
+
+|Predefined runMode|Description|JestRunMode|
+|:---:|---|---|
+|"watch"| run tests by watchman | {type: "watch", revealOutput: "on-run"} |
+|"on-save"| run tests when test or source files are saved|{type: "on-run", revealOutput: "on-run"}|
+|"on-demand"|run tests on-demand through UI | {type: "on-demand", revealOutput: "on-run"} |
+|"deferred"|defer test run and discovery until the first on-demand run | {type: "on-demand", revealOutput: "on-run", deferred: true } |
+
+**runMode Examples**
+- Run jest with watch mode - the default runMode if none is specified.
+  ```json
+  "jest.runMode": "watch"
+  ```
+- Run jest tests via UI only.
+  ```json
+  "jest.runMode": "on-demand"
+  ```
+- Run tests only when test files are saved.
+  ```json
+  "jest.runMode": {
+    "type": "on-save",
+    "testFileOnly": true
+  }
+  ```
+- Run tests when test/src files are saved, but delay the process until explicitly triggered.
+  ```json
+  "jest.runMode": {
+    "type": "on-save",
+    "deferred": true
+  }
+  ```
+**runMode performance tradeoff**
+<a id="runmode-tradeoff"></a>
+
+Balancing performance with the trade-offs between automation and completeness is often challenging. The runMode offers a tool to fine-tune this equilibrium according to your preferences.
+
+<img src="images/runmode-tradeoff.png" alt="runmode-tradeoff" width="400" style="border-radius: 10px;"/>
+
+While the concepts of performance and automation are generally clear, "completeness" may require some elaboration:
+
+1. Test coverage might not be comprehensive since it only captures the tests that were executed.
+2. If you modify the source or test code, potential failures in other tests may remain hidden until they are explicitly run.
+3. Tests bearing dynamic names, like those using test.each with variables or template literals, won't be translated. As a result, they must be executed through higher-level constructs, such as describe blocks with static names or entire test suites.
+
+
+**runMode migration**
+<a id="runmode-migration"></a>
+Starting from v6.0.2, if no runMode is defined in settings.json, the extension will automatically generate one using legacy settings (autoRun, autoRevealOutput, showCoverageOnLoad). To migrate, simply use the "Jest: Save Current RunMode" command from the command palette to update the setting. After this, you can safely remove the legacy settings.
+
+---
+
+#### autoRun
+ <div style="background-color: yellow; color: black; padding: 10px; border-radius: 5px;">
+  As of v6.0.2, <a href="#runmode">runMode</a> has superseded autoRun. For transition details, please refer to the <a href="#runmode-migration">runMode migration</a>.
+</div>
 
 AutoRun controls when **tests** should be executed automatically.
 
@@ -410,13 +560,18 @@ There are 2 ways to change autoRun:
 
 **Please note**, _even when the `autoRun` is "off", the extension will still perform the usual setup upon start-up, such as checking jest env and parsing test blocks, so users can run test blocks manually. To turn off the extension completely for the given workspace, you can use `jest.enable` setting instead._
 
-##### testExplorer
+
+---
+
+#### testExplorer
   ```ts
   testExplorer = {showInlineError?: boolean}
   ```
   - `showInlineError`: (optional) show vscode style inline error and error message viewer. Default is false.
 
-##### shell
+---
+
+#### shell
 ```ts
 shell = string | LoginShell;
 
@@ -434,7 +589,9 @@ Note the LoginShell is only applicable for non-windows platform and could cause 
 _Note_: Since v5, if detected shell env issue, such as `node: command not found` or `npm: no such file or directory`, the extension will fallback to a login shell to ensure tests can run correctly. If will try to auto generate a login shell configuration based on the `jest.shell` setting, otherwise, it will use the default `bash` login-shell. Currently supported auto-fallback shells are `bash`, `zsh`, `fish`.
 
 
-##### monitorLongRun
+---
+
+#### monitorLongRun
 ```ts
 monitorLongRun = number | 'off'
 ```
@@ -444,7 +601,14 @@ monitorLongRun = number | 'off'
 
 Default is `"jest.monitorLongRun":60000` (1 minute)
 
-##### autoRevealOutput
+
+---
+
+#### autoRevealOutput
+ <div style="background-color: yellow; color: black; padding: 10px; border-radius: 5px;">
+  As of v6.0.2, <a href="#runmode">runMode</a> has superseded autoRevealOutput. For transition details, please refer to the <a href="#runmode-migration">runMode migration</a>.
+</div>
+
 ```ts
 autoRevealOutput = "on-run" | "on-exec-error" | "off"
 ```
@@ -452,7 +616,9 @@ autoRevealOutput = "on-run" | "on-exec-error" | "off"
 - `on-exec-error`: reveal test run output only when execution error (note, not test error) occurred.
 - `off`: no auto reveal test output. Note this could mask critical error, check status bar status for detail.
 
-##### parserPluginOptions
+---
+
+#### parserPluginOptions
 
 ```ts
 parserPluginOptions = { decorators?: 
@@ -469,20 +635,23 @@ This extension uses babel to parse the test files. For decorators [plugin option
 
 "jest.parserPluginOptions": {"decorators": {"decoratorsBeforeExport": false}}
 ```
-##### virtualFolders
+
+---
+
+#### virtualFolders
 
 Much like a vscode workspace folder, which manages a runtime environment for a specific folder, a virtualFolder manages a custom Jest runtime environment. Each virtualFolder can have its own resource-level [settings](#settings), such as `jestCommandLine` and `rootPath`.
 
 You can configure multiple virtual folders within any given vscode workspace folder using the `jest.virtualFolders` setting. Here are a few common use cases and examples:
 
-1. Your project contains multiple jest configurations, such as unit test and integration test. While they run on the same set of source files, you want to run them separately and with different frequency: for instance, unit tests should always run automatically ("autoRun": "watch") while the integration tests should only run on-demand ("autoRun": "off"): 
+1. Your project contains multiple jest configurations, such as unit test and integration test. While they run on the same set of source files, you want to run them separately and with different frequency: for instance, unit tests should always run automatically ("runMode": "watch") while the integration tests should only run on-demand ("runMode": "on-demand"): 
 
    ```json
    // settings.json for unit and integration test environments under the root folder:
    {
      "jest.virtualFolders": [
-       {"name": "unit-tests", "jestCommandLine": "yarn test --config jest.unit.config.js", "autoRun": "watch"},
-       {"name": "integration-tests", "jestCommandLine": "yarn test --config jest.integration.config.js", "autoRun": "off"}
+       {"name": "unit-tests", "jestCommandLine": "yarn test --config jest.unit.config.js", "runMode": "watch"},
+       {"name": "integration-tests", "jestCommandLine": "yarn test --config jest.integration.config.js", "runMode": "on-demand"}
      ]
    }
    ```
@@ -501,18 +670,18 @@ You can configure multiple virtual folders within any given vscode workspace fol
 
 
 **Virtual Folders Inherit and Override Workspace Folder Settings**
-Virtual folders inherit settings from the parent workspace but can override these settings as needed. For instance, you can set the autoRun option to "off" in the workspace, but enable it for a specific virtual folder. This flexibility allows for granular control over the testing environments within a single workspace folder.
+Virtual folders inherit settings from the parent workspace but can override these settings as needed. For instance, you can set the runMode to "watch" in the workspace, but set it to "on-demand" for the virtual folders with many or expensive tests. This flexibility allows for granular control over the testing environments within a single workspace folder.
 
 
 ```json
 // settings.json in the "project" folder
 {
   ...
-  "jest.autoRun": "off",
+  "jest.runMode": "watch",
   "jest.jestCommandLine": "yarn test",
   "jest.virtualFolders": [
-    {"name": "unit-tests", "autoRun": "watch"},
-    {"name": "integration-tests", "jestCommandLine": "yarn test --config=jest.integration.config.js"}
+    {"name": "unit-tests"},
+    {"name": "integration-tests", , "runMode": "on-demand", "jestCommandLine": "yarn test --config=jest.integration.config.js"}
   ]
 }
 ```
@@ -529,6 +698,8 @@ However, there are some key differences between virtual folders and multi-root w
 3. The StatusBar might display the status of multiple Jest runtime environments if the active editor document is shared by multiple virtual folders, such as a source code file that both unit and integration tests depend on.
 4. You might receive additional prompts to select target folders when running commands for shared files.
 5. virtualFolders only contains jest settings. If your project require non-jest settings from the package's own `.vscode/settings.json` (like in a multi-root workspace), then you are probably better off continue with multi-root workspace.
+
+---
 
 
 ### Debug Config
@@ -623,6 +794,7 @@ This extension contributes the following commands and can be accessed via [Comma
 |Jest: Run All Tests (Select Workspace)| run all tests for the selected workspace|multi-root workspace
 |Jest: Run All Tests in Current Workspace| run all tests for the current workspace based on the active editor| always
 |Jest: Toggle Coverage for Current Workspace| toggle coverage mode for the current workspace based on the active editor| always
+|Jest: Save Current RunMode| update runMode in `settings.json` based on the current value| always (>= 6.0.2)
 |Jest: Setup Extension| start the setup tool|always|
 
 In addition, TestExplorer also exposed many handy commands, see the full list by searching for `testing` in  [vscode keyboard shortcuts editor](https://code.visualstudio.com/docs/getstarted/keybindings#_keyboard-shortcuts-editor). One can assign/change keyboard shortcut to any of these commands, see [vscode Key Bindings](https://code.visualstudio.com/docs/getstarted/keybindings) for more details.
@@ -652,31 +824,24 @@ Sorry you are having trouble with the extension. If your issue did not get resol
     - Try configuring the [jest.jestCommandLine](#jestcommandline) to mimic how you run jest from the terminal, such as `yarn test` or `npm run test --`. The extension can auto-config common configurations like create react apps but not custom scripts like [CRACO](https://github.com/gsoft-inc/craco).
     - or you can use the **"Run Setup Tool"** button in the error panel to resolve the configuration issue, see [Setup Tool](setup-wizard.md).  
   - **monorepo project issue**: you have a monorepo project but might not have been set up properly. 
-    - short answer is try [Setup monorepo project](setup-wizard.md#setup-monorepo-project) tool. Or read more detail in [how to use the extension with monorepo projects](#how-to-use-the-extension-with-monorepo-projects).
+    - Please reference [how to use the extension with monorepo projects](#how-to-use-the-extension-with-monorepo-projects).
   
 There could be other causes, such as jest test root path is different from the project's, which can be fixed by setting [jest.rootPath](#rootPath). Feel free to check out the [customization](#customization) section to manually adjust the extension if needed.
+
+A few known failure scenarios:
+- PNP without node_modules nor a "test" script in package.json will need to set up jest.jestCommandLine explicitly.
 
 ### Performance issue? 
 
 The extension should be a thin wrapper on top of the jest process, i.e., it shouldn't use much more resources than the jest process itself. 
 
-Having said that, we have definitely seen sluggish performance for some projects/users. The short answer is [try turning off autoRun in the explorer](#how-to-toggle-auto-run), which should usually show noticeable improvement. 
+Having said that, we have definitely seen sluggish performance for some projects/users. The short answer is [try changing runMode in the explorer](#how-to-change-runmode-for-the-current-session), which should usually show noticeable improvement. 
 
 The long answer is a bit more complicated:
 - The jest/node/watchman might be slow due to code changes, your test setup, environment, etc. See [facebook/jest#11956](https://github.com/facebook/jest/issues/11956) for a glimpse of such examples. However, this issue should impact with or without this extension. There are many resources and tips online about optimizing jest performance; we will leave it at that. 
-- Depending on the degree of cross-dependency or your development habit (e.g., save frequently even before the code is complete), the autoRun system ( jest watchman "watch" or "on-save") might decide to run many more tests than you intended to. Imagine adding a single test could trigger 90% of all the tests in the project... yeah we have been there, and it's not fun. If that's you, try [toggling off autoRun in TestExplorer](#how-to-toggle-auto-run) and only trigger test-run when ready with the run button in the gutter or test tree.
-  - But keep in mind while performance is important, turning autoRun off or setting it to be less "complete" does come with a cost, such as incomplete coverage and missing-broken-tests-detection. Please read up on the [autoRun trade-off](#autorun) and experiment to find the one that works for you.
+- Depending on the degree of cross-dependency or your development habit (e.g., save frequently even before the code is complete), the runMode system ( "watch" or "on-save") might decide to run many more tests than you intended to. Imagine adding a single test could trigger 90% of all the tests in the project... yeah we have been there, and it's not fun. If that's you, try [changing runMode to "on-demand"](#how-to-change-runmode-for-the-current-session) and only trigger test-run when ready with the run button in the gutter or test tree.
+  - But keep in mind while performance is important, turning runMode to be less "complete" does come with a cost, such as incomplete coverage and missing-broken-tests-detection. Please read up on the [runMode trade-off](#runmode-tradeoff) and experiment to find the one that works for you.
 - Never say never; it is possible that we did something stupid. :cold_sweat: Feel free to log an issue if your performance awe still needs to be resolved after you patiently read and tried the above.
-
-<details>
-
-<summary>fine tune performance with autoRun demo</summary>
-
-https://user-images.githubusercontent.com/891093/199872543-4f37de90-1e56-4e0d-8387-9af591264e13.mov
-
-Every project and developer are different. Experiment and pick the autoRun setting that fits your style and preference!
-
-</details>
 
 ### Intermittent errors for (npm/yarn/node) command not found during test run or debugging
 
@@ -711,9 +876,9 @@ If none of the auto activation criteria is met, you can do the following to manu
 
 ### What to do with "Long Running Tests Warning"
 The extension monitor excessive test run with ["jest.monitorLongRun"](#monitorlongrun) setting. By default if any runs exceed 60 seconds, a warning message will be shown. 
-- If running the tests with the extension seems to be longer than running it from a terminal, chances are you can use ["jest.autoRun"](#autorun) to optimize it, for example:
-  - for process type "all-tests", you can turn off the all-tests from autoRun.
-  - for process type "watch-tests" or "watch-all-tests", you can maybe turn off watch mode and use "onSave" instead. 
+- If running the tests with the extension seems to be longer than running it from a terminal, chances are you can use ["jest.runMode"](#runmode) to optimize it, for example:
+  - for process type "all-tests", you can turn off the all-tests from `runMode`.
+  - for process type "watch-tests" or "watch-all-tests", you can maybe turn off watch mode and use "on-save" or "on-demand" instead. 
   
 - If the tests are slow even from the terminal, i.e. without the extension, you will need to optimize your tests, feel free to check out [jest troubleshooting](https://jestjs.io/docs/troubleshooting) or other online articles.
 - If the run appeared to hang, i.e. the TestExplorer or statusBar showed test running when it is not. It might be related to this [jest issue](https://github.com/facebook/jest/issues/13187), which should be fixed after release `29.0.2`. If you believe your issue is different, please [file a new issue](https://github.com/jest-community/vscode-jest/issues) so we can take a look.

@@ -12,25 +12,6 @@ describe('TestItemContextManager', () => {
   });
   describe('can set itemContext', () => {
     describe('jest.runMode', () => {
-      it.each`
-        case | context                                                  | withItemKey                    | withoutItemKey
-        ${1} | ${{ key: 'jest.runMode', value: true, itemIds: ['a'] }}  | ${'jest.runMode.modified'}     | ${'jest.runMode.not-modified'}
-        ${2} | ${{ key: 'jest.runMode', value: false, itemIds: ['a'] }} | ${'jest.runMode.not-modified'} | ${'jest.runMode.modified'}
-      `('case $case: setContext for $expectedKey', ({ context, withItemKey, withoutItemKey }) => {
-        const workspace: any = { name: 'ws' };
-        const manager = new TestItemContextManager();
-        manager.setItemContext({ workspace, ...context });
-        expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-          'setContext',
-          withItemKey,
-          context.itemIds
-        );
-        expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-          'setContext',
-          withoutItemKey,
-          []
-        );
-      });
       it('can manage itemContext for multiple workspaces', () => {
         const ws1: any = { name: 'ws1' };
         const ws2: any = { name: 'ws2' };
@@ -38,31 +19,23 @@ describe('TestItemContextManager', () => {
         manager.setItemContext({
           workspace: ws1,
           key: 'jest.runMode',
-          value: true,
           itemIds: ['a', 'b'],
         });
         manager.setItemContext({
           workspace: ws2,
           key: 'jest.runMode',
-          value: true,
           itemIds: ['c'],
         });
         manager.setItemContext({
           workspace: ws2,
           key: 'jest.runMode',
-          value: false,
           itemIds: ['d'],
         });
-        expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-          'setContext',
-          'jest.runMode.modified',
-          ['a', 'b', 'c']
-        );
-        expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-          'setContext',
-          'jest.runMode.not-modified',
-          ['d']
-        );
+        expect(vscode.commands.executeCommand).toHaveBeenCalledWith('setContext', 'jest.runMode', [
+          'a',
+          'b',
+          'd',
+        ]);
       });
     });
     describe('jest.editor-view-snapshot', () => {
@@ -155,8 +128,8 @@ describe('TestItemContextManager', () => {
       const extCmd = `${extensionName}.with-workspace.change-run-mode`;
       const workspace: any = { name: 'ws' };
       const root = { id: `whatever:${workspace.name}` };
-      manager.setItemContext({ workspace, key: 'jest.runMode', value: true, itemIds: ['a'] });
-      expect(calls).toHaveLength(2);
+      manager.setItemContext({ workspace, key: 'jest.runMode', itemIds: ['a'] });
+      expect(calls).toHaveLength(1);
       calls.forEach((call) => {
         const callBack = call[1];
         callBack({ id: 'a', parent: root });
@@ -176,7 +149,7 @@ describe('TestItemContextManager', () => {
       `('$contextId', ({ contextId, contextCommand, itemCommand }) => {
         const manager = new TestItemContextManager();
         const disposableList = manager.registerCommands();
-        expect(disposableList.length).toBeGreaterThanOrEqual(5);
+        expect(disposableList.length).toBeGreaterThanOrEqual(4);
 
         const calls = (vscode.commands.registerCommand as jest.Mocked<any>).mock.calls.filter(
           (call) => call[0] === `${extensionName}.${contextCommand}`
@@ -257,7 +230,7 @@ describe('TestItemContextManager', () => {
       // say 2 virtual folders have the same test items
       const manager = new TestItemContextManager();
       const disposableList = manager.registerCommands();
-      expect(disposableList.length).toBeGreaterThanOrEqual(5);
+      expect(disposableList.length).toBeGreaterThanOrEqual(4);
 
       const calls = (vscode.commands.registerCommand as jest.Mocked<any>).mock.calls.filter(
         (call) => call[0] === `${extensionName}.test-item.view-snapshot`
@@ -306,7 +279,7 @@ describe('TestItemContextManager', () => {
     it('if we can not find workspace from testItem, will fallback to the vscode folder', () => {
       const manager = new TestItemContextManager();
       const disposableList = manager.registerCommands();
-      expect(disposableList.length).toBeGreaterThanOrEqual(5);
+      expect(disposableList.length).toBeGreaterThanOrEqual(4);
 
       const calls = (vscode.commands.registerCommand as jest.Mocked<any>).mock.calls.filter(
         (call) => call[0] === `${extensionName}.test-item.view-snapshot`
