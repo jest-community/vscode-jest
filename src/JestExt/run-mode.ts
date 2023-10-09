@@ -103,6 +103,7 @@ export class RunMode {
           deferred: true,
         };
       default: {
+        // istanbul ignore next
         throw new Error(`invalid runMode ${setting}`);
       }
     }
