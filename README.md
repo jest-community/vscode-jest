@@ -688,6 +688,7 @@ However, there are some key differences between virtual folders and multi-root w
 ---
 
 
+
 ### Debug Config
 
 This extension looks for jest specific debug config (`"vscode-jest-tests.[folder-name]"` or `"vscode-jest-tests.v2.[folder-name]"`) in the following order:
