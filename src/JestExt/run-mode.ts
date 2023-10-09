@@ -318,11 +318,11 @@ const showRunModeQuickPick = async (
 ): Promise<RunModeQuickPickItem | undefined> => {
   const acceptButton = {
     iconPath: new vscode.ThemeIcon('check'),
-    tooltip: 'switch to the selected runMode',
+    tooltip: 'accept the selected runMode',
   };
   const quickPick = vscode.window.createQuickPick<RunModeQuickPickItem>();
   quickPick.items = items;
-  quickPick.title = 'Quick Switch RunMode';
+  quickPick.title = 'Change RunMode';
   // quickPick.placeholder = 'Select the desired run mode for the current session';
   quickPick.ignoreFocusOut = true;
   quickPick.canSelectMany = false;

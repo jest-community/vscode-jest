@@ -356,7 +356,7 @@ for example:
 
 #### runMode
 
-The `runMode` controls test UX, determining when tests should run, test output options, and common run-time toggles like coverage. 
+The `runMode` controls test UX, determining when tests should run, and housing the common run-time toggles like coverage. 
 
 **runMode type**
 ```ts
@@ -388,39 +388,14 @@ export type JestRunMode = JestRunModeOptions & (
     - `true`: Suspend the initial setup. Most UI components remain active. If you toggle `runMode.deferred` or manually trigger a test run, the setup will resume, deferred option will be set to false, and the runMode will operate as usual.
     - `false`: Default behavior, the setup process gets going before any test run.
 
-**runMode type**
-```ts
-interface JestRunModeOptions {
-  runAllTestsOnStartup?: boolean;
-  coverage?: boolean;
-  revealOutput?: 'on-run' | 'on-exec-error' | 'on-demand';
-  deferred?: boolean;
-}
-export type JestRunMode = JestRunModeOptions & (
-  | { type: 'watch' }
-  | { type: 'on-demand' }
-  | { type: 'on-save'; testFileOnly?: boolean }
-);
-```
-- JestRunMode: The actual `runMode` type, which is a union of the following types:
-  - **watch**: Run tests automatically by watchman
-  - **on-demand**: Run tests on-demand through UI
-  - **on-save**: Run tests automatically when test or source files are saved
-  
-- JestRunModeOptions: Optional flags applicable to all `runMode` types:
-  - **runAllTestsOnStartup**: Run all tests in the workspace upon extension startup. 
-  - **coverage**: Enable coverage for the runMode.
-  - **revealOutput**: When to auto reveal the test output window. 
-    - "on-run": the default, which means the output window will be revealed when the test run starts. 
-    - "on-exec-error": the output window will be revealed only when there is an execution error (not test errors) during test run. 
-    - "on-demand": the output window will only be made visible by explicit UI interaction. 
-  - **deferred**: The extension usually starts a setup process before any test run to ensure the env is ready. This includes tasks like validating the jest env, conducting test discovery. While these tasks are often swift and lightweight, they could potentially cause performance issue for projects with many folders/packages, or error-prone for projects not yet ready to run jest.  The `deferred` option provides flexibility in managing this setup process.
-    - true: By activating this mode, the initial setup process is suspended. However, most UI components will still be available, so users can exit the deferred mode by either changing the runMode (turn off deferred) or explicitly trigger test run via UI. 
-    - false: The default setting. The setup process will be executed as described. 
+    <details>
 
-    <div style="background-color: #e8e8e8; padding: 10px; color: black; border-radius: 5px; margin-top: 10px;">
+    <summary> 🤔 defer vs. disable? </summary>
+
     📌 Note: There's a distinction between the deferred mode and disabling the extension via "jest.enable: false". Disabling the extension will remove all test features for the given workspace-folder. In contrast, deferred just delays the setup but most UI features are still visible.
-    </div>
+
+    </details>
+
 
 **Predefined RunMode**
 
@@ -442,14 +417,19 @@ The following are the predefined `runMode` configurations for convenience. They 
   ```json
   "jest.runMode": "on-demand"
   ```
-- Run tests only when test files are saved.
+- Delay extension setup until the actual on-demand run.
+  ```json
+  "jest.runMode": "deferred"
+  ```
+- Run tests with coverage when test files are saved.
   ```json
   "jest.runMode": {
     "type": "on-save",
-    "testFileOnly": true
+    "testFileOnly": true,
+    "coverage": true
   }
   ```
-- Run tests when test/src files are saved, but delay the process until explicitly triggered.
+- Delay extension setup until the actual (on-demand) run; after that, automatically run tests when test/src files are saved.
   ```json
   "jest.runMode": {
     "type": "on-save",
@@ -459,7 +439,7 @@ The following are the predefined `runMode` configurations for convenience. They 
 **runMode performance tradeoff**
 <a id="runmode-tradeoff"></a>
 
-Balancing performance with the trade-offs between automation and completeness is often challenging. The runMode offers a tool to fine-tune this equilibrium according to your preferences.
+Balancing performance, convenience and completeness is often challenging. The runMode offers a tool to fine-tune this equilibrium according to your preferences.
 
 <img src="images/runmode-tradeoff.png" alt="runmode-tradeoff" width="400" style="border-radius: 10px;"/>
 
@@ -472,7 +452,7 @@ While the concepts of performance and automation are generally clear, "completen
 
 **runMode migration**
 <a id="runmode-migration"></a>
-Starting from v6.0.2, if no runMode is defined in settings.json, the extension will automatically generate one using legacy settings (autoRun, autoRevealOutput, showCoverageOnLoad). To migrate, simply use the "Jest: Save Current RunMode" command from the command palette to update the setting. After this, you can safely remove the legacy settings.
+Starting from v6.0.2, if no runMode is defined in settings.json, the extension will automatically generate one using legacy settings (`autoRun`, `autoRevealOutput`, `showCoverageOnLoad`). To migrate, simply use the `"Jest: Save Current RunMode"` command from the command palette to update the setting, then remove the legacy settings.
 
 ---
 
@@ -481,7 +461,7 @@ Starting from v6.0.2, if no runMode is defined in settings.json, the extension w
   As of v6.0.2, <a href="#runmode">runMode</a> has superseded autoRun. For transition details, please refer to the <a href="#runmode-migration">runMode migration</a>.
 </div>
 
-AutoRun controls when **tests** should be executed automatically.
+AutoRun controls when tests should be executed automatically.
 
 Performance and automation/completeness are often a trade-off. autoRun is the tool to fine-tune the balance, which is unique for every project and user. 
 
@@ -688,6 +668,10 @@ Virtual folders inherit settings from the parent workspace but can override thes
 
 In this scenario, the "project" workspace will not run its own Jest environment but will instead spawn two separate Jest environments for "unit-tests" and "integration-tests".
 
+<details>
+
+<summary> 🤔 VirtualFolders vs. Multi-root Workspace?</summary>
+
 **VirtualFolders vs. Multi-root Workspace**
 While virtual folders are primarily designed to address the gap of supporting multiple test configurations for the same set of source files, they are also capable of supporting monorepo projects. Some developers might prefer this approach over traditional multi-root workspaces due to the simplified and centralized settings over individual package settings.
 
@@ -698,6 +682,8 @@ However, there are some key differences between virtual folders and multi-root w
 3. The StatusBar might display the status of multiple Jest runtime environments if the active editor document is shared by multiple virtual folders, such as a source code file that both unit and integration tests depend on.
 4. You might receive additional prompts to select target folders when running commands for shared files.
 5. virtualFolders only contains jest settings. If your project require non-jest settings from the package's own `.vscode/settings.json` (like in a multi-root workspace), then you are probably better off continue with multi-root workspace.
+
+</details>
 
 ---
 
@@ -822,11 +808,11 @@ Sorry you are having trouble with the extension. If your issue did not get resol
   
   - <a id="trouble-jest-cmdline"></a>**jest command line issue**: such as you usually run `yarn test` but the extension uses the default `jest` instead.
     - Try configuring the [jest.jestCommandLine](#jestcommandline) to mimic how you run jest from the terminal, such as `yarn test` or `npm run test --`. The extension can auto-config common configurations like create react apps but not custom scripts like [CRACO](https://github.com/gsoft-inc/craco).
-    - or you can use the **"Run Setup Tool"** button in the error panel to resolve the configuration issue, see [Setup Tool](setup-wizard.md).  
+  - **root path issue**: When jest test root path is different from the workspace folder. You can set [jest.rootPath](#rootPath) to the actual jest root. 
   - **monorepo project issue**: you have a monorepo project but might not have been set up properly. 
     - Please reference [how to use the extension with monorepo projects](#how-to-use-the-extension-with-monorepo-projects).
   
-There could be other causes, such as jest test root path is different from the project's, which can be fixed by setting [jest.rootPath](#rootPath). Feel free to check out the [customization](#customization) section to manually adjust the extension if needed.
+Feel free to try the [quick-fix chooser](#quick-fix-chooser), or check out the [customization](#customization) section to manually adjust the extension.
 
 A few known failure scenarios:
 - PNP without node_modules nor a "test" script in package.json will need to set up jest.jestCommandLine explicitly.

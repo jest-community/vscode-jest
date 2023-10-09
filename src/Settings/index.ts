@@ -77,7 +77,6 @@ export interface DeprecatedPluginResourceSettings {
   showCoverageOnLoad?: boolean;
   autoRevealOutput?: AutoRevealOutputType;
   autoRun?: JestExtAutoRunSetting | null;
-  enable?: boolean;
 }
 
 export interface PluginWindowSettings {
