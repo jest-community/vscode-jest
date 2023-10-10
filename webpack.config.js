@@ -1,7 +1,6 @@
 'use strict';
 
 const path = require('path');
-// const IgnoreDynamicRequire = require('webpack-ignore-dynamic-require');
 
 /**@returns {import('webpack').Configuration}*/
 module.exports = () => {

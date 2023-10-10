@@ -15,15 +15,10 @@ import {
 import { ItemCommand } from './test-provider/types';
 import { enabledWorkspaceFolders } from './workspace-manager';
 import { VirtualFolderBasedCache } from './virtual-workspace-folder';
+import { updateSetting } from './Settings';
+import { showQuickFix } from './quick-fix';
 
 export type GetJestExtByURI = (uri: vscode.Uri) => JestExt[];
-
-export function addFolderToDisabledWorkspaceFolders(folder: string): void {
-  const config = vscode.workspace.getConfiguration('jest');
-  const disabledWorkspaceFolders = new Set(config.get<string[]>('disabledWorkspaceFolders') ?? []);
-  disabledWorkspaceFolders.add(folder);
-  config.update('disabledWorkspaceFolders', [...disabledWorkspaceFolders]);
-}
 
 export type RegisterCommand =
   | {
@@ -120,14 +115,22 @@ export class ExtensionManager {
       return;
     }
 
-    const jestExt = new JestExt(
-      this.context,
-      workspaceFolder,
-      this.debugConfigurationProvider,
-      this.coverageCodeLensProvider
-    );
-    this.extCache.addItem(jestExt);
-    jestExt.startSession();
+    try {
+      const jestExt = new JestExt(
+        this.context,
+        workspaceFolder,
+        this.debugConfigurationProvider,
+        this.coverageCodeLensProvider
+      );
+      this.extCache.addItem(jestExt);
+      jestExt.startSession();
+    } catch (e) {
+      this.extCache.deleteItemByFolder(workspaceFolder);
+      console.error(`Failed to activate extension for "${workspaceFolder.name}":`, e);
+      vscode.window.showErrorMessage(
+        `Failed to activate extension for "${workspaceFolder.name}": ${e}`
+      );
+    }
   }
 
   deleteExtensionByFolder(workspaceFolder: vscode.WorkspaceFolder): void {
@@ -153,12 +156,13 @@ export class ExtensionManager {
   public getByDocUri: GetJestExtByURI = (uri: vscode.Uri): JestExt[] => {
     return this.extCache.findRelatedItems(uri) ?? [];
   };
-  private getExtensionsByFolder(folder: vscode.WorkspaceFolder): JestExt[] {
-    const ext = this.extCache.getItemByFolderName(folder.name);
+  private getExtensionsByFolder(folder: vscode.WorkspaceFolder | string): JestExt[] {
+    const name = typeof folder === 'string' ? folder : folder.name;
+    const ext = this.extCache.getItemByFolderName(name);
     if (ext) {
       return [ext];
     }
-    return this.extCache.getItemsByActualFolderName(folder.name) ?? [];
+    return this.extCache.getItemsByActualFolderName(name) ?? [];
   }
 
   async selectExtension(fromExtensions?: JestExt[]): Promise<JestExt | undefined> {
@@ -215,7 +219,7 @@ export class ExtensionManager {
       case 'workspace': {
         return vscode.commands.registerCommand(
           commandName,
-          async (workspace: vscode.WorkspaceFolder, ...args) => {
+          async (workspace: vscode.WorkspaceFolder | string, ...args) => {
             const extensions = this.getExtensionsByFolder(workspace);
             let ext;
             if (extensions.length > 1) {
@@ -354,17 +358,17 @@ export class ExtensionManager {
       this.registerCommand({
         type: 'all-workspaces',
         name: 'toggle-coverage',
-        callback: (extension) => extension.toggleCoverageOverlay(),
+        callback: (extension) => extension.toggleCoverage(),
       }),
       this.registerCommand({
         type: 'select-workspace',
         name: 'toggle-coverage',
-        callback: (extension) => extension.toggleCoverageOverlay(),
+        callback: (extension) => extension.toggleCoverage(),
       }),
       this.registerCommand({
         type: 'active-text-editor-workspace',
         name: 'toggle-coverage',
-        callback: (extension) => extension.toggleCoverageOverlay(),
+        callback: (extension) => extension.toggleCoverage(),
       }),
       this.registerCommand({
         type: 'all-workspaces',
@@ -393,19 +397,24 @@ export class ExtensionManager {
           extension.debugTests(editor.document, ...identifiers);
         },
       }),
+      this.registerCommand({
+        type: 'select-workspace',
+        name: 'save-run-mode',
+        callback: (extension) => extension.saveRunMode(),
+      }),
       // with-workspace commands
       this.registerCommand({
         type: 'workspace',
-        name: 'toggle-auto-run',
+        name: 'change-run-mode',
         callback: (extension) => {
-          extension.toggleAutoRun();
+          extension.changeRunMode();
         },
       }),
       this.registerCommand({
         type: 'workspace',
         name: 'toggle-coverage',
         callback: (extension) => {
-          extension.toggleCoverageOverlay();
+          extension.toggleCoverage();
         },
       }),
       this.registerCommand({
@@ -420,6 +429,42 @@ export class ExtensionManager {
         name: 'item-command',
         callback: (extension, testItem: vscode.TestItem, itemCommand: ItemCommand) => {
           extension.runItemCommand(testItem, itemCommand);
+        },
+      }),
+      this.registerCommand({
+        type: 'workspace',
+        name: 'exit-defer-mode',
+        callback: (extension, ...args) => {
+          extension.exitDeferMode(...args);
+        },
+      }),
+      this.registerCommand({
+        type: 'workspace',
+        name: 'setup-extension',
+        callback: (extension, ...args) => {
+          extension.setupExtensionForFolder(...args);
+        },
+      }),
+      this.registerCommand({
+        type: 'workspace',
+        name: 'disable',
+        callback: async (extension) => {
+          try {
+            await updateSetting(extension.workspaceFolder, 'enable', false);
+            this.applySettings();
+          } catch (e) {
+            console.error(`Failed to disable folder "${extension.workspaceFolder.name}`, e);
+            vscode.window.showErrorMessage(
+              `Failed to disable folder "${extension.workspaceFolder.name}: ${e}"`
+            );
+          }
+        },
+      }),
+      this.registerCommand({
+        type: 'workspace',
+        name: 'show-quick-fix',
+        callback: (extension, ...args) => {
+          showQuickFix(extension.workspaceFolder.name, args[0]);
         },
       }),
 

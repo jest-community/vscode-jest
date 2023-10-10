@@ -3,7 +3,7 @@ jest.unmock('../src/virtual-workspace-folder');
 jest.unmock('../src/appGlobals');
 
 import * as vscode from 'vscode';
-import { addFolderToDisabledWorkspaceFolders, ExtensionManager } from '../src/extension-manager';
+import { ExtensionManager } from '../src/extension-manager';
 import { readFileSync } from 'fs';
 import { extensionName } from '../src/appGlobals';
 import { JestExt } from '../src/JestExt';
@@ -11,6 +11,8 @@ import { DebugConfigurationProvider } from '../src/DebugConfigurationProvider';
 import { CoverageCodeLensProvider } from '../src/Coverage';
 import { startWizard } from '../src/setup-wizard';
 import { VirtualWorkspaceFolder } from '../src/virtual-workspace-folder';
+import { updateSetting } from '../src/Settings';
+import { showQuickFix } from '../src/quick-fix';
 
 const mockEnabledWorkspaceFolders = jest.fn();
 jest.mock('../src/workspace-manager', () => ({
@@ -69,10 +71,13 @@ const makeJestExt = (workspace: vscode.WorkspaceFolder): any => {
     onDidSaveTextDocument: jest.fn(),
     onWillSaveTextDocument: jest.fn(),
     triggerUpdateSettings: jest.fn(),
-    toggleAutoRun: jest.fn(),
-    toggleCoverageOverlay: jest.fn(),
+    toggleCoverage: jest.fn(),
     enableLoginShell: jest.fn(),
     runItemCommand: jest.fn(),
+    changeRunMode: jest.fn(),
+    saveRunMode: jest.fn(),
+    exitDeferMode: jest.fn(),
+    setupExtensionForFolder: jest.fn(),
     workspaceFolder: workspace,
     name: workspace.name,
   };
@@ -150,8 +155,8 @@ describe('ExtensionManager', () => {
   let extensionManager: ExtensionManager;
   const isInWorkspaceSpy = jest.spyOn(VirtualWorkspaceFolder.prototype, 'isInWorkspaceFolder');
 
-  const registerSpy = jest.spyOn(ExtensionManager.prototype, 'addExtension');
-  const unregisterSpy = jest.spyOn(ExtensionManager.prototype, 'deleteExtension');
+  const addExtensionSpy = jest.spyOn(ExtensionManager.prototype, 'addExtension');
+  const deleteExtensionSpy = jest.spyOn(ExtensionManager.prototype, 'deleteExtension');
 
   let workspaceFolder1;
   beforeEach(() => {
@@ -167,7 +172,7 @@ describe('ExtensionManager', () => {
   describe('constructor()', () => {
     it('should register extensions for all workspace folders', () => {
       new ExtensionManager(context);
-      expect(registerSpy).toHaveBeenCalledTimes(1);
+      expect(addExtensionSpy).toHaveBeenCalledTimes(1);
     });
     it('should created the components shared across of all workspaces', () => {
       new ExtensionManager(context);
@@ -183,7 +188,7 @@ describe('ExtensionManager', () => {
         taskId: 'monorepo',
       });
       new ExtensionManager(context);
-      expect(registerSpy).not.toHaveBeenCalled();
+      expect(addExtensionSpy).not.toHaveBeenCalled();
 
       expect(startWizard).toHaveBeenCalledWith(
         expect.anything(),
@@ -197,7 +202,7 @@ describe('ExtensionManager', () => {
         taskId: 'monorepo',
       });
       new ExtensionManager(context);
-      expect(registerSpy).toHaveBeenCalled();
+      expect(addExtensionSpy).toHaveBeenCalled();
     });
   });
   describe('with an extensionManager', () => {
@@ -206,8 +211,8 @@ describe('ExtensionManager', () => {
       jestInstances.length = 0;
       const recordInstances = (ext: any) => jestInstances.push(ext);
       extensionManager = createExtensionManager([workspaceFolder1.name], context, recordInstances);
-      registerSpy.mockClear();
-      unregisterSpy.mockClear();
+      addExtensionSpy.mockClear();
+      deleteExtensionSpy.mockClear();
       (vscode.window.showQuickPick as any).mockReset();
       (vscode.commands.registerCommand as any).mockReset();
     });
@@ -276,6 +281,15 @@ describe('ExtensionManager', () => {
       });
       it('should not register disabled workspace', () => {
         mockEnabledWorkspaceFolders.mockReturnValue([ws2]);
+        extensionManager.applySettings();
+        extensionManager.addExtension(ws1);
+        expect(extensionManager.getByName(ws1.name)).toBeUndefined();
+      });
+      it('will not store instance if extension failed to start up', () => {
+        (JestExt as jest.Mocked<any>).mockImplementation(() => {
+          throw new Error('mocked error');
+        });
+        mockEnabledWorkspaceFolders.mockReturnValue([ws1, ws2]);
         extensionManager.applySettings();
         extensionManager.addExtension(ws1);
         expect(extensionManager.getByName(ws1.name)).toBeUndefined();
@@ -822,7 +836,7 @@ describe('ExtensionManager', () => {
       it('will ignore folder change if IgnoreWorkspaceChanges is true', () => {
         context.workspaceState.get.mockReturnValue(true);
         extensionManager.onDidChangeWorkspaceFolders();
-        expect(registerSpy).not.toHaveBeenCalled();
+        expect(addExtensionSpy).not.toHaveBeenCalled();
       });
       it('should add/remove extensions for the added/removed folders', () => {
         const f1 = makeWorkspaceFolder('added-1');
@@ -1007,15 +1021,6 @@ describe('ExtensionManager', () => {
       });
     });
 
-    describe('addFolderToDisabledWorkspaceFolders()', () => {
-      it('should add the folder to the disabledWorkspaceFolders in the configuration', async () => {
-        addFolderToDisabledWorkspaceFolders('some-workspace-folder');
-        expect(updateConfigurationMock).toHaveBeenCalledWith('disabledWorkspaceFolders', [
-          'some-workspace-folder',
-        ]);
-      });
-    });
-
     describe.each`
       files                       | ext1Call | ext2Call
       ${['ws-3']}                 | ${0}     | ${0}
@@ -1101,14 +1106,17 @@ describe('ExtensionManager', () => {
         ${'workspace.start'}                   | ${'startSession'}
         ${'stop'}                              | ${'stopSession'}
         ${'workspace.stop'}                    | ${'stopSession'}
-        ${'toggle-coverage'}                   | ${'toggleCoverageOverlay'}
-        ${'workspace.toggle-coverage'}         | ${'toggleCoverageOverlay'}
+        ${'toggle-coverage'}                   | ${'toggleCoverage'}
+        ${'workspace.toggle-coverage'}         | ${'toggleCoverage'}
         ${'run-all-tests'}                     | ${'runAllTests'}
         ${'workspace.run-all-tests'}           | ${'runAllTests'}
-        ${'with-workspace.toggle-auto-run'}    | ${'toggleAutoRun'}
-        ${'with-workspace.toggle-coverage'}    | ${'toggleCoverageOverlay'}
+        ${'with-workspace.change-run-mode'}    | ${'changeRunMode'}
+        ${'workspace.save-run-mode'}           | ${'saveRunMode'}
+        ${'with-workspace.toggle-coverage'}    | ${'toggleCoverage'}
         ${'with-workspace.enable-login-shell'} | ${'enableLoginShell'}
         ${'with-workspace.item-command'}       | ${'runItemCommand'}
+        ${'with-workspace.exit-defer-mode'}    | ${'exitDeferMode'}
+        ${'with-workspace.setup-extension'}    | ${'setupExtensionForFolder'}
       `('extension-based commands "$name"', async ({ name, extFunc }) => {
         extensionManager.register();
         const expectedName = `${extensionName}.${name}`;
@@ -1131,7 +1139,7 @@ describe('ExtensionManager', () => {
       });
       it.each`
         name                                  | extFunc
-        ${'editor.workspace.toggle-coverage'} | ${'toggleCoverageOverlay'}
+        ${'editor.workspace.toggle-coverage'} | ${'toggleCoverage'}
         ${'editor.workspace.run-all-tests'}   | ${'runAllTests'}
         ${'editor.run-all-tests'}             | ${'runAllTests'}
         ${'editor.debug-tests'}               | ${'debugTests'}
@@ -1156,7 +1164,52 @@ describe('ExtensionManager', () => {
         const ext = extensionManager.getByName('ws-2');
         expect(ext[extFunc]).toHaveBeenCalled();
       });
+      it('disable workspace command', async () => {
+        extensionManager.register();
+        const applySettingsSpy = jest.spyOn(extensionManager, 'applySettings');
+        (updateSetting as jest.Mocked<any>).mockReturnValue(true);
 
+        const expectedName = `${extensionName}.with-workspace.disable`;
+        expect(vscode.commands.registerCommand).toHaveBeenCalledWith(
+          expectedName,
+          expect.anything()
+        );
+        const call = (vscode.commands.registerCommand as jest.Mocked<any>).mock.calls.find(
+          (args) => args[0] === expectedName
+        );
+        expect(call).not.toBeUndefined();
+
+        const registeredCallback = call[1];
+        await registeredCallback('ws-2');
+        expect(updateSetting).toHaveBeenCalled();
+        expect(applySettingsSpy).toHaveBeenCalled();
+
+        // if update failed, no applySettings will be called
+        (updateSetting as jest.Mocked<any>).mockClear().mockImplementation(() => {
+          throw new Error('error');
+        });
+        applySettingsSpy.mockClear();
+
+        await registeredCallback('ws-2');
+        expect(updateSetting).toHaveBeenCalled();
+        expect(applySettingsSpy).not.toHaveBeenCalled();
+      });
+      it('showQuickFix command', async () => {
+        extensionManager.register();
+        const expectedName = `${extensionName}.with-workspace.show-quick-fix`;
+        expect(vscode.commands.registerCommand).toHaveBeenCalledWith(
+          expectedName,
+          expect.anything()
+        );
+        const call = (vscode.commands.registerCommand as jest.Mocked<any>).mock.calls.find(
+          (args) => args[0] === expectedName
+        );
+        expect(call).not.toBeUndefined();
+
+        const registeredCallback = call[1];
+        await registeredCallback('ws-2', ['help']);
+        expect(showQuickFix).toHaveBeenCalled();
+      });
       it('event handlers', () => {
         extensionManager.register();
         expect(vscode.window.onDidChangeActiveTextEditor).toHaveBeenCalled();

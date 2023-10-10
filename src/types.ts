@@ -10,3 +10,8 @@ export interface TestStats {
   unknown: number;
 }
 export type TestStatsCategory = keyof TestStats;
+
+export interface TestExplorerRunRequest {
+  request: vscode.TestRunRequest;
+  token: vscode.CancellationToken;
+}

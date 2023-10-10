@@ -2,7 +2,7 @@
   "name": "vscode-jest",
   "displayName": "Jest",
   "description": "Use Facebook's Jest With Pleasure.",
-  "version": "6.0.1",
+  "version": "6.0.2",
   "publisher": "Orta",
   "engines": {
     "vscode": "^1.68.1"
@@ -108,7 +108,9 @@
           "description": "Show code coverage when extension starts (if collected)",
           "type": "boolean",
           "default": false,
-          "scope": "resource"
+          "scope": "resource",
+          "markdownDeprecationMessage": "**Deprecated**: Please use [runMode](https://github.com/jest-community/vscode-jest/blob/master/README.md#runmode) instead.",
+          "deprecationMessage": "Deprecated: Please use jest.runMode instead."
         },
         "jest.coverageFormatter": {
           "description": "Coverage formatter to use",
@@ -140,13 +142,15 @@
           "scope": "window"
         },
         "jest.autoRun": {
-          "markdownDescription": "Control when jest should run (changed) tests. It supports multiple models, such as fully automated, fully manual and onSave... See [AutoRun](https://github.com/jest-community/vscode-jest/blob/master/README.md#how-to-trigger-the-test-run) for details and examples",
+          "markdownDescription": "Control when jest should run (changed) tests. It supports multiple models, such as fully automated, onSave, and on-demand... See [AutoRun](https://github.com/jest-community/vscode-jest/blob/master/README.md#how-to-trigger-the-test-run) for details and examples",
           "type": [
             "object",
             "string"
           ],
           "default": null,
-          "scope": "resource"
+          "scope": "resource",
+          "markdownDeprecationMessage": "**Deprecated**: Please use [runMode](https://github.com/jest-community/vscode-jest/blob/master/README.md#runmode) instead.",
+          "deprecationMessage": "Deprecated: Please use jest.runMode instead."
         },
         "jest.testExplorer": {
           "markdownDescription": "Configure jest TestExplorer. See valid [formats](https://github.com/jest-community/vscode-jest/blob/master/README.md#testexplorer) or [how to use test explorer](https://github.com/jest-community/vscode-jest/blob/master/README.md#how-to-use-the-test-explorer) for more details",
@@ -177,7 +181,9 @@
             "auto show test output when execution error occurred",
             "disable auto show test output"
           ],
-          "scope": "resource"
+          "scope": "resource",
+          "markdownDeprecationMessage": "**Deprecated**: Please use [runMode](https://github.com/jest-community/vscode-jest/blob/master/README.md#runmode) instead.",
+          "deprecationMessage": "Deprecated: Please use jest.runMode instead."
         },
         "jest.parserPluginOptions": {
           "markdownDescription": "Configure babel parser plugins. See valid [format](https://github.com/jest-community/vscode-jest/blob/master/README.md#parserpluginoptions)",
@@ -192,9 +198,97 @@
           "scope": "resource"
         },
         "jest.virtualFolders": {
-          "markdownDescription": "Allows multiple jest run config for a given (physical) folder. See valid [format](TODO)",
-          "type": "array",
-          "default": null
+          "markdownDescription": "Allows multiple jest run config for a given (physical) folder. See valid [format](https://github.com/jest-community/vscode-jest#virtualfolders)",
+          "type": [
+            "array",
+            "null"
+          ],
+          "default": null,
+          "items": {
+            "type": "object"
+          }
+        },
+        "jest.runMode": {
+          "markdownDescription": "Control when to run jest tests and present the results. See details in [runMode](https://github.com/jest-community/vscode-jest#runmode)",
+          "default": null,
+          "scope": "resource",
+          "oneOf": [
+            {
+              "type": "string",
+              "enum": [
+                "watch",
+                "on-demand",
+                "on-save",
+                "deferred"
+              ],
+              "markdownDescription": "A predefined Jest run mode. See details in [runMode](https://github.com/jest-community/vscode-jest#runmode)"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "watch",
+                    "on-demand",
+                    "on-save"
+                  ],
+                  "description": "Specifies the jest run mode type."
+                },
+                "runAllTestsOnStartup": {
+                  "type": "boolean",
+                  "description": "Specifies whether to run all tests on startup."
+                },
+                "coverage": {
+                  "type": "boolean",
+                  "description": "Specifies whether to collect and report coverage information."
+                },
+                "revealOutput": {
+                  "type": "string",
+                  "enum": [
+                    "on-run",
+                    "on-exec-error",
+                    "on-demand"
+                  ],
+                  "description": "Determines when to reveal the test run output."
+                },
+                "deferred": {
+                  "type": "boolean",
+                  "description": "Specifies whether the run mode is deferred."
+                }
+              },
+              "required": [
+                "type"
+              ],
+              "additionalProperties": true,
+              "if": {
+                "properties": {
+                  "type": {
+                    "const": "on-save"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "testFileOnly": {
+                    "type": "boolean",
+                    "description": "if true, will run tests only when saving test files."
+                  }
+                },
+                "additionalProperties": true
+              },
+              "else": {
+                "not": {
+                  "required": [
+                    "testFileOnly"
+                  ]
+                },
+                "errorMessage": "The property 'testFileOnly' should only be present when 'type' is 'on-save'.",
+                "additionalProperties": true
+              },
+              "markdownDescription": "A detailed runMode configuration. See details in [runMode](https://github.com/jest-community/vscode-jest#runmode)"
+            }
+          ]
         }
       }
     },
@@ -228,6 +322,10 @@
         "title": "Jest: Run All Tests (Select Workspace)"
       },
       {
+        "command": "io.orta.jest.workspace.save-run-mode",
+        "title": "Jest: Save Current RunMode"
+      },
+      {
         "command": "io.orta.jest.run-all-tests",
         "title": "Jest: Run All Tests"
       },
@@ -248,24 +346,9 @@
         "title": "Jest: Setup Extension"
       },
       {
-        "command": "io.orta.jest.test-item.auto-run.toggle-on",
-        "title": "Toggle AutoRun On",
-        "icon": "$(sync)"
-      },
-      {
-        "command": "io.orta.jest.test-item.auto-run.toggle-off",
-        "title": "Toggle AutoRun Off",
-        "icon": "$(sync-ignored)"
-      },
-      {
-        "command": "io.orta.jest.test-item.coverage.toggle-off",
-        "title": "Toggle Coverage Off",
-        "icon": "$(circle-slash)"
-      },
-      {
-        "command": "io.orta.jest.test-item.coverage.toggle-on",
-        "title": "Toggle Coverage On",
-        "icon": "$(color-mode)"
+        "command": "io.orta.jest.test-item.run-mode.change",
+        "title": "Change RunMode",
+        "icon": "$(gear)"
       },
       {
         "command": "io.orta.jest.test-item.reveal-output",
@@ -314,19 +397,7 @@
           "when": "jest.never"
         },
         {
-          "command": "io.orta.jest.test-item.auto-run.toggle-on",
-          "when": "jest.never"
-        },
-        {
-          "command": "io.orta.jest.test-item.auto-run.toggle-off",
-          "when": "jest.never"
-        },
-        {
-          "command": "io.orta.jest.test-item.coverage.toggle-on",
-          "when": "jest.never"
-        },
-        {
-          "command": "io.orta.jest.test-item.coverage.toggle-off",
+          "command": "io.orta.jest.test-item.run-mode.change",
           "when": "jest.never"
         },
         {
@@ -351,28 +422,13 @@
       ],
       "testing/item/context": [
         {
-          "command": "io.orta.jest.test-item.auto-run.toggle-off",
+          "command": "io.orta.jest.test-item.run-mode.change",
           "group": "inline@1",
-          "when": "testId in jest.autoRun.on"
-        },
-        {
-          "command": "io.orta.jest.test-item.auto-run.toggle-on",
-          "group": "inline@1",
-          "when": "testId in jest.autoRun.off"
-        },
-        {
-          "command": "io.orta.jest.test-item.coverage.toggle-off",
-          "group": "inline@2",
-          "when": "testId in jest.coverage.on"
-        },
-        {
-          "command": "io.orta.jest.test-item.coverage.toggle-on",
-          "group": "inline@2",
-          "when": "testId in jest.coverage.off"
+          "when": "testId in jest.runMode"
         },
         {
           "command": "io.orta.jest.test-item.reveal-output",
-          "group": "inline@3",
+          "group": "inline@2",
           "when": "testId in jest.workspaceRoot"
         },
         {
@@ -520,7 +576,8 @@
     "test": "jest",
     "watch-test": "yarn test -- --watch",
     "tsc": "tsc --noEmit",
-    "update-vscode-type": "npx vscode-dts main; mv ./vscode.d.ts ./typings"
+    "update-vscode-type": "npx vscode-dts main; mv ./vscode.d.ts ./typings",
+    "compare-coverage": "ts-node scripts/compare-coverage.ts "
   },
   "dependencies": {
     "istanbul-lib-coverage": "^3.2.0",
@@ -528,6 +585,7 @@
     "jest-editor-support": "^31.1.1"
   },
   "devDependencies": {
+    "@types/fs-extra": "^11.0.2",
     "@types/istanbul-lib-coverage": "^2.0.4",
     "@types/istanbul-lib-source-maps": "^4.0.1",
     "@types/jest": "^29.2.5",
@@ -541,6 +599,7 @@
     "eslint-plugin-jsdoc": "^39.6.4",
     "eslint-plugin-prefer-arrow": "^1.2.3",
     "eslint-plugin-prettier": "^4.2.1",
+    "fs-extra": "^11.1.1",
     "jest": "^29.3.1",
     "jest-snapshot": "^27.2.0",
     "prettier": "^2.8.2",
@@ -548,6 +607,7 @@
     "rimraf": "^3.0.2",
     "ts-jest": "^29.0.3",
     "ts-loader": "^9.4.2",
+    "ts-node": "^10.9.1",
     "typescript": "^4.9.4",
     "webpack": "^5.75.0",
     "webpack-cli": "^5.0.1"

@@ -10,11 +10,12 @@ import { Logging } from '../logging';
 import { TestSuitChangeEvent } from '../TestResults/test-result-events';
 import { Debuggable, ItemCommand, TestItemData } from './types';
 import { JestTestProviderContext, JestTestRun, JestTestRunOptions } from './test-provider-helper';
-import { JestProcessInfo, JestProcessRequest } from '../JestProcessManagement';
-import { GENERIC_ERROR, getExitErrorDef, LONG_RUNNING_TESTS } from '../errors';
+import { JestProcessInfo, JestProcessRequest, UserDataType } from '../JestProcessManagement';
+import { GENERIC_ERROR, LONG_RUNNING_TESTS, getExitErrorDef } from '../errors';
 import { JestExtOutput } from '../JestExt/output-terminal';
 import { tiContextManager } from './test-item-context-manager';
 import { toAbsoluteRootPath } from '../helpers';
+import { runModeDescription } from '../JestExt/run-mode';
 
 interface JestRunnable {
   getJestRunRequest: () => JestExtRequestType;
@@ -24,12 +25,10 @@ interface WithUri {
   uri: vscode.Uri;
 }
 
-type JestTestRunRequest = JestExtRequestType & { run: JestTestRun };
 type TypedRunEvent = RunEventBase & { type: string };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const isJestTestRunRequest = (arg: any): arg is JestTestRunRequest =>
-  arg.run instanceof JestTestRun;
+const hasRunInfo = (userData?: UserDataType): userData is { run: JestTestRun } =>
+  userData?.run instanceof JestTestRun;
 
 abstract class TestItemDataBase implements TestItemData, JestRunnable, WithUri {
   item!: vscode.TestItem;
@@ -73,10 +72,7 @@ abstract class TestItemDataBase implements TestItemData, JestRunnable, WithUri {
 
     this.deepItemState(this.item, run.enqueued);
 
-    const process = this.context.ext.session.scheduleProcess({
-      ...jestRequest,
-      run,
-    });
+    const process = this.context.ext.session.scheduleProcess(jestRequest, { run });
     if (!process) {
       const msg = `failed to schedule test for ${this.item.id}`;
       run.errored(this.item, new vscode.TestMessage(msg));
@@ -141,7 +137,8 @@ export class WorkspaceRoot extends TestItemDataBase {
       undefined,
       ['run']
     );
-    item.description = `(${this.context.ext.settings.autoRun.mode})`;
+    const desc = runModeDescription(this.context.ext.settings.runMode.config);
+    item.description = `(${desc.deferred?.label ?? desc.type.label})`;
 
     item.canResolveChildren = true;
     return item;
@@ -337,8 +334,8 @@ export class WorkspaceRoot extends TestItemDataBase {
   /** get test item from jest process. If running tests from source file, will return undefined */
   private getItemFromProcess = (process: JestProcessInfo): vscode.TestItem | undefined => {
     // the TestExplorer triggered run should already have item associated
-    if (isJestTestRunRequest(process.request) && process.request.run.item) {
-      return process.request.run.item;
+    if (hasRunInfo(process.userData) && process.userData.run.item) {
+      return process.userData.run.item;
     }
 
     // should only come here for autoRun processes
@@ -363,8 +360,8 @@ export class WorkspaceRoot extends TestItemDataBase {
 
   private createRunForEvent = (event: TypedRunEvent): JestTestRun => {
     const item = this.getItemFromProcess(event.process) ?? this.item;
-    const name = isJestTestRunRequest(event.process.request)
-      ? event.process.request.run.name
+    const name = hasRunInfo(event.process.userData)
+      ? event.process.userData.run.name
       : `${event.type}:${event.process.id}`;
     const run = this.createRun({
       name,
@@ -377,8 +374,8 @@ export class WorkspaceRoot extends TestItemDataBase {
   };
   /** return a valid run from process or process-run-cache. return undefined if run is closed. */
   private getJestRun = (process: JestProcessInfo): JestTestRun | undefined => {
-    if (isJestTestRunRequest(process.request) && !process.request.run.isClosed()) {
-      return process.request.run;
+    if (hasRunInfo(process.userData) && !process.userData.run.isClosed()) {
+      return process.userData.run;
     }
     const run = this.cachedRun.get(process.id);
     if (run?.isClosed()) {
@@ -436,8 +433,9 @@ export class WorkspaceRoot extends TestItemDataBase {
           break;
         }
         case 'end': {
-          if (event.error) {
+          if (event.error && !event.process.userData?.errorReported) {
             this.writer(run).write(event.error, 'error');
+            event.process.userData = { ...(event.process.userData ?? {}), errorReported: true };
           }
           this.runLog('finished');
           run?.end();
@@ -446,10 +444,14 @@ export class WorkspaceRoot extends TestItemDataBase {
         case 'exit': {
           if (event.error) {
             run = run ?? this.createRunForEvent(event);
-            const type = getExitErrorDef(event.code) ?? GENERIC_ERROR;
-            run.write(event.error, type);
+
             if (run.item) {
               run.errored(run.item, new vscode.TestMessage(event.error));
+            }
+            if (!event.process.userData?.errorReported) {
+              const type = getExitErrorDef(event.code) ?? GENERIC_ERROR;
+              run.write(event.error, type);
+              event.process.userData = { ...(event.process.userData ?? {}), errorReported: true };
             }
           }
           this.runLog('exited');
@@ -556,16 +558,12 @@ abstract class TestResultData extends TestItemDataBase {
         run.skipped(this.item);
         break;
       case 'KnownFail': {
-        if (this.context.ext.settings.testExplorer.showInlineError) {
-          const message = new vscode.TestMessage(result.message);
-          if (errorLocation) {
-            message.location = errorLocation;
-          }
-
-          run.failed(this.item, message);
-        } else {
-          run.failed(this.item, []);
+        const message = new vscode.TestMessage(result.message);
+        if (errorLocation) {
+          message.location = errorLocation;
         }
+
+        run.failed(this.item, message);
         break;
       }
     }

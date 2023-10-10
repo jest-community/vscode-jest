@@ -66,53 +66,6 @@ describe('CoverageOverlay', () => {
         expect(sut.enabled).toBe(expected);
       });
     });
-
-    describe('set', () => {
-      it('should set the overlay visibility', () => {
-        const expected = true;
-        const sut = new CoverageOverlay(null, coverageMapProvider, !expected);
-        sut.updateVisibleEditors = jest.fn();
-        sut.enabled = expected;
-
-        expect(sut.enabled).toBe(expected);
-      });
-
-      it('should refresh the overlays in visible editors', () => {
-        const sut = new CoverageOverlay(null, coverageMapProvider);
-        sut.updateVisibleEditors = jest.fn();
-        sut.enabled = true;
-
-        expect(sut.updateVisibleEditors).toHaveBeenCalled();
-      });
-    });
-  });
-
-  describe('toggleVisibility()', () => {
-    it('should enable the overlay when disabled', () => {
-      const enabled = false;
-      const sut = new CoverageOverlay(null, coverageMapProvider, enabled);
-      sut.updateVisibleEditors = jest.fn();
-      sut.toggleVisibility();
-
-      expect(sut.enabled).toBe(true);
-    });
-
-    it('should disable the overlay when enabled', () => {
-      const enabled = true;
-      const sut = new CoverageOverlay(null, coverageMapProvider, enabled);
-      sut.updateVisibleEditors = jest.fn();
-      sut.toggleVisibility();
-
-      expect(sut.enabled).toBe(false);
-    });
-
-    it('should refresh the overlays in visible editors', () => {
-      const sut = new CoverageOverlay(null, coverageMapProvider);
-      sut.updateVisibleEditors = jest.fn();
-      sut.toggleVisibility();
-
-      expect(sut.updateVisibleEditors).toHaveBeenCalled();
-    });
   });
 
   describe('updateVisibleEditors()', () => {

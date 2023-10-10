@@ -11,28 +11,21 @@ export interface SnapshotItem {
   itemId: string;
   testFullName: string;
 }
-export type ItemContext =
-  | {
-      key: 'jest.autoRun' | 'jest.coverage';
-      workspace: vscode.WorkspaceFolder;
-      /** the current value of the itemId */
-      value: boolean;
-      itemIds: string[];
-    }
-  | {
-      key: 'jest.editor-view-snapshot' | 'jest.editor-update-snapshot' | 'jest.workspaceRoot';
-      workspace: vscode.WorkspaceFolder;
-      itemIds: string[];
-    };
+export type ItemContext = {
+  key:
+    | 'jest.runMode'
+    | 'jest.editor-view-snapshot'
+    | 'jest.editor-update-snapshot'
+    | 'jest.workspaceRoot';
+  workspace: vscode.WorkspaceFolder;
+  itemIds: string[];
+};
 export type TEItemContextKey = ItemContext['key'];
 
 export class TestItemContextManager {
   private cache = new Map<TEItemContextKey, ItemContext[]>();
   private wsCache: Record<string, vscode.WorkspaceFolder> = {};
 
-  private contextKey(key: TEItemContextKey, value: boolean): string {
-    return `${key}.${value ? 'on' : 'off'}`;
-  }
   // context are stored by key, one per workspace
   private updateContextCache(context: ItemContext): ItemContext[] {
     this.wsCache[context.workspace.name] = context.workspace;
@@ -48,20 +41,7 @@ export class TestItemContextManager {
   public setItemContext(context: ItemContext): void {
     const list = this.updateContextCache(context);
     switch (context.key) {
-      case 'jest.autoRun':
-      case 'jest.coverage': {
-        //set context for both on and off
-        let itemIds = list
-          .flatMap((c) => (c.key === context.key && c.value === true ? c.itemIds : undefined))
-          .filter((c) => c !== undefined);
-        vscode.commands.executeCommand('setContext', this.contextKey(context.key, true), itemIds);
-
-        itemIds = list
-          .flatMap((c) => (c.key === context.key && c.value === false ? c.itemIds : undefined))
-          .filter((c) => c !== undefined);
-        vscode.commands.executeCommand('setContext', this.contextKey(context.key, false), itemIds);
-        break;
-      }
+      case 'jest.runMode':
       case 'jest.editor-view-snapshot':
       case 'jest.editor-update-snapshot':
       case 'jest.workspaceRoot': {
@@ -94,30 +74,19 @@ export class TestItemContextManager {
         }
       }
     );
-    const autoRunCommands = ['test-item.auto-run.toggle-off', 'test-item.auto-run.toggle-on'].map(
-      (n) =>
-        vscode.commands.registerCommand(`${extensionName}.${n}`, (testItem: vscode.TestItem) => {
-          const workspace = this.getItemWorkspace(testItem);
-          if (workspace) {
-            vscode.commands.executeCommand(
-              `${extensionName}.with-workspace.toggle-auto-run`,
-              workspace
-            );
-          }
-        })
+    const runModeCommand = vscode.commands.registerCommand(
+      `${extensionName}.test-item.run-mode.change`,
+      (testItem: vscode.TestItem) => {
+        const workspace = this.getItemWorkspace(testItem);
+        if (workspace) {
+          vscode.commands.executeCommand(
+            `${extensionName}.with-workspace.change-run-mode`,
+            workspace
+          );
+        }
+      }
     );
-    const coverageCommands = ['test-item.coverage.toggle-off', 'test-item.coverage.toggle-on'].map(
-      (n) =>
-        vscode.commands.registerCommand(`${extensionName}.${n}`, (testItem: vscode.TestItem) => {
-          const workspace = this.getItemWorkspace(testItem);
-          if (workspace) {
-            vscode.commands.executeCommand(
-              `${extensionName}.with-workspace.toggle-coverage`,
-              workspace
-            );
-          }
-        })
-    );
+
     const viewSnapshotCommand = vscode.commands.registerCommand(
       `${extensionName}.test-item.view-snapshot`,
       (testItem: vscode.TestItem) => {
@@ -147,13 +116,7 @@ export class TestItemContextManager {
       }
     );
 
-    return [
-      ...autoRunCommands,
-      ...coverageCommands,
-      viewSnapshotCommand,
-      updateSnapshotCommand,
-      revealOutputCommand,
-    ];
+    return [runModeCommand, viewSnapshotCommand, updateSnapshotCommand, revealOutputCommand];
   }
 }
 

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import { JestTotalResults } from 'jest-editor-support';
+import { JestTotalResults, RunnerEvent } from 'jest-editor-support';
 import { cleanAnsi, toErrorString } from '../helpers';
-import { JestProcess, JestProcessEvent } from '../JestProcessManagement';
+import { JestProcess } from '../JestProcessManagement';
 import { ListenerSession, ListTestFilesCallback } from './process-session';
 import { Logging } from '../logging';
 import { JestRunEvent } from './types';
@@ -33,12 +33,8 @@ export class AbstractProcessListener {
     return 'AbstractProcessListener';
   }
 
-  onEvent(jestProcess: JestProcess, event: JestProcessEvent, ...args: unknown[]): void {
+  onEvent(jestProcess: JestProcess, event: RunnerEvent, ...args: unknown[]): void {
     switch (event) {
-      case 'processStarting': {
-        this.onProcessStarting(jestProcess);
-        break;
-      }
       case 'executableStdErr': {
         const data = (args[0] as Buffer).toString();
         this.onExecutableStdErr(jestProcess, cleanAnsi(data), data);
@@ -68,18 +64,9 @@ export class AbstractProcessListener {
         this.onProcessExit(jestProcess, code ?? undefined, signal ?? undefined);
         break;
       }
-      default:
-        this.logging(
-          'warn',
-          `received unexpected event "${event}" for process:`,
-          jestProcess.request
-        );
     }
   }
 
-  protected onProcessStarting(process: JestProcess): void {
-    this.session.context.onRunEvent.fire({ type: 'process-start', process });
-  }
   protected onExecutableStdErr(_process: JestProcess, data: string, _raw: string): void {
     if (POSSIBLE_ENV_ERROR_REGEX.test(data)) {
       this.CmdNotFoundEnv = true;
@@ -356,11 +343,14 @@ export class RunTestListener extends AbstractProcessListener {
 
   protected onProcessClose(process: JestProcess, code?: number, signal?: string): void {
     this.runEnded();
-    const error = this.handleWatchProcessCrash(process);
+    let error = this.handleWatchProcessCrash(process);
 
     if (code && code > 1) {
       if (this.retryWithLoginShell(process, code, signal)) {
         return;
+      }
+      if (!error) {
+        error = `process ${process.id} exited with code= ${code}`;
       }
     }
     this.onRunEvent.fire({ type: 'exit', process, error, code });

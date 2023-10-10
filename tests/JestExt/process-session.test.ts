@@ -1,12 +1,12 @@
 jest.unmock('../../src/JestExt/process-session');
 jest.unmock('../../src/JestExt/helper');
-jest.unmock('../../src/JestExt/auto-run');
+jest.unmock('../../src/JestExt/run-mode');
 jest.unmock('../test-helper');
 
 import { createProcessSession } from '../../src/JestExt/process-session';
 import * as listeners from '../../src/JestExt/process-listeners';
 import { JestProcessManager } from '../../src/JestProcessManagement';
-import { AutoRun } from '../../src/JestExt/auto-run';
+import { RunMode } from '../../src/JestExt/run-mode';
 import { mockJestProcessContext } from '../test-helper';
 
 const mockProcessManager = JestProcessManager as jest.Mocked<any>;
@@ -111,27 +111,28 @@ describe('ProcessSession', () => {
     it('can pass custom request', () => {
       const sm = createProcessSession(context);
       expect(mockProcessManager).toHaveBeenCalledTimes(1);
-      const extraInfo = 'whatever';
-      sm.scheduleProcess({ type: 'all-tests', extraInfo });
+      const extraInfo: any = 'whatever';
+      sm.scheduleProcess({ type: 'all-tests' }, extraInfo);
       expect(processManagerMock.scheduleJestProcess).toHaveBeenCalled();
       expect(processManagerMock.scheduleJestProcess).toHaveBeenCalledWith(
-        expect.objectContaining({ extraInfo })
+        expect.anything(),
+        extraInfo
       );
     });
   });
 
   describe('start', () => {
     it.each`
-      autoRun                                       | expectedRequests
-      ${'off'}                                      | ${[]}
-      ${{ watch: true, onStartup: ['all-tests'] }}  | ${['all-tests', 'watch-tests']}
-      ${{ watch: true }}                            | ${['watch-tests']}
-      ${{ watch: false, onStartup: ['all-tests'] }} | ${['all-tests']}
+      runMode                                                           | expectedRequests
+      ${new RunMode('on-demand')}                                       | ${[]}
+      ${new RunMode({ type: 'watch', runAllTestsOnStartup: true })}     | ${['all-tests', 'watch-tests']}
+      ${new RunMode('watch')}                                           | ${['watch-tests']}
+      ${new RunMode({ type: 'on-demand', runAllTestsOnStartup: true })} | ${['all-tests']}
     `(
-      'will execute the onStartup processes with autoRun=$autoRun',
-      async ({ autoRun, expectedRequests }) => {
+      'will execute the onStartup processes with runMode=$runMode',
+      async ({ runMode, expectedRequests }) => {
         expect.hasAssertions();
-        context.settings = { autoRun: new AutoRun(autoRun) };
+        context.settings = { runMode };
         processManagerMock.numberOfProcesses.mockReturnValue(0);
         const session = createProcessSession(context);
         await session.start();
@@ -144,7 +145,7 @@ describe('ProcessSession', () => {
     );
     it('will clear all process before starting new ones', async () => {
       expect.hasAssertions();
-      context.settings = { autoRun: new AutoRun({ watch: true }) };
+      context.settings = { runMode: new RunMode() };
       processManagerMock.numberOfProcesses.mockReturnValue(1);
       const session = createProcessSession(context);
       await session.start();

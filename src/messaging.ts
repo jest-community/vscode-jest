@@ -5,9 +5,9 @@
 import * as vscode from 'vscode';
 
 export const TROUBLESHOOTING_URL =
-  'https://github.com/jest-community/vscode-jest/blob/master/README.md#troubleshooting';
+  'https://github.com/jest-community/vscode-jest/tree/master#troubleshooting';
 export const LONG_RUN_TROUBLESHOOTING_URL =
-  'https://github.com/jest-community/vscode-jest/blob/master/README.md#what-to-do-with-long-running-tests-warning';
+  'https://github.com/jest-community/vscode-jest/tree/master#what-to-do-with-long-running-tests-warning';
 
 //
 // internal methods

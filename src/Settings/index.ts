@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import { CoverageColors } from '../Coverage/CoverageOverlay';
 import { JESParserPluginOptions, ProjectWorkspace } from 'jest-editor-support';
-import { AutoRun } from '../JestExt/auto-run';
 import { RunShell } from '../JestExt/run-shell';
 import { isVirtualWorkspaceFolder } from '../virtual-workspace-folder';
+import { RunMode } from '../JestExt/run-mode';
 
 export type JestTestProcessType =
   | 'all-tests'
@@ -28,6 +28,23 @@ export type JestExtAutoRunConfig =
     };
 export type JestExtAutoRunSetting = JestExtAutoRunShortHand | JestExtAutoRunConfig;
 
+interface JestRunModeOptions {
+  runAllTestsOnStartup?: boolean;
+  coverage?: boolean;
+  revealOutput?: 'on-run' | 'on-exec-error' | 'on-demand';
+  deferred?: boolean;
+}
+export type JestRunMode = (
+  | { type: 'watch' }
+  | { type: 'on-demand' }
+  | { type: 'on-save'; testFileOnly?: boolean }
+) &
+  JestRunModeOptions;
+
+export type JestRunModeType = JestRunMode['type'];
+export type JestPredefinedRunModeType = JestRunModeType | 'deferred';
+export type JestRunModeSetting = JestRunMode | JestPredefinedRunModeType;
+
 export type TestExplorerConfigLegacy =
   | { enabled: false }
   | { enabled: true; showClassicStatus?: boolean; showInlineError?: boolean };
@@ -43,30 +60,35 @@ export interface PluginResourceSettings {
   jestCommandLine?: string;
   autoClearTerminal?: boolean;
   rootPath: string;
-  showCoverageOnLoad: boolean;
   coverageFormatter: string;
   debugMode?: boolean;
   coverageColors?: CoverageColors;
-  autoRun: AutoRun;
+  runMode: RunMode;
   testExplorer: TestExplorerConfig;
   nodeEnv?: NodeEnv;
   shell: RunShell;
   monitorLongRun?: MonitorLongRun;
-  autoRevealOutput: AutoRevealOutputType;
-  parserPluginOptions?: JESParserPluginOptions;
   enable?: boolean;
+  parserPluginOptions?: JESParserPluginOptions;
   useDashedArgs?: boolean;
+}
+
+export interface DeprecatedPluginResourceSettings {
+  showCoverageOnLoad?: boolean;
+  autoRevealOutput?: AutoRevealOutputType;
+  autoRun?: JestExtAutoRunSetting | null;
 }
 
 export interface PluginWindowSettings {
   disabledWorkspaceFolders: string[];
 }
 
-export type VirtualFolderSettingKey = keyof PluginResourceSettings;
-export type VirtualFolderSettings = {
+export type AllPluginResourceSettings = PluginResourceSettings & DeprecatedPluginResourceSettings;
+
+export type VirtualFolderSettingKey = keyof AllPluginResourceSettings;
+export interface VirtualFolderSettings extends AllPluginResourceSettings {
   name: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-} & Record<VirtualFolderSettingKey, any>;
+}
 
 export type GetConfigFunction = <T>(key: VirtualFolderSettingKey) => T | undefined;
 /**
@@ -97,7 +119,28 @@ export const createJestSettingGetter = (
       return (config.get<boolean>(key) !== false && vFolder?.enable !== false) as T;
     }
 
-    return vFolder?.[key] ?? config.get<T>(key);
+    return (vFolder?.[key] as T) ?? config.get<T>(key);
   };
   return getSetting;
+};
+
+// get setting from virtual folder first, fallback to workspace setting if not found
+export const updateSetting = async (
+  workspaceFolder: vscode.WorkspaceFolder,
+  key: VirtualFolderSettingKey,
+  value: unknown
+): Promise<void> => {
+  const config = vscode.workspace.getConfiguration('jest', workspaceFolder.uri);
+  if (!isVirtualWorkspaceFolder(workspaceFolder)) {
+    await config.update(key, value);
+    return;
+  }
+  const virtualFolders = config.get<VirtualFolderSettings[]>('virtualFolders');
+  const vFolder = virtualFolders?.find((v) => v.name === workspaceFolder.name);
+  if (!vFolder) {
+    throw new Error(`[${workspaceFolder.name}] is missing corresponding virtual folder setting`);
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (vFolder as any)[key] = value;
+  await config.update('virtualFolders', virtualFolders);
 };

@@ -1,16 +1,23 @@
 import { JestProcess } from './JestProcess';
-import { TaskArrayFunctions, JestProcessRequest, QueueType, Task, JestProcessInfo } from './types';
+import {
+  TaskArrayFunctions,
+  JestProcessRequest,
+  QueueType,
+  Task,
+  JestProcessInfo,
+  UserDataType,
+} from './types';
 import { Logging } from '../logging';
 import { createTaskQueue, TaskQueue } from './task-queue';
 import { isDupe, requestString } from './helper';
-import { JestExtContext } from '../JestExt';
+import { JestExtProcessContext } from '../JestExt';
 
 export class JestProcessManager implements TaskArrayFunctions<JestProcess> {
-  private extContext: JestExtContext;
+  private extContext: JestExtProcessContext;
   private queues: Map<QueueType, TaskQueue<JestProcess>>;
   private logging: Logging;
 
-  constructor(extContext: JestExtContext) {
+  constructor(extContext: JestExtProcessContext) {
     this.extContext = extContext;
     this.logging = extContext.loggingFactory.create('JestProcessManager');
     this.queues = new Map([
@@ -46,7 +53,10 @@ export class JestProcessManager implements TaskArrayFunctions<JestProcess> {
    * @param request
    * @returns a jest process id if successfully scheduled, otherwise undefined
    */
-  public scheduleJestProcess(request: JestProcessRequest): JestProcessInfo | undefined {
+  public scheduleJestProcess(
+    request: JestProcessRequest,
+    userData?: UserDataType
+  ): JestProcessInfo | undefined {
     if (this.foundDup(request)) {
       this.logging(
         'debug',
@@ -56,7 +66,7 @@ export class JestProcessManager implements TaskArrayFunctions<JestProcess> {
     }
 
     const queue = this.getQueue(request.schedule.queue);
-    const process = new JestProcess(this.extContext, request);
+    const process = new JestProcess(this.extContext, request, userData);
     queue.add(process);
     this.run(queue);
     return process;
@@ -71,9 +81,16 @@ export class JestProcessManager implements TaskArrayFunctions<JestProcess> {
     const process = task.data;
 
     try {
-      await process.start();
+      const promise = process.start();
+      this.extContext.onRunEvent.fire({ type: 'process-start', process });
+      await promise;
     } catch (e) {
-      this.logging('error', `${queue.name}: process failed:`, process, e);
+      this.logging('error', `${queue.name}: process failed to start:`, process, e);
+      this.extContext.onRunEvent.fire({
+        type: 'exit',
+        process,
+        error: `Process failed to start: ${e}`,
+      });
     } finally {
       queue.remove(task);
     }

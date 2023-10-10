@@ -1,16 +1,18 @@
 jest.unmock('../../src/test-provider/test-provider');
 jest.unmock('../../src/test-provider/test-provider-helper');
+jest.unmock('../../src/JestExt/run-mode');
 jest.unmock('./test-helper');
 jest.unmock('../../src/appGlobals');
 
 import * as vscode from 'vscode';
 import { JestTestProvider } from '../../src/test-provider/test-provider';
 import { WorkspaceRoot } from '../../src/test-provider/test-item-data';
-import { JestTestProviderContext } from '../../src/test-provider/test-provider-helper';
+import { JestTestProviderContext, JestTestRun } from '../../src/test-provider/test-provider-helper';
 import { extensionId } from '../../src/appGlobals';
 import { mockController, mockExtExplorerContext } from './test-helper';
 import { tiContextManager } from '../../src/test-provider/test-item-context-manager';
 import { ItemCommand } from '../../src/test-provider/types';
+import { RunMode } from '../../src/JestExt/run-mode';
 
 const throwError = () => {
   throw new Error('debug error');
@@ -85,15 +87,23 @@ describe('JestTestProvider', () => {
         [vscode.TestRunProfileKind.Run, 'run', true],
         [vscode.TestRunProfileKind.Debug, 'debug', true],
       ].forEach(([kind, id, isDefault]) => {
-        expect(controllerMock.createRunProfile).toHaveBeenCalledWith(
-          expect.anything(),
-          kind,
-          expect.anything(),
-          isDefault,
-          expect.objectContaining({ id })
-        );
+        const profile = controllerMock.createRunProfile.mock.results.find(
+          (r) => r.value.label === id
+        )?.value;
+        expect(profile.kind).toEqual(kind);
+        expect(profile.isDefault).toEqual(isDefault);
+        if (id === 'run') {
+          expect(profile.configureHandler).toBeDefined();
+          profile.configureHandler();
+          expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+            expect.stringContaining(`with-workspace.change-run-mode`),
+            extExplorerContextMock.workspace
+          );
+        } else {
+          expect(profile.configureHandler).not.toBeDefined();
+        }
       });
-
+      controllerMock.createRunProfile.mock.results.find((r) => r.label === 'run');
       expect(WorkspaceRoot).toHaveBeenCalled();
     });
   });
@@ -485,57 +495,79 @@ describe('JestTestProvider', () => {
         await p;
         expect(runMock.end).toHaveBeenCalledTimes(1);
       });
-      it('can handle exception', async () => {
-        expect.hasAssertions();
+      describe('can handle exception', () => {
+        it('when schedule test failed', async () => {
+          expect.hasAssertions();
 
-        const testProvider = new JestTestProvider(extExplorerContextMock);
-        const itemDataList = setupItemData(workspaceRootMock.context);
-        itemDataList.forEach((d, idx) => {
-          if (idx === 1) {
-            d.scheduleTest.mockImplementation(() => {
-              throw new Error('error scheduling test');
-            });
-          } else {
-            d.scheduleTest.mockReturnValueOnce(`pid-${idx}`);
-          }
-        });
-        const request: any = {
-          include: itemDataList.map((d) => d.item),
-          profile: { kind: vscode.TestRunProfileKind.Run },
-        };
-        const p = testProvider.runTests(request, cancelToken);
+          const testProvider = new JestTestProvider(extExplorerContextMock);
+          const itemDataList = setupItemData(workspaceRootMock.context);
+          itemDataList.forEach((d, idx) => {
+            if (idx === 1) {
+              d.scheduleTest.mockImplementation(() => {
+                throw new Error('error scheduling test');
+              });
+            } else {
+              d.scheduleTest.mockReturnValueOnce(`pid-${idx}`);
+            }
+          });
+          const request: any = {
+            include: itemDataList.map((d) => d.item),
+            profile: { kind: vscode.TestRunProfileKind.Run },
+          };
+          const p = testProvider.runTests(request, cancelToken);
 
-        // cancel after run
-        cancelToken.isCancellationRequested = true;
+          // cancel after run
+          cancelToken.isCancellationRequested = true;
 
-        // a run is already created
-        expect(controllerMock.createTestRun).toHaveBeenCalled();
-        const runMock = controllerMock.lastRunMock();
+          // a run is already created
+          expect(controllerMock.createTestRun).toHaveBeenCalled();
+          const runMock = controllerMock.lastRunMock();
 
-        itemDataList.forEach((d, idx) => {
-          expect(d.scheduleTest).toHaveBeenCalled();
-          const [run] = d.scheduleTest.mock.calls[0];
-          expect(run).toEqual(expect.objectContaining({ vscodeRun: controllerMock.lastRunMock() }));
-
-          if (idx === 1) {
-            expect(run.vscodeRun.errored).toHaveBeenCalledWith(
-              d.item,
-              expect.anything(),
-              undefined
+          itemDataList.forEach((d, idx) => {
+            expect(d.scheduleTest).toHaveBeenCalled();
+            const [run] = d.scheduleTest.mock.calls[0];
+            expect(run).toEqual(
+              expect.objectContaining({ vscodeRun: controllerMock.lastRunMock() })
             );
-          } else {
-            expect(run.vscodeRun.errored).not.toHaveBeenCalledWith(
-              d.item,
-              expect.anything(),
-              undefined
-            );
-            // close the schedule
-            run.end();
-          }
-        });
 
-        await p;
-        expect(runMock.end).toHaveBeenCalled();
+            if (idx === 1) {
+              expect(run.vscodeRun.errored).toHaveBeenCalledWith(
+                d.item,
+                expect.anything(),
+                undefined
+              );
+            } else {
+              expect(run.vscodeRun.errored).not.toHaveBeenCalledWith(
+                d.item,
+                expect.anything(),
+                undefined
+              );
+              // close the schedule
+              run.end();
+            }
+          });
+
+          await p;
+          expect(runMock.end).toHaveBeenCalled();
+        });
+        it('when debug failed', async () => {
+          expect.hasAssertions();
+
+          const testProvider = new JestTestProvider(extExplorerContextMock);
+          const debugSpy = jest.spyOn(testProvider, 'debugTest');
+          debugSpy.mockImplementation(() => {
+            throw new Error('force an error');
+          });
+          const writeSpy = jest.spyOn(JestTestRun.prototype, 'write');
+          const itemDataList = setupItemData(workspaceRootMock.context);
+          const request: any = {
+            include: itemDataList.map((d) => d.item),
+            profile: { kind: vscode.TestRunProfileKind.Debug, label: 'debug' },
+          };
+          await testProvider.runTests(request, cancelToken);
+          expect(debugSpy).toHaveBeenCalled();
+          expect(writeSpy).toHaveBeenCalledWith(expect.stringContaining('debug'), 'error');
+        });
       });
       it('if no item in request, will run test for the whole workplace', async () => {
         expect.hasAssertions();
@@ -570,23 +602,11 @@ describe('JestTestProvider', () => {
   });
   describe('supports test-explorer item-menu', () => {
     it('updates item-menu context', () => {
-      extExplorerContextMock.settings.autoRun.isOff = false;
-      extExplorerContextMock.settings.showCoverageOnLoad = false;
-
       new JestTestProvider(extExplorerContextMock);
       expect(tiContextManager.setItemContext).toHaveBeenCalledWith(
         expect.objectContaining({
           workspace: extExplorerContextMock.workspace,
-          key: 'jest.autoRun',
-          value: true,
-          itemIds: [workspaceRootMock.item.id],
-        })
-      );
-      expect(tiContextManager.setItemContext).toHaveBeenCalledWith(
-        expect.objectContaining({
-          workspace: extExplorerContextMock.workspace,
-          key: 'jest.coverage',
-          value: false,
+          key: 'jest.runMode',
           itemIds: [workspaceRootMock.item.id],
         })
       );
@@ -603,5 +623,24 @@ describe('JestTestProvider', () => {
     const provider = new JestTestProvider(extExplorerContextMock);
     provider.runItemCommand(workspaceRootMock.item, ItemCommand.updateSnapshot);
     expect(workspaceRootMock.runItemCommand).toHaveBeenCalled();
+  });
+  it('will exit defer mode upon any run request', async () => {
+    expect.hasAssertions();
+
+    const runMode = new RunMode({ type: 'on-demand', deferred: true });
+    extExplorerContextMock.settings.runMode = runMode;
+    const provider = new JestTestProvider(extExplorerContextMock);
+
+    const request: any = {
+      include: {},
+      profile: { kind: vscode.TestRunProfileKind.Debug },
+    };
+    await provider.runTests(request, {} as any);
+    expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+      expect.stringContaining('with-workspace.exit-defer-mode'),
+      extExplorerContextMock.workspace,
+      expect.objectContaining({ request })
+    );
+    expect(controllerMock.createTestRun).not.toHaveBeenCalled();
   });
 });

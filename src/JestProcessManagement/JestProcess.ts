@@ -4,7 +4,7 @@ import { Runner, RunnerEvent, Options } from 'jest-editor-support';
 import { JestExtContext, WatchMode } from '../JestExt/types';
 import { extensionId } from '../appGlobals';
 import { Logging } from '../logging';
-import { JestProcessInfo, JestProcessRequest } from './types';
+import { JestProcessInfo, JestProcessRequest, UserDataType } from './types';
 import { requestString } from './helper';
 import { toFilePath, removeSurroundingQuote, escapeRegExp, shellQuote } from '../helpers';
 
@@ -38,7 +38,11 @@ export class JestProcess implements JestProcessInfo {
   private desc: string;
   public readonly request: JestProcessRequest;
 
-  constructor(extContext: JestExtContext, request: JestProcessRequest) {
+  constructor(
+    extContext: JestExtContext,
+    request: JestProcessRequest,
+    public userData?: UserDataType
+  ) {
     this.extContext = extContext;
     this.request = request;
     this.logging = extContext.loggingFactory.create(`JestProcess ${request.type}`);
@@ -185,7 +189,6 @@ export class JestProcess implements JestProcessInfo {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     this.task = { ...taskInfo!, promise };
 
-    this.request.listener.onEvent(this, 'processStarting');
     runner.start(this.watchMode !== WatchMode.None, this.watchMode === WatchMode.WatchAll);
 
     return promise;

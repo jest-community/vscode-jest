@@ -104,10 +104,24 @@ There are two debugging launch configurations defined in `.vscode/launch.json`:
 
 To debug the extension, [change the launch configuration](https://code.visualstudio.com/docs/editor/debugging#_launch-configurations) to **Launch Extension** and start debugging.
 
-**3. eat our own dog food**
+**3. check test coverage**
+
+Make sure your changes are covered by unit tests and that you did not lose coverage compared to the master branch. While compared to master branch is part of PR workflow validation, it is always a good practice to check it locally before submitting the PR. The following is the step to do it:
+1. go back to master branch (`git checkout master`), run all tests with coverage, which should produce a "coverage" folder under the project root. Rename it to something like "coverage-master" to keep it for later comparison.
+2. switch back to your branch (`git checkout your-branch`), run all tests with coverage, which should produce a "coverage" folder under the project root. 
+3. run compare-coverage script with the master and the current coverage folders, such as `yarn compare-coverage coverage-master coverage`. It will produce a report `coverage_comparison_report.html` under the project root. 
+4. examine `coverage_comparison_report.html` to make sure your changes are fully tested therefore did not reduce coverage compared to master branch.
+
+**4. eat our own dog food**
 
 The ultimate test is to actually use it in our real day-to-day working environment for a while. There are multiple ways to do this:
 
+The most accurate way is to install the extension locally and use it in your real project. You can do this by:
+- building a local installable package with command: `vsce package`. This will produce a `vscode-jest-xxx.vsix` file, where "xxx" is the version number in `package.json`.
+- install this file by using vscode command palette `Extensions: Install from VSIX...`. 
+- after test, you can restore the official version from the vscode's extensions panel.
+
+If you don't have vsce installed, you can try these methods instead:
 - by command line: `code --extensionDevelopmentPath=your-local-vscode-jest`
 - by environment variable: `CODE_EXTENSIONS_PATH`
 - by symlink:
