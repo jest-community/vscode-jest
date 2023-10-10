@@ -354,10 +354,8 @@ describe('test-item-data', () => {
         describe('when testSuiteChanged.assertions-updated event filed', () => {
           it('all item data will be updated accordingly', () => {
             context.ext.testResultProvider.getTestList.mockReturnValueOnce([]);
-            context.ext.settings = {
-              testExplorer: { enabled: true, showInlineError: true },
-              runMode: new RunMode('watch'),
-            };
+            const runMode = new RunMode({ type: 'watch', showInlineError: true });
+            context.ext.settings = { runMode };
 
             const wsRoot = new WorkspaceRoot(context);
             wsRoot.discoverTest(jestRun);
@@ -836,15 +834,15 @@ describe('test-item-data', () => {
           expect(runEndSpy).toHaveBeenCalled();
         });
         it.each`
-          config                                       | hasLocation
-          ${{ enabled: false }}                        | ${false}
-          ${{ enabled: true }}                         | ${false}
-          ${{ enabled: true, showInlineError: false }} | ${false}
-          ${{ enabled: true, showInlineError: true }}  | ${true}
+          showInlineError | hasLocation
+          ${undefined}    | ${false}
+          ${false}        | ${false}
+          ${true}         | ${true}
         `(
           'testExplore config $config, will show inline error? $hasLocation',
-          ({ config, hasLocation }) => {
-            context.ext.settings = { testExplorer: config };
+          ({ showInlineError, hasLocation }) => {
+            const runMode = new RunMode({ type: 'on-demand', showInlineError });
+            context.ext.settings = { runMode };
             const process = mockScheduleProcess(context);
 
             controllerMock.createTestRun.mockClear();
@@ -1184,9 +1182,10 @@ describe('test-item-data', () => {
         env = setupTestEnv();
       });
       it.each([{ type: 'scheduled' }, { type: 'start' }])(
-        '$type: clear when autoClearTerminal is true',
+        '$type: clear when clearOutputOnRun is true',
         ({ type }) => {
-          context.ext.settings = { autoClearTerminal: true };
+          const runMode = new RunMode({ type: 'watch', clearOutputOnRun: true });
+          context.ext.settings = { runMode };
           const process = mockScheduleProcess(context);
           env.onRunEvent({ type, process });
           expect(context.output.clear).toHaveBeenCalled();

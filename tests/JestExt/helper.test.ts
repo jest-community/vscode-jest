@@ -170,9 +170,7 @@ describe('getExtensionResourceSettings()', () => {
       rootPath: 'workspaceFolder1',
       debugMode: false,
       coverageColors: null,
-      autoClearTerminal: false,
       runMode: expect.objectContaining({ config: { type: 'watch', revealOutput: 'on-run' } }),
-      testExplorer: {},
       monitorLongRun: 60000,
       shell: mockShell,
       parserPluginOptions: null,
@@ -196,39 +194,14 @@ describe('getExtensionResourceSettings()', () => {
       })
     );
   });
-  describe('testExplorer', () => {
-    it.each`
-      testExplorer                                                         | showWarning | converted
-      ${{ enabled: true }}                                                 | ${false}    | ${{}}
-      ${{ enabled: false }}                                                | ${true}     | ${{}}
-      ${{ enabled: true, showClassicStatus: true }}                        | ${true}     | ${{}}
-      ${{ enabled: true, showClassicStatus: true, showInlineError: true }} | ${true}     | ${{}}
-      ${{ showInlineError: true }}                                         | ${false}    | ${{ showInlineError: true }}
-      ${{}}                                                                | ${false}    | ${{}}
-      ${null}                                                              | ${false}    | ${{}}
-    `(
-      'testExplorer: $testExplorer => show legacy warning? $showWarning',
-      ({ testExplorer, showWarning, converted }) => {
-        userSettings = { testExplorer };
-        const folder = makeWorkspaceFolder('workspaceFolder1');
-        const settings = getExtensionResourceSettings(folder);
-        expect(settings).toEqual(
-          expect.objectContaining({
-            testExplorer: converted,
-          })
-        );
-        if (showWarning) {
-          expect(vscode.window.showWarningMessage).toHaveBeenCalled();
-        }
-      }
-    );
-  });
+
   describe('runMode', () => {
     it('pass along legacy settings', () => {
       userSettings = {
         showCoverageOnLoad: true,
         autoRevealOutput: 'off',
         autoRun: 'off',
+        testExplorer: { showInlineError: true },
       };
       const folder = makeWorkspaceFolder('workspaceFolder1');
       const settings = getExtensionResourceSettings(folder);
@@ -236,6 +209,7 @@ describe('getExtensionResourceSettings()', () => {
         type: 'on-demand',
         revealOutput: 'on-demand',
         coverage: true,
+        showInlineError: true,
       });
     });
     it('if there is runMode, it will ignore the legacy settings', () => {

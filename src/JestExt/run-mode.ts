@@ -190,6 +190,15 @@ export class RunMode {
             throw new Error(`invalid autoRevealOutput ${legacySettings.autoRevealOutput}`);
         }
       }
+      if (legacySettings?.autoClearTerminal) {
+        base.clearOutputOnRun = true;
+      }
+      if (legacySettings?.testExplorer?.showInlineError) {
+        base.showInlineError = true;
+      }
+      if (!this.canIntegrateTestResultsTab()) {
+        base.integrateTestResultsTab = false;
+      }
       return base;
     } catch (e) {
       // sever user error, while we can fallback to the default, it might not be what the user intended.
@@ -202,6 +211,18 @@ export class RunMode {
       vscode.window.showErrorMessage(message);
       return this.getDefaultRunMode('watch');
     }
+  }
+
+  /**
+   *
+   * @returns true if user has "testing.openTesting" set to anything that is not "neverOpen", then we should assume
+   * not to manage the test results tab directly
+   */
+  private canIntegrateTestResultsTab(): boolean {
+    const openTestingSetting = vscode.workspace
+      .getConfiguration('testing')
+      ?.get<string | undefined>('openTesting');
+    return !openTestingSetting || openTestingSetting === 'neverOpen';
   }
 
   protected clone(config: JestRunMode): RunMode {

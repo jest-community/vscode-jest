@@ -81,7 +81,9 @@
         "jest.autoClearTerminal": {
           "description": "Clear the terminal output at the start of any new test run.",
           "type": "boolean",
-          "scope": "resource"
+          "scope": "resource",
+          "markdownDeprecationMessage": "**Deprecated**: Please use [runMode](https://github.com/jest-community/vscode-jest/blob/master/README.md#runmode) instead.",
+          "deprecationMessage": "Deprecated: Please use jest.runMode instead."
         },
         "jest.rootPath": {
           "description": "The path to your frontend src folder",
@@ -156,7 +158,9 @@
           "markdownDescription": "Configure jest TestExplorer. See valid [formats](https://github.com/jest-community/vscode-jest/blob/master/README.md#testexplorer) or [how to use test explorer](https://github.com/jest-community/vscode-jest/blob/master/README.md#how-to-use-the-test-explorer) for more details",
           "type": "object",
           "default": null,
-          "scope": "resource"
+          "scope": "resource",
+          "markdownDeprecationMessage": "**Deprecated**: Please use [runMode](https://github.com/jest-community/vscode-jest/blob/master/README.md#runmode) instead.",
+          "deprecationMessage": "Deprecated: Please use jest.runMode instead."
         },
         "jest.monitorLongRun": {
           "markdownDescription": "Enable monitoring for long running test process. See valid [monitorLongRun](https://github.com/jest-community/vscode-jest/blob/master/README.md#monitorLongRun) for details",
@@ -251,6 +255,19 @@
                     "on-demand"
                   ],
                   "description": "Determines when to reveal the test run output."
+                },
+                "clearOutputOnRun": {
+                  "type": "boolean",
+                  "description": "Specify if to automatically clear output at the start of each test run"
+                },
+                "showInlineError": {
+                  "type": "boolean",
+                  "description": "Specify if to enable inline error display in test file editor"
+                },
+                "integrateTestResultsTab": {
+                  "type": "boolean",
+                  "description": "Specify if to let extension manage the 'TEST RESULTS' tab",
+                  "default": true
                 },
                 "deferred": {
                   "type": "boolean",

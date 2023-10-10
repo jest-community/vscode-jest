@@ -33,6 +33,11 @@ interface JestRunModeOptions {
   coverage?: boolean;
   revealOutput?: 'on-run' | 'on-exec-error' | 'on-demand';
   deferred?: boolean;
+  clearOutputOnRun?: boolean;
+
+  // TestExplorer related settings
+  showInlineError?: boolean;
+  integrateTestResultsTab?: boolean;
 }
 export type JestRunMode = (
   | { type: 'watch' }
@@ -58,13 +63,11 @@ export type MonitorLongRun = 'off' | number;
 export type AutoRevealOutputType = 'on-run' | 'on-exec-error' | 'off';
 export interface PluginResourceSettings {
   jestCommandLine?: string;
-  autoClearTerminal?: boolean;
   rootPath: string;
   coverageFormatter: string;
   debugMode?: boolean;
   coverageColors?: CoverageColors;
   runMode: RunMode;
-  testExplorer: TestExplorerConfig;
   nodeEnv?: NodeEnv;
   shell: RunShell;
   monitorLongRun?: MonitorLongRun;
@@ -77,6 +80,8 @@ export interface DeprecatedPluginResourceSettings {
   showCoverageOnLoad?: boolean;
   autoRevealOutput?: AutoRevealOutputType;
   autoRun?: JestExtAutoRunSetting | null;
+  testExplorer?: TestExplorerConfig;
+  autoClearTerminal?: boolean;
 }
 
 export interface PluginWindowSettings {

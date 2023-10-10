@@ -46,6 +46,19 @@
               ],
               "description": "Determines when to reveal the test run output."
             },
+            "clearOutputOnRun": {
+              "type": "boolean",
+              "description": "Specify if to automatically clear output at the start of each test run"
+            },
+            "showInlineError": {
+              "type": "boolean",
+              "description": "Specify if to enable inline error display in test file editor"
+            },
+            "integrateTestResultsTab": {
+              "type": "boolean",
+              "description": "Specify if to let extension manage the 'TEST RESULTS' tab",
+              "default": true
+            },
             "deferred": {
               "type": "boolean",
               "description": "Specifies whether the run mode is deferred."
