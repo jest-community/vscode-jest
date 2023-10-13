@@ -16,6 +16,7 @@ import { JestExtOutput } from '../JestExt/output-terminal';
 import { tiContextManager } from './test-item-context-manager';
 import { toAbsoluteRootPath } from '../helpers';
 import { runModeDescription } from '../JestExt/run-mode';
+import { isVirtualWorkspaceFolder } from '../virtual-workspace-folder';
 
 interface JestRunnable {
   getJestRunRequest: () => JestExtRequestType;
@@ -129,10 +130,13 @@ export class WorkspaceRoot extends TestItemDataBase {
     this.registerEvents();
   }
   createTestItem(): vscode.TestItem {
+    const workspaceFolder = this.context.ext.workspace;
     const item = this.context.createTestItem(
-      `${extensionId}:${this.context.ext.workspace.name}`,
-      this.context.ext.workspace.name,
-      this.context.ext.workspace.uri,
+      `${extensionId}:${workspaceFolder.name}`,
+      workspaceFolder.name,
+      isVirtualWorkspaceFolder(workspaceFolder)
+        ? workspaceFolder.effectiveUri
+        : workspaceFolder.uri,
       this,
       undefined,
       ['run']
