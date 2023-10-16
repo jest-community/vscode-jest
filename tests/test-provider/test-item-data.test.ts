@@ -2,6 +2,7 @@ jest.unmock('../../src/test-provider/test-item-data');
 jest.unmock('../../src/test-provider/test-provider-helper');
 jest.unmock('../../src/appGlobals');
 jest.unmock('../../src/TestResults/match-node');
+jest.unmock('../../src/virtual-workspace-folder');
 jest.unmock('../../src/TestResults/match-by-context');
 jest.unmock('../test-helper');
 jest.unmock('./test-helper');
@@ -48,6 +49,7 @@ import { mockController, mockExtExplorerContext } from './test-helper';
 import * as errors from '../../src/errors';
 import { ItemCommand } from '../../src/test-provider/types';
 import { RunMode } from '../../src/JestExt/run-mode';
+import { VirtualWorkspaceFolder } from '../../src/virtual-workspace-folder';
 
 const mockPathSep = (newSep: string) => {
   (path as jest.Mocked<any>).setSep(newSep);
@@ -1456,6 +1458,43 @@ describe('test-item-data', () => {
             expect.stringContaining('60000'),
             errors.LONG_RUNNING_TESTS
           );
+        });
+      });
+    });
+    describe('createTestItem', () => {
+      describe('for a regular workspace folder', () => {
+        let workspaceFolder: vscode.WorkspaceFolder;
+        let wsRoot: WorkspaceRoot;
+
+        beforeEach(() => {
+          workspaceFolder = helper.makeWorkspaceFolder('workspace-1');
+          wsRoot = createAllTestItems().wsRoot;
+          wsRoot.context.ext.workspace = workspaceFolder;
+        });
+
+        it("creates an item using folder's uri", () => {
+          const item = wsRoot.createTestItem();
+          expect(item.uri).toEqual(workspaceFolder.uri);
+        });
+      });
+
+      describe('for a virtual workspace folder', () => {
+        let virtualWorkspaceFolder: VirtualWorkspaceFolder;
+        let wsRoot: WorkspaceRoot;
+
+        beforeEach(() => {
+          virtualWorkspaceFolder = new VirtualWorkspaceFolder(
+            helper.makeWorkspaceFolder('workspace-1'),
+            'virtual-a',
+            'packages/a'
+          );
+          wsRoot = createAllTestItems().wsRoot;
+          wsRoot.context.ext.workspace = virtualWorkspaceFolder;
+        });
+
+        it("creates an item using virtual folder's effectiveUri", () => {
+          const item = wsRoot.createTestItem();
+          expect(item.uri).toEqual(virtualWorkspaceFolder.effectiveUri);
         });
       });
     });
