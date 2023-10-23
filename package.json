@@ -212,6 +212,61 @@
             "type": "object"
           }
         },
+        "jest.outputConfig": {
+          "type": "object",
+          "default": null,
+          "scope": "window",
+          "markdownDescription": "Control jest output preference. See details in [output](https://github.com/jest-community/vscode-jest#output)",
+          "properties": {
+            "revalOn": {
+              "type": "string",
+              "enum": [
+                "run",
+                "error",
+                "demand"
+              ],
+              "enumDescriptions": [
+                "Reveal the output upon test run.",
+                "Reveal the output upon test error.",
+                "Reveal the output on demand."
+              ],
+              "default": "run",
+              "description": "Determines when to reveal the test run output. Default is 'run'."
+            },
+            "revealWithFocus": {
+              "type": "string",
+              "enum": [
+                "none",
+                "terminal",
+                "test-results"
+              ],
+              "enumDescriptions": [
+                "Do not change focus when revealing output.",
+                "Reveal terminal with focus.",
+                "Reveal test results panel with focus."
+              ],
+              "default": "none",
+              "description": "Specifies which output panel, if any, to shift focus to when revealing. Default is 'none'."
+            },
+            "clearOnRun": {
+              "type": "string",
+              "enum": [
+                "none",
+                "both",
+                "terminal",
+                "test-results"
+              ],
+              "enumDescriptions": [
+                "Do not automatically clear the output before each run.",
+                "Clear both the terminal and test results output before each run.",
+                "Clear the terminal output before each run.",
+                "Clear the test results output before each run."
+              ],
+              "default": "none",
+              "description": "Specifies which output, if any, to be cleared before each run. Default is 'none'."
+            }
+          }
+        },
         "jest.runMode": {
           "markdownDescription": "Control when to run jest tests and present the results. See details in [runMode](https://github.com/jest-community/vscode-jest#runmode)",
           "default": null,
@@ -247,28 +302,11 @@
                   "type": "boolean",
                   "description": "Specifies whether to collect and report coverage information."
                 },
-                "revealOutput": {
-                  "type": "string",
-                  "enum": [
-                    "on-run",
-                    "on-exec-error",
-                    "on-demand"
-                  ],
-                  "description": "Determines when to reveal the test run output."
-                },
-                "clearOutputOnRun": {
-                  "type": "boolean",
-                  "description": "Specify if to automatically clear output at the start of each test run"
-                },
                 "showInlineError": {
                   "type": "boolean",
                   "description": "Specify if to enable inline error display in test file editor"
                 },
-                "integrateTestResultsTab": {
-                  "type": "boolean",
-                  "description": "Specify if to let extension manage the 'TEST RESULTS' tab",
-                  "default": true
-                },
+                
                 "deferred": {
                   "type": "boolean",
                   "description": "Specifies whether the run mode is deferred."
@@ -361,6 +399,10 @@
       {
         "command": "io.orta.jest.setup-extension",
         "title": "Jest: Setup Extension"
+      },
+      {
+        "command": "io.orta.jest.v6-migration",
+        "title": "Jest: V6 Migration"
       },
       {
         "command": "io.orta.jest.test-item.run-mode.change",

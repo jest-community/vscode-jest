@@ -33,7 +33,7 @@ import {
 } from './types';
 import { extensionName, SupportedLanguageIds } from '../appGlobals';
 import { createJestExtContext, getExtensionResourceSettings, prefixWorkspace } from './helper';
-import { PluginResourceSettings } from '../Settings';
+import { JestRunModeOptions, PluginResourceSettings } from '../Settings';
 import { WizardTaskId } from '../setup-wizard';
 import { ItemCommand, JestExtExplorerContext } from '../test-provider/types';
 import { JestTestProvider } from '../test-provider';
@@ -43,6 +43,7 @@ import { WorkspaceManager, isInFolder } from '../workspace-manager';
 import { ansiEsc, JestOutputTerminal } from './output-terminal';
 import { QuickFixActionType } from '../quick-fix';
 import { executableTerminalLinkProvider } from '../terminal-link-provider';
+import { outputManager } from '../output-manager';
 
 interface RunTestPickItem extends vscode.QuickPickItem {
   id: DebugTestIdentifier;
@@ -53,6 +54,7 @@ interface JestCommandSettings {
   jestCommandLine: string;
 }
 
+const OUTPUT_CONFIG_KEYS: (keyof JestRunModeOptions)[] = ['deferred'];
 /** extract lines starts and end with [] */
 export class JestExt {
   coverageMapProvider: CoverageMapProvider;
@@ -195,12 +197,7 @@ export class JestExt {
   }
 
   private enableOutputOnRun(): void {
-    if (
-      !this.extContext.settings.runMode.config.revealOutput ||
-      this.extContext.settings.runMode.config.revealOutput === 'on-run'
-    ) {
-      this.output.enable();
-    }
+    outputManager.showOutputOnRun(this.output);
   }
   private setupRunEvents(events: JestSessionEvents): void {
     events.onRunEvent.event((event: JestRunEvent) => {
@@ -394,9 +391,20 @@ export class JestExt {
     this.updateTestFileEditor(editor);
   }
 
-  private updateOutputSetting(settings: PluginResourceSettings): void {
+  private updateOutputSetting(
+    settings: PluginResourceSettings,
+    prevSettings?: PluginResourceSettings
+  ): void {
+    if (prevSettings) {
+      const runModeChanged = OUTPUT_CONFIG_KEYS.find(
+        (key) => prevSettings.runMode.config[key] !== settings.runMode.config[key]
+      );
+      if (!runModeChanged) {
+        return;
+      }
+    }
     this.output.revealOnError =
-      !settings.runMode.config.deferred && settings.runMode.config.revealOutput === 'on-exec-error';
+      !settings.runMode.config.deferred && outputManager.revealOn === 'exec-error';
     this.output.close();
   }
   private testResultProviderOptions(settings: PluginResourceSettings): TestResultProviderOptions {
@@ -412,13 +420,7 @@ export class JestExt {
       newSettings ?? this.getExtensionResourceSettings(this.extContext.workspace);
 
     // output
-    if (
-      this.extContext.settings.runMode.config.revealOutput !==
-        updatedSettings.runMode.config.revealOutput ||
-      this.extContext.settings.runMode.config.deferred !== updatedSettings.runMode.config.deferred
-    ) {
-      this.updateOutputSetting(updatedSettings);
-    }
+    this.updateOutputSetting(updatedSettings, this.extContext.settings);
 
     // TestResultProvider
     this.testResultProvider.options = this.testResultProviderOptions(updatedSettings);

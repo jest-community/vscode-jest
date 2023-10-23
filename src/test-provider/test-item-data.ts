@@ -16,6 +16,7 @@ import { JestExtOutput } from '../JestExt/output-terminal';
 import { tiContextManager } from './test-item-context-manager';
 import { toAbsoluteRootPath } from '../helpers';
 import { runModeDescription } from '../JestExt/run-mode';
+import { outputManager } from '../output-manager';
 
 interface JestRunnable {
   getJestRunRequest: () => JestExtRequestType;
@@ -409,9 +410,7 @@ export class WorkspaceRoot extends TestItemDataBase {
             run = this.createRunForEvent(event);
             this.deepItemState(run.item, run.enqueued);
           }
-          if (this.context.ext.settings.runMode.config.clearOutputOnRun === true) {
-            this.context.output.clear();
-          }
+          outputManager.clearOutputOnRun(this.context.ext.output);
 
           break;
         }
@@ -426,9 +425,7 @@ export class WorkspaceRoot extends TestItemDataBase {
         case 'start': {
           run = run ?? this.createRunForEvent(event);
           this.deepItemState(run.item, run.started);
-          if (this.context.ext.settings.runMode.config.clearOutputOnRun === true) {
-            this.context.output.clear();
-          }
+          outputManager.clearOutputOnRun(this.context.ext.output);
           this.runLog('started');
           break;
         }

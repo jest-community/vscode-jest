@@ -92,11 +92,11 @@ export class RunMode {
   private getDefaultRunMode(setting: JestPredefinedRunModeType): JestRunMode {
     switch (setting.toLocaleLowerCase()) {
       case 'watch':
-        return { type: 'watch', revealOutput: 'on-run' };
+        return { type: 'watch' };
       case 'on-save':
-        return { type: 'on-save', revealOutput: 'on-run' };
+        return { type: 'on-save' };
       case 'on-demand':
-        return { type: 'on-demand', revealOutput: 'on-run' };
+        return { type: 'on-demand' };
       case 'deferred':
         return {
           ...this.getDefaultRunMode('on-demand'),
@@ -177,28 +177,11 @@ export class RunMode {
       if (legacySettings?.showCoverageOnLoad) {
         base.coverage = true;
       }
-      if (legacySettings?.autoRevealOutput) {
-        switch (legacySettings.autoRevealOutput) {
-          case 'on-run':
-          case 'on-exec-error':
-            base.revealOutput = legacySettings.autoRevealOutput;
-            break;
-          case 'off':
-            base.revealOutput = 'on-demand';
-            break;
-          default:
-            throw new Error(`invalid autoRevealOutput ${legacySettings.autoRevealOutput}`);
-        }
-      }
-      if (legacySettings?.autoClearTerminal) {
-        base.clearOutputOnRun = true;
-      }
+
       if (legacySettings?.testExplorer?.showInlineError) {
         base.showInlineError = true;
       }
-      if (!this.canIntegrateTestResultsTab()) {
-        base.integrateTestResultsTab = false;
-      }
+
       return base;
     } catch (e) {
       // sever user error, while we can fallback to the default, it might not be what the user intended.
@@ -211,18 +194,6 @@ export class RunMode {
       vscode.window.showErrorMessage(message);
       return this.getDefaultRunMode('watch');
     }
-  }
-
-  /**
-   *
-   * @returns true if user has "testing.openTesting" set to anything that is not "neverOpen", then we should assume
-   * not to manage the test results tab directly
-   */
-  private canIntegrateTestResultsTab(): boolean {
-    const openTestingSetting = vscode.workspace
-      .getConfiguration('testing')
-      ?.get<string | undefined>('openTesting');
-    return !openTestingSetting || openTestingSetting === 'neverOpen';
   }
 
   protected clone(config: JestRunMode): RunMode {
@@ -253,7 +224,7 @@ export class RunMode {
         ? vscode.Uri.file(context.asAbsolutePath('icons/pause-on-20.svg'))
         : new vscode.ThemeIcon('debug-pause');
       const runModeSchemaUri = vscode.Uri.file(
-        context.asAbsolutePath('syntaxes/jestRunModeSchema.json')
+        context.asAbsolutePath('syntaxes/ExtSettingsSchema.json')
       );
       const deferredButton = {
         iconPath: deferredIcon,
@@ -417,11 +388,10 @@ const showRunModeQuickPick = async (
 const RunModeEditInstruction = `
 // Save the file to accept the change.
 // close without saving to cancel the change.
-// RunMode reference: https://github.com/jest-community/vscode-jest/blob/master/README.md#runmode
+// RunMode reference: https://github.com/jest-community/vscode-jest#runmode
 `;
 
 export class RunModeEditor {
-  // private doc?: vscode.TextDocument;
   private disposables: vscode.Disposable[] = [];
   private docUri = vscode.Uri.parse(`${NoOpFileSystemProvider.scheme}://workspace/runMode.json`);
 

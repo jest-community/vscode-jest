@@ -17,6 +17,7 @@ import { enabledWorkspaceFolders } from './workspace-manager';
 import { VirtualFolderBasedCache } from './virtual-workspace-folder';
 import { updateSetting } from './Settings';
 import { showQuickFix } from './quick-fix';
+import { MigrationTool_V6 } from './migration/v6-migration';
 
 export type GetJestExtByURI = (uri: vscode.Uri) => JestExt[];
 
@@ -262,6 +263,7 @@ export class ExtensionManager {
     if (!vscode.workspace.workspaceFolders) {
       return;
     }
+
     let shouldApplySettings = true;
     for (const [idx, workspaceFolder] of vscode.workspace.workspaceFolders.entries()) {
       if (e.affectsConfiguration('jest', workspaceFolder)) {
@@ -470,6 +472,9 @@ export class ExtensionManager {
 
       // setup tool
       vscode.commands.registerCommand(`${extensionName}.setup-extension`, this.startWizard),
+      vscode.commands.registerCommand(`${extensionName}.v6-migration`, () =>
+        new MigrationTool_V6().show()
+      ),
 
       // this provides the opportunity to inject test names into the DebugConfiguration
       vscode.debug.registerDebugConfigurationProvider('node', this.debugConfigurationProvider),
@@ -496,25 +501,36 @@ export class ExtensionManager {
 
   private showReleaseMessage(): void {
     const version = vscode.extensions.getExtension(extensionId)?.packageJSON.version;
-    const releaseNote = ReleaseNotes[version];
-    if (!releaseNote) {
+    const releaseInfo = ReleaseNotes[version];
+    if (!releaseInfo) {
       return;
     }
     const key = `${extensionId}-${version}-launch`;
+
+    // TODO: remove after testing
+    this.context.globalState.update(key, false);
+
     const didLaunch = this.context.globalState.get<boolean>(key, false);
     if (!didLaunch) {
+      const button = typeof releaseInfo === 'string' ? 'See What Is Changed' : releaseInfo.label;
       vscode.window
-        .showInformationMessage(
-          `vscode-jest has been updated to ${version}.`,
-          'See What Is Changed'
-        )
+        .showInformationMessage(`vscode-jest has been updated to ${version}.`, button)
         .then((value) => {
-          if (value === 'See What Is Changed') {
-            vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(releaseNote));
+          if (!value) {
+            return;
+          }
+          if (typeof releaseInfo === 'string') {
+            vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(releaseInfo));
+          } else {
+            releaseInfo.action(this.context);
           }
         });
       this.context.globalState.update(key, true);
     }
+    // // perform version specific action
+    // if (this.isAfterVersion(version, [6, 0, 2])) {
+    //   testResultsTabController.showConfirmation(this.context);
+    // }
   }
 
   activate(): void {
@@ -529,7 +545,17 @@ export class ExtensionManager {
 }
 
 const ReleaseNoteBase = 'https://github.com/jest-community/vscode-jest/blob/master/release-notes';
-const ReleaseNotes: Record<string, string> = {
+interface ReleaseAction {
+  label: string;
+  action: (context: vscode.ExtensionContext) => void;
+}
+const ReleaseNotes: Record<string, string | ReleaseAction> = {
+  '6.0.2': {
+    label: 'Migrate',
+    action: () => {
+      new MigrationTool_V6().show();
+    },
+  },
   '6.0.0': `${ReleaseNoteBase}/release-note-v6.md#v600-pre-release`,
   '5.2.3': `${ReleaseNoteBase}/release-note-v5.x.md#v523`,
   '5.2.2': `${ReleaseNoteBase}/release-note-v5.x.md#v522`,
