@@ -9,7 +9,8 @@ export interface JestProcessListener {
 export type JestProcessStatus = 'pending' | 'running' | 'stopping' | 'stopped';
 export interface UserDataType {
   run?: JestTestRun;
-  errorReported?: boolean;
+  execError?: boolean;
+  testError?: boolean;
 }
 export interface JestProcessInfo {
   readonly id: string;

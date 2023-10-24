@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { ExtErrorDef } from '../errors';
+import { outputManager } from '../output-manager';
 
 /**
  * This class write out Jest run output to vscode.Terminal
@@ -118,7 +119,7 @@ export class ExtOutputTerminal implements JestExtOutput {
     this.appendRaw(text);
 
     if (isErrorOutputType(opt) && (this.enabled || this.revealOnError)) {
-      this.show();
+      outputManager.showOutputOn('exec-error', this);
     }
     return text;
   }

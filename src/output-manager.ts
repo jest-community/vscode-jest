@@ -27,16 +27,37 @@ export class OutputManager {
     return this.config.revalOn;
   }
 
-  public showOutputOnRun(terminalOutput: ExtOutputTerminal): void {
-    if (this.config.revalOn !== 'run') {
-      return;
-    }
-    if (this.config.revealWithFocus === 'terminal') {
-      return terminalOutput.show();
-    } else if (this.config.revealWithFocus === 'test-results') {
-      return this.showTestResultsOutput();
+  public showOutputOn(
+    type: 'run' | 'test-error' | 'exec-error',
+    terminalOutput: ExtOutputTerminal
+  ): void {
+    // will not reveal output for the following cases:
+    switch (type) {
+      case 'run':
+        if (this.config.revalOn !== 'run') {
+          return;
+        }
+        break;
+      case 'test-error':
+        if (this.config.revalOn !== 'error') {
+          return;
+        }
+        break;
+      case 'exec-error':
+        if (this.config.revalOn === 'demand') {
+          return;
+        }
+        break;
     }
     terminalOutput.enable();
+
+    // check to see if we need to show with the focus
+    if (this.config.revealWithFocus === 'terminal') {
+      return terminalOutput.show();
+    } else if (type !== 'exec-error' && this.config.revealWithFocus === 'test-results') {
+      // exec-error will only show in terminal
+      return this.showTestResultsOutput();
+    }
   }
 
   public clearOutputOnRun(terminalOutput: ExtOutputTerminal): void {
@@ -45,7 +66,8 @@ export class OutputManager {
     }
     if (this.config.clearOnRun === 'terminal' || this.config.clearOnRun === 'both') {
       terminalOutput.clear();
-    } else if (this.config.clearOnRun === 'test-results' || this.config.clearOnRun === 'both') {
+    }
+    if (this.config.clearOnRun === 'test-results' || this.config.clearOnRun === 'both') {
       this.clearTestResultsOutput();
     }
   }
@@ -74,7 +96,7 @@ export class OutputManager {
    * This occurred when "testing.openTesting" is not set to "neverOpen"
    * and the 'revealWithFocus' is not set to "test-results"
    *
-   * @returns 'should-not-focus-test-results' | 'ok'
+   * @returns boolean
    */
   private isTestingSettingValid(): boolean {
     const testingSetting = vscode.workspace.getConfiguration('testing').get<string>('openTesting');

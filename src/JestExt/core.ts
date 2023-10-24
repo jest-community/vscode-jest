@@ -33,7 +33,7 @@ import {
 } from './types';
 import { extensionName, SupportedLanguageIds } from '../appGlobals';
 import { createJestExtContext, getExtensionResourceSettings, prefixWorkspace } from './helper';
-import { JestRunModeOptions, PluginResourceSettings } from '../Settings';
+import { PluginResourceSettings } from '../Settings';
 import { WizardTaskId } from '../setup-wizard';
 import { ItemCommand, JestExtExplorerContext } from '../test-provider/types';
 import { JestTestProvider } from '../test-provider';
@@ -54,7 +54,6 @@ interface JestCommandSettings {
   jestCommandLine: string;
 }
 
-const OUTPUT_CONFIG_KEYS: (keyof JestRunModeOptions)[] = ['deferred'];
 /** extract lines starts and end with [] */
 export class JestExt {
   coverageMapProvider: CoverageMapProvider;
@@ -197,7 +196,7 @@ export class JestExt {
   }
 
   private enableOutputOnRun(): void {
-    outputManager.showOutputOnRun(this.output);
+    outputManager.showOutputOn('run', this.output);
   }
   private setupRunEvents(events: JestSessionEvents): void {
     events.onRunEvent.event((event: JestRunEvent) => {
@@ -220,14 +219,14 @@ export class JestExt {
         case 'exit':
           if (event.error) {
             this.updateStatusBar({ state: 'exec-error' });
-            if (!event.process.userData?.errorReported) {
+            if (!event.process.userData?.execError) {
               this.outputActionMessages(
                 `Jest process exited unexpectedly: ${event.error}`,
                 ['wizard', 'defer', 'disable-folder', 'help'],
                 true,
                 event.error
               );
-              event.process.userData = { ...(event.process.userData ?? {}), errorReported: true };
+              event.process.userData = { ...(event.process.userData ?? {}), execError: true };
             }
           } else {
             this.updateStatusBar({ state: 'done' });
@@ -236,6 +235,13 @@ export class JestExt {
         case 'data': {
           if (event.isError) {
             this.updateStatusBar({ state: 'exec-error' });
+          }
+          break;
+        }
+        case 'test-error': {
+          if (!event.process.userData?.testError) {
+            outputManager.showOutputOn('test-error', this.output);
+            event.process.userData = { ...(event.process.userData ?? {}), testError: true };
           }
           break;
         }
@@ -295,10 +301,6 @@ export class JestExt {
         });
         return;
       }
-      const readyState = await this.validateJestCommandLine();
-      if (readyState !== 'pass') {
-        return;
-      }
 
       this.dirtyFiles.clear();
       this.resetStatusBar();
@@ -311,6 +313,11 @@ export class JestExt {
 
       this.testProvider?.dispose();
       this.testProvider = new JestTestProvider(this.getExtExplorerContext());
+
+      const readyState = await this.validateJestCommandLine();
+      if (readyState !== 'pass') {
+        return;
+      }
 
       await this.processSession.start();
 
@@ -391,21 +398,8 @@ export class JestExt {
     this.updateTestFileEditor(editor);
   }
 
-  private updateOutputSetting(
-    settings: PluginResourceSettings,
-    prevSettings?: PluginResourceSettings
-  ): void {
-    if (prevSettings) {
-      const runModeChanged = OUTPUT_CONFIG_KEYS.find(
-        (key) => prevSettings.runMode.config[key] !== settings.runMode.config[key]
-      );
-      if (!runModeChanged) {
-        return;
-      }
-    }
-    this.output.revealOnError =
-      !settings.runMode.config.deferred && outputManager.revealOn === 'exec-error';
-    this.output.close();
+  private updateOutputSetting(settings: PluginResourceSettings): void {
+    this.output.revealOnError = !settings.runMode.config.deferred;
   }
   private testResultProviderOptions(settings: PluginResourceSettings): TestResultProviderOptions {
     return {
@@ -420,7 +414,7 @@ export class JestExt {
       newSettings ?? this.getExtensionResourceSettings(this.extContext.workspace);
 
     // output
-    this.updateOutputSetting(updatedSettings, this.extContext.settings);
+    this.updateOutputSetting(updatedSettings);
 
     // TestResultProvider
     this.testResultProvider.options = this.testResultProviderOptions(updatedSettings);

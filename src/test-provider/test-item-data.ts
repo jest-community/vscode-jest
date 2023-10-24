@@ -410,7 +410,6 @@ export class WorkspaceRoot extends TestItemDataBase {
             run = this.createRunForEvent(event);
             this.deepItemState(run.item, run.enqueued);
           }
-          outputManager.clearOutputOnRun(this.context.ext.output);
 
           break;
         }
@@ -430,9 +429,9 @@ export class WorkspaceRoot extends TestItemDataBase {
           break;
         }
         case 'end': {
-          if (event.error && !event.process.userData?.errorReported) {
+          if (event.error && !event.process.userData?.execError) {
             this.writer(run).write(event.error, 'error');
-            event.process.userData = { ...(event.process.userData ?? {}), errorReported: true };
+            event.process.userData = { ...(event.process.userData ?? {}), execError: true };
           }
           this.runLog('finished');
           run?.end();
@@ -445,10 +444,10 @@ export class WorkspaceRoot extends TestItemDataBase {
             if (run.item) {
               run.errored(run.item, new vscode.TestMessage(event.error));
             }
-            if (!event.process.userData?.errorReported) {
+            if (!event.process.userData?.execError) {
               const type = getExitErrorDef(event.code) ?? GENERIC_ERROR;
               run.write(event.error, type);
-              event.process.userData = { ...(event.process.userData ?? {}), errorReported: true };
+              event.process.userData = { ...(event.process.userData ?? {}), execError: true };
             }
           }
           this.runLog('exited');

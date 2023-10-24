@@ -35,6 +35,7 @@ export type JestRunEvent = RunEventBase &
   (
     | { type: 'scheduled' }
     | { type: 'data'; text: string; raw?: string; newLine?: boolean; isError?: boolean }
+    | { type: 'test-error' }
     | { type: 'process-start' }
     | { type: 'start' }
     | { type: 'end'; error?: string }
