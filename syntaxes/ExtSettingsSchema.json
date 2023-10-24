@@ -80,57 +80,82 @@
       ]
     },
     "jest.outputConfig": {
-      "type": "object",
-      "markdownDescription": "Control jest output preference. See details in [output](https://github.com/jest-community/vscode-jest#output)",
-      "properties": {
-        "revalOn": {
+      "scope": "window",
+      "type": [
+        "string",
+        "object"
+      ],
+      "markdownDescription": "Control jest output preference. See details in [outputConfig](https://github.com/jest-community/vscode-jest#outputconfig).",
+      "default": "neutral",
+      "oneOf": [
+        {
           "type": "string",
           "enum": [
-            "run",
-            "error",
-            "demand"
+            "neutral",
+            "terminal-based",
+            "test-results-based"
           ],
           "enumDescriptions": [
-            "Reveal the output upon test run.",
-            "Reveal the output upon test error.",
-            "Reveal the output on demand."
+            "A passive and neutral config, will not automatically change active panel nor clear output.",
+            "Switch to terminal panel when running tests.",
+            "Switch to test-results panel when running tests."
           ],
-          "default": "run",
-          "description": "Determines when to reveal the test run output. Default is 'run'."
+          "description": "Specifies the predefined common outputConfig in a string form."
         },
-        "revealWithFocus": {
-          "type": "string",
-          "enum": [
-            "none",
-            "terminal",
-            "test-results"
-          ],
-          "enumDescriptions": [
-            "Do not change focus when revealing output.",
-            "Reveal terminal with focus.",
-            "Reveal test results panel with focus."
-          ],
-          "default": "none",
-          "description": "Specifies which output panel, if any, to shift focus to when revealing. Default is 'none'."
-        },
-        "clearOnRun": {
-          "type": "string",
-          "enum": [
-            "none",
-            "both",
-            "terminal",
-            "test-results"
-          ],
-          "enumDescriptions": [
-            "Do not automatically clear the output before each run.",
-            "Clear both the terminal and test results output before each run.",
-            "Clear the terminal output before each run.",
-            "Clear the test results output before each run."
-          ],
-          "default": "none",
-          "description": "Specifies which output, if any, to be cleared before each run. Default is 'none'."
+        {
+          "type": "object",
+          "properties": {
+            "revealOn": {
+              "type": "string",
+              "enum": [
+                "run",
+                "error",
+                "demand"
+              ],
+              "enumDescriptions": [
+                "Reveal the output upon test run.",
+                "Reveal the output upon test error.",
+                "Reveal the output on demand."
+              ],
+              "default": "run",
+              "description": "Determines when to reveal the test run output. Default is 'run'."
+            },
+            "revealWithFocus": {
+              "type": "string",
+              "enum": [
+                "none",
+                "terminal",
+                "test-results"
+              ],
+              "enumDescriptions": [
+                "Do not change focus when revealing output.",
+                "Switch to terminal when revealing output.",
+                "Switch to test-results panel when revealing output."
+              ],
+              "default": "none",
+              "description": "Specifies which output panel, if any, to switch focus to when revealing. Default is 'none'."
+            },
+            "clearOnRun": {
+              "type": "string",
+              "enum": [
+                "none",
+                "both",
+                "terminal",
+                "test-results"
+              ],
+              "enumDescriptions": [
+                "Do not automatically clear the output before each run.",
+                "Clear both the terminal and test results output before each run.",
+                "Clear the terminal output before each run.",
+                "Clear the test results output before each run."
+              ],
+              "default": "none",
+              "description": "Specifies which output, if any, to be cleared before each run. Default is 'none'."
+            }
+          },
+          "description": "Specifies the complete output config in an object form."
         }
-      }
+      ]
     }
   }
 }

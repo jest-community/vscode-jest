@@ -45,11 +45,13 @@ export type JestRunModeType = JestRunMode['type'];
 export type JestPredefinedRunModeType = JestRunModeType | 'deferred';
 export type JestRunModeSetting = JestRunMode | JestPredefinedRunModeType;
 
-export interface JestOutputSetting {
+export interface JestRawOutputSetting {
   revealWithFocus?: 'terminal' | 'test-results' | 'none';
-  revalOn?: 'run' | 'error' | 'demand';
+  revealOn?: 'run' | 'error' | 'demand';
   clearOnRun?: 'both' | 'terminal' | 'test-results' | 'none';
 }
+export type JestPredefinedOutputSetting = 'neutral' | 'terminal-based' | 'test-results-based';
+export type JestOutputSetting = JestPredefinedOutputSetting | JestRawOutputSetting;
 
 export type TestExplorerConfigLegacy =
   | { enabled: false }

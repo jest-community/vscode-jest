@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
-import { AutoRevealOutputType, JestOutputSetting } from './Settings/types';
+import { AutoRevealOutputType, JestOutputSetting, JestRawOutputSetting } from './Settings/types';
 import { ExtOutputTerminal } from './JestExt/output-terminal';
 
-type OutputConfig = Required<JestOutputSetting>;
+type OutputConfig = Required<JestRawOutputSetting>;
 const DefaultJestOutputSetting: OutputConfig = {
-  revalOn: 'run',
+  revealOn: 'run',
   revealWithFocus: 'none',
   clearOnRun: 'none',
 };
@@ -20,11 +20,40 @@ export class OutputManager {
 
   private getConfig(): OutputConfig {
     const config = vscode.workspace.getConfiguration('jest').get<JestOutputSetting>('outputConfig');
-    return { ...DefaultJestOutputSetting, ...(config ?? this.fromLegacySettings()) };
+    return config
+      ? this.resolveSetting(config)
+      : { ...DefaultJestOutputSetting, ...this.fromLegacySettings() };
   }
 
-  public get revealOn(): JestOutputSetting['revalOn'] {
-    return this.config.revalOn;
+  private resolveSetting(setting: JestOutputSetting): OutputConfig {
+    if (typeof setting === 'string') {
+      switch (setting) {
+        case 'neutral':
+          return DefaultJestOutputSetting;
+        case 'terminal-based':
+          return {
+            revealOn: 'run',
+            revealWithFocus: 'terminal',
+            clearOnRun: 'none',
+          };
+        case 'test-results-based':
+          return {
+            revealOn: 'run',
+            revealWithFocus: 'test-results',
+            clearOnRun: 'none',
+          };
+      }
+      throw new Error(`Unknown predefined output setting: ${setting}`);
+    }
+
+    return { ...DefaultJestOutputSetting, ...setting };
+  }
+
+  // private asPredefinedSetting(): JestPredefinedOutputSetting | undefined {
+  // }
+
+  public get revealOn(): JestRawOutputSetting['revealOn'] {
+    return this.config.revealOn;
   }
 
   public showOutputOn(
@@ -34,17 +63,17 @@ export class OutputManager {
     // will not reveal output for the following cases:
     switch (type) {
       case 'run':
-        if (this.config.revalOn !== 'run') {
+        if (this.config.revealOn !== 'run') {
           return;
         }
         break;
       case 'test-error':
-        if (this.config.revalOn !== 'error') {
+        if (this.config.revealOn !== 'error') {
           return;
         }
         break;
       case 'exec-error':
-        if (this.config.revalOn === 'demand') {
+        if (this.config.revealOn === 'demand') {
           return;
         }
         break;
@@ -171,6 +200,7 @@ export class OutputManager {
     switch (item) {
       case items.fixTestResults:
         await this.updateTestResultsSettings();
+        await this.save();
         return true;
       case items.fixOutputConfig:
         this.config.revealWithFocus = 'test-results';
@@ -196,20 +226,20 @@ export class OutputManager {
     }
   }
 
-  private fromLegacySettings(scope?: vscode.ConfigurationScope): JestOutputSetting {
+  private fromLegacySettings(scope?: vscode.ConfigurationScope): JestRawOutputSetting {
     const vscodeConfig = vscode.workspace.getConfiguration('jest', scope);
     const autoClearTerminal = vscodeConfig.get<boolean>('autoClearTerminal');
     const autoRevealOutput = vscodeConfig.get<AutoRevealOutputType>('autoRevealOutput');
 
-    const config = {} as JestOutputSetting;
+    const config = {} as JestRawOutputSetting;
     switch (autoRevealOutput) {
       case undefined:
       case 'on-run':
       case 'on-exec-error':
-        config.revalOn = 'run';
+        config.revealOn = 'run';
         break;
       case 'off':
-        config.revalOn = 'demand';
+        config.revealOn = 'demand';
         break;
     }
     config.clearOnRun = autoClearTerminal ? 'terminal' : 'none';
