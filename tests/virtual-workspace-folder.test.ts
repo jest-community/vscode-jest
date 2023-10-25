@@ -20,7 +20,8 @@ describe('virtual-workspace-folder', () => {
     vscode.Uri.file = jest.fn().mockImplementation((f) => ({ fsPath: f }));
   });
   describe('VirtualWorkspaceFolder', () => {
-    const workspaceFolder = makeWorkspaceFolder(path.join(__dirname, 'my-workspace'));
+    const workspaceFolderPath = path.join(__dirname, 'my-workspace');
+    const workspaceFolder = makeWorkspaceFolder(workspaceFolderPath);
     const vFolderName = 'v1';
     const vFolderRootPath = path.join('packages', 'v1'); // a relative path
     let virtualFolder;
@@ -66,6 +67,28 @@ describe('virtual-workspace-folder', () => {
     it('isVirtualWorkspaceFolder can determine if a workspace folder is virtual', () => {
       expect(isVirtualWorkspaceFolder(virtualFolder)).toBe(true);
       expect(isVirtualWorkspaceFolder(workspaceFolder)).toBe(false);
+    });
+
+    describe('effectiveUri', () => {
+      let vFolder: VirtualWorkspaceFolder;
+      describe('for a virtual folder with a rootPath', () => {
+        beforeEach(() => {
+          vFolder = new VirtualWorkspaceFolder(workspaceFolder, vFolderName, vFolderRootPath);
+        });
+        it('correctly returns a URI including the rootPath', () => {
+          expect(vFolder.effectiveUri.fsPath).toEqual(
+            path.join(workspaceFolderPath, vFolderRootPath)
+          );
+        });
+      });
+      describe('for a virtual folder without a rootPath', () => {
+        beforeEach(() => {
+          vFolder = new VirtualWorkspaceFolder(workspaceFolder, vFolderName);
+        });
+        it('correctly returns the workspace folder URI', () => {
+          expect(vFolder.effectiveUri.fsPath).toEqual(workspaceFolderPath);
+        });
+      });
     });
   });
 

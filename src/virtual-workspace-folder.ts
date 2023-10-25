@@ -85,14 +85,15 @@ export class VirtualFolderBasedCache<T extends FolderAwareItem> {
 }
 
 /**
- * a virtual workspace folder is a folder resides in a physical workspace folder but might have
+ * A virtual workspace folder is a folder resides in a physical workspace folder but might have
  * different name and separate jest settings. A physical workspace folder can have multiple virtual folders.
 
- * Note: The class will have the same index as the actual workspace folder, but different name and uri (if it has set a different rootPath).
+ * Note: The class will have the same index and the uri as the actual workspace folder, but a different name.
  */
 export class VirtualWorkspaceFolder implements vscode.WorkspaceFolder {
-  // the URI with the rootPath applied
-  private effectiveUri: vscode.Uri;
+  /** URI pointing to the virtual folder, including rootPath */
+  public readonly effectiveUri: vscode.Uri;
+
   constructor(
     public readonly actualWorkspaceFolder: vscode.WorkspaceFolder,
     public readonly name: string,
@@ -110,7 +111,7 @@ export class VirtualWorkspaceFolder implements vscode.WorkspaceFolder {
     return this.actualWorkspaceFolder.uri;
   }
 
-  /** check if the given uri falls within the virtual folder's path */
+  /** Check if the given uri falls within the virtual folder's path */
   isInWorkspaceFolder(uri: vscode.Uri): boolean {
     return uri.fsPath.startsWith(this.effectiveUri.fsPath);
   }

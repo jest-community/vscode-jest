@@ -2,6 +2,7 @@ jest.unmock('../../src/test-provider/test-item-data');
 jest.unmock('../../src/test-provider/test-provider-helper');
 jest.unmock('../../src/appGlobals');
 jest.unmock('../../src/TestResults/match-node');
+jest.unmock('../../src/virtual-workspace-folder');
 jest.unmock('../../src/TestResults/match-by-context');
 jest.unmock('../test-helper');
 jest.unmock('./test-helper');
@@ -48,6 +49,7 @@ import { mockController, mockExtExplorerContext } from './test-helper';
 import * as errors from '../../src/errors';
 import { ItemCommand } from '../../src/test-provider/types';
 import { RunMode } from '../../src/JestExt/run-mode';
+import { VirtualWorkspaceFolder } from '../../src/virtual-workspace-folder';
 
 const mockPathSep = (newSep: string) => {
   (path as jest.Mocked<any>).setSep(newSep);
@@ -1160,303 +1162,342 @@ describe('test-item-data', () => {
       expect(debugInfo.testNamePattern).toBeUndefined();
     });
   });
-  describe('WorkspaceRoot listens to jest run events', () => {
-    it('register and dispose event listeners', () => {
-      const wsRoot = new WorkspaceRoot(context);
-      expect(context.ext.sessionEvents.onRunEvent.event).toHaveBeenCalled();
-      wsRoot.dispose();
-      const listener = context.ext.sessionEvents.onRunEvent.event.mock.results[0].value;
-      expect(listener.dispose).toHaveBeenCalled();
-    });
-    it('can adapt raw output to terminal output', () => {
-      // cSpell: ignore myarn
-      const coloredText = '[2K[1G[1myarn run v1.22.5[22m\n';
-      jestRun.write(coloredText);
-      expect(jestRun.vscodeRun.appendOutput).toHaveBeenCalledWith(
-        expect.stringContaining(coloredText)
-      );
-    });
-    describe('optionally clear terminal on start & schedule', () => {
-      let env;
-      beforeEach(() => {
-        env = setupTestEnv();
+  describe('WorkspaceRoot', () => {
+    describe('listens to jest run events', () => {
+      it('register and dispose event listeners', () => {
+        const wsRoot = new WorkspaceRoot(context);
+        expect(context.ext.sessionEvents.onRunEvent.event).toHaveBeenCalled();
+        wsRoot.dispose();
+        const listener = context.ext.sessionEvents.onRunEvent.event.mock.results[0].value;
+        expect(listener.dispose).toHaveBeenCalled();
       });
-      it.each([{ type: 'scheduled' }, { type: 'start' }])(
-        '$type: clear when clearOutputOnRun is true',
-        ({ type }) => {
-          const runMode = new RunMode({ type: 'watch', clearOutputOnRun: true });
-          context.ext.settings = { runMode };
-          const process = mockScheduleProcess(context);
-          env.onRunEvent({ type, process });
-          expect(context.output.clear).toHaveBeenCalled();
-        }
-      );
-      it.each([{ type: 'scheduled' }, { type: 'start' }])(
-        '$type: do not clear when when autoClearTerminal is false',
-        ({ type }) => {
-          context.ext.settings = { autoClearTerminal: false };
-          const process = mockScheduleProcess(context);
-          env.onRunEvent({ type, process });
-          expect(context.output.clear).not.toHaveBeenCalled();
-        }
-      );
-    });
-    describe('handle run event to set item status and show output', () => {
-      let env;
-      beforeEach(() => {
-        env = setupTestEnv();
+      it('can adapt raw output to terminal output', () => {
+        // cSpell: ignore myarn
+        const coloredText = '[2K[1G[1myarn run v1.22.5[22m\n';
+        jestRun.write(coloredText);
+        expect(jestRun.vscodeRun.appendOutput).toHaveBeenCalledWith(
+          expect.stringContaining(coloredText)
+        );
       });
-      describe('explorer-triggered runs', () => {
-        let process;
+      describe('optionally clear terminal on start & schedule', () => {
+        let env;
         beforeEach(() => {
-          process = mockScheduleProcess(context);
-          [jestRun, runEndSpy, runMock] = createTestRun({ end: jest.fn() });
+          env = setupTestEnv();
         });
-        describe.each`
-          itemType
-          ${'workspace'}
-          ${'folder'}
-          ${'testFile'}
-          ${'testBlock'}
-        `('will use run passed from explorer throughout for $targetItem item', ({ itemType }) => {
-          it('item will be enqueued after schedule', () => {
-            const item = env.scheduleItem(itemType);
-            expect(process.userData.run.vscodeRun.enqueued).toHaveBeenCalledWith(item);
+        it.each([{ type: 'scheduled' }, { type: 'start' }])(
+          '$type: clear when autoClearTerminal is true',
+          ({ type }) => {
+            context.ext.settings = { autoClearTerminal: true };
+            const process = mockScheduleProcess(context);
+            env.onRunEvent({ type, process });
+            expect(context.output.clear).toHaveBeenCalled();
+          }
+        );
+        it.each([{ type: 'scheduled' }, { type: 'start' }])(
+          '$type: do not clear when when autoClearTerminal is false',
+          ({ type }) => {
+            context.ext.settings = { autoClearTerminal: false };
+            const process = mockScheduleProcess(context);
+            env.onRunEvent({ type, process });
+            expect(context.output.clear).not.toHaveBeenCalled();
+          }
+        );
+      });
+      describe('handle run event to set item status and show output', () => {
+        let env;
+        beforeEach(() => {
+          env = setupTestEnv();
+        });
+        describe('explorer-triggered runs', () => {
+          let process;
+          beforeEach(() => {
+            process = mockScheduleProcess(context);
+            [jestRun, runEndSpy, runMock] = createTestRun({ end: jest.fn() });
           });
-          it('item will show started when jest run started', () => {
-            const item = env.scheduleItem(itemType);
+          describe.each`
+            itemType
+            ${'workspace'}
+            ${'folder'}
+            ${'testFile'}
+            ${'testBlock'}
+          `('will use run passed from explorer throughout for $targetItem item', ({ itemType }) => {
+            it('item will be enqueued after schedule', () => {
+              const item = env.scheduleItem(itemType);
+              expect(process.userData.run.vscodeRun.enqueued).toHaveBeenCalledWith(item);
+            });
+            it('item will show started when jest run started', () => {
+              const item = env.scheduleItem(itemType);
 
-            process.userData.run.vscodeRun.enqueued.mockClear();
+              process.userData.run.vscodeRun.enqueued.mockClear();
 
-            // scheduled event has no effect
-            env.onRunEvent({ type: 'scheduled', process });
-            expect(process.userData.run.vscodeRun.enqueued).not.toHaveBeenCalled();
+              // scheduled event has no effect
+              env.onRunEvent({ type: 'scheduled', process });
+              expect(process.userData.run.vscodeRun.enqueued).not.toHaveBeenCalled();
 
-            // starting the process
-            env.onRunEvent({ type: 'start', process });
-            expect(process.userData.run.item).toBe(item);
-            expect(process.userData.run.vscodeRun.started).toHaveBeenCalledWith(item);
+              // starting the process
+              env.onRunEvent({ type: 'start', process });
+              expect(process.userData.run.item).toBe(item);
+              expect(process.userData.run.vscodeRun.started).toHaveBeenCalledWith(item);
 
-            //will not create new run
-            expect(controllerMock.createTestRun).not.toHaveBeenCalled();
-          });
-          it.each`
-            case | text      | raw          | newLine      | isError      | outputText | outputOptions
-            ${1} | ${'text'} | ${'raw'}     | ${true}      | ${false}     | ${'raw'}   | ${'new-line'}
-            ${2} | ${'text'} | ${'raw'}     | ${false}     | ${undefined} | ${'raw'}   | ${undefined}
-            ${3} | ${'text'} | ${'raw'}     | ${undefined} | ${undefined} | ${'raw'}   | ${undefined}
-            ${4} | ${'text'} | ${'raw'}     | ${true}      | ${true}      | ${'raw'}   | ${'error'}
-            ${5} | ${'text'} | ${undefined} | ${true}      | ${true}      | ${'text'}  | ${'error'}
-          `(
-            'can output process data: case $case',
-            ({ text, raw, newLine, isError, outputText, outputOptions }) => {
+              //will not create new run
+              expect(controllerMock.createTestRun).not.toHaveBeenCalled();
+            });
+            it.each`
+              case | text      | raw          | newLine      | isError      | outputText | outputOptions
+              ${1} | ${'text'} | ${'raw'}     | ${true}      | ${false}     | ${'raw'}   | ${'new-line'}
+              ${2} | ${'text'} | ${'raw'}     | ${false}     | ${undefined} | ${'raw'}   | ${undefined}
+              ${3} | ${'text'} | ${'raw'}     | ${undefined} | ${undefined} | ${'raw'}   | ${undefined}
+              ${4} | ${'text'} | ${'raw'}     | ${true}      | ${true}      | ${'raw'}   | ${'error'}
+              ${5} | ${'text'} | ${undefined} | ${true}      | ${true}      | ${'text'}  | ${'error'}
+            `(
+              'can output process data: case $case',
+              ({ text, raw, newLine, isError, outputText, outputOptions }) => {
+                env.scheduleItem(itemType);
+
+                env.onRunEvent({ type: 'start', process });
+                env.onRunEvent({ type: 'data', process, text, raw, newLine, isError });
+
+                expect(controllerMock.createTestRun).not.toHaveBeenCalled();
+                expect(context.output.write).toHaveBeenCalledWith(outputText, outputOptions);
+              }
+            );
+            it.each([
+              { type: 'end' },
+              { type: 'exit', error: 'something is wrong' },
+              { type: 'exit', error: 'something is wrong', code: 127 },
+              { type: 'exit', error: 'something is wrong', code: 1 },
+            ])("will only resolve the promise and not close the run for event '%s'", (event) => {
+              env.scheduleItem(itemType);
+              env.onRunEvent({ type: 'start', process });
+              expect(controllerMock.createTestRun).not.toHaveBeenCalled();
+              expect(process.userData.run.vscodeRun.started).toHaveBeenCalled();
+
+              env.onRunEvent({ ...event, process });
+              expect(process.userData.run.vscodeRun.end).not.toHaveBeenCalled();
+
+              expect(runEndSpy).toHaveBeenCalled();
+            });
+            it('can report exit error even if run is ended', () => {
               env.scheduleItem(itemType);
 
               env.onRunEvent({ type: 'start', process });
-              env.onRunEvent({ type: 'data', process, text, raw, newLine, isError });
+              env.onRunEvent({ type: 'end', process });
 
               expect(controllerMock.createTestRun).not.toHaveBeenCalled();
-              expect(context.output.write).toHaveBeenCalledWith(outputText, outputOptions);
-            }
-          );
-          it.each([
-            { type: 'end' },
-            { type: 'exit', error: 'something is wrong' },
-            { type: 'exit', error: 'something is wrong', code: 127 },
-            { type: 'exit', error: 'something is wrong', code: 1 },
-          ])("will only resolve the promise and not close the run for event '%s'", (event) => {
-            env.scheduleItem(itemType);
-            env.onRunEvent({ type: 'start', process });
-            expect(controllerMock.createTestRun).not.toHaveBeenCalled();
-            expect(process.userData.run.vscodeRun.started).toHaveBeenCalled();
+              expect(process.userData.run.vscodeRun.end).not.toHaveBeenCalled();
+              expect(runEndSpy).toHaveBeenCalled();
 
-            env.onRunEvent({ ...event, process });
-            expect(process.userData.run.vscodeRun.end).not.toHaveBeenCalled();
+              const error = 'something is wrong';
+              env.onRunEvent({ type: 'exit', error, process });
 
-            expect(runEndSpy).toHaveBeenCalled();
-          });
-          it('can report exit error even if run is ended', () => {
-            env.scheduleItem(itemType);
-
-            env.onRunEvent({ type: 'start', process });
-            env.onRunEvent({ type: 'end', process });
-
-            expect(controllerMock.createTestRun).not.toHaveBeenCalled();
-            expect(process.userData.run.vscodeRun.end).not.toHaveBeenCalled();
-            expect(runEndSpy).toHaveBeenCalled();
-
-            const error = 'something is wrong';
-            env.onRunEvent({ type: 'exit', error, process });
-
-            // no new run need to be created
-            expect(controllerMock.createTestRun).not.toHaveBeenCalled();
-            expect(process.userData.run.vscodeRun.appendOutput).toHaveBeenCalledWith(
-              expect.stringContaining(error)
-            );
+              // no new run need to be created
+              expect(controllerMock.createTestRun).not.toHaveBeenCalled();
+              expect(process.userData.run.vscodeRun.appendOutput).toHaveBeenCalledWith(
+                expect.stringContaining(error)
+              );
+            });
           });
         });
-      });
-      describe('extension-managed runs', () => {
-        const file = '/ws-1/tests/a.test.ts';
-        beforeEach(() => {
-          controllerMock.createTestRun.mockClear();
-        });
-        describe.each`
-          request                                                              | withFile
-          ${{ type: 'watch-tests' }}                                           | ${false}
-          ${{ type: 'watch-all-tests' }}                                       | ${false}
-          ${{ type: 'all-tests' }}                                             | ${false}
-          ${{ type: 'by-file', testFileName: file }}                           | ${true}
-          ${{ type: 'by-file', testFileName: 'source.ts', notTestFile: true }} | ${false}
-          ${{ type: 'by-file-pattern', testFileNamePattern: file }}            | ${true}
-        `('will create a new run and use it throughout: $request', ({ request, withFile }) => {
-          it('if run starts before schedule returns: no enqueue', () => {
-            const process = { id: 'whatever', request };
-            const item = withFile ? env.testFile : env.wsRoot.item;
-
-            // starting the process
-            env.onRunEvent({ type: 'start', process });
-            const runMock = controllerMock.lastRunMock();
-            expect(runMock.started).toHaveBeenCalledWith(item);
-
-            //followed by scheduled
-            env.onRunEvent({ type: 'scheduled', process });
-            // run has already started, do nothing,
-            expect(runMock.enqueued).not.toHaveBeenCalled();
-
-            //will create 1 new run
-            expect(controllerMock.createTestRun).toHaveBeenCalledTimes(1);
+        describe('extension-managed runs', () => {
+          const file = '/ws-1/tests/a.test.ts';
+          beforeEach(() => {
+            controllerMock.createTestRun.mockClear();
           });
-          it('if run starts after schedule: show enqueue then start', () => {
-            const process = { id: 'whatever', request };
-            const item = withFile ? env.testFile : env.wsRoot.item;
-
-            //scheduled
-            env.onRunEvent({ type: 'scheduled', process });
-            expect(controllerMock.createTestRun).toHaveBeenCalledTimes(1);
-            const runMock = controllerMock.lastRunMock();
-            expect(runMock.enqueued).toHaveBeenCalledWith(item);
-
-            // followed by starting process
-            env.onRunEvent({ type: 'start', process });
-            expect(runMock.started).toHaveBeenCalledWith(item);
-
-            //will create 1 new run
-            expect(controllerMock.createTestRun).toHaveBeenCalledTimes(1);
-          });
-          it.each`
-            case | text      | raw          | newLine      | isError      | outputText | outputOptions
-            ${1} | ${'text'} | ${'raw'}     | ${true}      | ${false}     | ${'raw'}   | ${'new-line'}
-            ${2} | ${'text'} | ${'raw'}     | ${false}     | ${undefined} | ${'raw'}   | ${undefined}
-            ${3} | ${'text'} | ${'raw'}     | ${undefined} | ${undefined} | ${'raw'}   | ${undefined}
-            ${4} | ${'text'} | ${'raw'}     | ${true}      | ${true}      | ${'raw'}   | ${'error'}
-            ${5} | ${'text'} | ${undefined} | ${true}      | ${true}      | ${'text'}  | ${'error'}
-          `(
-            'can output process data: case $case',
-            ({ text, raw, newLine, isError, outputText, outputOptions }) => {
+          describe.each`
+            request                                                              | withFile
+            ${{ type: 'watch-tests' }}                                           | ${false}
+            ${{ type: 'watch-all-tests' }}                                       | ${false}
+            ${{ type: 'all-tests' }}                                             | ${false}
+            ${{ type: 'by-file', testFileName: file }}                           | ${true}
+            ${{ type: 'by-file', testFileName: 'source.ts', notTestFile: true }} | ${false}
+            ${{ type: 'by-file-pattern', testFileNamePattern: file }}            | ${true}
+          `('will create a new run and use it throughout: $request', ({ request, withFile }) => {
+            it('if run starts before schedule returns: no enqueue', () => {
               const process = { id: 'whatever', request };
+              const item = withFile ? env.testFile : env.wsRoot.item;
 
+              // starting the process
               env.onRunEvent({ type: 'start', process });
-              env.onRunEvent({ type: 'data', process, text, raw, newLine, isError });
+              const runMock = controllerMock.lastRunMock();
+              expect(runMock.started).toHaveBeenCalledWith(item);
+
+              //followed by scheduled
+              env.onRunEvent({ type: 'scheduled', process });
+              // run has already started, do nothing,
+              expect(runMock.enqueued).not.toHaveBeenCalled();
+
+              //will create 1 new run
+              expect(controllerMock.createTestRun).toHaveBeenCalledTimes(1);
+            });
+            it('if run starts after schedule: show enqueue then start', () => {
+              const process = { id: 'whatever', request };
+              const item = withFile ? env.testFile : env.wsRoot.item;
+
+              //scheduled
+              env.onRunEvent({ type: 'scheduled', process });
+              expect(controllerMock.createTestRun).toHaveBeenCalledTimes(1);
+              const runMock = controllerMock.lastRunMock();
+              expect(runMock.enqueued).toHaveBeenCalledWith(item);
+
+              // followed by starting process
+              env.onRunEvent({ type: 'start', process });
+              expect(runMock.started).toHaveBeenCalledWith(item);
+
+              //will create 1 new run
+              expect(controllerMock.createTestRun).toHaveBeenCalledTimes(1);
+            });
+            it.each`
+              case | text      | raw          | newLine      | isError      | outputText | outputOptions
+              ${1} | ${'text'} | ${'raw'}     | ${true}      | ${false}     | ${'raw'}   | ${'new-line'}
+              ${2} | ${'text'} | ${'raw'}     | ${false}     | ${undefined} | ${'raw'}   | ${undefined}
+              ${3} | ${'text'} | ${'raw'}     | ${undefined} | ${undefined} | ${'raw'}   | ${undefined}
+              ${4} | ${'text'} | ${'raw'}     | ${true}      | ${true}      | ${'raw'}   | ${'error'}
+              ${5} | ${'text'} | ${undefined} | ${true}      | ${true}      | ${'text'}  | ${'error'}
+            `(
+              'can output process data: case $case',
+              ({ text, raw, newLine, isError, outputText, outputOptions }) => {
+                const process = { id: 'whatever', request };
+
+                env.onRunEvent({ type: 'start', process });
+                env.onRunEvent({ type: 'data', process, text, raw, newLine, isError });
+
+                expect(controllerMock.createTestRun).toHaveBeenCalledTimes(1);
+                expect(context.output.write).toHaveBeenCalledWith(outputText, outputOptions);
+              }
+            );
+            it.each([['end'], ['exit']])("close the run on event '%s'", (eventType) => {
+              const process = { id: 'whatever', request: { type: 'all-tests' } };
+              env.onRunEvent({ type: 'start', process });
+              expect(controllerMock.createTestRun).toHaveBeenCalledTimes(1);
+              const runMock = controllerMock.lastRunMock();
+              expect(runMock.started).toHaveBeenCalled();
+              expect(runMock.end).not.toHaveBeenCalled();
+
+              env.onRunEvent({ type: eventType, process });
+              expect(runMock.end).toHaveBeenCalled();
+            });
+            it('can report exit error even if run is ended', () => {
+              const process = { id: 'whatever', request: { type: 'all-tests' } };
+              env.onRunEvent({ type: 'start', process });
+              env.onRunEvent({ type: 'end', process });
 
               expect(controllerMock.createTestRun).toHaveBeenCalledTimes(1);
-              expect(context.output.write).toHaveBeenCalledWith(outputText, outputOptions);
-            }
+              const runMock = controllerMock.lastRunMock();
+              expect(runMock.end).toHaveBeenCalled();
+
+              const error = 'something is wrong';
+              env.onRunEvent({ type: 'exit', error, process });
+
+              expect(controllerMock.createTestRun).toHaveBeenCalledTimes(2);
+              const runMock2 = controllerMock.lastRunMock();
+
+              expect(context.output.write).toHaveBeenCalledWith(error, expect.anything());
+              expect(runMock2.errored).toHaveBeenCalled();
+              expect(runMock2.end).toHaveBeenCalled();
+            });
+            it('can report end error', () => {
+              const process = { id: 'whatever', request: { type: 'all-tests' } };
+              env.onRunEvent({ type: 'start', process });
+              env.onRunEvent({ type: 'end', process, error: 'whatever' });
+              expect(context.output.write).toHaveBeenCalledWith('whatever', 'error');
+            });
+            it('if WorkspaceRoot is disposed before process end, all pending run will be closed', () => {
+              const process = { id: 'whatever', request: { type: 'all-tests' } };
+              env.onRunEvent({ type: 'start', process });
+
+              expect(controllerMock.createTestRun).toHaveBeenCalledTimes(1);
+              const runMock = controllerMock.lastRunMock();
+
+              env.wsRoot.dispose();
+              expect(runMock.end).toHaveBeenCalled();
+            });
+          });
+          describe('request not supported', () => {
+            it.each`
+              request
+              ${{ type: 'not-test' }}
+              ${{ type: 'by-file-test', testFileName: file, testNamePattern: 'whatever' }}
+              ${{ type: 'by-file-test-pattern', testFileNamePattern: file, testNamePattern: 'whatever' }}
+            `('$request', ({ request }) => {
+              const process = { id: 'whatever', request };
+
+              // starting the process
+              env.onRunEvent({ type: 'start', process });
+              const runMock = controllerMock.lastRunMock();
+              expect(runMock.started).not.toHaveBeenCalled();
+
+              //will not create any run
+              expect(controllerMock.createTestRun).not.toHaveBeenCalled();
+            });
+          });
+        });
+        it('scheduled and start events will do deep item status update', () => {
+          const process = mockScheduleProcess(context);
+          const testFileData = context.getData(env.testFile);
+
+          testFileData.scheduleTest(jestRun);
+          expect(jestRun.vscodeRun.enqueued).toHaveBeenCalledTimes(2);
+          [env.testFile, env.testBlock].forEach((t) =>
+            expect(jestRun.vscodeRun.enqueued).toHaveBeenCalledWith(t)
           );
-          it.each([['end'], ['exit']])("close the run on event '%s'", (eventType) => {
-            const process = { id: 'whatever', request: { type: 'all-tests' } };
-            env.onRunEvent({ type: 'start', process });
-            expect(controllerMock.createTestRun).toHaveBeenCalledTimes(1);
-            const runMock = controllerMock.lastRunMock();
-            expect(runMock.started).toHaveBeenCalled();
-            expect(runMock.end).not.toHaveBeenCalled();
 
-            env.onRunEvent({ type: eventType, process });
-            expect(runMock.end).toHaveBeenCalled();
-          });
-          it('can report exit error even if run is ended', () => {
-            const process = { id: 'whatever', request: { type: 'all-tests' } };
-            env.onRunEvent({ type: 'start', process });
-            env.onRunEvent({ type: 'end', process });
-
-            expect(controllerMock.createTestRun).toHaveBeenCalledTimes(1);
-            const runMock = controllerMock.lastRunMock();
-            expect(runMock.end).toHaveBeenCalled();
-
-            const error = 'something is wrong';
-            env.onRunEvent({ type: 'exit', error, process });
-
-            expect(controllerMock.createTestRun).toHaveBeenCalledTimes(2);
-            const runMock2 = controllerMock.lastRunMock();
-
-            expect(context.output.write).toHaveBeenCalledWith(error, expect.anything());
-            expect(runMock2.errored).toHaveBeenCalled();
-            expect(runMock2.end).toHaveBeenCalled();
-          });
-          it('can report end error', () => {
-            const process = { id: 'whatever', request: { type: 'all-tests' } };
-            env.onRunEvent({ type: 'start', process });
-            env.onRunEvent({ type: 'end', process, error: 'whatever' });
-            expect(context.output.write).toHaveBeenCalledWith('whatever', 'error');
-          });
-          it('if WorkspaceRoot is disposed before process end, all pending run will be closed', () => {
-            const process = { id: 'whatever', request: { type: 'all-tests' } };
-            env.onRunEvent({ type: 'start', process });
-
-            expect(controllerMock.createTestRun).toHaveBeenCalledTimes(1);
-            const runMock = controllerMock.lastRunMock();
-
-            env.wsRoot.dispose();
-            expect(runMock.end).toHaveBeenCalled();
-          });
+          env.onRunEvent({ type: 'start', process });
+          expect(jestRun.vscodeRun.started).toHaveBeenCalledTimes(2);
+          [env.testFile, env.testBlock].forEach((t) =>
+            expect(jestRun.vscodeRun.started).toHaveBeenCalledWith(t)
+          );
         });
-        describe('request not supported', () => {
-          it.each`
-            request
-            ${{ type: 'not-test' }}
-            ${{ type: 'by-file-test', testFileName: file, testNamePattern: 'whatever' }}
-            ${{ type: 'by-file-test-pattern', testFileNamePattern: file, testNamePattern: 'whatever' }}
-          `('$request', ({ request }) => {
-            const process = { id: 'whatever', request };
+        it('log long-run event', () => {
+          const process = mockScheduleProcess(context);
 
-            // starting the process
-            env.onRunEvent({ type: 'start', process });
-            const runMock = controllerMock.lastRunMock();
-            expect(runMock.started).not.toHaveBeenCalled();
-
-            //will not create any run
-            expect(controllerMock.createTestRun).not.toHaveBeenCalled();
-          });
+          env.onRunEvent({ type: 'long-run', threshold: 60000, process });
+          expect(context.output.write).toHaveBeenCalledTimes(1);
+          expect(context.output.write).toHaveBeenCalledWith(
+            expect.stringContaining('60000'),
+            errors.LONG_RUNNING_TESTS
+          );
         });
       });
-      it('scheduled and start events will do deep item status update', () => {
-        const process = mockScheduleProcess(context);
-        const testFileData = context.getData(env.testFile);
+    });
+    describe('createTestItem', () => {
+      describe('for a regular workspace folder', () => {
+        let workspaceFolder: vscode.WorkspaceFolder;
+        let wsRoot: WorkspaceRoot;
 
-        testFileData.scheduleTest(jestRun);
-        expect(jestRun.vscodeRun.enqueued).toHaveBeenCalledTimes(2);
-        [env.testFile, env.testBlock].forEach((t) =>
-          expect(jestRun.vscodeRun.enqueued).toHaveBeenCalledWith(t)
-        );
+        beforeEach(() => {
+          workspaceFolder = helper.makeWorkspaceFolder('workspace-1');
+          wsRoot = createAllTestItems().wsRoot;
+          wsRoot.context.ext.workspace = workspaceFolder;
+        });
 
-        env.onRunEvent({ type: 'start', process });
-        expect(jestRun.vscodeRun.started).toHaveBeenCalledTimes(2);
-        [env.testFile, env.testBlock].forEach((t) =>
-          expect(jestRun.vscodeRun.started).toHaveBeenCalledWith(t)
-        );
+        it("creates an item using folder's uri", () => {
+          const item = wsRoot.createTestItem();
+          expect(item.uri).toEqual(workspaceFolder.uri);
+        });
       });
-      it('log long-run event', () => {
-        const process = mockScheduleProcess(context);
 
-        env.onRunEvent({ type: 'long-run', threshold: 60000, process });
-        expect(context.output.write).toHaveBeenCalledTimes(1);
-        expect(context.output.write).toHaveBeenCalledWith(
-          expect.stringContaining('60000'),
-          errors.LONG_RUNNING_TESTS
-        );
+      describe('for a virtual workspace folder', () => {
+        let virtualWorkspaceFolder: VirtualWorkspaceFolder;
+        let wsRoot: WorkspaceRoot;
+
+        beforeEach(() => {
+          virtualWorkspaceFolder = new VirtualWorkspaceFolder(
+            helper.makeWorkspaceFolder('workspace-1'),
+            'virtual-a',
+            'packages/a'
+          );
+          wsRoot = createAllTestItems().wsRoot;
+          wsRoot.context.ext.workspace = virtualWorkspaceFolder;
+        });
+
+        it("creates an item using virtual folder's effectiveUri", () => {
+          const item = wsRoot.createTestItem();
+          expect(item.uri).toEqual(virtualWorkspaceFolder.effectiveUri);
+        });
       });
     });
   });
+
   describe('simulate complete run flow', () => {
     let env;
     beforeEach(() => {
