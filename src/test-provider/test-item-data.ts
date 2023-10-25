@@ -9,8 +9,8 @@ import { ContainerNode, DataNode, NodeType, ROOT_NODE_NAME } from '../TestResult
 import { Logging } from '../logging';
 import { TestSuitChangeEvent } from '../TestResults/test-result-events';
 import { Debuggable, ItemCommand, TestItemData } from './types';
-import { JestTestProviderContext, JestTestRun, JestTestRunOptions } from './test-provider-helper';
-import { JestProcessInfo, JestProcessRequest, UserDataType } from '../JestProcessManagement';
+import { JestTestProviderContext, JestTestRun } from './test-provider-helper';
+import { JestProcessInfo, JestProcessRequest } from '../JestProcessManagement';
 import { GENERIC_ERROR, LONG_RUNNING_TESTS, getExitErrorDef } from '../errors';
 import { JestExtOutput } from '../JestExt/output-terminal';
 import { tiContextManager } from './test-item-context-manager';
@@ -28,9 +28,7 @@ interface WithUri {
 
 type TypedRunEvent = RunEventBase & { type: string };
 
-const hasRunInfo = (userData?: UserDataType): userData is { run: JestTestRun } =>
-  userData?.run instanceof JestTestRun;
-
+let SEQ = 0;
 abstract class TestItemDataBase implements TestItemData, JestRunnable, WithUri {
   item!: vscode.TestItem;
   log: Logging;
@@ -69,16 +67,20 @@ abstract class TestItemDataBase implements TestItemData, JestRunnable, WithUri {
     }
 
     const jestRequest = this.getJestRunRequest(itemCommand);
-    run.item = this.item;
 
     this.deepItemState(this.item, run.enqueued);
 
-    const process = this.context.ext.session.scheduleProcess(jestRequest, { run });
+    const process = this.context.ext.session.scheduleProcess(jestRequest, {
+      run,
+      testItem: this.item,
+    });
     if (!process) {
       const msg = `failed to schedule test for ${this.item.id}`;
       run.errored(this.item, new vscode.TestMessage(msg));
       run.write(msg, 'error');
       run.end();
+    } else {
+      run.addProcess(process.id);
     }
   }
 
@@ -118,14 +120,12 @@ interface SnapshotItemCollection {
 export class WorkspaceRoot extends TestItemDataBase {
   private testDocuments: Map<string, TestDocumentRoot>;
   private listeners: vscode.Disposable[];
-  private cachedRun: Map<string, JestTestRun>;
 
   constructor(context: JestTestProviderContext) {
     super(context, 'WorkspaceRoot');
     this.item = this.createTestItem();
     this.testDocuments = new Map();
     this.listeners = [];
-    this.cachedRun = new Map();
 
     this.registerEvents();
   }
@@ -178,13 +178,11 @@ export class WorkspaceRoot extends TestItemDataBase {
     this.listeners.length = 0;
   };
 
-  private createRun = (options?: JestTestRunOptions): JestTestRun => {
-    const item = options?.item ?? this.item;
+  private createRun = (name: string, testItem?: vscode.TestItem): JestTestRun => {
+    const item = testItem ?? this.item;
     const request = new vscode.TestRunRequest([item]);
     return this.context.createTestRun(request, {
-      ...options,
-      name: options?.name ?? item.id,
-      item,
+      name: `${name}-${SEQ++}`,
     });
   };
 
@@ -247,7 +245,7 @@ export class WorkspaceRoot extends TestItemDataBase {
     this.item.children.replace([]);
     const testRoots: TestDocumentRoot[] = [];
 
-    const aRun = run ?? this.createRun();
+    const aRun = run ?? this.createRun('onTestListUpdated');
     absoluteFileNames?.forEach((f) =>
       this.addTestFile(f, (testRoot) => {
         testRoot.updateResultState(aRun);
@@ -271,14 +269,14 @@ export class WorkspaceRoot extends TestItemDataBase {
   private onTestSuiteChanged = (event: TestSuitChangeEvent): void => {
     switch (event.type) {
       case 'assertions-updated': {
-        const run = this.getJestRun(event.process) ?? this.createRunForEvent(event);
+        const run = this.getJestRun(event, true);
 
         this.log(
           'debug',
           `update status from run "${event.process.id}": ${event.files.length} files`
         );
         event.files.forEach((f) => this.addTestFile(f, (testRoot) => testRoot.discoverTest(run)));
-        run.end();
+        run.end({ pid: event.process.id, delay: 3000 });
         break;
       }
       case 'result-matched': {
@@ -335,8 +333,8 @@ export class WorkspaceRoot extends TestItemDataBase {
   /** get test item from jest process. If running tests from source file, will return undefined */
   private getItemFromProcess = (process: JestProcessInfo): vscode.TestItem | undefined => {
     // the TestExplorer triggered run should already have item associated
-    if (hasRunInfo(process.userData) && process.userData.run.item) {
-      return process.userData.run.item;
+    if (process.userData?.testItem) {
+      return process.userData.testItem;
     }
 
     // should only come here for autoRun processes
@@ -359,32 +357,24 @@ export class WorkspaceRoot extends TestItemDataBase {
     return this.testDocuments.get(fileName)?.item;
   };
 
-  private createRunForEvent = (event: TypedRunEvent): JestTestRun => {
-    const item = this.getItemFromProcess(event.process) ?? this.item;
-    const name = hasRunInfo(event.process.userData)
-      ? event.process.userData.run.name
-      : `${event.type}:${event.process.id}`;
-    const run = this.createRun({
-      name,
-      item,
-      onEnd: () => this.cachedRun.delete(event.process.id),
-    });
+  /** return a valid run from event. if createIfMissing is true, then create a new one if none exist in the event **/
+  private getJestRun(event: TypedRunEvent, createIfMissing: true): JestTestRun;
+  private getJestRun(event: TypedRunEvent, createIfMissing?: false): JestTestRun | undefined;
+  private getJestRun(event: TypedRunEvent, createIfMissing = false): JestTestRun | undefined {
+    if (event.process.userData?.run && !event.process.userData.run.isClosed()) {
+      return event.process.userData.run;
+    }
 
-    this.cachedRun.set(event.process.id, run);
-    return run;
-  };
-  /** return a valid run from process or process-run-cache. return undefined if run is closed. */
-  private getJestRun = (process: JestProcessInfo): JestTestRun | undefined => {
-    if (hasRunInfo(process.userData) && !process.userData.run.isClosed()) {
-      return process.userData.run;
+    if (createIfMissing) {
+      const name = event.process.userData?.run?.name ?? `${event.process.id}:${event.type}}`;
+      const testItem = this.getItemFromProcess(event.process) ?? this.item;
+      const run = this.createRun(name, testItem);
+      run.addProcess(event.process.id);
+      event.process.userData = { ...event.process.userData, run, testItem };
+
+      return run;
     }
-    const run = this.cachedRun.get(process.id);
-    if (run?.isClosed()) {
-      this.cachedRun.delete(process.id);
-      return;
-    }
-    return run;
-  };
+  }
 
   private runLog(type: string): void {
     const d = new Date();
@@ -401,16 +391,12 @@ export class WorkspaceRoot extends TestItemDataBase {
       return;
     }
 
-    let run = this.getJestRun(event.process);
+    const run = this.getJestRun(event, true);
 
     try {
       switch (event.type) {
         case 'scheduled': {
-          if (!run) {
-            run = this.createRunForEvent(event);
-            this.deepItemState(run.item, run.enqueued);
-          }
-
+          this.deepItemState(event.process.userData?.testItem, run.enqueued);
           break;
         }
         case 'data': {
@@ -422,8 +408,7 @@ export class WorkspaceRoot extends TestItemDataBase {
           break;
         }
         case 'start': {
-          run = run ?? this.createRunForEvent(event);
-          this.deepItemState(run.item, run.started);
+          this.deepItemState(event.process.userData?.testItem, run.started);
           outputManager.clearOutputOnRun(this.context.ext.output);
           this.runLog('started');
           break;
@@ -434,15 +419,14 @@ export class WorkspaceRoot extends TestItemDataBase {
             event.process.userData = { ...(event.process.userData ?? {}), execError: true };
           }
           this.runLog('finished');
-          run?.end();
+          run?.end({ pid: event.process.id, delay: 5000 });
           break;
         }
         case 'exit': {
           if (event.error) {
-            run = run ?? this.createRunForEvent(event);
-
-            if (run.item) {
-              run.errored(run.item, new vscode.TestMessage(event.error));
+            const testItem = event.process.userData?.testItem;
+            if (testItem) {
+              run.errored(testItem, new vscode.TestMessage(event.error));
             }
             if (!event.process.userData?.execError) {
               const type = getExitErrorDef(event.code) ?? GENERIC_ERROR;
@@ -451,7 +435,7 @@ export class WorkspaceRoot extends TestItemDataBase {
             }
           }
           this.runLog('exited');
-          run?.end();
+          run.end({ pid: event.process.id, delay: 5000 });
           break;
         }
         case 'long-run': {
@@ -470,7 +454,6 @@ export class WorkspaceRoot extends TestItemDataBase {
 
   dispose(): void {
     this.unregisterEvents();
-    this.cachedRun.forEach((run) => run.end());
   }
 }
 

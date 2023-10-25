@@ -1,3 +1,4 @@
+import * as vscode from 'vscode';
 import { RunnerEvent } from 'jest-editor-support';
 import { JestTestProcessType } from '../Settings';
 import { JestProcess } from './JestProcess';
@@ -11,6 +12,7 @@ export interface UserDataType {
   run?: JestTestRun;
   execError?: boolean;
   testError?: boolean;
+  testItem?: vscode.TestItem;
 }
 export interface JestProcessInfo {
   readonly id: string;

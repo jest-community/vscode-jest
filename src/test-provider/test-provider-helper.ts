@@ -78,10 +78,14 @@ export class JestTestProviderContext {
   };
 
   createTestRun = (request: vscode.TestRunRequest, options?: JestTestRunOptions): JestTestRun => {
-    const name = options?.name ?? `run-${RunSeq++}`;
-    const opt = { ...(options ?? {}), name };
-    const vscodeRun = this.controller.createTestRun(request, name);
-    return new JestTestRun(this, vscodeRun, opt);
+    const name = options?.name ?? `testRun-${RunSeq++}`;
+    const createRun = () => {
+      const vscodeRun = this.controller.createTestRun(request, name);
+      vscodeRun.appendOutput(`\nTestRun "${name}" started\n`);
+      return vscodeRun;
+    };
+
+    return new JestTestRun(name, this, createRun);
   };
 
   // tags
@@ -135,76 +139,79 @@ export class JestTestProviderContext {
 
 export interface JestTestRunOptions {
   name?: string;
-  item?: vscode.TestItem;
-
-  // in addition to the regular end() method
-  onEnd?: () => void;
-
-  // replace the end function
-  end?: () => void;
 }
 
 export type TestRunProtocol = Pick<
   vscode.TestRun,
   'name' | 'enqueued' | 'started' | 'errored' | 'failed' | 'passed' | 'skipped' | 'end'
 >;
-export type ParentRun = vscode.TestRun | JestTestRun;
-const isVscodeRun = (arg: ParentRun | undefined): arg is vscode.TestRun =>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  arg != null && typeof (arg as any).appendOutput === 'function';
 
-/** a wrapper for vscode.TestRun or another JestTestRun */
+type CreateRun = () => vscode.TestRun;
+type ActualRun = vscode.TestRun | CreateRun;
+
+/**
+ * A wrapper class for vscode.TestRun to support
+ * 1. JIT creation of TestRun
+ * 2. delayed end of TestRun (to prevent the TestRun from being closed before the test is completely done)
+ * 3. allow multiple processes to use the same TestRun. And the TestRun will be closed only when all processes are done.
+ */
 export class JestTestRun implements JestExtOutput, TestRunProtocol {
   private output: JestOutputTerminal;
-  public item?: vscode.TestItem;
-  private parentRun?: ParentRun;
+  private _run?: vscode.TestRun;
+  private createRun?: CreateRun;
+  private processes: Map<string, NodeJS.Timeout | undefined>;
 
   constructor(
+    public readonly name: string,
     private context: JestTestProviderContext,
-    parentRun: ParentRun,
-    private options?: JestTestRunOptions
+    run: ActualRun
   ) {
-    this.parentRun = parentRun;
+    if (typeof run === 'function') {
+      this.createRun = run;
+    } else {
+      this._run = run;
+    }
+
     this.output = context.output;
-    this.item = options?.item;
+    this.processes = new Map();
   }
-
-  get vscodeRun(): vscode.TestRun | undefined {
-    if (!this.parentRun) {
-      return;
-    }
-    if (isVscodeRun(this.parentRun)) {
-      return this.parentRun;
-    }
-    return this.parentRun.vscodeRun;
-  }
-
   write(msg: string, opt?: OutputOptions): string {
     const text = this.output.write(msg, opt);
-    this.vscodeRun?.appendOutput(text);
+    this._run?.appendOutput(text);
     return text;
   }
 
   isClosed(): boolean {
-    return this.vscodeRun === undefined;
+    return !this._run;
   }
 
-  private updateState = (f: (pRun: ParentRun) => void): void => {
-    if (!this.parentRun || !this.vscodeRun) {
-      throw new Error(`run "${this.name}" has already closed`);
+  public addProcess(pid: string): void {
+    if (!this.processes.has(pid)) {
+      this.processes.set(pid, undefined);
     }
-    f(this.parentRun);
-  };
+  }
+  /**
+   * returns the underlying vscode.TestRun, if existing.
+   * If no run but there is createRun() factory method, then use it to create the run and return it.
+   * Otherwise, throw error
+   **/
+  private safeRun(): vscode.TestRun {
+    if (!this._run) {
+      if (this.createRun) {
+        this._run = this.createRun();
+      } else {
+        throw new Error(`run "${this.name}" was expected but not present.`);
+      }
+    }
+    return this._run;
+  }
 
   // TestRunProtocol
-  public get name(): string | undefined {
-    return this.options?.name;
-  }
   public enqueued = (test: vscode.TestItem): void => {
-    this.updateState((pRun) => pRun.enqueued(test));
+    this.safeRun().enqueued(test);
   };
   public started = (test: vscode.TestItem): void => {
-    this.updateState((pRun) => pRun.started(test));
+    this.safeRun().started(test);
   };
   public errored = (
     test: vscode.TestItem,
@@ -212,7 +219,7 @@ export class JestTestRun implements JestExtOutput, TestRunProtocol {
     duration?: number | undefined
   ): void => {
     const _msg = this.context.ext.settings.runMode.config.showInlineError ? message : [];
-    this.updateState((pRun) => pRun.errored(test, _msg, duration));
+    this.safeRun().errored(test, _msg, duration);
   };
   public failed = (
     test: vscode.TestItem,
@@ -220,26 +227,42 @@ export class JestTestRun implements JestExtOutput, TestRunProtocol {
     duration?: number | undefined
   ): void => {
     const _msg = this.context.ext.settings.runMode.config.showInlineError ? message : [];
-    this.updateState((pRun) => pRun.failed(test, _msg, duration));
+    this.safeRun().failed(test, _msg, duration);
   };
   public passed = (test: vscode.TestItem, duration?: number | undefined): void => {
-    this.updateState((pRun) => pRun.passed(test, duration));
+    this.safeRun().passed(test, duration);
   };
   public skipped = (test: vscode.TestItem): void => {
-    this.updateState((pRun) => pRun.skipped(test));
+    this.safeRun().skipped(test);
   };
-  public end = (): void => {
-    if (this.options?.end) {
-      return this.options.end();
+  public end = (options?: { pid: string; delay?: number }): void => {
+    if (!this._run) {
+      console.warn(`Trying to end a run "${this.name}" that is already ended`);
+      return;
     }
-
-    if (this.parentRun) {
-      this.parentRun.end();
-      if (isVscodeRun(this.parentRun)) {
-        this.parentRun = undefined;
+    if (options) {
+      let timeoutId = this.processes.get(options.pid);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      if (!options.delay) {
+        this.processes.delete(options.pid);
+      } else {
+        // delay 5 seconds to end the run
+        timeoutId = setTimeout(() => {
+          console.log(`run ${options.pid} ended after delay.`);
+          this.processes.delete(options.pid);
+          this.end();
+        }, options.delay);
+        this.processes.set(options.pid, timeoutId);
       }
     }
-
-    this.options?.onEnd?.();
+    // close the run only when all processes are done
+    if (this.processes.size > 0) {
+      return;
+    }
+    this._run.end();
+    this._run = undefined;
+    console.log(`run ${this.name} ended`);
   };
 }

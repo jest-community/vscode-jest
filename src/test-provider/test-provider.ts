@@ -10,6 +10,7 @@ import { tiContextManager } from './test-item-context-manager';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const isDebuggable = (arg: any): arg is Debuggable => arg && typeof arg.getDebugInfo === 'function';
 
+let SEQ = 0;
 export class JestTestProvider {
   private readonly controller: vscode.TestController;
   private context: JestTestProviderContext;
@@ -85,7 +86,7 @@ export class JestTestProvider {
       return;
     }
     const run = this.context.createTestRun(new vscode.TestRunRequest([theItem]), {
-      name: `discoverTest: ${this.controller.id}`,
+      name: `discoverTest: ${this.controller.id}-${SEQ++}`,
     });
     try {
       const data = this.context.getData(theItem);
@@ -159,10 +160,11 @@ export class JestTestProvider {
       return Promise.reject(message);
     }
 
-    const run = this.context.createTestRun(req, { name: this.controller.id });
+    const run = this.context.createTestRun(req, {
+      name: `runTest: ${this.controller.id}-${SEQ++}`,
+    });
     const tests = (req.include ?? this.getAllItems()).filter((t) => !req.exclude?.includes(t));
 
-    const promises: Promise<void>[] = [];
     try {
       for (const test of tests) {
         const tData = this.context.getData(test);
@@ -173,31 +175,19 @@ export class JestTestProvider {
         if (req.profile.kind === vscode.TestRunProfileKind.Debug) {
           await this.debugTest(tData, run);
         } else {
-          promises.push(
-            new Promise((resolve, reject) => {
-              try {
-                const itemRun = new JestTestRun(this.context, run, {
-                  item: test,
-                  end: resolve,
-                });
-                tData.scheduleTest(itemRun);
-              } catch (e) {
-                const msg = `failed to schedule test for ${tData.item.id}: ${toErrorString(e)}`;
-                this.log('error', msg, e);
-                run.errored(test, new vscode.TestMessage(msg));
-                reject(msg);
-              }
-            })
-          );
+          try {
+            tData.scheduleTest(run);
+          } catch (e) {
+            const msg = `failed to schedule test for ${tData.item.id}: ${toErrorString(e)}`;
+            this.log('error', msg, e);
+            run.errored(test, new vscode.TestMessage(msg));
+          }
         }
       }
-
-      await Promise.allSettled(promises);
     } catch (e) {
       const msg = `failed to execute profile "${req.profile.label}": ${e}`;
       run.write(msg, 'error');
     }
-    run.end();
   };
 
   public runItemCommand(testItem: vscode.TestItem, command: ItemCommand): void | Promise<void> {
