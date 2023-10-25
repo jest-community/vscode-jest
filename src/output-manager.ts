@@ -49,9 +49,6 @@ export class OutputManager {
     return { ...DefaultJestOutputSetting, ...setting };
   }
 
-  // private asPredefinedSetting(): JestPredefinedOutputSetting | undefined {
-  // }
-
   public get revealOn(): JestRawOutputSetting['revealOn'] {
     return this.config.revealOn;
   }

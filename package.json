@@ -424,10 +424,6 @@
         "title": "Jest: Setup Extension"
       },
       {
-        "command": "io.orta.jest.v6-migration",
-        "title": "Jest: V6 Migration"
-      },
-      {
         "command": "io.orta.jest.test-item.run-mode.change",
         "title": "Change RunMode",
         "icon": "$(gear)"

@@ -147,7 +147,6 @@ export type TestRunProtocol = Pick<
 >;
 
 type CreateRun = () => vscode.TestRun;
-type ActualRun = vscode.TestRun | CreateRun;
 
 /**
  * A wrapper class for vscode.TestRun to support
@@ -158,20 +157,13 @@ type ActualRun = vscode.TestRun | CreateRun;
 export class JestTestRun implements JestExtOutput, TestRunProtocol {
   private output: JestOutputTerminal;
   private _run?: vscode.TestRun;
-  private createRun?: CreateRun;
   private processes: Map<string, NodeJS.Timeout | undefined>;
 
   constructor(
     public readonly name: string,
     private context: JestTestProviderContext,
-    run: ActualRun
+    private createRun: CreateRun
   ) {
-    if (typeof run === 'function') {
-      this.createRun = run;
-    } else {
-      this._run = run;
-    }
-
     this.output = context.output;
     this.processes = new Map();
   }
@@ -192,16 +184,11 @@ export class JestTestRun implements JestExtOutput, TestRunProtocol {
   }
   /**
    * returns the underlying vscode.TestRun, if existing.
-   * If no run but there is createRun() factory method, then use it to create the run and return it.
-   * Otherwise, throw error
+   * If no run then create one with this.createRun and return it.
    **/
   private safeRun(): vscode.TestRun {
     if (!this._run) {
-      if (this.createRun) {
-        this._run = this.createRun();
-      } else {
-        throw new Error(`run "${this.name}" was expected but not present.`);
-      }
+      this._run = this.createRun();
     }
     return this._run;
   }
