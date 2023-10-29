@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { RunnerEvent } from 'jest-editor-support';
 import { JestTestProcessType } from '../Settings';
 import { JestProcess } from './JestProcess';
-import { JestTestRun } from '../test-provider/test-provider-helper';
+import { JestTestRun } from '../test-provider/jest-test-run';
 
 export interface JestProcessListener {
   onEvent: (process: JestProcess, event: RunnerEvent, ...args: unknown[]) => unknown;

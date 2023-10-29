@@ -23,12 +23,19 @@ jest.mock('../src/Coverage', () => ({
 jest.mock('../src/test-provider/test-item-context-manager', () => ({
   tiContextManager: { registerCommands: jest.fn(() => []) },
 }));
+const mockOutputManager = {
+  register: jest.fn().mockReturnValue([]),
+};
+jest.mock('../src/output-manager', () => ({
+  outputManager: mockOutputManager,
+}));
 
 const extensionManager = {
   unregisterAllWorkspaces: jest.fn(),
   activate: jest.fn(),
   register: jest.fn(() => []),
   deleteAllExtensions: jest.fn(),
+  getByName: jest.fn(),
 };
 
 // tslint:disable-next-line: variable-name
@@ -65,10 +72,17 @@ describe('Extension', () => {
       statusBar.register.mockClear();
       activate(context);
       expect(statusBar.register).toHaveBeenCalled();
+      const [f]: any[] = statusBar.register.mock.calls[0];
+      f('whatever');
+      expect(extensionManager.getByName).toHaveBeenCalledWith('whatever');
     });
     it('should register language provider', () => {
       activate(context);
       expect(languageProvider.register).toHaveBeenCalledTimes(1);
+    });
+    it('should register outputManager', () => {
+      activate(context);
+      expect(mockOutputManager.register).toHaveBeenCalled();
     });
   });
 

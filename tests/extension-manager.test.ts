@@ -149,6 +149,10 @@ const setupVirtualFolders = (em: ExtensionManager) => {
   return { ws1, ws2, ws2_v1, ws2_v2 };
 };
 
+jest.mock('../src/output-manager', () => ({
+  outputManager: jest.fn(),
+}));
+
 describe('ExtensionManager', () => {
   const jestInstance = makeJestExt(makeWorkspaceFolder('workspaceFolder1'));
   let context;
@@ -1276,13 +1280,13 @@ describe('ExtensionManager', () => {
         expect(ext2.onDidChangeActiveTextEditor).not.toHaveBeenCalled();
       });
       it.each`
-        case | version     | showChoice | choice                   | showRN
-        ${1} | ${'4.6'}    | ${false}   | ${undefined}             | ${false}
-        ${2} | ${'5.0.0'}  | ${true}    | ${undefined}             | ${false}
-        ${3} | ${'5.0.0'}  | ${true}    | ${'See What Is Changed'} | ${true}
-        ${4} | ${'5.0.1'}  | ${true}    | ${undefined}             | ${false}
-        ${5} | ${'6.0.0'}  | ${true}    | ${undefined}             | ${false}
-        ${6} | ${'99.0.0'} | ${false}   | ${undefined}             | ${false}
+        case | version     | showChoice | choice                  | showRN
+        ${1} | ${'4.6'}    | ${false}   | ${undefined}            | ${false}
+        ${2} | ${'5.0.0'}  | ${true}    | ${undefined}            | ${false}
+        ${3} | ${'5.0.0'}  | ${true}    | ${"See What's Changed"} | ${true}
+        ${4} | ${'5.0.1'}  | ${true}    | ${undefined}            | ${false}
+        ${5} | ${'6.0.0'}  | ${true}    | ${undefined}            | ${false}
+        ${6} | ${'99.0.0'} | ${false}   | ${undefined}            | ${false}
       `(
         'show release note once for specific version: case $case',
         async ({ version, showChoice, choice, showRN }) => {

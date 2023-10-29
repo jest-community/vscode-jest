@@ -400,6 +400,7 @@ export class JestExt {
 
   private updateOutputSetting(settings: PluginResourceSettings): void {
     this.output.revealOnError = !settings.runMode.config.deferred;
+    this.output.close();
   }
   private testResultProviderOptions(settings: PluginResourceSettings): TestResultProviderOptions {
     return {

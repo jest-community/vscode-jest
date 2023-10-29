@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
-import { JestExtOutput, JestOutputTerminal, OutputOptions } from '../JestExt/output-terminal';
+import { JestOutputTerminal } from '../JestExt/output-terminal';
 import { JestExtExplorerContext, TestItemData } from './types';
+import { JestTestRun } from './jest-test-run';
 
 /**
  * provide context information from JestExt and test provider state:
@@ -11,7 +12,11 @@ import { JestExtExplorerContext, TestItemData } from './types';
 
 export type TagIdType = 'run' | 'debug' | 'update-snapshot';
 
-let RunSeq = 0;
+export interface JestTestRunOptions {
+  name?: string;
+}
+
+let SEQ = 0;
 export class JestTestProviderContext {
   private testItemData: WeakMap<vscode.TestItem, TestItemData>;
 
@@ -78,10 +83,10 @@ export class JestTestProviderContext {
   };
 
   createTestRun = (request: vscode.TestRunRequest, options?: JestTestRunOptions): JestTestRun => {
-    const name = options?.name ?? `testRun-${RunSeq++}`;
-    const createRun = () => {
+    const name = options?.name ?? `testRun-${SEQ++}`;
+    const createRun = (name: string) => {
       const vscodeRun = this.controller.createTestRun(request, name);
-      vscodeRun.appendOutput(`\nTestRun "${name}" started\n`);
+      vscodeRun.appendOutput(`\r\nTestRun "${name}" started\r\n`);
       return vscodeRun;
     };
 
@@ -134,122 +139,5 @@ export class JestTestProviderContext {
     }
 
     return new vscode.TestRunRequest(include, exclude, profile);
-  };
-}
-
-export interface JestTestRunOptions {
-  name?: string;
-}
-
-export type TestRunProtocol = Pick<
-  vscode.TestRun,
-  'name' | 'enqueued' | 'started' | 'errored' | 'failed' | 'passed' | 'skipped' | 'end'
->;
-
-type CreateRun = () => vscode.TestRun;
-
-/**
- * A wrapper class for vscode.TestRun to support
- * 1. JIT creation of TestRun
- * 2. delayed end of TestRun (to prevent the TestRun from being closed before the test is completely done)
- * 3. allow multiple processes to use the same TestRun. And the TestRun will be closed only when all processes are done.
- */
-export class JestTestRun implements JestExtOutput, TestRunProtocol {
-  private output: JestOutputTerminal;
-  private _run?: vscode.TestRun;
-  private processes: Map<string, NodeJS.Timeout | undefined>;
-
-  constructor(
-    public readonly name: string,
-    private context: JestTestProviderContext,
-    private createRun: CreateRun
-  ) {
-    this.output = context.output;
-    this.processes = new Map();
-  }
-  write(msg: string, opt?: OutputOptions): string {
-    const text = this.output.write(msg, opt);
-    this._run?.appendOutput(text);
-    return text;
-  }
-
-  isClosed(): boolean {
-    return !this._run;
-  }
-
-  public addProcess(pid: string): void {
-    if (!this.processes.has(pid)) {
-      this.processes.set(pid, undefined);
-    }
-  }
-  /**
-   * returns the underlying vscode.TestRun, if existing.
-   * If no run then create one with this.createRun and return it.
-   **/
-  private safeRun(): vscode.TestRun {
-    if (!this._run) {
-      this._run = this.createRun();
-    }
-    return this._run;
-  }
-
-  // TestRunProtocol
-  public enqueued = (test: vscode.TestItem): void => {
-    this.safeRun().enqueued(test);
-  };
-  public started = (test: vscode.TestItem): void => {
-    this.safeRun().started(test);
-  };
-  public errored = (
-    test: vscode.TestItem,
-    message: vscode.TestMessage | readonly vscode.TestMessage[],
-    duration?: number | undefined
-  ): void => {
-    const _msg = this.context.ext.settings.runMode.config.showInlineError ? message : [];
-    this.safeRun().errored(test, _msg, duration);
-  };
-  public failed = (
-    test: vscode.TestItem,
-    message: vscode.TestMessage | readonly vscode.TestMessage[],
-    duration?: number | undefined
-  ): void => {
-    const _msg = this.context.ext.settings.runMode.config.showInlineError ? message : [];
-    this.safeRun().failed(test, _msg, duration);
-  };
-  public passed = (test: vscode.TestItem, duration?: number | undefined): void => {
-    this.safeRun().passed(test, duration);
-  };
-  public skipped = (test: vscode.TestItem): void => {
-    this.safeRun().skipped(test);
-  };
-  public end = (options?: { pid: string; delay?: number }): void => {
-    if (!this._run) {
-      console.warn(`Trying to end a run "${this.name}" that is already ended`);
-      return;
-    }
-    if (options) {
-      let timeoutId = this.processes.get(options.pid);
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-      if (!options.delay) {
-        this.processes.delete(options.pid);
-      } else {
-        // delay 5 seconds to end the run
-        timeoutId = setTimeout(() => {
-          console.log(`run ${options.pid} ended after delay.`);
-          this.processes.delete(options.pid);
-          this.end();
-        }, options.delay);
-        this.processes.set(options.pid, timeoutId);
-      }
-    }
-    // close the run only when all processes are done
-    if (this.processes.size > 0) {
-      return;
-    }
-    this._run.end();
-    this._run = undefined;
-    console.log(`run ${this.name} ended`);
   };
 }

@@ -28,6 +28,35 @@ describe('VSCodeJest Reporter', () => {
       expect(output).toContain('some error');
     });
   });
+  describe('report test error status', () => {
+    let writeSpy: any;
+    beforeEach(() => {
+      writeSpy = jest.spyOn(process.stderr, 'write');
+    });
+    it('report error if numFailingTests > 0', () => {
+      const reporter = new VSCodeJestReporter();
+
+      let testResult: any = { numFailingTests: 0 };
+      reporter.onTestFileResult({} as any, testResult, {} as any);
+      expect(writeSpy).not.toHaveBeenCalled();
+
+      testResult = { numFailingTests: 1 };
+      reporter.onTestFileResult({} as any, testResult, {} as any);
+      expect(writeSpy).toHaveBeenCalledWith(expect.stringContaining('onTestFileResult'));
+    });
+    it('report error if there is execError > 0', () => {
+      const reporter = new VSCodeJestReporter();
+
+      let testResult: any = {};
+      reporter.onTestFileResult({} as any, testResult, {} as any);
+      expect(writeSpy).not.toHaveBeenCalled();
+
+      testResult = { testExecError: {} };
+      reporter.onTestFileResult({} as any, testResult, {} as any);
+      expect(writeSpy).toHaveBeenCalledWith(expect.stringContaining('onTestFileResult'));
+    });
+  });
+
   it('getLastError never returns error', () => {
     const reporter = new VSCodeJestReporter();
     expect(reporter.getLastError()).toBeUndefined();

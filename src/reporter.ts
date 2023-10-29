@@ -27,7 +27,6 @@ class VSCodeJestReporter implements Reporter {
   ): Promise<void> | void {
     if (testResult.numFailingTests > 0 || testResult.testExecError) {
       const msg = `onTestFileResult: encountered errors`;
-      console.log(msg);
       process.stderr.write(`${msg}\r\n`);
     }
   }

@@ -1,15 +1,13 @@
-jest.unmock('../../src/Settings/index');
+jest.unmock('../../src/Settings/helper');
+jest.unmock('../../src/Settings/types');
 jest.unmock('../test-helper');
 jest.unmock('../../src/virtual-workspace-folder');
 
 import * as vscode from 'vscode';
-import {
-  VirtualFolderSettingKey,
-  createJestSettingGetter,
-  updateSetting,
-} from '../../src/Settings/index';
+import { createJestSettingGetter, updateSetting } from '../../src/Settings/helper';
 import { VirtualWorkspaceFolder } from '../../src/virtual-workspace-folder';
 import { makeWorkspaceFolder } from '../test-helper';
+import { VirtualFolderSettingKey } from '../../src/Settings/types';
 
 const mockConfiguration = (userSettings: any) => {
   vscode.workspace.getConfiguration = jest.fn().mockImplementation(() => ({

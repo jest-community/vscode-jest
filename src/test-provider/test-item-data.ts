@@ -9,7 +9,8 @@ import { ContainerNode, DataNode, NodeType, ROOT_NODE_NAME } from '../TestResult
 import { Logging } from '../logging';
 import { TestSuitChangeEvent } from '../TestResults/test-result-events';
 import { Debuggable, ItemCommand, TestItemData } from './types';
-import { JestTestProviderContext, JestTestRun } from './test-provider-helper';
+import { JestTestProviderContext } from './test-provider-context';
+import { JestTestRun } from './jest-test-run';
 import { JestProcessInfo, JestProcessRequest } from '../JestProcessManagement';
 import { GENERIC_ERROR, LONG_RUNNING_TESTS, getExitErrorDef } from '../errors';
 import { JestExtOutput } from '../JestExt/output-terminal';
@@ -29,7 +30,6 @@ interface WithUri {
 
 type TypedRunEvent = RunEventBase & { type: string };
 
-let SEQ = 0;
 abstract class TestItemDataBase implements TestItemData, JestRunnable, WithUri {
   item!: vscode.TestItem;
   log: Logging;
@@ -79,7 +79,7 @@ abstract class TestItemDataBase implements TestItemData, JestRunnable, WithUri {
       const msg = `failed to schedule test for ${this.item.id}`;
       run.errored(this.item, new vscode.TestMessage(msg));
       run.write(msg, 'error');
-      run.end();
+      run.end({ reason: 'failed to schedule test' });
     } else {
       run.addProcess(process.id);
     }
@@ -164,7 +164,7 @@ export class WorkspaceRoot extends TestItemDataBase {
     if (testList.length > 0) {
       this.onTestListUpdated(testList, run);
     } else {
-      run.end();
+      run.end({ reason: 'no test found' });
       this.item.canResolveChildren = false;
     }
   }
@@ -186,7 +186,7 @@ export class WorkspaceRoot extends TestItemDataBase {
     const item = testItem ?? this.item;
     const request = new vscode.TestRunRequest([item]);
     return this.context.createTestRun(request, {
-      name: `${name}-${SEQ++}`,
+      name,
     });
   };
 
@@ -259,7 +259,7 @@ export class WorkspaceRoot extends TestItemDataBase {
     //sync testDocuments
     this.testDocuments.clear();
     testRoots.forEach((t) => this.testDocuments.set(t.item.id, t));
-    aRun.end();
+    aRun.end({ reason: 'onTestListUpdated' });
     this.item.canResolveChildren = false;
   };
 
@@ -280,7 +280,7 @@ export class WorkspaceRoot extends TestItemDataBase {
           `update status from run "${event.process.id}": ${event.files.length} files`
         );
         event.files.forEach((f) => this.addTestFile(f, (testRoot) => testRoot.discoverTest(run)));
-        run.end({ pid: event.process.id, delay: 3000 });
+        run.end({ pid: event.process.id, delay: 1000, reason: 'assertions-updated' });
         break;
       }
       case 'result-matched': {
@@ -365,12 +365,12 @@ export class WorkspaceRoot extends TestItemDataBase {
   private getJestRun(event: TypedRunEvent, createIfMissing: true): JestTestRun;
   private getJestRun(event: TypedRunEvent, createIfMissing?: false): JestTestRun | undefined;
   private getJestRun(event: TypedRunEvent, createIfMissing = false): JestTestRun | undefined {
-    if (event.process.userData?.run && !event.process.userData.run.isClosed()) {
+    if (event.process.userData?.run) {
       return event.process.userData.run;
     }
 
     if (createIfMissing) {
-      const name = event.process.userData?.run?.name ?? `${event.process.id}:${event.type}}`;
+      const name = (event.process.userData?.run?.name ?? event.process.id) + `:${event.type}`;
       const testItem = this.getItemFromProcess(event.process) ?? this.item;
       const run = this.createRun(name, testItem);
       run.addProcess(event.process.id);
@@ -395,9 +395,8 @@ export class WorkspaceRoot extends TestItemDataBase {
       return;
     }
 
-    const run = this.getJestRun(event, true);
-
     try {
+      const run = this.getJestRun(event, true);
       switch (event.type) {
         case 'scheduled': {
           this.deepItemState(event.process.userData?.testItem, run.enqueued);
@@ -423,7 +422,7 @@ export class WorkspaceRoot extends TestItemDataBase {
             event.process.userData = { ...(event.process.userData ?? {}), execError: true };
           }
           this.runLog('finished');
-          run?.end({ pid: event.process.id, delay: 5000 });
+          run?.end({ pid: event.process.id, delay: 30000, reason: 'process end' });
           break;
         }
         case 'exit': {
@@ -439,7 +438,7 @@ export class WorkspaceRoot extends TestItemDataBase {
             }
           }
           this.runLog('exited');
-          run.end({ pid: event.process.id, delay: 5000 });
+          run.end({ pid: event.process.id, delay: 1000, reason: 'process exit' });
           break;
         }
         case 'long-run': {

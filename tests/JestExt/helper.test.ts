@@ -170,7 +170,7 @@ describe('getExtensionResourceSettings()', () => {
       rootPath: 'workspaceFolder1',
       debugMode: false,
       coverageColors: null,
-      runMode: expect.objectContaining({ config: { type: 'watch', revealOutput: 'on-run' } }),
+      runMode: expect.objectContaining({ config: { type: 'watch' } }),
       monitorLongRun: 60000,
       shell: mockShell,
       parserPluginOptions: null,
@@ -199,7 +199,6 @@ describe('getExtensionResourceSettings()', () => {
     it('pass along legacy settings', () => {
       userSettings = {
         showCoverageOnLoad: true,
-        autoRevealOutput: 'off',
         autoRun: 'off',
         testExplorer: { showInlineError: true },
       };
@@ -207,7 +206,6 @@ describe('getExtensionResourceSettings()', () => {
       const settings = getExtensionResourceSettings(folder);
       expect(settings.runMode.config).toEqual({
         type: 'on-demand',
-        revealOutput: 'on-demand',
         coverage: true,
         showInlineError: true,
       });
@@ -215,7 +213,6 @@ describe('getExtensionResourceSettings()', () => {
     it('if there is runMode, it will ignore the legacy settings', () => {
       userSettings = {
         showCoverageOnLoad: true,
-        autoRevealOutput: 'off',
         autoRun: 'off',
         runMode: 'on-save',
       };
@@ -223,7 +220,6 @@ describe('getExtensionResourceSettings()', () => {
       const settings = getExtensionResourceSettings(folder);
       expect(settings.runMode.config).toEqual({
         type: 'on-save',
-        revealOutput: 'on-run',
       });
     });
   });

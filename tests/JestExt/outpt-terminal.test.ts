@@ -10,6 +10,13 @@ import {
   toAnsi,
 } from '../../src/JestExt/output-terminal';
 import * as errors from '../../src/errors';
+import { outputManager } from '../../src/output-manager';
+
+jest.mock('../../src/output-manager', () => ({
+  outputManager: {
+    showOutputOn: jest.fn(),
+  },
+}));
 
 describe('JestOutputTerminal', () => {
   let mockTerminal;
@@ -86,29 +93,51 @@ describe('JestOutputTerminal', () => {
     const { pty: pty2 } = (vscode.window.createTerminal as jest.Mocked<any>).mock.calls[1][0];
     expect(pty2).toBe(pty);
   });
-  it('will show terminal when writing error messages', () => {
-    const output = new JestOutputTerminal('a');
+  describe('interact with outputManager', () => {
+    it('will delegate output decision when writing error messages', () => {
+      const output = new JestOutputTerminal('a');
 
-    output.write('1');
+      output.write('1');
+      expect(outputManager.showOutputOn).not.toHaveBeenCalled();
+
+      output.write('2', 'error');
+      expect(outputManager.showOutputOn).toHaveBeenCalledWith('exec-error', output);
+      (outputManager.showOutputOn as jest.Mocked<any>).mockClear();
+
+      output.write('2', errors.GENERIC_ERROR);
+      expect(outputManager.showOutputOn).toHaveBeenCalledWith('exec-error', output);
+    });
+    it('will not call outputManager when writing error messages if revalOnError is false', () => {
+      const output = new JestOutputTerminal('a');
+      output.revealOnError = false;
+
+      output.write('an error', 'error');
+      expect(outputManager.showOutputOn).not.toHaveBeenCalled();
+
+      output.revealOnError = true;
+      output.write('an error', 'error');
+      expect(outputManager.showOutputOn).toHaveBeenCalled();
+    });
+  });
+  it('enable terminal will create the terminal if needed', () => {
+    const output = new JestOutputTerminal('a');
+    expect(vscode.window.createTerminal).not.toHaveBeenCalled();
+    output.enable();
+    expect(vscode.window.createTerminal).toHaveBeenCalledTimes(1);
     expect(mockTerminal.show).not.toHaveBeenCalled();
 
-    output.write('2', 'error');
-    expect(mockTerminal.show).toHaveBeenCalledTimes(1);
-
-    output.write('2', errors.GENERIC_ERROR);
-    expect(mockTerminal.show).toHaveBeenCalledTimes(2);
+    // calling enable again is no-op
+    output.enable();
+    expect(vscode.window.createTerminal).toHaveBeenCalledTimes(1);
   });
-  it('will not show terminal when writing error messages if revalOnError is false', () => {
+  it('can show the terminal', () => {
     const output = new JestOutputTerminal('a');
-    output.revealOnError = false;
-
-    output.write('an error', 'error');
-    expect(mockTerminal.show).not.toHaveBeenCalled();
-
-    output.revealOnError = true;
-    output.write('an error', 'error');
+    const enableSpy = jest.spyOn(output, 'enable');
+    output.show();
+    expect(enableSpy).toHaveBeenCalled();
     expect(mockTerminal.show).toHaveBeenCalledTimes(1);
   });
+
   it('will properly dispose terminal and emitter', () => {
     const output = new JestOutputTerminal('a');
     output.enable();

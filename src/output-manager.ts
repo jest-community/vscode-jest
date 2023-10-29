@@ -2,8 +2,8 @@ import * as vscode from 'vscode';
 import { AutoRevealOutputType, JestOutputSetting, JestRawOutputSetting } from './Settings/types';
 import { ExtOutputTerminal } from './JestExt/output-terminal';
 
-type OutputConfig = Required<JestRawOutputSetting>;
-const DefaultJestOutputSetting: OutputConfig = {
+export type OutputConfig = Required<JestRawOutputSetting>;
+export const DefaultJestOutputSetting: OutputConfig = {
   revealOn: 'run',
   revealWithFocus: 'none',
   clearOnRun: 'none',
@@ -42,15 +42,57 @@ export class OutputManager {
             revealWithFocus: 'test-results',
             clearOnRun: 'none',
           };
+        default: {
+          console.warn(
+            `Unknown predefined output setting: ${setting}, will use default setting ("neutral") instead.`
+          );
+          return DefaultJestOutputSetting;
+        }
       }
-      throw new Error(`Unknown predefined output setting: ${setting}`);
     }
 
     return { ...DefaultJestOutputSetting, ...setting };
   }
 
-  public get revealOn(): JestRawOutputSetting['revealOn'] {
-    return this.config.revealOn;
+  private fromLegacySettings(scope?: vscode.ConfigurationScope): JestRawOutputSetting {
+    const vscodeConfig = vscode.workspace.getConfiguration('jest', scope);
+    const autoClearTerminal = vscodeConfig.get<boolean>('autoClearTerminal');
+    const autoRevealOutput = vscodeConfig.get<AutoRevealOutputType>('autoRevealOutput');
+    const openTesting = vscode.workspace.getConfiguration('testing').get<string>('openTesting');
+
+    const config = {} as JestRawOutputSetting;
+
+    switch (openTesting) {
+      case 'neverOpen':
+      case 'openExplorerOnTestStart':
+        // no-op
+        break;
+      case 'openOnTestStart':
+        config.revealWithFocus = 'test-results';
+        break;
+      case 'openOnTestFailure':
+        config.revealOn = 'error';
+        config.revealWithFocus = 'test-results';
+        break;
+      default:
+        console.warn(`Unrecognized "testing.openTesting" setting: ${openTesting}`);
+    }
+
+    switch (autoRevealOutput) {
+      case undefined:
+        // no-op
+        break;
+      case 'on-run':
+      case 'on-exec-error':
+        config.revealOn = 'run';
+        break;
+      case 'off':
+        config.revealOn = 'demand';
+        config.revealWithFocus = 'none';
+        break;
+    }
+    config.clearOnRun = autoClearTerminal ? 'terminal' : 'none';
+    return config;
   }
 
   public showOutputOn(
@@ -99,6 +141,8 @@ export class OutputManager {
   }
 
   private clearTestResultsOutput(): void {
+    // Note: this command is probably not the right one as it will clear all test items status as well, not just the output like in the terminal.
+    // should file a feature request for testing framework to provide a command to clear the output history only.
     vscode.commands.executeCommand('testing.clearTestResults');
   }
   private showTestResultsOutput(): void {
@@ -134,7 +178,7 @@ export class OutputManager {
    * If conflict detected, show a warning message with options to update the settings.
    * @returns void
    */
-  public async validate(modal: boolean): Promise<boolean> {
+  public async validate(): Promise<boolean> {
     if (this.isTestingSettingValid()) {
       return true;
     }
@@ -149,12 +193,9 @@ export class OutputManager {
       cancel: 'Cancel',
     };
 
-    const buttons: string[] = modal
-      ? [actions.fixIt, actions.help]
-      : [actions.fixIt, actions.help, actions.cancel];
+    const buttons: string[] = [actions.fixIt, actions.help, actions.cancel];
     const selection = await vscode.window.showWarningMessage(
       `Output Config Conflict Detected`,
-      { modal, detail },
       ...buttons
     );
     switch (selection) {
@@ -197,7 +238,6 @@ export class OutputManager {
     switch (item) {
       case items.fixTestResults:
         await this.updateTestResultsSettings();
-        await this.save();
         return true;
       case items.fixOutputConfig:
         this.config.revealWithFocus = 'test-results';
@@ -219,29 +259,10 @@ export class OutputManager {
       e.affectsConfiguration('testing.openTesting')
     ) {
       this.config = this.getConfig();
-      this.validate(false);
+      this.validate();
     }
   }
 
-  private fromLegacySettings(scope?: vscode.ConfigurationScope): JestRawOutputSetting {
-    const vscodeConfig = vscode.workspace.getConfiguration('jest', scope);
-    const autoClearTerminal = vscodeConfig.get<boolean>('autoClearTerminal');
-    const autoRevealOutput = vscodeConfig.get<AutoRevealOutputType>('autoRevealOutput');
-
-    const config = {} as JestRawOutputSetting;
-    switch (autoRevealOutput) {
-      case undefined:
-      case 'on-run':
-      case 'on-exec-error':
-        config.revealOn = 'run';
-        break;
-      case 'off':
-        config.revealOn = 'demand';
-        break;
-    }
-    config.clearOnRun = autoClearTerminal ? 'terminal' : 'none';
-    return config;
-  }
   public async save(): Promise<void> {
     await vscode.workspace.getConfiguration('jest').update('outputConfig', this.config);
   }
