@@ -153,7 +153,7 @@
               "description": "Specifies which output, if any, to be cleared before each run. Default is 'none'."
             }
           },
-          "description": "Specifies the complete output config in an object form."
+          "description": "Specifies a custom output config in an object form."
         }
       ]
     }
