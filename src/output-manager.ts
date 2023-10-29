@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { AutoRevealOutputType, JestOutputSetting, JestRawOutputSetting } from './Settings/types';
 import { ExtOutputTerminal } from './JestExt/output-terminal';
+import { extensionName } from './appGlobals';
 
 export type OutputConfig = Required<JestRawOutputSetting>;
 export const DefaultJestOutputSetting: OutputConfig = {
@@ -158,7 +159,12 @@ export class OutputManager {
   }
 
   public register(): vscode.Disposable[] {
-    return [vscode.workspace.onDidChangeConfiguration(this.onDidChangeConfiguration, this)];
+    return [
+      vscode.workspace.onDidChangeConfiguration(this.onDidChangeConfiguration, this),
+      vscode.commands.registerCommand(`${extensionName}.save-output-config`, async () =>
+        this.save()
+      ),
+    ];
   }
 
   /**

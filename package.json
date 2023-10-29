@@ -2,7 +2,7 @@
   "name": "vscode-jest",
   "displayName": "Jest",
   "description": "Use Facebook's Jest With Pleasure.",
-  "version": "6.0.2",
+  "version": "6.1.0",
   "publisher": "Orta",
   "engines": {
     "vscode": "^1.68.1"
@@ -402,6 +402,10 @@
       {
         "command": "io.orta.jest.workspace.save-run-mode",
         "title": "Jest: Save Current RunMode"
+      },
+      {
+        "command": "io.orta.jest.save-output-config",
+        "title": "Jest: Save Current Output Config"
       },
       {
         "command": "io.orta.jest.run-all-tests",

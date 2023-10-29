@@ -198,13 +198,22 @@ describe('OutputManager', () => {
   });
 
   describe('register', () => {
-    it('will register onDidChangeConfiguration', () => {
+    it('will register onDidChangeConfiguration and a save command', async () => {
       const om = new OutputManager();
       const disposables = om.register();
-      expect(disposables).toHaveLength(1);
+      expect(disposables).toHaveLength(2);
       expect(mockWorkspace.onDidChangeConfiguration).toHaveBeenCalled();
+      expect(vscode.commands.registerCommand).toHaveBeenCalledWith(
+        expect.stringContaining('save-output-config'),
+        expect.anything()
+      );
       const onDidChangeConfiguration = mockWorkspace.onDidChangeConfiguration.mock.calls[0][0];
       expect(onDidChangeConfiguration).not.toBeUndefined();
+
+      const saveCommand = (vscode.commands.registerCommand as jest.Mocked<any>).mock.calls[0][1];
+      const saveSpy = jest.spyOn(om, 'save');
+      await saveCommand();
+      expect(saveSpy).toHaveBeenCalled();
     });
     describe('onDidChangeConfiguration', () => {
       let om: OutputManager;

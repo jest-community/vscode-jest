@@ -20,6 +20,7 @@ describe('JestTestRun', () => {
         write: jest.fn((text) => text),
       },
       ext: {
+        workspace: { name: 'testWorkspace' },
         settings: {
           debugMode: false,
           runMode: { config: { showInlineError: true } },
@@ -43,7 +44,7 @@ describe('JestTestRun', () => {
 
   describe('constructor', () => {
     it('should set the name property', () => {
-      expect(jestRun.name).toBe('test:(0)');
+      expect(jestRun.name).toBe('testWorkspace:test:0');
     });
     it('does not create vscode TestRun until it is needed', () => {
       expect(mockCreateTestRun).not.toHaveBeenCalled();

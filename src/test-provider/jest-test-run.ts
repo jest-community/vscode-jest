@@ -33,7 +33,7 @@ export class JestTestRun implements JestExtOutput, TestRunProtocol {
     private context: JestTestProviderContext,
     private createRun: CreateRun
   ) {
-    this.name = `${name}:(${SEQ++})`;
+    this.name = `${this.context.ext.workspace.name}:${name}:${SEQ++}`;
     this.output = context.output;
     this.processes = new Map();
     this.verbose = context.ext.settings.debugMode === true;
@@ -67,7 +67,7 @@ export class JestTestRun implements JestExtOutput, TestRunProtocol {
             `JestTestRun "${this.name}": Recreating a TestRun for the same instance should not happen.`
           );
         } else {
-          console.log(`JestTestRun "${runName}": created.`);
+          console.log(`[${this.context.ext.workspace.name}] JestTestRun "${runName}": created.`);
         }
       }
     }
@@ -128,7 +128,9 @@ export class JestTestRun implements JestExtOutput, TestRunProtocol {
             );
           }
           this.processes.delete(pid);
-          this.end();
+          this.end({
+            reason: `last process "${pid}" ended after ${delay} msec delay because: ${reason}.`,
+          });
         }, delay);
         this.processes.set(pid, timeoutId);
         if (this.verbose) {
