@@ -5,6 +5,7 @@ jest.unmock('./test-helper');
 
 import * as vscode from 'vscode';
 import { JestTestProviderContext } from '../../src/test-provider/test-provider-context';
+import { JestTestRun } from '../../src/test-provider/jest-test-run';
 
 describe('JestTestProviderContext', () => {
   it('when try to getTag not in any profiles, throw error', () => {
@@ -13,6 +14,30 @@ describe('JestTestProviderContext', () => {
     const context = new JestTestProviderContext(whatever, whatever, [profile]);
     expect(context.getTag('run')).toEqual(profile.tag);
     expect(() => context.getTag('debug')).toThrow();
+  });
+  it('createTestRun should create a JIT JestTestRun', () => {
+    const extContext: any = {};
+    const mockRun: any = { appendOutput: jest.fn() };
+    const mockController: any = { createTestRun: jest.fn().mockReturnValue(mockRun) };
+    const profile: any = { tag: { id: 'run' } };
+    const context = new JestTestProviderContext(extContext, mockController, [profile]);
+    const request: any = {};
+
+    const mockJestRun: any = {};
+    (JestTestRun as jest.Mocked<any>) = jest.fn().mockReturnValue(mockJestRun);
+    const jestRun = context.createTestRun(request, { name: 'test-run' });
+
+    expect(jestRun).toBe(mockJestRun);
+    expect(JestTestRun).toHaveBeenCalledWith('test-run', context, expect.anything());
+    // no vscode run should be created yet
+    expect(mockController.createTestRun).not.toHaveBeenCalled();
+
+    // vscode run will be created through the factory function
+    const factory = (JestTestRun as jest.Mocked<any>).mock.calls[0][2];
+    const run = factory('new-test-run');
+
+    expect(mockController.createTestRun).toHaveBeenCalledWith(request, 'new-test-run');
+    expect(run).toBe(mockRun);
   });
   describe('requestFrom', () => {
     let context: JestTestProviderContext;

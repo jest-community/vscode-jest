@@ -329,7 +329,6 @@
                   "type": "boolean",
                   "description": "Specify if to enable inline error display in test file editor"
                 },
-                
                 "deferred": {
                   "type": "boolean",
                   "description": "Specifies whether the run mode is deferred."
