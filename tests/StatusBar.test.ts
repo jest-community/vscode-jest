@@ -29,8 +29,6 @@ describe('StatusBar', () => {
   let statusBar: StatusBar;
   let updateSpy;
   let renderSpy;
-  // let mockActiveSBItem;
-  // let mockSummarySBItem;
   let createFolderItemSpy;
   let createSummaryItemSpy;
   let mockSummarySBItems;
@@ -233,6 +231,14 @@ describe('StatusBar', () => {
             .update({ mode: new RunMode('on-save'), stats: { success: 1, fail: 2, unknown: 3 } });
           expect(mockActiveSBItems[0].tooltip).toContain('on-save');
           expect(mockSummarySBItems[0].tooltip).toContain('success 1, fail 2, unknown 3');
+        });
+        it('error background will be reset upon next successful run', () => {
+          statusBar.bind(makeWorkspaceFolder('testSource1')).update({ state: 'exec-error' });
+          expect(mockActiveSBItems[0].backgroundColor.id).toEqual(
+            expect.stringContaining('statusBarItem.errorBackground')
+          );
+          statusBar.bind(makeWorkspaceFolder('testSource1')).update({ state: 'running' });
+          expect(mockActiveSBItems[0].backgroundColor).toEqual(undefined);
         });
       });
     });

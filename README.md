@@ -358,7 +358,7 @@ for example:
 
 #### outputConfig
 
-The `outputConfig` controls the Jest output experience by specifying when and where to create, display, and clear the output content. It supports 2 output panels: `TEST RESULTS` and `TERMINAL`. The `TEST RESULTS` panel displays test results in the order they were run, while the `TERMINAL` panel organizes outputs by workspace folder. `TERMINAL` panel also contains the  non test run outputs, such as [quick-fix link](quick-fix-chooser), extension auto-config info and tips. 
+The `outputConfig` controls the Jest output experience by specifying when and where to create, display, and clear the output content. It supports 2 output panels: `TEST RESULTS` and `TERMINAL`. The `TEST RESULTS` panel displays test results in the order they were run, while the `TERMINAL` panel organizes outputs by workspace folder. `TERMINAL` panel also contains the non-test run outputs, such as [quick-fix link](quick-fix-chooser), extension auto-config info and tips. 
 
 **Type Definitions**
 ```ts
@@ -399,14 +399,26 @@ This setting can be one of the predefined types or a custom object.
 
 **Handling Conflicts with "TEST RESULTS" panel**
 <a id="outputconfig-conflict"></a>
-It's important to note that outputConfig settings can conflict with the default settings provided by the VSCode testing framework. The issue arises specifically with the `"testing.openTesting"` setting, which is set to "openOnTestStart" by default.
 
-Unless this setting is set to "neverOpen," it will automatically focus on the "TEST RESULTS" panel during various phases of testing, as dictated by the `"testing.openTesting"` setting. This behavior could potentially clash with your `"jest.outputConfig"` settings, especially when "revealWithFocus" is NOT set to "test-results".
+_The Problem_
 
-To resolve this, the extension offers built-in validation with quick-fix actions:
+The behavior of the "TEST RESULTS" panel is influenced by VSCode's native `"testing.openTesting"` setting. This can cause inconsistencies with your `"jest.outputConfig"` settings.
 
-1. Option 1: Set `"testing.openTesting": "neverOpen"` to let the extension manage the panel using `"jest.outputConfig"`.
-2. Option 2: Set `"jest.outputConfig": {..."revealWithFocus": "test-results"}` and let the VSCode testing framework manage the panel with `"testing.openTesting"` independently.
+For instance, if you set `"jest.outputConfig": {"revealWithFocus": "none"}` to prevent automatic focus changes, but leave `"testing.openTesting"` at its default value of `"openOnTestStart"`, the "TEST RESULTS" panel will still automatically switch focus whenever tests run.
+
+_The Universal Solution_
+
+For a consistent Jest output experience, the simplest solution is to set `"testing.openTesting": "neverOpen"`. This allows the extension to manage the "TEST RESULTS" and "TERMINAL" panels together using `"jest.outputConfig"` alone.
+
+_Further Customization_
+
+However, if you prefer "TEST RESULTS" and "TERMINAL" panels to behave differently and don't mind managing 2 settings yourself, you could play with different combinations. 
+
+For instance, if `"testing.openTesting"` is set to `"openOnTestFailure"`, and you want your terminal panel to still reveal when any tests run, your setting would look like this: `"jest.outputConfig": {revealWithFocus: "test-results"}` 
+
+_Built-in Validation_
+
+The extension also features built-in conflict detection and quick fixes to assist.
 
 **Examples**
 - Choose a passive output experience that is identical to the previous version.
@@ -432,7 +444,7 @@ To resolve this, the extension offers built-in validation with quick-fix actions
   "testing.openTesting": "openOnTestFailure",
   "jest.outputConfig": {
     "revealOn": "error",
-    "revealWithFocus": "none"
+    "revealWithFocus": "test-results"
   }
   ```
 - Clear the terminal output on each run but do not automatically switch focus to any panel.
@@ -448,14 +460,14 @@ To resolve this, the extension offers built-in validation with quick-fix actions
 
 Migrating to the new `"jest.outputConfig"` can require some manual adjustments, especially if you're working in a multi-root workspace. Here are some guidelines to help with the transition:
 
-1. **Workspace Level vs Workspace-Folder Level**: The new `"jest.outputConfig"` is a workspace-level setting, unlike legacy settings like `"jest.autoClearTerminal"` and `"autoRevealOutput"`, which are workspace-folder level settings.
+1. **Workspace Level vs Workspace-Folder Level**: The new `"jest.outputConfig"` is a workspace-level setting, unlike legacy settings like `"jest.autoClearTerminal"` and `"jest.autoRevealOutput"`, which are workspace-folder level settings.
 
-2. **Backward Compatibility**: If no `"jest.outputConfig"` is defined in your settings.json, the extension will attempt to generate a backward-compatible outputConfig in memory. This uses the `"testing.openTesting"` setting and any legacy settings (`"jest.autoClearTerminal"`, `"jest.autoRevealOutput"`) you might have. Note that this is more straightforward for single-root workspaces.
+2. **Backward Compatibility**: If no `"jest.outputConfig"` is defined in your settings.json, the extension will attempt to generate a backward-compatible outputConfig in memory. This uses the `"testing.openTesting"` setting and any legacy settings (`"jest.autoClearTerminal"`, `"jest.autoRevealOutput"`) you might have. Note that this might only work for single-root workspaces.
 
 3. **Migration Steps**:
    - Use the `"Jest: Save Current Output Config"` command from the command palette to update your settings.json.
-   - Review and adjust the generated outputConfig as needed.
-   - Finally, remove any deprecated settings from settings.json.
+   - (optional) Fix warning: The save does not include `"testing.openTesting"`, so you might see the conflict warning message. You can either use the "Quick Fix" action or adjust the `settings.json` manually (see [handling conflict](#outputconfig-conflict)).
+   - Finally, remove any deprecated settings.
 
 By following these guidelines, you should be able to smoothly transition to using `"jest.outputConfig"`.
 
@@ -465,8 +477,9 @@ By following these guidelines, you should be able to smoothly transition to usin
 
 The `runMode` controls test UX, determining when tests should run, and housing the common run-time toggles like coverage. 
 
-**runMode type**
+**Type Definitions**
 ```ts
+// typescript types
 interface JestRunModeOptions {
   runAllTestsOnStartup?: boolean;
   coverage?: boolean;
@@ -510,7 +523,7 @@ The following are the predefined `runMode` configurations for convenience. They 
 |"on-demand"|run tests on-demand through UI | {type: "on-demand", revealOutput: "on-run"} |
 |"deferred"|defer test run and discovery until the first on-demand run | {type: "on-demand", revealOutput: "on-run", deferred: true } |
 
-**runMode Examples**
+**Examples**
 - Run jest with watch mode - the default runMode if none is specified.
   ```json
   "jest.runMode": "watch"
@@ -554,13 +567,13 @@ While the concepts of performance and automation are generally clear, "completen
 
 **Migration Guide**
 <a id="runmode-migration"></a>
-Starting from v6.1.0, if no runMode is defined in settings.json, the extension will automatically generate one using legacy settings (`autoRun`, `autoRevealOutput`, `showCoverageOnLoad`). To migrate, simply use the `"Jest: Save Current RunMode"` command from the command palette to update the setting, then remove the legacy settings.
+Starting from v6.1.0, if no runMode is defined in settings.json, the extension will automatically generate one using legacy settings (`autoRun`, `autoRevealOutput`, `showCoverageOnLoad`). To migrate, simply use the `"Jest: Save Current RunMode"` command from the command palette to update the setting, then remove the deprecated settings.
 
 ---
 
 #### autoRun
  <div style="background-color: yellow; color: black; padding: 10px; border-radius: 5px;">
-  Note: As of v6.1.0, <a href="#runmode">runMode</a> has superseded autoRun. For transition details, please refer to the <a href="#runmode-migration">runMode migration</a>.
+  Note: As of v6.1.0, autoRun will be replaced by <a href="#runmode">runMode</a>. For transition details, please refer to the <a href="#runmode-migration">runMode migration</a>.
 </div>
 
 AutoRun controls when tests should be executed automatically.

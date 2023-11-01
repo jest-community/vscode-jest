@@ -18,4 +18,8 @@
   "cSpell.words": [
     "unmock"
   ],
+  "testing.openTesting": "neverOpen",
+  "jest.outputConfig": {
+    "clearOnRun": "terminal"
+  }
 }

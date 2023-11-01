@@ -279,7 +279,11 @@ export class WorkspaceRoot extends TestItemDataBase {
           'debug',
           `update status from run "${event.process.id}": ${event.files.length} files`
         );
-        event.files.forEach((f) => this.addTestFile(f, (testRoot) => testRoot.discoverTest(run)));
+        if (event.files.length === 0) {
+          run.write(`No tests were run.`, `new-line`);
+        } else {
+          event.files.forEach((f) => this.addTestFile(f, (testRoot) => testRoot.discoverTest(run)));
+        }
         run.end({ pid: event.process.id, delay: 1000, reason: 'assertions-updated' });
         break;
       }

@@ -62,13 +62,7 @@ export class JestTestRun implements JestExtOutput, TestRunProtocol {
       const runName = `${this.name} (${this.runCount++})`;
       this._run = this.createRun(runName);
       if (this.verbose) {
-        if (this.runCount > 1) {
-          console.warn(
-            `JestTestRun "${this.name}": Recreating a TestRun for the same instance should not happen.`
-          );
-        } else {
-          console.log(`[${this.context.ext.workspace.name}] JestTestRun "${runName}": created.`);
-        }
+        console.log(`[${this.context.ext.workspace.name}] JestTestRun "${runName}": created.`);
       }
     }
     return this._run;
@@ -118,24 +112,24 @@ export class JestTestRun implements JestExtOutput, TestRunProtocol {
       if (!delay) {
         this.processes.delete(pid);
         if (this.verbose) {
-          console.log(`JestTestRun "${runName}": process "${pid}" ended because: ${reason}.`);
+          console.log(`JestTestRun "${runName}": process "${pid}" ended because: ${reason}`);
         }
       } else {
         timeoutId = setTimeout(() => {
           if (this.verbose) {
             console.log(
-              `JestTestRun "${runName}": process "${pid}" ended after ${delay} msec delay because: ${reason}.`
+              `JestTestRun "${runName}": process "${pid}" ended after ${delay} msec delay because: ${reason}`
             );
           }
           this.processes.delete(pid);
           this.end({
-            reason: `last process "${pid}" ended after ${delay} msec delay because: ${reason}.`,
+            reason: `last process "${pid}" ended by ${reason}`,
           });
         }, delay);
         this.processes.set(pid, timeoutId);
         if (this.verbose) {
           console.log(
-            `JestTestRun "${runName}": starting a ${delay} msec timer to end process "${pid}" because: ${reason}.`
+            `JestTestRun "${runName}": starting a ${delay} msec timer to end process "${pid}" because: ${reason}`
           );
         }
       }
@@ -147,7 +141,7 @@ export class JestTestRun implements JestExtOutput, TestRunProtocol {
     this._run.end();
     this._run = undefined;
     if (this.verbose) {
-      console.log(`JestTestRun "${runName}": ended because: ${options?.reason}.`);
+      console.log(`JestTestRun "${runName}": TestRun ended because: ${options?.reason}.`);
     }
   };
 }

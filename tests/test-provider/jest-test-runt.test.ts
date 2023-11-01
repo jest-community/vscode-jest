@@ -311,7 +311,6 @@ describe('JestTestRun', () => {
     });
   });
   it('print warning for runs re-created after close: this means the test-run will be splitted into multiple TestRun', () => {
-    const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     mockContext.ext.settings.debugMode = true;
 
     jestRun = new JestTestRun('test', mockContext, mockCreateTestRun);
@@ -326,61 +325,11 @@ describe('JestTestRun', () => {
     expect(mockCreateTestRun).toHaveBeenCalledTimes(1);
 
     // calling error on a closed run will force it to open again
-    consoleWarnSpy.mockClear();
     jestRun.errored({} as any, 'whatever' as any);
 
     expect(jestRun.isClosed()).toEqual(false);
     expect(mockCreateTestRun).toHaveBeenCalledTimes(2);
     const run2 = mockCreateTestRun.mock.results[1].value;
     expect(run1).not.toBe(run2);
-    expect(consoleWarnSpy).toHaveBeenCalled();
   });
 });
-
-// describe('JestTestRun', () => {
-//   let context, controllerMock, vRun, item;
-//   beforeEach(() => {
-//     jest.resetAllMocks();
-//     controllerMock = mockController();
-//     const profiles: any = [{ tag: { id: 'run' } }, { tag: { id: 'debug' } }];
-//     context = new JestTestProviderContext(mockExtExplorerContext('ws-1'), controllerMock, profiles);
-//     vRun = controllerMock.createTestRun({}, 'whatever');
-//     item = {};
-//   });
-//   it('can detect status update after run is closed', () => {
-//     const jestRun = new JestTestRun(context, vRun);
-//     jestRun.enqueued(item);
-//     expect(vRun.enqueued).toHaveBeenCalled();
-
-//     jestRun.passed(item);
-//     expect(vRun.passed).toHaveBeenCalled();
-
-//     // end the run
-//     jestRun.end();
-//     expect(jestRun.isClosed()).toBeTruthy();
-//     expect(vRun.end).toHaveBeenCalled();
-
-//     //update state now should throw exception
-//     expect(() => jestRun.passed(item)).toThrow();
-//   });
-//   describe('can chain JestTestRun backed by a single vscode Run', () => {
-//     let jestRun1, jestRun2;
-//     beforeEach(() => {
-//       jestRun1 = new JestTestRun(context, vRun);
-//       jestRun2 = new JestTestRun(context, jestRun1);
-//     });
-
-//     it('both are backed by the same vscode.TestRun', () => {
-//       expect(jestRun1.vscodeRun).toBe(jestRun2.vscodeRun);
-//     });
-
-//     it('close the top of the chain will close the underlying vscodeRun and mark isClose() state', () => {
-//       jestRun2.end();
-
-//       expect(jestRun2.isClosed()).toBeTruthy();
-//       expect(jestRun1.isClosed()).toBeTruthy();
-//       expect(jestRun2.vscodeRun).toBeUndefined();
-//       expect(jestRun1.vscodeRun).toBeUndefined();
-//     });
-//   });
-// });

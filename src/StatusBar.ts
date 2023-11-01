@@ -50,7 +50,7 @@ class TypedStatusBarItem {
     const { text, tooltip, backgroundColor } = options;
     this.actual.text = text ?? this.actual.text;
     this.actual.tooltip = tooltip ?? this.actual.tooltip;
-    this.actual.backgroundColor = backgroundColor ?? this.actual.backgroundColor;
+    this.actual.backgroundColor = backgroundColor;
   }
   dispose() {
     this.actual.dispose();
