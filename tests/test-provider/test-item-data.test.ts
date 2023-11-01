@@ -420,6 +420,25 @@ describe('test-item-data', () => {
             expect(run.failed).toHaveBeenCalledWith(tItem, { message: a1.message });
             expect(tItem.range).toEqual({ args: [1, 0, 1, 0] });
           });
+          it('if nothing is updated, output the message', () => {
+            const wsRoot = new WorkspaceRoot(context);
+            expect(wsRoot.item.children.size).toBe(0);
+
+            const run = createTestRun();
+            context.ext.testResultProvider.events.testSuiteChanged.event.mock.calls[0][0]({
+              type: 'assertions-updated',
+              process: { id: 'whatever', request: { type: 'watch-tests' }, userData: { run } },
+              files: [],
+            });
+            // no tests items to be added
+            expect(wsRoot.item.children.size).toBe(0);
+
+            expect(run.write).toHaveBeenCalledWith(
+              expect.stringContaining('No tests'),
+              expect.anything()
+            );
+            expect(run.end).toHaveBeenCalled();
+          });
         });
         describe('when testSuiteChanged.result-matched event fired', () => {
           it('test data range and snapshot context will be updated accordingly', () => {
