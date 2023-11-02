@@ -169,7 +169,7 @@ const createMessaging =
 type MatchResultType<C extends ContextType> = [
   ChildNodeType<ItBlock, C>,
   ChildNodeType<TestAssertionStatus, C>[],
-  MatchEvent
+  MatchEvent,
 ];
 interface ContextMatchAlgorithm {
   match: (

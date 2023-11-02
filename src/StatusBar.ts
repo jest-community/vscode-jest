@@ -35,7 +35,10 @@ export interface StatusBarUpdateRequest {
 class TypedStatusBarItem {
   public status: ExtensionStatus = {};
   public isVisible = false;
-  constructor(public readonly type: StatusType, protected readonly actual: vscode.StatusBarItem) {
+  constructor(
+    public readonly type: StatusType,
+    protected readonly actual: vscode.StatusBarItem
+  ) {
     this.actual.hide();
   }
   hide() {

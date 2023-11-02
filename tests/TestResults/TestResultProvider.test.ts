@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 jest.unmock('../../src/TestResults/TestResultProvider');
 jest.unmock('../../src/TestResults/test-result-events');
 jest.unmock('../../src/TestResults/match-node');

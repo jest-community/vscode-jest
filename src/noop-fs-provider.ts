@@ -1,5 +1,5 @@
 /* istanbul ignore file */
-/* eslint-disable @typescript-eslint/no-empty-function */
+
 import * as vscode from 'vscode';
 
 /**

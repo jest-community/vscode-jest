@@ -91,7 +91,7 @@ export const makeAssertion = (
     status,
     location: location ? makeLocation(location) : EmptyLocation,
     ...(override || {}),
-  } as TestAssertionStatus);
+  }) as TestAssertionStatus;
 
 export const makeTestResult = (
   title: string,

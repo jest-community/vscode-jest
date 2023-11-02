@@ -16,7 +16,7 @@ function _extractActionTitles(actions?: MessageAction[]): string[] {
   return actions ? actions.map((a) => a.title) : [];
 }
 // expose the internal function so we can unit testing it
-// eslint-disable-next-line @typescript-eslint/no-empty-function
+
 const doNothing = () => {};
 export function _handleMessageActions(actions?: MessageAction[]): (action?: string) => void {
   if (!actions || actions.length <= 0) {
