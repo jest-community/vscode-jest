@@ -34,11 +34,13 @@ abstract class TestItemDataBase implements TestItemData, JestRunnable, WithUri {
   item!: vscode.TestItem;
   log: Logging;
 
-  constructor(public context: JestTestProviderContext, name: string) {
+  constructor(
+    public context: JestTestProviderContext,
+    name: string
+  ) {
     this.log = context.ext.loggingFactory.create(name);
   }
   get uri(): vscode.Uri {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     return this.item.uri!;
   }
 
@@ -466,7 +468,6 @@ export class WorkspaceRoot extends TestItemDataBase {
 
 export class FolderData extends TestItemDataBase {
   static makeUri = (parent: vscode.TestItem, folderName: string): vscode.Uri => {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     return vscode.Uri.joinPath(parent.uri!, folderName);
   };
   constructor(
@@ -522,7 +523,10 @@ const isEmpty = (node?: ItemNodeType): boolean => {
 
 // type AssertNode = NodeType<TestAssertionStatus>;
 abstract class TestResultData extends TestItemDataBase {
-  constructor(readonly context: JestTestProviderContext, name: string) {
+  constructor(
+    readonly context: JestTestProviderContext,
+    name: string
+  ) {
     super(context, name);
   }
 

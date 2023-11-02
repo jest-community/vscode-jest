@@ -28,7 +28,6 @@ export class JestProcessManager implements TaskArrayFunctions<JestProcess> {
   }
 
   private getQueue(type: QueueType): TaskQueue<JestProcess> {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     return this.queues.get(type)!;
   }
 

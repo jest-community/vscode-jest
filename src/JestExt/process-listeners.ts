@@ -178,7 +178,11 @@ export const DEFAULT_LONG_RUN_THRESHOLD = 60000;
 export class LongRunMonitor {
   private timer: NodeJS.Timeout | undefined;
   public readonly thresholdMs: number;
-  constructor(private callback: () => void, private logging: Logging, option?: MonitorLongRun) {
+  constructor(
+    private callback: () => void,
+    private logging: Logging,
+    option?: MonitorLongRun
+  ) {
     if (option == null) {
       this.thresholdMs = DEFAULT_LONG_RUN_THRESHOLD;
     } else if (typeof option === 'number' && option > 0) {

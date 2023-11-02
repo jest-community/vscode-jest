@@ -89,7 +89,6 @@ export class JestProcess implements JestProcessInfo {
   }
 
   private getReporterPath() {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const extensionPath = vscode.extensions.getExtension(extensionId)!.extensionPath;
     return join(extensionPath, 'out', 'reporter.js');
   }
@@ -112,7 +111,6 @@ export class JestProcess implements JestProcessInfo {
       args: { args: ['--colors'] },
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const args = options.args!.args;
 
     switch (this.request.type) {
@@ -186,7 +184,7 @@ export class JestProcess implements JestProcessInfo {
     const promise = new Promise<void>((resolve, reject) => {
       taskInfo = { runner, resolve, reject };
     });
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+
     this.task = { ...taskInfo!, promise };
 
     runner.start(this.watchMode !== WatchMode.None, this.watchMode === WatchMode.WatchAll);

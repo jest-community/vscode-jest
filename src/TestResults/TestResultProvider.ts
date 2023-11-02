@@ -62,7 +62,11 @@ export class TestSuiteRecord implements TestSuiteUpdatable {
   private _testBlocks?: TestBlocks | 'failed';
   private _assertionContainer?: ContainerNode<TestAssertionStatus>;
 
-  constructor(public testFile: string, private reconciler: TestReconciler, private parser: Parser) {
+  constructor(
+    public testFile: string,
+    private reconciler: TestReconciler,
+    private parser: Parser
+  ) {
     this._status = TestReconciliationState.Unknown;
     this._message = '';
   }

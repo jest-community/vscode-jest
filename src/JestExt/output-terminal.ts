@@ -64,7 +64,10 @@ export class ExtOutputTerminal implements JestExtOutput {
       this._terminal = undefined;
     },
   };
-  constructor(private name: string, enabled?: boolean) {
+  constructor(
+    private name: string,
+    enabled?: boolean
+  ) {
     this.ptyIsOpen = false;
     this.pendingMessages = new PendingOutput();
     this.enabled = enabled ?? false;
