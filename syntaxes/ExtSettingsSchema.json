@@ -1,0 +1,161 @@
+{
+  "title": "Jest V6 Setting",
+  "markdownDescription": "Schema for validating the new v6 settings in vscode. See details in [settings](https://github.com/jest-community/vscode-jest#customization)",
+  "type": "object",
+  "properties": {
+    "jest.runMode": {
+      "markdownDescription": "Control when and how jest tests should be run. See details in [runMode](https://github.com/jest-community/vscode-jest#runmode)",
+      "default": "watch",
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "watch",
+            "on-demand",
+            "on-save",
+            "deferred"
+          ],
+          "markdownDescription": "A predefined Jest run mode. See details in [runMode](https://github.com/jest-community/vscode-jest#runmode)"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "watch",
+                "on-demand",
+                "on-save"
+              ],
+              "description": "Specifies the jest run mode type."
+            },
+            "runAllTestsOnStartup": {
+              "type": "boolean",
+              "description": "Specifies whether to run all tests on startup."
+            },
+            "coverage": {
+              "type": "boolean",
+              "description": "Specifies whether to collect and report coverage information."
+            },
+            "showInlineError": {
+              "type": "boolean",
+              "description": "Specify if to enable inline error display in test file editor"
+            },
+            "deferred": {
+              "type": "boolean",
+              "description": "Specifies whether the run mode is deferred."
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "additionalProperties": true,
+          "if": {
+            "properties": {
+              "type": {
+                "const": "on-save"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "testFileOnly": {
+                "type": "boolean",
+                "description": "if true, will run tests only when saving test files."
+              }
+            },
+            "additionalProperties": true
+          },
+          "else": {
+            "not": {
+              "required": [
+                "testFileOnly"
+              ]
+            },
+            "errorMessage": "The property 'testFileOnly' should only be present when 'type' is 'on-save'.",
+            "additionalProperties": true
+          },
+          "markdownDescription": "A detailed runMode configuration. See details in [runMode](https://github.com/jest-community/vscode-jest#runmode)"
+        }
+      ]
+    },
+    "jest.outputConfig": {
+      "scope": "window",
+      "type": [
+        "string",
+        "object"
+      ],
+      "markdownDescription": "Control jest output preference. See details in [outputConfig](https://github.com/jest-community/vscode-jest#outputconfig).",
+      "default": "neutral",
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "neutral",
+            "terminal-based",
+            "test-results-based"
+          ],
+          "enumDescriptions": [
+            "A passive and neutral config, will not automatically change active panel nor clear output.",
+            "Switch to terminal panel when running tests.",
+            "Switch to test-results panel when running tests."
+          ],
+          "description": "Specifies the predefined common outputConfig in a string form."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "revealOn": {
+              "type": "string",
+              "enum": [
+                "run",
+                "error",
+                "demand"
+              ],
+              "enumDescriptions": [
+                "Reveal the output upon test run.",
+                "Reveal the output upon test error.",
+                "Reveal the output on demand."
+              ],
+              "default": "run",
+              "description": "Determines when to reveal the test run output. Default is 'run'."
+            },
+            "revealWithFocus": {
+              "type": "string",
+              "enum": [
+                "none",
+                "terminal",
+                "test-results"
+              ],
+              "enumDescriptions": [
+                "Do not change focus when revealing output.",
+                "Switch to terminal when revealing output.",
+                "Switch to test-results panel when revealing output."
+              ],
+              "default": "none",
+              "description": "Specifies which output panel, if any, to switch focus to when revealing. Default is 'none'."
+            },
+            "clearOnRun": {
+              "type": "string",
+              "enum": [
+                "none",
+                "both",
+                "terminal",
+                "test-results"
+              ],
+              "enumDescriptions": [
+                "Do not automatically clear the output before each run.",
+                "Clear both the terminal and test results output before each run.",
+                "Clear the terminal output before each run.",
+                "Clear the test results output before each run."
+              ],
+              "default": "none",
+              "description": "Specifies which output, if any, to be cleared before each run. Default is 'none'."
+            }
+          },
+          "description": "Specifies a custom output config in an object form."
+        }
+      ]
+    }
+  }
+}

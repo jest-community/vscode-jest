@@ -168,14 +168,15 @@ const WATCH_IS_NOT_SUPPORTED_REGEXP =
   /^s*--watch is not supported without git\/hg, please use --watchAlls*/im;
 const RUN_EXEC_ERROR = /onRunComplete: execError: (.*)/im;
 const RUN_START_TEST_SUITES_REGEX = /onRunStart: numTotalTestSuites: ((\d)+)/im;
-const CONTROL_MESSAGES = /^(onRunStart|onRunComplete|Test results written to)[^\n]+\n/gim;
+const CONTROL_MESSAGES =
+  /^(onRunStart|onRunComplete|onTestFileResult|Test results written to)[^\n]+\n/gim;
 
 /**
  * monitor for long test run, default is 1 minute
  */
 export const DEFAULT_LONG_RUN_THRESHOLD = 60000;
 export class LongRunMonitor {
-  private timer: NodeJS.Timer | undefined;
+  private timer: NodeJS.Timeout | undefined;
   public readonly thresholdMs: number;
   constructor(private callback: () => void, private logging: Logging, option?: MonitorLongRun) {
     if (option == null) {
@@ -298,6 +299,7 @@ export class RunTestListener extends AbstractProcessListener {
 
     const cleaned = this.cleanupOutput(raw);
     this.handleRunStart(process, message);
+    this.handleTestFileResult(process, message);
 
     this.onRunEvent.fire({ type: 'data', process, text: message, raw: cleaned });
 
@@ -320,6 +322,11 @@ export class RunTestListener extends AbstractProcessListener {
       this.runStarted({ process, numTotalTestSuites: this.getNumTotalTestSuites(output) });
 
       this.onRunEvent.fire({ type: 'start', process });
+    }
+  }
+  protected handleTestFileResult(process: JestProcess, output: string): void {
+    if (output.includes('onTestFileResult: encountered errors')) {
+      this.onRunEvent.fire({ type: 'test-error', process });
     }
   }
   protected handleRunComplete(process: JestProcess, output: string): void {

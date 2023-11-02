@@ -22,6 +22,10 @@ import { setupJestCmdLine } from '../../../src/setup-wizard/tasks/setup-jest-cmd
 const mockHelper = helper as jest.Mocked<any>;
 const { mockShowActionMenu, mockHelperSetup } = mockWizardHelper(mockHelper);
 
+jest.mock('../../../src/output-manager', () => ({
+  outputManager: {},
+}));
+
 describe('setupMonorepo', () => {
   const mockSaveConfig = jest.fn();
   const debugConfigProvider = {};

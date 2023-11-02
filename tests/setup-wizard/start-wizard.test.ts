@@ -19,6 +19,10 @@ const mockTasks = tasks as jest.Mocked<any>;
 const mockHelper = helper as jest.Mocked<any>;
 const { mockShowActionMenu, mockHelperSetup } = mockWizardHelper(mockHelper);
 
+jest.mock('../../src/output-manager', () => ({
+  outputManager: {},
+}));
+
 describe('startWizard', () => {
   const mockDebugConfigProvider: any = {};
   const vscodeContext: any = {

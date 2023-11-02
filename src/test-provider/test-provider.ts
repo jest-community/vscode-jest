@@ -1,11 +1,12 @@
 import * as vscode from 'vscode';
-import { JestTestProviderContext, JestTestRun } from './test-provider-helper';
+import { JestTestProviderContext } from './test-provider-context';
 import { WorkspaceRoot } from './test-item-data';
 import { Debuggable, ItemCommand, JestExtExplorerContext, TestItemData, TestTagId } from './types';
 import { extensionId, extensionName } from '../appGlobals';
 import { Logging } from '../logging';
 import { toErrorString } from '../helpers';
 import { tiContextManager } from './test-item-context-manager';
+import { JestTestRun } from './jest-test-run';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const isDebuggable = (arg: any): arg is Debuggable => arg && typeof arg.getDebugInfo === 'function';
@@ -98,7 +99,7 @@ export class JestTestProvider {
       this.log('error', `[JestTestProvider]: discoverTest error for "${theItem.id}" : `, e);
       theItem.error = `discoverTest error: ${JSON.stringify(e)}`;
     } finally {
-      run.end();
+      run.end({ reason: 'discoverTest' });
     }
   };
 
@@ -159,45 +160,31 @@ export class JestTestProvider {
       return Promise.reject(message);
     }
 
-    const run = this.context.createTestRun(req, { name: this.controller.id });
+    const run = this.context.createTestRun(req, {
+      name: `runTest: ${this.controller.id}`,
+    });
     const tests = (req.include ?? this.getAllItems()).filter((t) => !req.exclude?.includes(t));
 
-    const promises: Promise<void>[] = [];
-    try {
-      for (const test of tests) {
-        const tData = this.context.getData(test);
-        if (!tData || cancelToken?.isCancellationRequested) {
-          run.skipped(test);
-          continue;
-        }
-        if (req.profile.kind === vscode.TestRunProfileKind.Debug) {
-          await this.debugTest(tData, run);
-        } else {
-          promises.push(
-            new Promise((resolve, reject) => {
-              try {
-                const itemRun = new JestTestRun(this.context, run, {
-                  item: test,
-                  end: resolve,
-                });
-                tData.scheduleTest(itemRun);
-              } catch (e) {
-                const msg = `failed to schedule test for ${tData.item.id}: ${toErrorString(e)}`;
-                this.log('error', msg, e);
-                run.errored(test, new vscode.TestMessage(msg));
-                reject(msg);
-              }
-            })
-          );
+    for (const test of tests) {
+      const tData = this.context.getData(test);
+      if (!tData || cancelToken?.isCancellationRequested) {
+        run.skipped(test);
+        continue;
+      }
+      if (req.profile.kind === vscode.TestRunProfileKind.Debug) {
+        await this.debugTest(tData, run);
+      } else {
+        try {
+          tData.scheduleTest(run);
+        } catch (e) {
+          const msg = `failed to schedule test for ${tData.item.id}: ${toErrorString(e)}`;
+          this.log('error', msg, e);
+          run.errored(test, new vscode.TestMessage(msg));
         }
       }
-
-      await Promise.allSettled(promises);
-    } catch (e) {
-      const msg = `failed to execute profile "${req.profile.label}": ${e}`;
-      run.write(msg, 'error');
     }
-    run.end();
+
+    run.end({ reason: 'runTests ends' });
   };
 
   public runItemCommand(testItem: vscode.TestItem, command: ItemCommand): void | Promise<void> {

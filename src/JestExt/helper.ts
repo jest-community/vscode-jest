@@ -9,9 +9,7 @@ import {
   TestExplorerConfig,
   NodeEnv,
   MonitorLongRun,
-  TestExplorerConfigLegacy,
   JestExtAutoRunSetting,
-  AutoRevealOutputType,
   createJestSettingGetter,
   JestRunModeType,
   JestRunMode,
@@ -82,31 +80,6 @@ export const createJestExtContext = (
   };
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const isTestExplorerConfigLegacy = (arg: any): arg is TestExplorerConfigLegacy =>
-  typeof arg.enabled === 'boolean';
-
-const DefaultTestExplorerSetting: TestExplorerConfig = {};
-const adaptTestExplorer = (
-  setting?: TestExplorerConfig | TestExplorerConfigLegacy
-): TestExplorerConfig => {
-  if (!setting) {
-    return DefaultTestExplorerSetting;
-  }
-
-  if (isTestExplorerConfigLegacy(setting)) {
-    if (setting.enabled === false || setting.showClassicStatus === true) {
-      const message = `Invalid TestExplorer setting: please check README to upgrade. Will use the default setting instead`;
-      console.error(message);
-      vscode.window.showWarningMessage(message);
-      return DefaultTestExplorerSetting;
-    }
-    return { showInlineError: setting.showInlineError };
-  }
-
-  return setting;
-};
-
 export const getExtensionResourceSettings = (
   workspaceFolder: vscode.WorkspaceFolder
 ): PluginResourceSettings => {
@@ -114,20 +87,16 @@ export const getExtensionResourceSettings = (
 
   const deprecatedSettings: DeprecatedPluginResourceSettings = {
     showCoverageOnLoad: getSetting<boolean>('showCoverageOnLoad') ?? false,
-    autoRevealOutput: getSetting<AutoRevealOutputType>('autoRevealOutput') ?? 'on-run',
     autoRun: getSetting<JestExtAutoRunSetting | null>('autoRun'),
+    testExplorer: getSetting<TestExplorerConfig>('testExplorer'),
   };
 
   return {
     jestCommandLine: getSetting<string>('jestCommandLine'),
-    autoClearTerminal: getSetting<boolean>('autoClearTerminal') ?? false,
     rootPath: toAbsoluteRootPath(workspaceFolder, getSetting<string>('rootPath')),
     coverageFormatter: getSetting<string>('coverageFormatter') ?? 'DefaultFormatter',
     debugMode: getSetting<boolean>('debugMode'),
     coverageColors: getSetting<CoverageColors>('coverageColors'),
-    testExplorer: adaptTestExplorer(
-      getSetting<TestExplorerConfig | TestExplorerConfigLegacy>('testExplorer')
-    ),
     nodeEnv: getSetting<NodeEnv | null>('nodeEnv') ?? undefined,
     shell: new RunShell(getSetting<string | LoginShell>('shell')),
     monitorLongRun: getSetting<MonitorLongRun>('monitorLongRun') ?? undefined,

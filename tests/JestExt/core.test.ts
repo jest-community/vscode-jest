@@ -27,6 +27,12 @@ jest.mock('../../src/workspace-manager', () => ({
   WorkspaceManager: jest.fn().mockReturnValue(mockWorkspaceManager),
   isInFolder: mockIsInFolder,
 }));
+const mockOutputManager = {
+  showOutputOn: jest.fn(),
+};
+jest.mock('../../src/output-manager', () => ({
+  outputManager: mockOutputManager,
+}));
 
 import * as vscode from 'vscode';
 import { JestExt } from '../../src/JestExt/core';
@@ -906,12 +912,9 @@ describe('JestExt', () => {
           const validateJestCommandLineSpy = jest.spyOn(sut, 'validateJestCommandLine');
           validateJestCommandLineSpy.mockReturnValue(Promise.resolve(validationResult));
           await sut.startSession();
-
-          if (abort) {
-            expect(JestTestProvider).not.toHaveBeenCalled();
-          } else {
-            expect(JestTestProvider).toHaveBeenCalled();
-          }
+          // testProvider will always be created
+          expect(JestTestProvider).toHaveBeenCalled();
+          expect(mockProcessSession.start).toHaveBeenCalledTimes(abort ? 0 : 1);
         });
       });
       it('will update statusBar', async () => {
@@ -1211,11 +1214,11 @@ describe('JestExt', () => {
             expect(sbUpdateMock).toHaveBeenCalledWith({ state: 'exec-error' });
             expect(executableTerminalLinkProvider.executableLink).toHaveBeenCalled();
             expect(mockOutputTerminal.write).toHaveBeenCalledWith(expect.anything(), 'info');
-            expect(process.userData?.errorReported).toEqual(true);
+            expect(process.userData?.execError).toEqual(true);
           });
           it('will not report error if already reported', () => {
             mockOutputTerminal.write.mockClear();
-            process.userData = { errorReported: true };
+            process.userData = { execError: true };
             onRunEvent({ type: 'exit', error: 'something is wrong', process });
             expect(sbUpdateMock).toHaveBeenCalledWith({ state: 'exec-error' });
             expect(executableTerminalLinkProvider.executableLink).not.toHaveBeenCalled();
@@ -1435,33 +1438,27 @@ describe('JestExt', () => {
       });
     });
   });
-  describe('autoRevealOutput', () => {
-    it.each`
-      revealOutput       | shouldReveal | revealOnError
-      ${'on-run'}        | ${true}      | ${false}
-      ${'on-exec-error'} | ${false}     | ${true}
-      ${'on-demand'}     | ${false}     | ${false}
-    `(
-      'revealOutput = $revealOutput, shouldReveal = $shouldReveal',
-      ({ revealOutput, shouldReveal, revealOnError }) => {
-        const runMode = new RunMode({ type: 'watch', revealOutput });
-        const sut = newJestExt({ settings: { runMode } });
-        const onRunEvent = (sut.events.onRunEvent.event as jest.Mocked<any>).mock.calls[0][0];
-        const process = { id: 'a process id', request: { type: 'watch' } };
-        onRunEvent({ type: 'start', process });
-        if (shouldReveal) {
-          expect(mockOutputTerminal.enable).toHaveBeenCalled();
-        } else {
-          expect(mockOutputTerminal.enable).not.toHaveBeenCalled();
-        }
-        expect(mockOutputTerminal.revealOnError).toEqual(revealOnError);
-      }
-    );
+  describe('output handling', () => {
+    it('delegate output handling to outputManager during runEvent', () => {
+      const sut = newJestExt();
+      const onRunEvent = (sut.events.onRunEvent.event as jest.Mocked<any>).mock.calls[0][0];
+      const process = { id: 'a process id', request: { type: 'watch' } };
+      onRunEvent({ type: 'start', process });
+      expect(mockOutputManager.showOutputOn).toHaveBeenCalledWith('run', expect.anything());
+    });
+    it('notify outputManager for test-error event', () => {
+      const sut = newJestExt();
+      const onRunEvent = (sut.events.onRunEvent.event as jest.Mocked<any>).mock.calls[0][0];
+      const process = { id: 'a process id', request: { type: 'watch' } };
+      onRunEvent({ type: 'test-error', process });
+      expect(mockOutputManager.showOutputOn).toHaveBeenCalledWith('run', expect.anything());
+      expect(mockOutputManager.showOutputOn).toHaveBeenCalledWith('test-error', expect.anything());
+    });
     it('when setting changed, output setting will change accordingly', () => {
-      const runMode = new RunMode({ type: 'watch', revealOutput: 'on-exec-error' });
+      const runMode = new RunMode({ type: 'watch', deferred: false });
       const sut = newJestExt({ settings: { runMode } });
       expect(mockOutputTerminal.revealOnError).toEqual(true);
-      const runMode2 = new RunMode({ type: 'watch', revealOutput: 'on-demand' });
+      const runMode2 = new RunMode({ type: 'watch', deferred: true });
       sut.triggerUpdateSettings({ runMode: runMode2 } as any);
       expect(mockOutputTerminal.revealOnError).toEqual(false);
       expect(mockOutputTerminal.close).toHaveBeenCalled();
@@ -1549,18 +1546,6 @@ describe('JestExt', () => {
       expect(validateJestCommandLineSpy).not.toHaveBeenCalled();
       expect(mockProcessSession.scheduleProcess).not.toHaveBeenCalled();
     });
-    it('will not show output even in exec-error', async () => {
-      expect.hasAssertions();
-
-      let runMode = new RunMode({ type: 'watch', revealOutput: 'on-exec-error', deferred: true });
-      newJestExt({ settings: { runMode } });
-      expect(mockOutputTerminal.revealOnError).toEqual(false);
-
-      // while in non-deferred mode, the revealOnError will be true
-      runMode = new RunMode({ type: 'watch', revealOutput: 'on-exec-error', deferred: false });
-      newJestExt({ settings: { runMode } });
-      expect(mockOutputTerminal.revealOnError).toEqual(true);
-    });
     it('will not do any auto-run for on-save mode either', async () => {
       expect.hasAssertions();
       let runMode = new RunMode({ type: 'on-save', deferred: true });
@@ -1590,13 +1575,15 @@ describe('JestExt', () => {
         await jestExt.startSession();
 
         expect(runMode.config.deferred).toBe(true);
-        expect(mockOutputTerminal.enable).not.toHaveBeenCalled();
+        expect(mockOutputManager.showOutputOn).not.toHaveBeenCalled();
+        expect(mockOutputTerminal.revealOnError).toEqual(false);
         expect(mockProcessSession.scheduleProcess).not.toHaveBeenCalled();
 
         await jestExt.runAllTests();
 
         expect(runMode.config.deferred).toBe(false);
-        expect(mockOutputTerminal.enable).toHaveBeenCalled();
+        expect(mockOutputManager.showOutputOn).toHaveBeenCalledWith('run', expect.anything());
+        expect(mockOutputTerminal.revealOnError).toEqual(true);
         expect(mockProcessSession.scheduleProcess).toHaveBeenCalledWith(
           expect.objectContaining({ type: 'all-tests' })
         );
@@ -1609,7 +1596,7 @@ describe('JestExt', () => {
         await jestExt.startSession();
 
         expect(runMode.config.deferred).toBe(true);
-        expect(mockOutputTerminal.enable).not.toHaveBeenCalled();
+        expect(mockOutputManager.showOutputOn).not.toHaveBeenCalled();
         expect(mockTestProvider.runItemCommand).not.toHaveBeenCalled();
 
         const testItem: any = {};
@@ -1617,7 +1604,7 @@ describe('JestExt', () => {
         await jestExt.runItemCommand(testItem, itemCommand);
 
         expect(runMode.config.deferred).toBe(false);
-        expect(mockOutputTerminal.enable).toHaveBeenCalled();
+        expect(mockOutputManager.showOutputOn).toHaveBeenCalledWith('run', expect.anything());
         expect(mockTestProvider.runItemCommand).toHaveBeenCalled();
       });
       describe('when triggered explicitly (by UI)', () => {

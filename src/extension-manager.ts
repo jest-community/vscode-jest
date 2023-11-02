@@ -502,19 +502,18 @@ export class ExtensionManager {
     }
     const key = `${extensionId}-${version}-launch`;
     const didLaunch = this.context.globalState.get<boolean>(key, false);
-    if (!didLaunch) {
-      vscode.window
-        .showInformationMessage(
-          `vscode-jest has been updated to ${version}.`,
-          'See What Is Changed'
-        )
-        .then((value) => {
-          if (value === 'See What Is Changed') {
-            vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(releaseNote));
-          }
-        });
-      this.context.globalState.update(key, true);
+    if (didLaunch) {
+      return;
     }
+    const button = "See What's Changed";
+    vscode.window
+      .showInformationMessage(`vscode-jest has been updated to ${version}.`, button)
+      .then((value) => {
+        if (value === button) {
+          vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(releaseNote));
+        }
+      });
+    this.context.globalState.update(key, true);
   }
 
   activate(): void {
@@ -530,6 +529,7 @@ export class ExtensionManager {
 
 const ReleaseNoteBase = 'https://github.com/jest-community/vscode-jest/blob/master/release-notes';
 const ReleaseNotes: Record<string, string> = {
+  '6.1.0': `${ReleaseNoteBase}/release-note-v6.md#v610-pre-release`,
   '6.0.0': `${ReleaseNoteBase}/release-note-v6.md#v600-pre-release`,
   '5.2.3': `${ReleaseNoteBase}/release-note-v5.x.md#v523`,
   '5.2.2': `${ReleaseNoteBase}/release-note-v5.x.md#v522`,

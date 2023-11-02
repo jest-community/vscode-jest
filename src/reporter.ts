@@ -1,6 +1,6 @@
 // Custom Jest reporter used by jest-vscode extension
 
-import type { AggregatedResult } from '@jest/test-result';
+import type { AggregatedResult, Test, TestResult } from '@jest/test-result';
 import { Reporter, TestContext } from '@jest/reporters';
 
 class VSCodeJestReporter implements Reporter {
@@ -18,6 +18,19 @@ class VSCodeJestReporter implements Reporter {
       process.stderr.write('onRunComplete\r\n');
     }
   }
+
+  // report any test or exec errors
+  onTestFileResult(
+    _test: Test,
+    testResult: TestResult,
+    _aggregatedResult: AggregatedResult
+  ): Promise<void> | void {
+    if (testResult.numFailingTests > 0 || testResult.testExecError) {
+      const msg = `onTestFileResult: encountered errors`;
+      process.stderr.write(`${msg}\r\n`);
+    }
+  }
+
   getLastError(): Error | undefined {
     return;
   }

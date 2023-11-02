@@ -1,7 +1,8 @@
+import * as vscode from 'vscode';
 import { RunnerEvent } from 'jest-editor-support';
 import { JestTestProcessType } from '../Settings';
 import { JestProcess } from './JestProcess';
-import { JestTestRun } from '../test-provider/test-provider-helper';
+import { JestTestRun } from '../test-provider/jest-test-run';
 
 export interface JestProcessListener {
   onEvent: (process: JestProcess, event: RunnerEvent, ...args: unknown[]) => unknown;
@@ -9,7 +10,9 @@ export interface JestProcessListener {
 export type JestProcessStatus = 'pending' | 'running' | 'stopping' | 'stopped';
 export interface UserDataType {
   run?: JestTestRun;
-  errorReported?: boolean;
+  execError?: boolean;
+  testError?: boolean;
+  testItem?: vscode.TestItem;
 }
 export interface JestProcessInfo {
   readonly id: string;

@@ -2,7 +2,7 @@
   "name": "vscode-jest",
   "displayName": "Jest",
   "description": "Use Facebook's Jest With Pleasure.",
-  "version": "6.0.2",
+  "version": "6.1.0",
   "publisher": "Orta",
   "engines": {
     "vscode": "^1.68.1"
@@ -81,7 +81,9 @@
         "jest.autoClearTerminal": {
           "description": "Clear the terminal output at the start of any new test run.",
           "type": "boolean",
-          "scope": "resource"
+          "scope": "resource",
+          "markdownDeprecationMessage": "**Deprecated**: Please use [outputConfig](https://github.com/jest-community/vscode-jest#outputconfig) instead.",
+          "deprecationMessage": "Deprecated: Please use jest.outputConfig instead."
         },
         "jest.rootPath": {
           "description": "The path to your frontend src folder",
@@ -156,7 +158,9 @@
           "markdownDescription": "Configure jest TestExplorer. See valid [formats](https://github.com/jest-community/vscode-jest/blob/master/README.md#testexplorer) or [how to use test explorer](https://github.com/jest-community/vscode-jest/blob/master/README.md#how-to-use-the-test-explorer) for more details",
           "type": "object",
           "default": null,
-          "scope": "resource"
+          "scope": "resource",
+          "markdownDeprecationMessage": "**Deprecated**: Please use [runMode](https://github.com/jest-community/vscode-jest/blob/master/README.md#runmode) instead.",
+          "deprecationMessage": "Deprecated: Please use jest.runMode instead."
         },
         "jest.monitorLongRun": {
           "markdownDescription": "Enable monitoring for long running test process. See valid [monitorLongRun](https://github.com/jest-community/vscode-jest/blob/master/README.md#monitorLongRun) for details",
@@ -182,11 +186,11 @@
             "disable auto show test output"
           ],
           "scope": "resource",
-          "markdownDeprecationMessage": "**Deprecated**: Please use [runMode](https://github.com/jest-community/vscode-jest/blob/master/README.md#runmode) instead.",
-          "deprecationMessage": "Deprecated: Please use jest.runMode instead."
+          "markdownDeprecationMessage": "**Deprecated**: Please use [outputConfig](https://github.com/jest-community/vscode-jest#outputconfig) instead.",
+          "deprecationMessage": "Deprecated: Please use jest.outputConfig instead."
         },
         "jest.parserPluginOptions": {
-          "markdownDescription": "Configure babel parser plugins. See valid [format](https://github.com/jest-community/vscode-jest/blob/master/README.md#parserpluginoptions)",
+          "markdownDescription": "Configure babel parser plugins. See valid [format](https://github.com/jest-community/vscode-jest#parserpluginoptions)",
           "type": "object",
           "default": null,
           "scope": "resource"
@@ -207,6 +211,84 @@
           "items": {
             "type": "object"
           }
+        },
+        "jest.outputConfig": {
+          "scope": "window",
+          "type": [
+            "string",
+            "object"
+          ],
+          "markdownDescription": "Control jest output preference. See details in [outputConfig](https://github.com/jest-community/vscode-jest#outputconfig).",
+          "default": null,
+          "oneOf": [
+            {
+              "type": "string",
+              "enum": [
+                "neutral",
+                "terminal-based",
+                "test-results-based"
+              ],
+              "enumDescriptions": [
+                "A passive and neutral config, will not automatically change active panel nor clear output.",
+                "Switch to terminal panel when running tests.",
+                "Switch to test-results panel when running tests."
+              ],
+              "description": "Specifies the predefined common outputConfig in a string form."
+            },
+            {
+              "type": "object",
+              "properties": {
+                "revealOn": {
+                  "type": "string",
+                  "enum": [
+                    "run",
+                    "error",
+                    "demand"
+                  ],
+                  "enumDescriptions": [
+                    "Reveal the output upon test run.",
+                    "Reveal the output upon test error.",
+                    "Reveal the output on demand."
+                  ],
+                  "default": "run",
+                  "description": "Determines when to reveal the test run output. Default is 'run'."
+                },
+                "revealWithFocus": {
+                  "type": "string",
+                  "enum": [
+                    "none",
+                    "terminal",
+                    "test-results"
+                  ],
+                  "enumDescriptions": [
+                    "Do not change focus when revealing output.",
+                    "Switch to terminal when revealing output.",
+                    "Switch to test-results panel when revealing output."
+                  ],
+                  "default": "none",
+                  "description": "Specifies which output panel, if any, to switch focus to when revealing. Default is 'none'."
+                },
+                "clearOnRun": {
+                  "type": "string",
+                  "enum": [
+                    "none",
+                    "both",
+                    "terminal",
+                    "test-results"
+                  ],
+                  "enumDescriptions": [
+                    "Do not automatically clear the output before each run.",
+                    "Clear both the terminal and test results output before each run.",
+                    "Clear the terminal output before each run.",
+                    "Clear the test results output before each run."
+                  ],
+                  "default": "none",
+                  "description": "Specifies which output, if any, to be cleared before each run. Default is 'none'."
+                }
+              },
+              "description": "Specifies a custom output config in an object form."
+            }
+          ]
         },
         "jest.runMode": {
           "markdownDescription": "Control when to run jest tests and present the results. See details in [runMode](https://github.com/jest-community/vscode-jest#runmode)",
@@ -243,14 +325,9 @@
                   "type": "boolean",
                   "description": "Specifies whether to collect and report coverage information."
                 },
-                "revealOutput": {
-                  "type": "string",
-                  "enum": [
-                    "on-run",
-                    "on-exec-error",
-                    "on-demand"
-                  ],
-                  "description": "Determines when to reveal the test run output."
+                "showInlineError": {
+                  "type": "boolean",
+                  "description": "Specify if to enable inline error display in test file editor"
                 },
                 "deferred": {
                   "type": "boolean",
@@ -324,6 +401,10 @@
       {
         "command": "io.orta.jest.workspace.save-run-mode",
         "title": "Jest: Save Current RunMode"
+      },
+      {
+        "command": "io.orta.jest.save-output-config",
+        "title": "Jest: Save Current Output Config"
       },
       {
         "command": "io.orta.jest.run-all-tests",
@@ -582,13 +663,13 @@
   "dependencies": {
     "istanbul-lib-coverage": "^3.2.0",
     "istanbul-lib-source-maps": "^4.0.1",
-    "jest-editor-support": "^31.1.1"
+    "jest-editor-support": "^31.1.2"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.2",
     "@types/istanbul-lib-coverage": "^2.0.4",
     "@types/istanbul-lib-source-maps": "^4.0.1",
-    "@types/jest": "^29.2.5",
+    "@types/jest": "^29.5.6",
     "@types/node": "^18.11.18",
     "@typescript-eslint/eslint-plugin": "^5.48.1",
     "@typescript-eslint/parser": "^5.48.1",
@@ -600,7 +681,7 @@
     "eslint-plugin-prefer-arrow": "^1.2.3",
     "eslint-plugin-prettier": "^4.2.1",
     "fs-extra": "^11.1.1",
-    "jest": "^29.3.1",
+    "jest": "^29.7",
     "jest-snapshot": "^27.2.0",
     "prettier": "^2.8.2",
     "raw-loader": "^4.0.1",

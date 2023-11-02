@@ -11,16 +11,16 @@ import * as vscode from 'vscode';
 import { updateSetting } from '../../src/Settings';
 
 describe('RunMode', () => {
-  const defaultRunModeConfig = { type: 'watch', revealOutput: 'on-run' };
+  const defaultRunModeConfig = { type: 'watch' };
   describe('constructor', () => {
     it.each`
       seq  | setting        | legacySettings        | expected
-      ${1} | ${'watch'}     | ${undefined}          | ${{ type: 'watch', revealOutput: 'on-run' }}
-      ${2} | ${'on-save'}   | ${undefined}          | ${{ type: 'on-save', revealOutput: 'on-run' }}
-      ${3} | ${'on-demand'} | ${undefined}          | ${{ type: 'on-demand', revealOutput: 'on-run' }}
-      ${4} | ${'deferred'}  | ${undefined}          | ${{ type: 'on-demand', revealOutput: 'on-run', deferred: true }}
+      ${1} | ${'watch'}     | ${undefined}          | ${{ type: 'watch' }}
+      ${2} | ${'on-save'}   | ${undefined}          | ${{ type: 'on-save' }}
+      ${3} | ${'on-demand'} | ${undefined}          | ${{ type: 'on-demand' }}
+      ${4} | ${'deferred'}  | ${undefined}          | ${{ type: 'on-demand', deferred: true }}
       ${5} | ${'typo'}      | ${undefined}          | ${'error'}
-      ${6} | ${'watch'}     | ${{ autoRun: 'off' }} | ${{ type: 'watch', revealOutput: 'on-run' }}
+      ${6} | ${'watch'}     | ${{ autoRun: 'off' }} | ${{ type: 'watch' }}
     `(
       'case $seq: creating a RunMode from predefined type: $setting',
       ({ setting, legacySettings, expected }) => {
@@ -34,12 +34,12 @@ describe('RunMode', () => {
       }
     );
     it.each`
-      seq  | setting                                      | legacySettings        | expected
-      ${1} | ${{ type: 'watch', revealOutput: 'on-run' }} | ${undefined}          | ${{ type: 'watch', revealOutput: 'on-run' }}
-      ${2} | ${{ type: 'watch' }}                         | ${undefined}          | ${{ type: 'watch' }}
-      ${3} | ${{ type: 'on-save', testFileOnly: true }}   | ${undefined}          | ${{ type: 'on-save', testFileOnly: true }}
-      ${4} | ${{ type: 'manual' }}                        | ${undefined}          | ${'error'}
-      ${5} | ${{ type: 'watch', revealOutput: 'on-run' }} | ${{ autoRun: 'off' }} | ${{ type: 'watch', revealOutput: 'on-run' }}
+      seq  | setting                                    | legacySettings        | expected
+      ${1} | ${{ type: 'watch' }}                       | ${undefined}          | ${{ type: 'watch' }}
+      ${2} | ${{ type: 'watch' }}                       | ${undefined}          | ${{ type: 'watch' }}
+      ${3} | ${{ type: 'on-save', testFileOnly: true }} | ${undefined}          | ${{ type: 'on-save', testFileOnly: true }}
+      ${4} | ${{ type: 'manual' }}                      | ${undefined}          | ${'error'}
+      ${5} | ${{ type: 'watch' }}                       | ${{ autoRun: 'off' }} | ${{ type: 'watch' }}
     `(
       'case $seq: creating a RunMode from existing config without change: $setting',
       ({ setting, legacySettings, expected }) => {
@@ -55,13 +55,13 @@ describe('RunMode', () => {
     describe(`migrating from existing settings`, () => {
       it.each`
         seq  | legacySettings                                            | expected
-        ${1} | ${{ autoRun: 'off' }}                                     | ${{ type: 'on-demand', revealOutput: 'on-run' }}
-        ${2} | ${{ autoRun: 'watch' }}                                   | ${{ type: 'watch', revealOutput: 'on-run' }}
-        ${3} | ${{ autoRun: 'on-save' }}                                 | ${{ type: 'on-save', revealOutput: 'on-run' }}
-        ${4} | ${{ autoRun: 'legacy' }}                                  | ${{ type: 'watch', revealOutput: 'on-run', runAllTestsOnStartup: true }}
-        ${5} | ${{ autoRun: { watch: true, onStartup: ['all-tests'] } }} | ${{ type: 'watch', revealOutput: 'on-run', runAllTestsOnStartup: true }}
-        ${6} | ${{ autoRun: { watch: false, onSave: 'test-src-file' } }} | ${{ type: 'on-save', revealOutput: 'on-run' }}
-        ${7} | ${{ autoRun: { watch: false, onSave: 'test-file' } }}     | ${{ type: 'on-save', revealOutput: 'on-run', testFileOnly: true }}
+        ${1} | ${{ autoRun: 'off' }}                                     | ${{ type: 'on-demand' }}
+        ${2} | ${{ autoRun: 'watch' }}                                   | ${{ type: 'watch' }}
+        ${3} | ${{ autoRun: 'on-save' }}                                 | ${{ type: 'on-save' }}
+        ${4} | ${{ autoRun: 'legacy' }}                                  | ${{ type: 'watch', runAllTestsOnStartup: true }}
+        ${5} | ${{ autoRun: { watch: true, onStartup: ['all-tests'] } }} | ${{ type: 'watch', runAllTestsOnStartup: true }}
+        ${6} | ${{ autoRun: { watch: false, onSave: 'test-src-file' } }} | ${{ type: 'on-save' }}
+        ${7} | ${{ autoRun: { watch: false, onSave: 'test-file' } }}     | ${{ type: 'on-save', testFileOnly: true }}
         ${8} | ${{ autoRun: 'typo' }}                                    | ${'error'}
       `('case $seq: can create autoRun from autoRun settings', ({ legacySettings, expected }) => {
         const runMode = new RunMode(undefined, legacySettings);
@@ -73,16 +73,13 @@ describe('RunMode', () => {
         }
       });
       it.each`
-        seq  | setting      | legacySettings                                                           | expected
-        ${1} | ${undefined} | ${{ showCoverageOnLoad: true }}                                          | ${{ type: 'watch', revealOutput: 'on-run', coverage: true }}
-        ${2} | ${'watch'}   | ${{ showCoverageOnLoad: true }}                                          | ${{ type: 'watch', revealOutput: 'on-run' }}
-        ${3} | ${undefined} | ${{ autoRevealOutput: 'off' }}                                           | ${{ type: 'watch', revealOutput: 'on-demand' }}
-        ${4} | ${undefined} | ${{ autoRevealOutput: 'on-run' }}                                        | ${{ type: 'watch', revealOutput: 'on-run' }}
-        ${5} | ${undefined} | ${{ autoRevealOutput: 'on-exec-error' }}                                 | ${{ type: 'watch', revealOutput: 'on-exec-error' }}
-        ${6} | ${undefined} | ${{ autoRevealOutput: 'something' }}                                     | ${'error'}
-        ${7} | ${undefined} | ${{ showCoverageOnLoad: true }}                                          | ${{ type: 'watch', revealOutput: 'on-run', coverage: true }}
-        ${8} | ${undefined} | ${{ showCoverageOnLoad: false }}                                         | ${{ type: 'watch', revealOutput: 'on-run' }}
-        ${9} | ${undefined} | ${{ autoRun: 'off', autoRevealOutput: 'off', showCoverageOnLoad: true }} | ${{ type: 'on-demand', revealOutput: 'on-demand', coverage: true }}
+        seq  | setting      | legacySettings                                  | expected
+        ${1} | ${undefined} | ${{ showCoverageOnLoad: true }}                 | ${{ type: 'watch', coverage: true }}
+        ${2} | ${'watch'}   | ${{ showCoverageOnLoad: true }}                 | ${{ type: 'watch' }}
+        ${3} | ${undefined} | ${{ showCoverageOnLoad: true }}                 | ${{ type: 'watch', coverage: true }}
+        ${4} | ${undefined} | ${{ showCoverageOnLoad: false }}                | ${{ type: 'watch' }}
+        ${5} | ${undefined} | ${{ testExplorer: { showInlineError: true } }}  | ${{ type: 'watch', showInlineError: true }}
+        ${6} | ${undefined} | ${{ autoRun: 'off', showCoverageOnLoad: true }} | ${{ type: 'on-demand', coverage: true }}
       `(
         'case $seq: migrating other legacy settings to RunMode',
         ({ setting, legacySettings, expected }) => {

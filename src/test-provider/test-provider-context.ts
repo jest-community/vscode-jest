@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
-import { JestExtOutput, JestOutputTerminal, OutputOptions } from '../JestExt/output-terminal';
+import { JestOutputTerminal } from '../JestExt/output-terminal';
 import { JestExtExplorerContext, TestItemData } from './types';
+import { JestTestRun } from './jest-test-run';
 
 /**
  * provide context information from JestExt and test provider state:
@@ -11,7 +12,11 @@ import { JestExtExplorerContext, TestItemData } from './types';
 
 export type TagIdType = 'run' | 'debug' | 'update-snapshot';
 
-let RunSeq = 0;
+export interface JestTestRunOptions {
+  name?: string;
+}
+
+let SEQ = 0;
 export class JestTestProviderContext {
   private testItemData: WeakMap<vscode.TestItem, TestItemData>;
 
@@ -78,10 +83,14 @@ export class JestTestProviderContext {
   };
 
   createTestRun = (request: vscode.TestRunRequest, options?: JestTestRunOptions): JestTestRun => {
-    const name = options?.name ?? `run-${RunSeq++}`;
-    const opt = { ...(options ?? {}), name };
-    const vscodeRun = this.controller.createTestRun(request, name);
-    return new JestTestRun(this, vscodeRun, opt);
+    const name = options?.name ?? `testRun-${SEQ++}`;
+    const createRun = (name: string) => {
+      const vscodeRun = this.controller.createTestRun(request, name);
+      vscodeRun.appendOutput(`\r\nTestRun "${name}" started\r\n`);
+      return vscodeRun;
+    };
+
+    return new JestTestRun(name, this, createRun);
   };
 
   // tags
@@ -130,116 +139,5 @@ export class JestTestProviderContext {
     }
 
     return new vscode.TestRunRequest(include, exclude, profile);
-  };
-}
-
-export interface JestTestRunOptions {
-  name?: string;
-  item?: vscode.TestItem;
-
-  // in addition to the regular end() method
-  onEnd?: () => void;
-
-  // replace the end function
-  end?: () => void;
-}
-
-export type TestRunProtocol = Pick<
-  vscode.TestRun,
-  'name' | 'enqueued' | 'started' | 'errored' | 'failed' | 'passed' | 'skipped' | 'end'
->;
-export type ParentRun = vscode.TestRun | JestTestRun;
-const isVscodeRun = (arg: ParentRun | undefined): arg is vscode.TestRun =>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  arg != null && typeof (arg as any).appendOutput === 'function';
-
-/** a wrapper for vscode.TestRun or another JestTestRun */
-export class JestTestRun implements JestExtOutput, TestRunProtocol {
-  private output: JestOutputTerminal;
-  public item?: vscode.TestItem;
-  private parentRun?: ParentRun;
-
-  constructor(
-    private context: JestTestProviderContext,
-    parentRun: ParentRun,
-    private options?: JestTestRunOptions
-  ) {
-    this.parentRun = parentRun;
-    this.output = context.output;
-    this.item = options?.item;
-  }
-
-  get vscodeRun(): vscode.TestRun | undefined {
-    if (!this.parentRun) {
-      return;
-    }
-    if (isVscodeRun(this.parentRun)) {
-      return this.parentRun;
-    }
-    return this.parentRun.vscodeRun;
-  }
-
-  write(msg: string, opt?: OutputOptions): string {
-    const text = this.output.write(msg, opt);
-    this.vscodeRun?.appendOutput(text);
-    return text;
-  }
-
-  isClosed(): boolean {
-    return this.vscodeRun === undefined;
-  }
-
-  private updateState = (f: (pRun: ParentRun) => void): void => {
-    if (!this.parentRun || !this.vscodeRun) {
-      throw new Error(`run "${this.name}" has already closed`);
-    }
-    f(this.parentRun);
-  };
-
-  // TestRunProtocol
-  public get name(): string | undefined {
-    return this.options?.name;
-  }
-  public enqueued = (test: vscode.TestItem): void => {
-    this.updateState((pRun) => pRun.enqueued(test));
-  };
-  public started = (test: vscode.TestItem): void => {
-    this.updateState((pRun) => pRun.started(test));
-  };
-  public errored = (
-    test: vscode.TestItem,
-    message: vscode.TestMessage | readonly vscode.TestMessage[],
-    duration?: number | undefined
-  ): void => {
-    const _msg = this.context.ext.settings.testExplorer.showInlineError ? message : [];
-    this.updateState((pRun) => pRun.errored(test, _msg, duration));
-  };
-  public failed = (
-    test: vscode.TestItem,
-    message: vscode.TestMessage | readonly vscode.TestMessage[],
-    duration?: number | undefined
-  ): void => {
-    const _msg = this.context.ext.settings.testExplorer.showInlineError ? message : [];
-    this.updateState((pRun) => pRun.failed(test, _msg, duration));
-  };
-  public passed = (test: vscode.TestItem, duration?: number | undefined): void => {
-    this.updateState((pRun) => pRun.passed(test, duration));
-  };
-  public skipped = (test: vscode.TestItem): void => {
-    this.updateState((pRun) => pRun.skipped(test));
-  };
-  public end = (): void => {
-    if (this.options?.end) {
-      return this.options.end();
-    }
-
-    if (this.parentRun) {
-      this.parentRun.end();
-      if (isVscodeRun(this.parentRun)) {
-        this.parentRun = undefined;
-      }
-    }
-
-    this.options?.onEnd?.();
   };
 }

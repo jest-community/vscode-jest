@@ -252,11 +252,12 @@ describe('jest process listeners', () => {
       });
     });
     describe.each`
-      output             | stdout       | stderr       | error
-      ${'whatever'}      | ${'data'}    | ${'data'}    | ${'data'}
-      ${'onRunStart'}    | ${'data'}    | ${'start'}   | ${'data'}
-      ${'onRunComplete'} | ${'data'}    | ${'end'}     | ${'data'}
-      ${'Watch Usage'}   | ${undefined} | ${undefined} | ${'data'}
+      output                                    | stdout       | stderr          | error
+      ${'whatever'}                             | ${'data'}    | ${'data'}       | ${'data'}
+      ${'onRunStart'}                           | ${'data'}    | ${'start'}      | ${'data'}
+      ${'onRunComplete'}                        | ${'data'}    | ${'end'}        | ${'data'}
+      ${'onTestFileResult: encountered errors'} | ${'data'}    | ${'test-error'} | ${'data'}
+      ${'Watch Usage'}                          | ${undefined} | ${undefined}    | ${'data'}
     `('propagate run events: $output', ({ output, stdout, stderr, error }) => {
       it('from stdout: eventType=$stdout', () => {
         expect.hasAssertions();

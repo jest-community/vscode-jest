@@ -92,11 +92,11 @@ export class RunMode {
   private getDefaultRunMode(setting: JestPredefinedRunModeType): JestRunMode {
     switch (setting.toLocaleLowerCase()) {
       case 'watch':
-        return { type: 'watch', revealOutput: 'on-run' };
+        return { type: 'watch' };
       case 'on-save':
-        return { type: 'on-save', revealOutput: 'on-run' };
+        return { type: 'on-save' };
       case 'on-demand':
-        return { type: 'on-demand', revealOutput: 'on-run' };
+        return { type: 'on-demand' };
       case 'deferred':
         return {
           ...this.getDefaultRunMode('on-demand'),
@@ -177,19 +177,11 @@ export class RunMode {
       if (legacySettings?.showCoverageOnLoad) {
         base.coverage = true;
       }
-      if (legacySettings?.autoRevealOutput) {
-        switch (legacySettings.autoRevealOutput) {
-          case 'on-run':
-          case 'on-exec-error':
-            base.revealOutput = legacySettings.autoRevealOutput;
-            break;
-          case 'off':
-            base.revealOutput = 'on-demand';
-            break;
-          default:
-            throw new Error(`invalid autoRevealOutput ${legacySettings.autoRevealOutput}`);
-        }
+
+      if (legacySettings?.testExplorer?.showInlineError) {
+        base.showInlineError = true;
       }
+
       return base;
     } catch (e) {
       // sever user error, while we can fallback to the default, it might not be what the user intended.
@@ -232,7 +224,7 @@ export class RunMode {
         ? vscode.Uri.file(context.asAbsolutePath('icons/pause-on-20.svg'))
         : new vscode.ThemeIcon('debug-pause');
       const runModeSchemaUri = vscode.Uri.file(
-        context.asAbsolutePath('syntaxes/jestRunModeSchema.json')
+        context.asAbsolutePath('syntaxes/ExtSettingsSchema.json')
       );
       const deferredButton = {
         iconPath: deferredIcon,
@@ -396,11 +388,10 @@ const showRunModeQuickPick = async (
 const RunModeEditInstruction = `
 // Save the file to accept the change.
 // close without saving to cancel the change.
-// RunMode reference: https://github.com/jest-community/vscode-jest/blob/master/README.md#runmode
+// RunMode reference: https://github.com/jest-community/vscode-jest#runmode
 `;
 
 export class RunModeEditor {
-  // private doc?: vscode.TextDocument;
   private disposables: vscode.Disposable[] = [];
   private docUri = vscode.Uri.parse(`${NoOpFileSystemProvider.scheme}://workspace/runMode.json`);
 

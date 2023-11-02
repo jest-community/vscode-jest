@@ -59,6 +59,7 @@ Content
       - [rootPath](#rootpath)
       - [coverageFormatter](#coverageformatter)
       - [coverageColors](#coveragecolors)
+      - [outputConfig](#outputconfig)
       - [runMode](#runmode)
       - [autoRun](#autorun)
       - [testExplorer](#testexplorer)
@@ -280,13 +281,14 @@ useDashedArgs| Determine if to use dashed arguments for jest processes |undefine
 |[parserPluginOptions](#parserpluginoptions)|Configure babel parser plugins|null|`"jest.parserPluginOptions": {decorators: 'legacy'}`|
 |[virtualFolders](#virtual-folders)|defines multiple jest runs in a given vscode workspace folder|undefined|`"jest.virtualFolders": "[{"name": "front-end", "rootPath': "packages/front-end"}, {"name": "back-end", "rootPath': "packages/back-end"} ]"`| >= v6.0.0 
 |**UX**|
-|[runMode](#runmode)|Controls most test UX, including when tests should be run, output management, etc|undefined|`"jest.runMode": "watch"` or `"jest.runMode": "on-demand"` or `"jest.runMode": {"type": "on-demand", "deferred": true}`| >= v6.0.2
-|autoClearTerminal|Clear the terminal output at the start of any new test run.|false|`"jest.autoClearTerminal": true`| >= v6.0.0
-|[testExplorer](#testexplorer) |Configure jest test explorer|null|`{"showInlineError": "true"}`|
-|:x: [autoRun](#autorun)|Controls when and what tests should be run|undefined|`"jest.autoRun": "off"` or `"jest.autoRun": "watch"` or `"jest.autoRun": {"watch": false, "onSave":"test-only"}`| <= v6.0.2 (replaced by runMode)
-|:x: [autoRevealOutput](#autoRevealOutput)|Determine when to show test output|"on-run"|`"jest.autoRevealOutput": "on-exec-error"`| <= v6.0.2 (replaced by runMode)
+|[outputConfig](#outputconfig) 💼|Controls test output experience across the whole workspace.|undefined|`"jest.outputConfig": "neutral"` or `"jest.outputConfig": {"revealOn": "run", "revealWithFocus": "terminal", "clearOnRun": 'terminal"`| >= v6.1.0
+|[runMode](#runmode)|Controls most test UX, including when tests should be run, output management, etc|undefined|`"jest.runMode": "watch"` or `"jest.runMode": "on-demand"` or `"jest.runMode": {"type": "on-demand", "deferred": true}`| >= v6.1.0
+|:x: autoClearTerminal|Clear the terminal output at the start of any new test run.|false|`"jest.autoClearTerminal": true`| >= v6.0.0 < 6.1 (replaced by outputConfig)
+|:x: [testExplorer](#testexplorer) |Configure jest test explorer|null|`{"showInlineError": "true"}`| < 6.1.0 (replaced by runMode)
+|:x: [autoRun](#autorun)|Controls when and what tests should be run|undefined|`"jest.autoRun": "off"` or `"jest.autoRun": "watch"` or `"jest.autoRun": {"watch": false, "onSave":"test-only"}`| <= v6.1.0 (replaced by runMode)
+|:x: [autoRevealOutput](#autoRevealOutput)|Determine when to show test output|"on-run"|`"jest.autoRevealOutput": "on-exec-error"`| <= v6.1.0 (replaced by outputConfig)
 |**Coverage**|
-|:x: showCoverageOnLoad|Show code coverage when extension starts|false|`"jest.showCoverageOnLoad": true`| <= v6.0.2 (replaced by runMode)
+|:x: showCoverageOnLoad|Show code coverage when extension starts|false|`"jest.showCoverageOnLoad": true`| <= v6.1.0 (replaced by runMode)
 |[coverageFormatter](#coverageFormatter)|Determine the coverage overlay style|"DefaultFormatter"|`"jest.coverageFormatter": "GutterFormatter"`|
 |[coverageColors](#coverageColors)|Coverage indicator color override|undefined|`"jest.coverageColors": { "uncovered": "rgba(255,99,71, 0.2)", "partially-covered": "rgba(255,215,0, 0.2)"}`|
 |**Misc**|
@@ -354,16 +356,133 @@ for example:
 
 ---
 
+#### outputConfig
+
+The `outputConfig` controls the Jest output experience by specifying when and where to create, display, and clear the output content. It supports 2 output panels: `TEST RESULTS` and `TERMINAL`. The `TEST RESULTS` panel displays test results in the order they were run, while the `TERMINAL` panel organizes outputs by workspace folder. `TERMINAL` panel also contains the non-test run outputs, such as [quick-fix link](quick-fix-chooser), extension auto-config info and tips. 
+
+**Type Definitions**
+```ts
+// typescript type definition
+export interface JestRawOutputSetting {
+  revealOn?: 'run' | 'error' | 'demand';
+  revealWithFocus?: 'terminal' | 'test-results' | 'none';
+  clearOnRun?: 'both' | 'terminal' | 'test-results' | 'none';
+}
+export type JestPredefinedOutputSetting = 'neutral' | 'terminal-based' | 'test-results-based';
+export type JestOutputSetting = JestPredefinedOutputSetting | JestRawOutputSetting;
+```
+**JestOutputSetting** 
+This setting can be one of the predefined types or a custom object.
+
+- **Predefined OutputConfig Settings** (JestPredefinedOutputSetting): 
+    Predefined outputConfig|Description|JestRawOutputSetting|
+    |:---:|---|---|
+    |"neutral"| A passive setting that does not favor either panel | {revealOn: "run", revealWithFocus: "none", clearOnRun: "none"} |
+    |"terminal-based"| A terminal-centric output experience|{revealOn: "run", revealWithFocus: "terminal", clearOnRun: "none"}|
+    |"test-results-based"|A test-results-centric output experience|{revealOn: "run", revealWithFocus: "test-results", clearOnRun: "none"} | 
+
+- **Custom Config Object** (JestRawOutputSetting): 
+  - **revealOn**: Create or make output window available (without automatic focus switch). Possible values:
+    1. "run": On test starts. (default)
+    2. "error": On test failure.
+    3. "demand": On manual trigger.
+  - **revealWithFocus**: When revealing the output, which panel should have the focus, i.e. panel will become active. Possible values:
+    1. "terminal": Show output in terminal panel and focus on it.
+    2. "test-results": Show output in test results panel and focus on it.
+    3. "none": No automatic focus change. (default)
+  - **clearOnRun**: Determine if to automatically clear the output before each test run. Possible values:
+    1. "both": Clear both terminal and test results panel.
+    2. "terminal": Clear the terminal panel only.
+    3. "test-results": clear the test results panel only.
+    4. "none": Do not clear any panel. (default)
+    (_**Note**: As of the current version, the testing framework does not support the clearing of the "TEST RESULTS" panel without side effects. The closest available command also clears all test item statuses, which may not be desirable. We are aware of this limitation and will raise the issue with the VS Code team._)
+
+**Handling Conflicts with "TEST RESULTS" panel**
+<a id="outputconfig-conflict"></a>
+
+_The Problem_
+
+The behavior of the "TEST RESULTS" panel is influenced by VSCode's native `"testing.openTesting"` setting. This can cause inconsistencies with your `"jest.outputConfig"` settings.
+
+For instance, if you set `"jest.outputConfig": {"revealWithFocus": "none"}` to prevent automatic focus changes, but leave `"testing.openTesting"` at its default value of `"openOnTestStart"`, the "TEST RESULTS" panel will still automatically switch focus whenever tests run.
+
+_The Universal Solution_
+
+For a consistent Jest output experience, the simplest solution is to set `"testing.openTesting": "neverOpen"`. This allows the extension to manage the "TEST RESULTS" and "TERMINAL" panels together using `"jest.outputConfig"` alone.
+
+_Further Customization_
+
+However, if you prefer "TEST RESULTS" and "TERMINAL" panels to behave differently and don't mind managing 2 settings yourself, you could play with different combinations. 
+
+For instance, if `"testing.openTesting"` is set to `"openOnTestFailure"`, and you want your terminal panel to still reveal when any tests run, your setting would look like this: `"jest.outputConfig": {revealWithFocus: "test-results"}` 
+
+_Built-in Validation_
+
+The extension also features built-in conflict detection and quick fixes to assist.
+
+**Examples**
+- Choose a passive output experience that is identical to the previous version.
+  ```json
+  "testing.openTesting": "neverOpen",
+  "jest.outputConfig": "neutral"
+  ```
+- Choose a terminal-based experience and switch focus to it when test run starts.
+  ```json
+  "testing.openTesting": "neverOpen",
+  "jest.outputConfig": "terminal-based"
+  ```
+- Choose a test-results-based experience and switch focus to it when test fails.
+  ```json
+  "testing.openTesting": "neverOpen",
+  "jest.outputConfig": {
+    "revealOn": "error",
+    "revealWithFocus": "test-results",
+  }
+  ```
+   alternatively:
+  ```json
+  "testing.openTesting": "openOnTestFailure",
+  "jest.outputConfig": {
+    "revealOn": "error",
+    "revealWithFocus": "test-results"
+  }
+  ```
+- Clear the terminal output on each run but do not automatically switch focus to any panel.
+  ```json
+  "testing.openTesting": "neverOpen",
+  "jest.outputConfig": {
+    "clearOnRun": "terminal"
+  }
+  ```
+ 
+**Migration Guide**
+<a id="outputconfig-migration"></a>
+
+Migrating to the new `"jest.outputConfig"` can require some manual adjustments, especially if you're working in a multi-root workspace. Here are some guidelines to help with the transition:
+
+1. **Workspace Level vs Workspace-Folder Level**: The new `"jest.outputConfig"` is a workspace-level setting, unlike legacy settings like `"jest.autoClearTerminal"` and `"jest.autoRevealOutput"`, which are workspace-folder level settings.
+
+2. **Backward Compatibility**: If no `"jest.outputConfig"` is defined in your settings.json, the extension will attempt to generate a backward-compatible outputConfig in memory. This uses the `"testing.openTesting"` setting and any legacy settings (`"jest.autoClearTerminal"`, `"jest.autoRevealOutput"`) you might have. Note that this might only work for single-root workspaces.
+
+3. **Migration Steps**:
+   - Use the `"Jest: Save Current Output Config"` command from the command palette to update your settings.json.
+   - (optional) Fix warning: The save does not include `"testing.openTesting"`, so you might see the conflict warning message. You can either use the "Quick Fix" action or adjust the `settings.json` manually (see [handling conflict](#outputconfig-conflict)).
+   - Finally, remove any deprecated settings.
+
+By following these guidelines, you should be able to smoothly transition to using `"jest.outputConfig"`.
+
+---
+
 #### runMode
 
 The `runMode` controls test UX, determining when tests should run, and housing the common run-time toggles like coverage. 
 
-**runMode type**
+**Type Definitions**
 ```ts
+// typescript types
 interface JestRunModeOptions {
   runAllTestsOnStartup?: boolean;
   coverage?: boolean;
-  revealOutput?: 'on-run' | 'on-exec-error' | 'on-demand';
   deferred?: boolean;
 }
 export type JestRunMode = JestRunModeOptions & (
@@ -380,17 +499,13 @@ export type JestRunMode = JestRunModeOptions & (
 - **JestRunModeOptions**: Options applicable for all `runMode` types:
   - **runAllTestsOnStartup**: Want to run all tests as soon as the extension starts? Use this.
   - **coverage**: To get those coverage metrics, turn this on.
-  - **revealOutput**: Control when your test output window shows up:
-    - "on-run": Default behavior, pops up as tests begin.
-    - "on-exec-error": Shows up only if there's an execution glitch.
-    - "on-demand": Displays only when you ask it to via the UI.
   - **deferred**: Usually, the extension sets things up before any test run, verifying the Jest env and discovering tests. This process is generally quick, but if you've got a hefty project or your setup isn't Jest-ready, this option helps:
     - `true`: Suspend the initial setup. Most UI components remain active. If you toggle `runMode.deferred` or manually trigger a test run, the setup will resume, deferred option will be set to false, and the runMode will operate as usual.
     - `false`: Default behavior, the setup process gets going before any test run.
 
     <details>
 
-    <summary> 🤔 defer vs. disable? </summary>
+    <summary> defer vs. disable? 🤔 </summary>
 
     📌 Note: There's a distinction between the deferred mode and disabling the extension via "jest.enable: false". Disabling the extension will remove all test features for the given workspace-folder. In contrast, deferred just delays the setup but most UI features are still visible.
 
@@ -408,7 +523,7 @@ The following are the predefined `runMode` configurations for convenience. They 
 |"on-demand"|run tests on-demand through UI | {type: "on-demand", revealOutput: "on-run"} |
 |"deferred"|defer test run and discovery until the first on-demand run | {type: "on-demand", revealOutput: "on-run", deferred: true } |
 
-**runMode Examples**
+**Examples**
 - Run jest with watch mode - the default runMode if none is specified.
   ```json
   "jest.runMode": "watch"
@@ -450,15 +565,15 @@ While the concepts of performance and automation are generally clear, "completen
 3. Tests bearing dynamic names, like those using test.each with variables or template literals, won't be translated. As a result, they must be executed through higher-level constructs, such as describe blocks with static names or entire test suites.
 
 
-**runMode migration**
+**Migration Guide**
 <a id="runmode-migration"></a>
-Starting from v6.0.2, if no runMode is defined in settings.json, the extension will automatically generate one using legacy settings (`autoRun`, `autoRevealOutput`, `showCoverageOnLoad`). To migrate, simply use the `"Jest: Save Current RunMode"` command from the command palette to update the setting, then remove the legacy settings.
+Starting from v6.1.0, if no runMode is defined in settings.json, the extension will automatically generate one using legacy settings (`autoRun`, `autoRevealOutput`, `showCoverageOnLoad`). To migrate, simply use the `"Jest: Save Current RunMode"` command from the command palette to update the setting, then remove the deprecated settings.
 
 ---
 
 #### autoRun
  <div style="background-color: yellow; color: black; padding: 10px; border-radius: 5px;">
-  As of v6.0.2, <a href="#runmode">runMode</a> has superseded autoRun. For transition details, please refer to the <a href="#runmode-migration">runMode migration</a>.
+  Note: As of v6.1.0, autoRun will be replaced by <a href="#runmode">runMode</a>. For transition details, please refer to the <a href="#runmode-migration">runMode migration</a>.
 </div>
 
 AutoRun controls when tests should be executed automatically.
@@ -586,7 +701,7 @@ Default is `"jest.monitorLongRun":60000` (1 minute)
 
 #### autoRevealOutput
  <div style="background-color: yellow; color: black; padding: 10px; border-radius: 5px;">
-  As of v6.0.2, <a href="#runmode">runMode</a> has superseded autoRevealOutput. For transition details, please refer to the <a href="#runmode-migration">runMode migration</a>.
+  As of v6.1.0, <a href="#runmode">runMode</a> has superseded autoRevealOutput. For transition details, please refer to the <a href="#runmode-migration">runMode migration</a>.
 </div>
 
 ```ts
@@ -781,7 +896,8 @@ This extension contributes the following commands and can be accessed via [Comma
 |Jest: Run All Tests (Select Workspace)| run all tests for the selected workspace|multi-root workspace
 |Jest: Run All Tests in Current Workspace| run all tests for the current workspace based on the active editor| always
 |Jest: Toggle Coverage for Current Workspace| toggle coverage mode for the current workspace based on the active editor| always
-|Jest: Save Current RunMode| update runMode in `settings.json` based on the current value| always (>= 6.0.2)
+|Jest: Save Current RunMode| update `"jest.runMode"` in `settings.json` based on the current value| always (>= 6.1.0)
+|Jest: Save Current Output Config| update `"jest.outputConfig"` in `settings.json` based on the current value| always (>= 6.1.0)
 |Jest: Setup Extension| start the setup tool|always|
 
 In addition, TestExplorer also exposed many handy commands, see the full list by searching for `testing` in  [vscode keyboard shortcuts editor](https://code.visualstudio.com/docs/getstarted/keybindings#_keyboard-shortcuts-editor). One can assign/change keyboard shortcut to any of these commands, see [vscode Key Bindings](https://code.visualstudio.com/docs/getstarted/keybindings) for more details.

@@ -2,7 +2,8 @@ import * as vscode from 'vscode';
 import { DebugFunction, JestSessionEvents, JestExtSessionContext } from '../JestExt';
 import { TestResultProvider } from '../TestResults';
 import { WorkspaceRoot, FolderData, TestData, TestDocumentRoot } from './test-item-data';
-import { JestTestProviderContext, JestTestRun } from './test-provider-helper';
+import { JestTestProviderContext } from './test-provider-context';
+import { JestTestRun } from './jest-test-run';
 
 export type TestItemDataType = WorkspaceRoot | FolderData | TestDocumentRoot | TestData;
 
