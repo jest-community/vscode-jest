@@ -8,29 +8,17 @@ import {
   SortedTestResults,
   TestResultProviderOptions,
 } from '../TestResults';
-import {
-  testIdString,
-  IdStringType,
-  escapeRegExp,
-  emptyTestStats,
-  getValidJestCommand,
-} from '../helpers';
+import { escapeRegExp, emptyTestStats, getValidJestCommand } from '../helpers';
 import { CoverageMapProvider, CoverageCodeLensProvider } from '../Coverage';
 import { updateDiagnostics, updateCurrentDiagnostics, resetDiagnostics } from '../diagnostics';
 import { DebugConfigurationProvider } from '../DebugConfigurationProvider';
-import { TestExplorerRunRequest, TestStats } from '../types';
+import { TestExplorerRunRequest, TestNamePattern, TestStats } from '../types';
 import { CoverageOverlay } from '../Coverage/CoverageOverlay';
 import { resultsWithoutAnsiEscapeSequence } from '../TestResults/TestResult';
 import { CoverageMapData } from 'istanbul-lib-coverage';
 import { Logging } from '../logging';
 import { createProcessSession, ProcessSession } from './process-session';
-import {
-  JestExtContext,
-  JestSessionEvents,
-  JestExtSessionContext,
-  JestRunEvent,
-  DebugTestIdentifier,
-} from './types';
+import { JestExtContext, JestSessionEvents, JestExtSessionContext, JestRunEvent } from './types';
 import { extensionName, SupportedLanguageIds } from '../appGlobals';
 import { createJestExtContext, getExtensionResourceSettings, prefixWorkspace } from './helper';
 import { PluginResourceSettings } from '../Settings';
@@ -44,10 +32,6 @@ import { ansiEsc, JestOutputTerminal } from './output-terminal';
 import { QuickFixActionType } from '../quick-fix';
 import { executableTerminalLinkProvider } from '../terminal-link-provider';
 import { outputManager } from '../output-manager';
-
-interface RunTestPickItem extends vscode.QuickPickItem {
-  id: DebugTestIdentifier;
-}
 
 interface JestCommandSettings {
   rootPath: string;
@@ -562,10 +546,8 @@ export class JestExt {
   //**  commands */
   public debugTests = async (
     document: vscode.TextDocument | string,
-    ...ids: DebugTestIdentifier[]
+    testNamePattern?: TestNamePattern
   ): Promise<void> => {
-    const idString = (type: IdStringType, id: DebugTestIdentifier): string =>
-      typeof id === 'string' ? id : testIdString(type, id);
     const getDebugConfig = (
       folder?: vscode.WorkspaceFolder
     ): vscode.DebugConfiguration | undefined => {
@@ -586,39 +568,10 @@ export class JestExt {
         }
       }
     };
-    const selectTest = async (
-      testIdentifiers: DebugTestIdentifier[]
-    ): Promise<DebugTestIdentifier | undefined> => {
-      const items: RunTestPickItem[] = testIdentifiers.map((id) => ({
-        label: idString('display-reverse', id),
-        id,
-      }));
-      const selected = await vscode.window.showQuickPick<RunTestPickItem>(items, {
-        placeHolder: 'Select a test to debug',
-      });
-
-      return selected?.id;
-    };
-    let testId: DebugTestIdentifier | undefined;
-    switch (ids.length) {
-      case 0:
-        //no testId, will run all tests in the file
-        break;
-      case 1:
-        testId = ids[0];
-        break;
-      default:
-        testId = await selectTest(ids);
-        // if nothing is selected, abort
-        if (!testId) {
-          return;
-        }
-        break;
-    }
 
     this.debugConfigurationProvider.prepareTestRun(
       typeof document === 'string' ? document : document.fileName,
-      testId ? escapeRegExp(idString('full-name', testId)) : '.*',
+      testNamePattern ? escapeRegExp(testNamePattern) : '.*',
       this.extContext.workspace
     );
 

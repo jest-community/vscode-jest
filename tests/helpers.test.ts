@@ -148,11 +148,15 @@ describe('ModuleHelpers', () => {
 
 describe('escapeRegExp', () => {
   it.each`
-    str                    | expected
-    ${'no special char'}   | ${'no special char'}
-    ${'with (a)'}          | ${'with \\(a\\)'}
-    ${'with {} and $sign'} | ${'with \\{\\} and \\$sign'}
-    ${'with []'}           | ${'with \\[\\]'}
+    str                                        | expected
+    ${'no special char'}                       | ${'no special char'}
+    ${'with (a)'}                              | ${'with \\(a\\)'}
+    ${'with {} and $sign'}                     | ${'with \\{\\} and \\$sign'}
+    ${'with []'}                               | ${'with \\[\\]'}
+    ${{ value: 'with []', exactMatch: true }}  | ${'with \\[\\]$'}
+    ${{ value: 'with []', exactMatch: false }} | ${'with \\[\\]'}
+    ${{ value: 'with []', isRegExp: true }}    | ${'with []'}
+    ${{ value: 'with []', isRegExp: false }}   | ${'with \\[\\]'}
   `('escapeRegExp: $str', ({ str, expected }) => {
     expect(escapeRegExp(str)).toEqual(expected);
   });

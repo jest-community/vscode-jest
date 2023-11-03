@@ -5,7 +5,7 @@ import { join, resolve, normalize, isAbsolute } from 'path';
 import { ExtensionContext } from 'vscode';
 
 import { TestIdentifier } from './TestResults';
-import { TestStats } from './types';
+import { StringPattern, TestStats } from './types';
 import { LoginShell } from 'jest-editor-support';
 import { WorkspaceManager } from './workspace-manager';
 
@@ -125,10 +125,22 @@ export const getDefaultJestCommand = (rootPath = ''): string | undefined => {
 };
 
 /**
- *  Taken From https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
+ * Escapes special characters in a string to be used as a regular expression pattern.
+ * @param str - The string to escape.
+ * @returns The escaped string.
+ *
+ * Note: the conversion algorithm is taken from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
  */
-export function escapeRegExp(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+export function escapeRegExp(str: string | StringPattern): string {
+  const sp: StringPattern = typeof str === 'string' ? { value: str } : str;
+  if (sp.isRegExp) {
+    return sp.value;
+  }
+  const escaped = sp.value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+  if (sp.exactMatch) {
+    return escaped + '$';
+  }
+  return escaped;
 }
 
 /**

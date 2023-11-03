@@ -13,12 +13,12 @@ import { JestTestProviderContext } from './test-provider-context';
 import { JestTestRun } from './jest-test-run';
 import { JestProcessInfo, JestProcessRequest } from '../JestProcessManagement';
 import { GENERIC_ERROR, LONG_RUNNING_TESTS, getExitErrorDef } from '../errors';
-import { JestExtOutput } from '../JestExt/output-terminal';
 import { tiContextManager } from './test-item-context-manager';
 import { toAbsoluteRootPath } from '../helpers';
 import { runModeDescription } from '../JestExt/run-mode';
 import { isVirtualWorkspaceFolder } from '../virtual-workspace-folder';
 import { outputManager } from '../output-manager';
+import { TestNamePattern } from '../types';
 
 interface JestRunnable {
   getJestRunRequest: () => JestExtRequestType;
@@ -370,6 +370,7 @@ export class WorkspaceRoot extends TestItemDataBase {
   /** return a valid run from event. if createIfMissing is true, then create a new one if none exist in the event **/
   private getJestRun(event: TypedRunEvent, createIfMissing: true): JestTestRun;
   private getJestRun(event: TypedRunEvent, createIfMissing?: false): JestTestRun | undefined;
+  // istanbul ignore next
   private getJestRun(event: TypedRunEvent, createIfMissing = false): JestTestRun | undefined {
     if (event.process.userData?.run) {
       return event.process.userData.run;
@@ -393,9 +394,6 @@ export class WorkspaceRoot extends TestItemDataBase {
       'new-line',
     ]);
   }
-  private writer(run?: JestTestRun): JestExtOutput {
-    return run ?? this.context.output;
-  }
   private onRunEvent = (event: JestRunEvent) => {
     if (event.process.request.type === 'not-test') {
       return;
@@ -412,7 +410,7 @@ export class WorkspaceRoot extends TestItemDataBase {
           const text = event.raw ?? event.text;
           if (text && text.length > 0) {
             const opt = event.isError ? 'error' : event.newLine ? 'new-line' : undefined;
-            this.writer(run).write(text, opt);
+            run.write(text, opt);
           }
           break;
         }
@@ -424,11 +422,11 @@ export class WorkspaceRoot extends TestItemDataBase {
         }
         case 'end': {
           if (event.error && !event.process.userData?.execError) {
-            this.writer(run).write(event.error, 'error');
+            run.write(event.error, 'error');
             event.process.userData = { ...(event.process.userData ?? {}), execError: true };
           }
           this.runLog('finished');
-          run?.end({ pid: event.process.id, delay: 30000, reason: 'process end' });
+          run.end({ pid: event.process.id, delay: 30000, reason: 'process end' });
           break;
         }
         case 'exit': {
@@ -448,7 +446,7 @@ export class WorkspaceRoot extends TestItemDataBase {
           break;
         }
         case 'long-run': {
-          this.writer(run).write(
+          run.write(
             `Long Running Tests Warning: Tests exceeds ${event.threshold}ms threshold. Please reference Troubleshooting if this is not expected`,
             LONG_RUNNING_TESTS
           );
@@ -505,12 +503,9 @@ const isAssertDataNode = (arg: ItemNodeType): arg is DataNode<TestAssertionStatu
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   isDataNode(arg) && (arg.data as any).fullName;
 
-const isEmpty = (node?: ItemNodeType): boolean => {
+const isContainerEmpty = (node?: ContainerNode<TestAssertionStatus>): boolean => {
   if (!node) {
     return true;
-  }
-  if (isDataNode(node)) {
-    return false;
   }
   if (
     (node.childData && node.childData.length > 0) ||
@@ -570,21 +565,12 @@ abstract class TestResultData extends TestItemDataBase {
     return parts.join('#');
   }
 
-  isSameId(id1: string, id2: string): boolean {
-    if (id1 === id2) {
-      return true;
-    }
-    // truncate the last "extra-id" added for duplicate test names before comparing
-    const truncateExtra = (id: string): string => id.replace(/(.*)(#[0-9]+$)/, '$1');
-    return truncateExtra(id1) === truncateExtra(id2);
-  }
-
+  /**
+   * Synchronizes the child nodes of the test item with the given ItemNodeType, recursively.
+   * @param node - The ItemNodeType to synchronize the child nodes with.
+   * @returns void
+   */
   syncChildNodes(node: ItemNodeType): void {
-    const testId = this.makeTestId(this.uri, node);
-    if (!this.isSameId(testId, this.item.id)) {
-      this.item.error = 'invalid node';
-      return;
-    }
     this.item.error = undefined;
 
     if (!isDataNode(node)) {
@@ -684,7 +670,7 @@ export class TestDocumentRoot extends TestResultData {
     // test file has syntax error or failed to run for whatever reason.
     // In this case we should mark the suite itself as TestExplorer won't be able to
     // aggregate from the children list
-    if (isEmpty(suiteResult?.assertionContainer)) {
+    if (isContainerEmpty(suiteResult?.assertionContainer)) {
       this.updateItemState(run, suiteResult);
     }
     this.forEachChild((child) => child.updateResultState(run));
@@ -736,17 +722,24 @@ export class TestData extends TestResultData implements Debuggable {
     return item;
   }
 
+  private getTestNamePattern(): TestNamePattern {
+    if (isDataNode(this.node)) {
+      return { value: this.node.fullName, exactMatch: true };
+    }
+    return { value: this.node.fullName, exactMatch: false };
+  }
+
   getJestRunRequest(itemCommand?: ItemCommand): JestExtRequestType {
     return {
       type: 'by-file-test-pattern',
       updateSnapshot: itemCommand === ItemCommand.updateSnapshot,
       testFileNamePattern: this.uri.fsPath,
-      testNamePattern: this.node.fullName,
+      testNamePattern: this.getTestNamePattern(),
     };
   }
 
   getDebugInfo(): ReturnType<Debuggable['getDebugInfo']> {
-    return { fileName: this.uri.fsPath, testNamePattern: this.node.fullName };
+    return { fileName: this.uri.fsPath, testNamePattern: this.getTestNamePattern() };
   }
   private updateItemRange(): void {
     if (this.node.attrs.range) {

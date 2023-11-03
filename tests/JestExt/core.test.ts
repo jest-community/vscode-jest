@@ -41,7 +41,7 @@ import { createProcessSession } from '../../src/JestExt/process-session';
 import { updateCurrentDiagnostics, updateDiagnostics } from '../../src/diagnostics';
 import { CoverageMapProvider } from '../../src/Coverage';
 import * as helper from '../../src/helpers';
-import { TestIdentifier, resultsWithLowerCaseWindowsDriveLetters } from '../../src/TestResults';
+import { resultsWithLowerCaseWindowsDriveLetters } from '../../src/TestResults';
 import * as messaging from '../../src/messaging';
 import { PluginResourceSettings } from '../../src/Settings';
 import * as extHelper from '../../src/JestExt/helper';
@@ -164,10 +164,6 @@ describe('JestExt', () => {
   });
 
   describe('debugTests()', () => {
-    const makeIdentifier = (title: string, ancestors?: string[]): TestIdentifier => ({
-      title,
-      ancestorTitles: ancestors || [],
-    });
     const fileName = 'fileName';
     const document: any = { fileName };
     let sut: JestExt;
@@ -314,140 +310,19 @@ describe('JestExt', () => {
           testNamePattern,
           workspaceFolder
         );
+        expect(mockHelpers.escapeRegExp).toHaveBeenCalledWith(testNamePattern);
       });
     });
-    it('can handle testIdentifier argument', async () => {
-      const tId = makeIdentifier('test-1', ['d-1', 'd-1-1']);
-      const fullName = 'd-1 d-1-1 test-1';
-      mockHelpers.testIdString.mockReturnValue(fullName);
-      await sut.debugTests(document, tId);
-      expect(vscode.debug.startDebugging).toHaveBeenCalledWith(
-        workspaceFolder,
-        debugConfiguration2
-      );
-      const configuration = startDebugging.mock.calls[startDebugging.mock.calls.length - 1][1];
-      expect(configuration).toBeDefined();
-      // test identifier is cleaned up before debug
-      expect(mockHelpers.testIdString).toHaveBeenCalledWith('full-name', tId);
+    it('if pass zero testNamePattern, all tests will be run', async () => {
+      await sut.debugTests(document);
+      expect(mockShowQuickPick).not.toHaveBeenCalled();
+      expect(mockHelpers.testIdString).not.toHaveBeenCalled();
       expect(sut.debugConfigurationProvider.prepareTestRun).toHaveBeenCalledWith(
-        fileName,
-        fullName,
+        document.fileName,
+        '.*',
         workspaceFolder
       );
-    });
-    it.each`
-      desc                      | testIds                                | testIdStringCount | startDebug
-      ${'no id'}                | ${undefined}                           | ${0}              | ${true}
-      ${'empty id'}             | ${[]}                                  | ${0}              | ${true}
-      ${'1 string id '}         | ${['test-1']}                          | ${0}              | ${true}
-      ${'1 testIdentifier id '} | ${[makeIdentifier('test-1', ['d-1'])]} | ${1}              | ${true}
-    `('no selection needed: $desc', async ({ testIds, testIdStringCount, startDebug }) => {
-      if (testIds) {
-        await sut.debugTests(document, ...testIds);
-      } else {
-        await sut.debugTests(document);
-      }
-      expect(mockShowQuickPick).not.toHaveBeenCalled();
-      expect(mockHelpers.testIdString).toHaveBeenCalledTimes(testIdStringCount);
-      if (testIdStringCount >= 1) {
-        expect(mockHelpers.testIdString).toHaveBeenLastCalledWith('full-name', testIds[0]);
-        expect(mockHelpers.escapeRegExp).toHaveBeenCalled();
-      }
-      if (startDebug) {
-        expect(vscode.debug.startDebugging).toHaveBeenCalledWith(
-          workspaceFolder,
-          debugConfiguration2
-        );
-        const configuration = startDebugging.mock.calls[startDebugging.mock.calls.length - 1][1];
-        expect(configuration).toBeDefined();
-        if (testIds?.length === 1) {
-          expect(sut.debugConfigurationProvider.prepareTestRun).toHaveBeenCalledWith(
-            document.fileName,
-            testIds[0],
-            workspaceFolder
-          );
-        } else {
-          expect(sut.debugConfigurationProvider.prepareTestRun).toHaveBeenCalledWith(
-            document.fileName,
-            '.*',
-            workspaceFolder
-          );
-        }
-        expect(sut.debugConfigurationProvider.prepareTestRun).toHaveBeenCalled();
-      } else {
-        expect(sut.debugConfigurationProvider.prepareTestRun).not.toHaveBeenCalled();
-        expect(vscode.debug.startDebugging).not.toHaveBeenCalled();
-      }
-    });
-    describe('parameterized test', () => {
-      describe.each`
-        desc                 | tId1                                 | tId2                                 | tId3                                 | selectIdx
-        ${'testIdentifiers'} | ${makeIdentifier('test-1', ['d-1'])} | ${makeIdentifier('test-2', ['d-1'])} | ${makeIdentifier('test-3', ['d-1'])} | ${0}
-        ${'string ids'}      | ${'d-1 test-1'}                      | ${'d-1 test-2'}                      | ${'d-1 test-3'}                      | ${2}
-        ${'mixed ids'}       | ${'d-1 test-1'}                      | ${makeIdentifier('test-2', ['d-1'])} | ${'d-1 test-3'}                      | ${1}
-      `('with $desc', ({ tId1, tId2, tId3, selectIdx }) => {
-        let identifierIdCount = 0;
-        beforeEach(() => {
-          mockShowQuickPick.mockImplementation((items) => Promise.resolve(items[selectIdx]));
-          identifierIdCount = [tId1, tId2, tId3].filter((id) => typeof id !== 'string').length;
-        });
-        it('can run selected test', async () => {
-          // user choose the 2nd test: tId2
-          await sut.debugTests(document, tId1, tId2, tId3);
-          // user has made selection to choose from 3 candidates
-          expect(mockShowQuickPick).toHaveBeenCalledTimes(1);
-          const [items] = mockShowQuickPick.mock.calls[0];
-          expect(items).toHaveLength(3);
-          const hasIds = () => {
-            // id string is called 4 times: 3 to construct the quickPickItems, the last one is for jest test fullName
-            expect(mockHelpers.testIdString).toHaveBeenCalledTimes(identifierIdCount + 1);
-            const calls = mockHelpers.testIdString.mock.calls;
-            expect(
-              calls.slice(0, identifierIdCount).every((c) => c[0] === 'display-reverse')
-            ).toBeTruthy();
-            expect(calls[calls.length - 1][0]).toEqual('full-name');
-          };
-          const hasNoId = () => {
-            expect(mockHelpers.testIdString).toHaveBeenCalledTimes(0);
-          };
-          if (identifierIdCount) {
-            hasIds();
-          } else {
-            hasNoId();
-          }
-          const selected = [tId1, tId2, tId3][selectIdx];
-          expect(mockHelpers.escapeRegExp).toHaveBeenCalledWith(selected);
-          // verify the actual test to be run is the one we selected: tId2
-          expect(vscode.debug.startDebugging).toHaveBeenCalledWith(
-            workspaceFolder,
-            debugConfiguration2
-          );
-          const configuration = startDebugging.mock.calls[startDebugging.mock.calls.length - 1][1];
-          expect(configuration).toBeDefined();
-          expect(sut.debugConfigurationProvider.prepareTestRun).toHaveBeenCalledWith(
-            fileName,
-            selected,
-            workspaceFolder
-          );
-        });
-        it('if user did not choose any test, no debug will be run', async () => {
-          selectIdx = -1;
-          await sut.debugTests(document, tId1, tId2, tId3);
-          expect(mockShowQuickPick).toHaveBeenCalledTimes(1);
-          expect(vscode.debug.startDebugging).not.toHaveBeenCalled();
-        });
-        it('if pass zero testId, all tests will be run', async () => {
-          await sut.debugTests(document);
-          expect(mockShowQuickPick).not.toHaveBeenCalled();
-          expect(mockHelpers.testIdString).not.toHaveBeenCalled();
-          expect(sut.debugConfigurationProvider.prepareTestRun).toHaveBeenCalledWith(
-            document.fileName,
-            '.*',
-            workspaceFolder
-          );
-          expect(vscode.debug.startDebugging).toHaveBeenCalled();
-        });
-      });
+      expect(vscode.debug.startDebugging).toHaveBeenCalled();
     });
   });
 

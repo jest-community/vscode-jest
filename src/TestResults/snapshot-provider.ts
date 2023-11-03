@@ -50,7 +50,7 @@ export class SnapshotProvider {
   public async previewSnapshot(testPath: string, testFullName: string): Promise<void> {
     const content = await this.snapshotSupport.getSnapshotContent(
       testPath,
-      new RegExp(`^${escapeRegExp(testFullName)} [0-9]+$`)
+      new RegExp(`^${escapeRegExp({ value: testFullName, exactMatch: false })} [0-9]+$`)
     );
     const noSnapshotFound = (): void => {
       vscode.window.showErrorMessage('no snapshot is found, please run test to generate first');
