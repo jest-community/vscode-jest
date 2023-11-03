@@ -732,20 +732,38 @@ describe('test-item-data', () => {
             expect.anything()
           );
         });
-        it('TestData runs the specific test pattern', () => {
-          const uri: any = { fsPath: '/ws-1/a.test.ts' };
-          const node: any = { fullName: 'a test', attrs: {}, data: {} };
-          const parent: any = controllerMock.createTestItem('ws-1', 'ws-1', uri);
-          const tData = new TestData(context, uri, node, parent);
-          const jestRun = createTestRun();
-          tData.scheduleTest(jestRun);
-          expect(context.ext.session.scheduleProcess).toHaveBeenCalledWith(
-            expect.objectContaining({
-              type: 'by-file-test-pattern',
-              testFileNamePattern: uri.fsPath,
-              testNamePattern: 'a test',
-            }),
-            expect.anything()
+        describe('testNamePattern differ between describe and test', () => {
+          it.each`
+            isDescribeBlock | exactMatch
+            ${true}         | ${false}
+            ${false}        | ${true}
+          `(
+            'isDescribeBlock=$isDescribeBlock, exactMatch=$exactMatch',
+            ({ isDescribeBlock, exactMatch }) => {
+              const uri: any = { fsPath: '/ws-1/a.test.ts' };
+
+              const node: any = isDescribeBlock
+                ? {
+                    fullName: 'a test',
+                    attrs: {},
+                    childContainers: [],
+                    childData: [],
+                  }
+                : { fullName: 'a test', attrs: {}, data: {} };
+
+              const parent: any = controllerMock.createTestItem('ws-1', 'ws-1', uri);
+              const tData = new TestData(context, uri, node, parent);
+              const jestRun = createTestRun();
+              tData.scheduleTest(jestRun);
+              expect(context.ext.session.scheduleProcess).toHaveBeenCalledWith(
+                expect.objectContaining({
+                  type: 'by-file-test-pattern',
+                  testFileNamePattern: uri.fsPath,
+                  testNamePattern: { value: 'a test', exactMatch },
+                }),
+                expect.anything()
+              );
+            }
           );
         });
       });
@@ -767,23 +785,37 @@ describe('test-item-data', () => {
         expect(process.userData.run).toBe(jestRun);
         expect(process.userData.testItem).toBe(folderData.item);
       });
-      it('if test name is not resolved, it will execute the resolved parent test block', () => {
-        const { doc } = createAllTestItems();
-        const descNode: any = {
-          fullName: 'a $describe',
-          attrs: { nonLiteralName: true },
-          data: {},
-        };
-        const testNode: any = { fullName: 'a test', attrs: { isGroup: 'yes' }, data: {} };
-        const descItem = new TestData(context, doc.uri, descNode, doc.item);
-        const testItem = new TestData(context, doc.uri, testNode, descItem.item);
-        const jestRun = createTestRun();
+      describe('if test name is not resolved', () => {
+        it('if there is a parent block => will execute it instead', () => {
+          const { doc } = createAllTestItems();
+          const descNode: any = {
+            fullName: 'a $describe',
+            attrs: { nonLiteralName: true },
+            data: {},
+          };
+          const testNode: any = { fullName: 'a test', attrs: { isGroup: 'yes' }, data: {} };
+          const descItem = new TestData(context, doc.uri, descNode, doc.item);
+          const testItem = new TestData(context, doc.uri, testNode, descItem.item);
+          const jestRun = createTestRun();
 
-        testItem.scheduleTest(jestRun);
-        // const process: any = context.ext.session.scheduleProcess.mock.results[0].value;
-        expect(process.userData.run).toBe(jestRun);
-        expect(process.userData.testItem.id).toBe(doc.item.id);
-        // try
+          testItem.scheduleTest(jestRun);
+          expect(process.userData.run).toBe(jestRun);
+          expect(process.userData.testItem.id).toBe(doc.item.id);
+        });
+        it('if failed to get parent block, will attempt to run the test anyway', () => {
+          const { doc } = createAllTestItems();
+
+          const testNode: any = { fullName: 'a $test', attrs: { nonLiteralName: true }, data: {} };
+          const testItem = new TestData(context, doc.uri, testNode, doc.item);
+          const jestRun = createTestRun();
+
+          // simulate no parent block
+          context.getData = jest.fn().mockReturnValueOnce(undefined);
+
+          testItem.scheduleTest(jestRun);
+          expect(process.userData.run).toBe(jestRun);
+          expect(process.userData.testItem.id).toBe(testItem.item.id);
+        });
       });
       describe('can update snapshot based on runProfile', () => {
         let wsRoot, folder, doc, testItem;
@@ -1161,7 +1193,7 @@ describe('test-item-data', () => {
     it('TestData returns file and test info', () => {
       const debugInfo = test.getDebugInfo();
       expect(debugInfo.fileName).toEqual(test.item.uri.fsPath);
-      expect(debugInfo.testNamePattern).toEqual('a test');
+      expect(debugInfo.testNamePattern).toEqual({ value: 'a test', exactMatch: true });
     });
     it('TestDocumentRoot returns only file info', () => {
       const debugInfo = doc.getDebugInfo();
@@ -1292,6 +1324,15 @@ describe('test-item-data', () => {
               );
               // end will be called again
               expect(process.userData.run.end).toHaveBeenCalledTimes(2);
+            });
+            it('if process has no testItem, will not do anything', () => {
+              env.scheduleItem(itemType);
+              mockedJestTestRun.mockClear();
+
+              process.userData.run = createTestRun();
+              process.userData.testItem = undefined;
+              env.onRunEvent({ type: 'start', process });
+              expect(process.userData.run.started).not.toHaveBeenCalled();
             });
           });
         });

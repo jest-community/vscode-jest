@@ -4,6 +4,7 @@ import { TestResultProvider } from '../TestResults';
 import { WorkspaceRoot, FolderData, TestData, TestDocumentRoot } from './test-item-data';
 import { JestTestProviderContext } from './test-provider-context';
 import { JestTestRun } from './jest-test-run';
+import { TestNamePattern } from '../types';
 
 export type TestItemDataType = WorkspaceRoot | FolderData | TestDocumentRoot | TestData;
 
@@ -24,7 +25,7 @@ export interface TestItemData {
 }
 
 export interface Debuggable {
-  getDebugInfo: () => { fileName: string; testNamePattern?: string };
+  getDebugInfo: () => { fileName: string; testNamePattern?: TestNamePattern };
 }
 
 export enum TestTagId {

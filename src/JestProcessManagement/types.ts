@@ -3,6 +3,7 @@ import { RunnerEvent } from 'jest-editor-support';
 import { JestTestProcessType } from '../Settings';
 import { JestProcess } from './JestProcess';
 import { JestTestRun } from '../test-provider/jest-test-run';
+import { TestNamePattern } from '../types';
 
 export interface JestProcessListener {
   onEvent: (process: JestProcess, event: RunnerEvent, ...args: unknown[]) => unknown;
@@ -71,7 +72,7 @@ export type JestProcessRequestSimple =
   | {
       type: Extract<JestTestProcessType, 'by-file-test'>;
       testFileName: string;
-      testNamePattern: string;
+      testNamePattern: TestNamePattern;
       updateSnapshot?: boolean;
     }
   | {
@@ -82,7 +83,7 @@ export type JestProcessRequestSimple =
   | {
       type: Extract<JestTestProcessType, 'by-file-test-pattern'>;
       testFileNamePattern: string;
-      testNamePattern: string;
+      testNamePattern: TestNamePattern;
       updateSnapshot?: boolean;
     }
   | {

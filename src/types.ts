@@ -15,3 +15,11 @@ export interface TestExplorerRunRequest {
   request: vscode.TestRunRequest;
   token: vscode.CancellationToken;
 }
+
+export interface StringPattern {
+  value: string;
+  exactMatch?: boolean;
+  isRegExp?: boolean;
+}
+
+export type TestNamePattern = StringPattern | string;
