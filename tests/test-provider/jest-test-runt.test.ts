@@ -13,6 +13,7 @@ describe('JestTestRun', () => {
   let mockContext: any;
   let jestRun: JestTestRun;
   let mockCreateTestRun: any;
+  let mockRequest: any;
 
   beforeEach(() => {
     mockContext = {
@@ -27,19 +28,22 @@ describe('JestTestRun', () => {
         },
       },
     };
-    mockCreateTestRun = jest.fn().mockImplementation((name: string) => ({
-      name,
-      appendOutput: jest.fn(),
-      enqueued: jest.fn(),
-      started: jest.fn(),
-      errored: jest.fn(),
-      failed: jest.fn(),
-      passed: jest.fn(),
-      skipped: jest.fn(),
-      end: jest.fn(),
-    }));
+    mockCreateTestRun = jest
+      .fn()
+      .mockImplementation((_request: vscode.TestRunRequest, name: string) => ({
+        name,
+        appendOutput: jest.fn(),
+        enqueued: jest.fn(),
+        started: jest.fn(),
+        errored: jest.fn(),
+        failed: jest.fn(),
+        passed: jest.fn(),
+        skipped: jest.fn(),
+        end: jest.fn(),
+      }));
 
-    jestRun = new JestTestRun('test', mockContext, mockCreateTestRun);
+    mockRequest = {};
+    jestRun = new JestTestRun('test', mockContext, mockRequest, mockCreateTestRun);
   });
 
   describe('constructor', () => {
@@ -229,7 +233,7 @@ describe('JestTestRun', () => {
         const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
         mockContext.ext.settings.debugMode = true;
 
-        jestRun = new JestTestRun('test', mockContext, mockCreateTestRun);
+        jestRun = new JestTestRun('test', mockContext, mockRequest, mockCreateTestRun);
         jestRun.addProcess(pid);
         expect(mockCreateTestRun).toHaveBeenCalledTimes(0);
 
@@ -294,7 +298,7 @@ describe('JestTestRun', () => {
           const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
           mockContext.ext.settings.debugMode = true;
 
-          jestRun = new JestTestRun('test', mockContext, mockCreateTestRun);
+          jestRun = new JestTestRun('test', mockContext, mockRequest, mockCreateTestRun);
           jestRun.addProcess(pid);
           expect(mockCreateTestRun).toHaveBeenCalledTimes(0);
 
@@ -313,7 +317,7 @@ describe('JestTestRun', () => {
   it('print warning for runs re-created after close: this means the test-run will be splitted into multiple TestRun', () => {
     mockContext.ext.settings.debugMode = true;
 
-    jestRun = new JestTestRun('test', mockContext, mockCreateTestRun);
+    jestRun = new JestTestRun('test', mockContext, mockRequest, mockCreateTestRun);
 
     jestRun.started({} as any);
     expect(mockCreateTestRun).toHaveBeenCalledTimes(1);
@@ -331,5 +335,37 @@ describe('JestTestRun', () => {
     expect(mockCreateTestRun).toHaveBeenCalledTimes(2);
     const run2 = mockCreateTestRun.mock.results[1].value;
     expect(run1).not.toBe(run2);
+  });
+  describe('multi-items run', () => {
+    it('ignore skipped tests if there are more than one test to run', () => {
+      mockRequest = { include: ['test1', 'test2'] };
+      jestRun = new JestTestRun('test', mockContext, mockRequest, mockCreateTestRun);
+
+      jestRun.started({} as any);
+      expect(mockCreateTestRun).toHaveBeenCalledTimes(1);
+      const run = mockCreateTestRun.mock.results[0].value;
+      expect(run.started).toHaveBeenCalled();
+
+      jestRun.skipped({} as any);
+      expect(run.skipped).not.toHaveBeenCalled();
+    });
+  });
+  describe('when request changed', () => {
+    it('the next createTestRnn will use the new request', () => {
+      jestRun = new JestTestRun('test', mockContext, mockRequest, mockCreateTestRun);
+      jestRun.started({} as any);
+      expect(mockCreateTestRun).toHaveBeenCalledTimes(1);
+      const run1 = mockCreateTestRun.mock.results[0].value;
+      expect(run1.started).toHaveBeenCalled();
+
+      jestRun.end();
+      expect(run1.end).toHaveBeenCalled();
+
+      const newRequest: any = { include: ['test1'] };
+      jestRun.updateRequest(newRequest);
+      jestRun.started({} as any);
+      expect(mockCreateTestRun).toHaveBeenCalledTimes(2);
+      expect(mockCreateTestRun.mock.calls[1][0]).toBe(newRequest);
+    });
   });
 });

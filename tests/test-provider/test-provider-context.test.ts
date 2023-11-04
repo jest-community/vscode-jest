@@ -28,13 +28,13 @@ describe('JestTestProviderContext', () => {
     const jestRun = context.createTestRun(request, { name: 'test-run' });
 
     expect(jestRun).toBe(mockJestRun);
-    expect(JestTestRun).toHaveBeenCalledWith('test-run', context, expect.anything());
+    expect(JestTestRun).toHaveBeenCalledWith('test-run', context, request, expect.anything());
     // no vscode run should be created yet
     expect(mockController.createTestRun).not.toHaveBeenCalled();
 
     // vscode run will be created through the factory function
-    const factory = (JestTestRun as jest.Mocked<any>).mock.calls[0][2];
-    const run = factory('new-test-run');
+    const factory = (JestTestRun as jest.Mocked<any>).mock.calls[0][3];
+    const run = factory(request, 'new-test-run');
 
     expect(mockController.createTestRun).toHaveBeenCalledWith(request, 'new-test-run');
     expect(run).toBe(mockRun);

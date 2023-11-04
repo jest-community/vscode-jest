@@ -84,13 +84,7 @@ export class JestTestProviderContext {
 
   createTestRun = (request: vscode.TestRunRequest, options?: JestTestRunOptions): JestTestRun => {
     const name = options?.name ?? `testRun-${SEQ++}`;
-    const createRun = (name: string) => {
-      const vscodeRun = this.controller.createTestRun(request, name);
-      vscodeRun.appendOutput(`\r\nTestRun "${name}" started\r\n`);
-      return vscodeRun;
-    };
-
-    return new JestTestRun(name, this, createRun);
+    return new JestTestRun(name, this, request, this.controller.createTestRun);
   };
 
   // tags

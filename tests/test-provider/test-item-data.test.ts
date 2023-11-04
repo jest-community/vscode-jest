@@ -786,12 +786,13 @@ describe('test-item-data', () => {
         expect(process.userData.testItem).toBe(folderData.item);
       });
       describe('if test name is not resolved', () => {
-        it('if there is a parent block => will execute it instead', () => {
+        it('will find the parent block that is resolved to execute instead', () => {
           const { doc } = createAllTestItems();
           const descNode: any = {
             fullName: 'a $describe',
             attrs: { nonLiteralName: true },
-            data: {},
+            childContainers: [],
+            childData: [],
           };
           const testNode: any = { fullName: 'a test', attrs: { isGroup: 'yes' }, data: {} };
           const descItem = new TestData(context, doc.uri, descNode, doc.item);
@@ -799,8 +800,13 @@ describe('test-item-data', () => {
           const jestRun = createTestRun();
 
           testItem.scheduleTest(jestRun);
+
           expect(process.userData.run).toBe(jestRun);
           expect(process.userData.testItem.id).toBe(doc.item.id);
+
+          expect(jestRun.end).toHaveBeenCalledTimes(2);
+          expect(jestRun.updateRequest).toHaveBeenCalledTimes(2);
+          expect(vscode.TestRunRequest).toHaveBeenLastCalledWith([doc.item]);
         });
         it('if failed to get parent block, will attempt to run the test anyway', () => {
           const { doc } = createAllTestItems();

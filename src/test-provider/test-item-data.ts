@@ -64,6 +64,8 @@ abstract class TestItemDataBase implements TestItemData, JestRunnable, WithUri {
     if (!this.isTestNameResolved()) {
       const parent = this.item.parent && this.context.getData(this.item.parent);
       if (parent) {
+        run.end({ reason: 'unresolved parameterized test' });
+        run.updateRequest(new vscode.TestRunRequest([parent.item]));
         return parent.scheduleTest(run, itemCommand);
       }
       this.context.output.write(`running an unresolved parameterized test might fail`, 'warn');
