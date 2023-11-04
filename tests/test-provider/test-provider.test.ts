@@ -115,7 +115,7 @@ describe('JestTestProvider', () => {
 
   describe('can discover tests', () => {
     it('test mockedJestTestRun', () => {
-      const jestRun = new JestTestRun('jest-run', {} as any, (() => {}) as any);
+      const jestRun = new JestTestRun('jest-run', {} as any, {} as any, (() => {}) as any);
       expect(jestRun.name).toBe('jest-run');
     });
     it('should only discover items with canResolveChildren = true', () => {

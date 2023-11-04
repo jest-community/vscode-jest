@@ -24,6 +24,7 @@ jest.mock('../src/test-provider/jest-test-run', () => {
         write: jest.fn(),
         addProcess: jest.fn(),
         isClosed: jest.fn(() => false),
+        updateRequest: jest.fn(),
       };
     }),
   };

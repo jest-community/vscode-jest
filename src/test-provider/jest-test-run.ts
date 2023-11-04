@@ -7,7 +7,7 @@ export type TestRunProtocol = Pick<
   'name' | 'enqueued' | 'started' | 'errored' | 'failed' | 'passed' | 'skipped' | 'end'
 >;
 
-export type CreateRun = (name: string) => vscode.TestRun;
+export type CreateTestRun = (request: vscode.TestRunRequest, name: string) => vscode.TestRun;
 export type EndProcessOption = { pid: string; delay?: number; reason?: string };
 export type EndOption = EndProcessOption | { reason: string };
 const isEndProcessOption = (arg?: EndOption): arg is EndProcessOption =>
@@ -27,11 +27,13 @@ export class JestTestRun implements JestExtOutput, TestRunProtocol {
   private verbose: boolean;
   private runCount = 0;
   public readonly name: string;
+  private ignoreSkipped = false;
 
   constructor(
     name: string,
     private context: JestTestProviderContext,
-    private createRun: CreateRun
+    private request: vscode.TestRunRequest,
+    private createRun: CreateTestRun
   ) {
     this.name = `${this.context.ext.workspace.name}:${name}:${SEQ++}`;
     this.output = context.output;
@@ -54,13 +56,19 @@ export class JestTestRun implements JestExtOutput, TestRunProtocol {
     }
   }
   /**
-   * returns the underlying vscode.TestRun, if existing.
-   * If no run then create one with this.createRun and return it.
+   * returns the underlying vscode.TestRun, if no run then create one.
    **/
-  private safeRun(): vscode.TestRun {
+  private vscodeRun(): vscode.TestRun {
     if (!this._run) {
       const runName = `${this.name} (${this.runCount++})`;
-      this._run = this.createRun(runName);
+
+      this._run = this.createRun(this.request, runName);
+      this._run.appendOutput(`\r\nTestRun "${runName}" started\r\n`);
+
+      // ignore skipped tests if there are more than one test to run
+      // this is to prevent the later runs override the previous runs's result
+      this.ignoreSkipped = this.request.include && this.request.include.length > 1 ? true : false;
+
       if (this.verbose) {
         console.log(`[${this.context.ext.workspace.name}] JestTestRun "${runName}": created.`);
       }
@@ -70,10 +78,10 @@ export class JestTestRun implements JestExtOutput, TestRunProtocol {
 
   // TestRunProtocol
   public enqueued = (test: vscode.TestItem): void => {
-    this.safeRun().enqueued(test);
+    this.vscodeRun().enqueued(test);
   };
   public started = (test: vscode.TestItem): void => {
-    this.safeRun().started(test);
+    this.vscodeRun().started(test);
   };
   public errored = (
     test: vscode.TestItem,
@@ -81,7 +89,7 @@ export class JestTestRun implements JestExtOutput, TestRunProtocol {
     duration?: number | undefined
   ): void => {
     const _msg = this.context.ext.settings.runMode.config.showInlineError ? message : [];
-    this.safeRun().errored(test, _msg, duration);
+    this.vscodeRun().errored(test, _msg, duration);
   };
   public failed = (
     test: vscode.TestItem,
@@ -89,13 +97,15 @@ export class JestTestRun implements JestExtOutput, TestRunProtocol {
     duration?: number | undefined
   ): void => {
     const _msg = this.context.ext.settings.runMode.config.showInlineError ? message : [];
-    this.safeRun().failed(test, _msg, duration);
+    this.vscodeRun().failed(test, _msg, duration);
   };
   public passed = (test: vscode.TestItem, duration?: number | undefined): void => {
-    this.safeRun().passed(test, duration);
+    this.vscodeRun().passed(test, duration);
   };
   public skipped = (test: vscode.TestItem): void => {
-    this.safeRun().skipped(test);
+    if (!this.ignoreSkipped) {
+      this.vscodeRun().skipped(test);
+    }
   };
   public end = (options?: EndOption): void => {
     if (!this._run) {
@@ -144,4 +154,8 @@ export class JestTestRun implements JestExtOutput, TestRunProtocol {
       console.log(`JestTestRun "${runName}": TestRun ended because: ${options?.reason}.`);
     }
   };
+  // set request for next time the underlying run needed to be created
+  updateRequest(request: vscode.TestRunRequest): void {
+    this.request = request;
+  }
 }
