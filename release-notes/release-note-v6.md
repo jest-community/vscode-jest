@@ -2,9 +2,22 @@
 
 Release Notes
 ---
+
 - [Release Notes](#release-notes)
-- [v6.0.0 (pre-release)](#v600-pre-release)
+- [v6.1.0 (pre-release)](#v610-pre-release)
   - [Main Features](#main-features)
+    - [1. Enhanced Test Execution Control with "runMode"](#1-enhanced-test-execution-control-with-runmode)
+      - [1.1 The "deferred" mode](#11-the-deferred-mode)
+      - [1.2 Configuration and Examples](#12-configuration-and-examples)
+      - [1.3 Deprecations and Migrations](#13-deprecations-and-migrations)
+    - [2. Support VSCode "TEST RESULTS" Panel with "jest.outputConfig"](#2-support-vscode-test-results-panel-with-jestoutputconfig)
+      - [2.1 "TEST RESULTS" Panel Integration](#21-test-results-panel-integration)
+      - [2.2 Configuration and Examples](#22-configuration-and-examples)
+      - [2.3 Deprecations and Migration](#23-deprecations-and-migration)
+  - [Bug Fixes](#bug-fixes)
+  - [Technical Debt](#technical-debt)
+- [v6.0.0 (pre-release)](#v600-pre-release)
+  - [Main Features](#main-features-1)
     - [1. Virtual Folders](#1-virtual-folders)
     - [2. Support spawning jest with dashed arguments](#2-support-spawning-jest-with-dashed-arguments)
     - [3. control extension activation within each folder](#3-control-extension-activation-within-each-folder)
@@ -13,6 +26,134 @@ Release Notes
   - [CHANGELOG](#changelog)
 
 ---
+
+## v6.1.0 (pre-release)
+
+This release introduces a more streamlined ["jest.runMode"](https://github.com/jest-community/vscode-jest#runmode) setting to boost test execution efficiency, coupled with the integration of the "TEST RESULTS" panel via the new ["jest.outputConfig"](https://github.com/jest-community/vscode-jest#outputconfig) for a consistent test results display. These enhancements should simplify the transition for newcomers and also improve startup times for larger projects, while offering more control over test output visibility.
+
+While we aim for backward compatibility, the nature of the advancements may not align seamlessly with all existing configurations. Users are advised to refer to the Migration Guide provided for each feature to ensure a smooth transition.
+
+As with any pre-release, your feedback is invaluable to us. If you encounter any unexpected behavior or have suggestions for improvement, do not hesitate to report it [here](https://github.com/jest-community/vscode-jest/issues).
+
+
+### Main Features
+#### 1. Enhanced Test Execution Control with "runMode"
+
+https://github.com/jest-community/vscode-jest/assets/891093/9bd4e414-b7aa-43f1-bc89-ffaf30959fe0
+
+Replacing `jest.autoRun` and related settings, the new `runMode` configuration simplifies the test execution process, resolves confusion for newcomers, and introduces more efficient workflows with modes like "deferred."
+
+##### 1.1 The "deferred" mode
+The "deferred" mode addresses startup performance, particularly for large projects, by postponing preparation tasks until the first test run or until the user disables deferred mode.
+
+##### 1.2 Configuration and Examples
+`"jest.runMode"` offers flexible configurations, allowing for both predefined modes and detailed customization. Here are some configuration examples:
+```json
+// for "on-demand" runMode
+{
+  "jest.runMode": "on-demand"
+}
+
+// for "on-demand" and deferred: the most light-weight startup 
+{
+  "jest.runMode": {
+    "type": "on-demand",
+    "deferred": true 
+  }
+}
+
+// watch mode with coverage and startup full run: the most complete setup
+{
+  "jest.runMode": {
+    "type": "watch",
+    "runAllTestsOnStartup": true,
+    "coverage": true
+  }
+}
+
+// on-save mode for test file only and show inline error
+{
+  "jest.runMode": {
+    "type": "on-save",
+    "testFileOnly": true,
+    "showInlineError": true
+  }
+}
+```
+Detailed explanations and more examples are available in the [RunMode](https://github.com/jest-community/vscode-jest#runmode).
+
+##### 1.3 Deprecations and Migrations
+The following settings have been consolidated into `runMode` and will be removed in the future release: 
+
+- "jest.autoRun"
+- "jest.showCoverageOnLoad"
+- "TestExplorer"
+
+For a smooth transition, users should migrate to the new `runMode`` setting. Assistance with migration is provided by the `"Jest: Save Current RunMode"`` command in the command palette. Complete migration steps can be found in the [RunMode Migration Guide](https://github.com/jest-community/vscode-jest#runmode-migration).
+
+#### 2. Support VSCode "TEST RESULTS" Panel with "jest.outputConfig"
+
+https://github.com/jest-community/vscode-jest/assets/891093/6b2fa5b6-8790-493a-803a-4cddbce05ccd
+
+The extension now supports the display of test results in VSCode's "TEST RESULTS" panel, complementing the traditional output in the integrated TERMINAL, through a new `"jest.outputConfig"` setting. This allows for a simple and consistent control over both panels.
+
+##### 2.1 "TEST RESULTS" Panel Integration
+
+The VSCode "TEST RESULTS" panel is controlled by a native `"testing.openTesting"` setting, which might not align with the extension's settings. To avoid conflicts, you may set `"testing.openTesting"` to `"neverOpen"` if you prefer this extension to handle the panel behavior through the new `"jest.outputConfig"` setting. More detailed explanation can be found in the [Handling Conflict](https://github.com/jest-community/vscode-jest#outputconfig-conflict) section.
+
+##### 2.2 Configuration and Examples
+
+We've introduced the `"jest.outputConfig"` setting to give users comprehensive control over the test output behavior across TERMINAL and TEST RESULTS panels, moving to a workspace-level setting for broader applicability.
+
+Here are a few scenarios and how to configure them:
+
+```json
+// Minimal interaction, suitable for watch/on-save modes
+{
+  "testing.openTesting": "neverOpen",
+  "jest.outputConfig": "neutral"
+}
+
+// Auto-focus on "TEST RESULTS" when errors occur, ideal for on-demand testing
+{
+  "testing.openTesting": "neverOpen",
+  "jest.outputConfig": {
+    "revealOn": "error",
+    "revealWithFocus": "test-results"
+  }
+}
+
+// Terminal-focused output with clean start for each run, preferred for on-demand mode
+{
+  "testing.openTesting": "neverOpen",
+  "jest.outputConfig": {
+    "revealWithFocus": "terminal",
+    "clearOnRun": "terminal"
+  }
+}
+```
+For more detailed examples and explanations, refer to the [OutputConfig](https://github.com/jest-community/vscode-jest#outputconfig).
+
+##### 2.3 Deprecations and Migration
+
+The following settings have been consolidated into `outputConfig` and will be removed in the future release: 
+- `"jest.autoRevealOutput"`
+- `"jest.autoClearTerminal"`
+
+To migrate, use the `"Jest: Save Current Output Config"` command, and then manually adjust your "settings.json" as needed. If any conflicts arise, the extension will guide you through resolving them.
+
+For a step-by-step migration process, see the [OutputConfig Migration Guide](https://github.com/jest-community/vscode-jest#outputconfig-migration).
+
+
+### Bug Fixes
+- Fixed an issue where the virtual folder `rootPath` was not resolved correctly for folder test items, causing test runs or debugging to fail. ([#1080](https://github.com/jest-community/vscode-jest/pull/1080) - @akwodkiewicz)
+- Resolved a matching problem during manual test runs where a non-exact match led to more tests being run than specified. ([#1091](https://github.com/jest-community/vscode-jest/pull/1091) - @connectdotz)
+- Corrected the status recording for running `".each"` test/describe blocks which sometimes did not reflect accurately. ([#1092](https://github.com/jest-community/vscode-jest/pull/1092) - @connectdotz)
+
+### Technical Debt
+- Updated the CI node version check to now include versions 18 through 20, ensuring compatibility with the latest node releases. ([#1088](https://github.com/jest-community/vscode-jest/pull/1088) - @connectdotz)
+- Upgraded tooling dependencies to their latest versions to improve development workflows and bring in new features and bug fixes from those tools. ([#1089](https://github.com/jest-community/vscode-jest/pull/1089) - @connectdotz)
+
 
 ## v6.0.0 (pre-release)
 

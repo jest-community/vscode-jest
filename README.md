@@ -26,7 +26,7 @@ You can see the full [features](#features) and learn more details in the [How-To
 Happy testing!
 
 ## Releases 
-- **Next** ([v6.0.0](https://github.com/jest-community/vscode-jest/releases/tag/v6.0.0)): [release note](release-notes/release-note-v6.md#v600-pre-release)
+- **Next** ([v6.1.0](https://github.com/jest-community/vscode-jest/releases/tag/v6.1.0-next)): [release note](release-notes/release-note-v6.md#v610-pre-release)
 - **Current** ([v5.2.3](https://github.com/jest-community/vscode-jest/releases/tag/v5.2.3)): [release note](release-notes/release-note-v5.x.md#v523)
 - **Previous** ([v5.1.0](https://github.com/jest-community/vscode-jest/releases/tag/v5.1.0)): [release note](release-notes/release-note-v5.x.md#v510)
  
@@ -108,32 +108,22 @@ For detailed releases and migration help, please see [releases](https://github.c
 
 This extension fully integrates with the VSCode testing framework, supporting both automatic and on-demand test runs. In addition to the standard VSCode Test Explorer interface, the extension provides additional UI elements to simplify the development workflow:
 
-<img src="images/testExplorer-6.0.2.png" alt="testExplorer.png" width="1000"/>
+<img src="images/interface-6.1.0.png" alt="interface-6.1.0.png" width="1000"/>
 
-1. **Run Mode**: [Run mode](#runmode) dictates the overall user experience, determining when tests should run, how test outputs are displayed or cleared, etc. Different run modes may have different performance implications, particularly for larger projects. The run mode is visible in the Test Explorer (on the folder item) and on the status bar (refer to point 4). Users can change this setting either in `settings.json` (for all runs) or through the UI components mentioned below (for the current session):
-   - **1.1** Adjust the RunMode using the Test Explorer's run configuration dropdown by selecting "Configure Test Profiles".
-   - **1.2** Alternatively, alter the RunMode via the Test Explorer's inline menu (associated with the folder item).
+<br>
 
-   More info:
-    - [How to change runMode](#runmode-chooser).
-    - [RunMode performance tradeoff](#runmode-tradeoff)
+1. **Dynamic Run Mode**: [Run mode](#runmode) dictates the overall user experience, determining when tests should run, with or without coverage, error display style, etc. Different run modes may have different [performance implications](#runmode-tradeoff), particularly for larger projects. 
+   
+   We realized that runMode preference could change even within a given project, for example developers  prefer "watch" runMode when doing light code changes to ensure nothing breaks, may prefer the 'on-demand' mode during heavy test development for greater control over test execution. A static runMode config in "settings.json" is simply not sufficient. Therefore, we added the [runMode quick switch](#runmode-chooser) so users can easily switch to different runMode without permanently modifying the "settings.json".
+   <br> 
 
-2. **Test Menu**: Besides automatic test executions (if configured), users can initiate test actions on-demand via:
-   - **2.1** The Test Explorer inline menu for individual test items. A right/alt click on an item also displays a context menu similar to the editor's gutter menu below.
-   - **2.2** Right/Alt clicking on the test status indicator in the editor's gutter shows a context menu with relevant test actions, such as run, debug, view, or update snapshots.
-  
-    More info: 
-      - [How to trigger a test run](#how-to-trigger-the-test-run)  
-      - [How to update and view snapshots](#how-to-update-and-view-snapshots).
+2. **Interactive Test Run**: Besides automatic test executions ("watch", "on-save"), users can initiate full test actions, such as run, debug, [update/view snapshot](#how-to-update-and-view-snapshots), from both editor and Test Explorer through various [UI components](#how-to-trigger-the-test-run).
+   <br>
 
-3. **Test Output**: Alongside the test status visible in the editor and TestExplorer tree view, the extension offers native jest run outputs, extension configuration details, and [quick-fix](#quick-fix-chooser) suggestions through vscode terminals (labeled as "Jest (folder-name)"). By default, the output automatically appears when tests run, but this can be adjusted via the [runMode](#runmode) setting.
-   - **3.1** The output terminal can be accessed on-demand using the TestExplorer inline menu (on the folder item) or the status bar item (refer to point 4).
+3. **Test Output**: The extension offers native jest run outputs in both the "TERMINAL" and "TEST RESULTS" panel. "TEST RESULTS" panel mainly displays test run output in execution order, while "TERMINAL" groups test output by workspace folder/virtual-folder, and also includes extension configuration details, [quick-fix](#quick-fix-chooser) suggestions, etc. By default, the output appears when tests run, but this can be adjusted via the [outputConfig](#outputconfig) setting.
+   <br>
 
-4. **Extension Status**: Upon successful launch of the extension, it displays the active folder run status and the aggregated workspace test stats in the status bar. Clicking on the item reveals the associated output window.  
-
-    More info: 
-       - [How to read the StatusBar](#how-to-read-the-statusbar)
-  
+4. **Extension Status**: Upon successful launch of the extension, the [status bar](#how-to-trigger-the-test-run) shows the run status for the active folder, and the aggregated test status for the whole workspace. Clicking on each status reveals the associated output window.  
 
 ## How To?
 ### How to set up the extension?
@@ -283,12 +273,12 @@ useDashedArgs| Determine if to use dashed arguments for jest processes |undefine
 |**UX**|
 |[outputConfig](#outputconfig) 💼|Controls test output experience across the whole workspace.|undefined|`"jest.outputConfig": "neutral"` or `"jest.outputConfig": {"revealOn": "run", "revealWithFocus": "terminal", "clearOnRun": 'terminal"`| >= v6.1.0
 |[runMode](#runmode)|Controls most test UX, including when tests should be run, output management, etc|undefined|`"jest.runMode": "watch"` or `"jest.runMode": "on-demand"` or `"jest.runMode": {"type": "on-demand", "deferred": true}`| >= v6.1.0
-|:x: autoClearTerminal|Clear the terminal output at the start of any new test run.|false|`"jest.autoClearTerminal": true`| >= v6.0.0 < 6.1 (replaced by outputConfig)
+|:x: autoClearTerminal|Clear the terminal output at the start of any new test run.|false|`"jest.autoClearTerminal": true`| v6.0.0 (replaced by outputConfig)
 |:x: [testExplorer](#testexplorer) |Configure jest test explorer|null|`{"showInlineError": "true"}`| < 6.1.0 (replaced by runMode)
-|:x: [autoRun](#autorun)|Controls when and what tests should be run|undefined|`"jest.autoRun": "off"` or `"jest.autoRun": "watch"` or `"jest.autoRun": {"watch": false, "onSave":"test-only"}`| <= v6.1.0 (replaced by runMode)
-|:x: [autoRevealOutput](#autoRevealOutput)|Determine when to show test output|"on-run"|`"jest.autoRevealOutput": "on-exec-error"`| <= v6.1.0 (replaced by outputConfig)
+|:x: [autoRun](#autorun)|Controls when and what tests should be run|undefined|`"jest.autoRun": "off"` or `"jest.autoRun": "watch"` or `"jest.autoRun": {"watch": false, "onSave":"test-only"}`| < v6.1.0 (replaced by runMode)
+|:x: [autoRevealOutput](#autoRevealOutput)|Determine when to show test output|"on-run"|`"jest.autoRevealOutput": "on-exec-error"`| < v6.1.0 (replaced by outputConfig)
 |**Coverage**|
-|:x: showCoverageOnLoad|Show code coverage when extension starts|false|`"jest.showCoverageOnLoad": true`| <= v6.1.0 (replaced by runMode)
+|:x: showCoverageOnLoad|Show code coverage when extension starts|false|`"jest.showCoverageOnLoad": true`| < v6.1.0 (replaced by runMode)
 |[coverageFormatter](#coverageFormatter)|Determine the coverage overlay style|"DefaultFormatter"|`"jest.coverageFormatter": "GutterFormatter"`|
 |[coverageColors](#coverageColors)|Coverage indicator color override|undefined|`"jest.coverageColors": { "uncovered": "rgba(255,99,71, 0.2)", "partially-covered": "rgba(255,215,0, 0.2)"}`|
 |**Misc**|
@@ -484,6 +474,7 @@ interface JestRunModeOptions {
   runAllTestsOnStartup?: boolean;
   coverage?: boolean;
   deferred?: boolean;
+  showInlineError?: boolean;
 }
 export type JestRunMode = JestRunModeOptions & (
   | { type: 'watch' }
@@ -567,7 +558,7 @@ While the concepts of performance and automation are generally clear, "completen
 
 **Migration Guide**
 <a id="runmode-migration"></a>
-Starting from v6.1.0, if no runMode is defined in settings.json, the extension will automatically generate one using legacy settings (`autoRun`, `autoRevealOutput`, `showCoverageOnLoad`). To migrate, simply use the `"Jest: Save Current RunMode"` command from the command palette to update the setting, then remove the deprecated settings.
+Starting from v6.1.0, if no runMode is defined in settings.json, the extension will automatically generate one using legacy settings (`autoRun`, `showCoverageOnLoad`). To migrate, simply use the `"Jest: Save Current RunMode"` command from the command palette to update the setting, then remove the deprecated settings.
 
 ---
 
@@ -659,6 +650,11 @@ There are 2 ways to change autoRun:
 ---
 
 #### testExplorer
+
+ <div style="background-color: yellow; color: black; padding: 10px; border-radius: 5px;">
+  As of v6.1.0, this setting has been folded into <a href="#runmode">runMode</a>. For transition details, please refer to the <a href="#runmode-migration">runMode migration</a>.
+</div>
+
   ```ts
   testExplorer = {showInlineError?: boolean}
   ```
@@ -701,7 +697,7 @@ Default is `"jest.monitorLongRun":60000` (1 minute)
 
 #### autoRevealOutput
  <div style="background-color: yellow; color: black; padding: 10px; border-radius: 5px;">
-  As of v6.1.0, <a href="#runmode">runMode</a> has superseded autoRevealOutput. For transition details, please refer to the <a href="#runmode-migration">runMode migration</a>.
+  As of v6.1.0, this setting has been folded into <a href="#runmode">runMode</a>. For transition details, please refer to the <a href="#runmode-migration">runMode migration</a>.
 </div>
 
 ```ts
