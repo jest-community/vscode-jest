@@ -41,7 +41,7 @@ export class RunShell {
         this.nonLoginShell = setting;
         this.loginShell = this.getLoginShell(setting);
       } else {
-        if (setting.args.length > 0) {
+        if (setting.args?.length > 0) {
           this._useLoginShell = true;
           this.nonLoginShell = undefined;
           this.loginShell = setting;
