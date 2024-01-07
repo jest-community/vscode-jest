@@ -4,9 +4,9 @@ Among billions other things you can do with your time, you choose to spend it on
 
 vscode-jest started as a simple extension and grew quite a bit in the last 12 months with many amazing contributions from the community! As the community and code base continue to expand, we decided to restructure the contribution page to make it easier and more fun to contribute:
 
-1. [Code of Conduct](#code_of_conduct): the standard open source contribution guideline.
-1. [Our Philosophy](#our_philosophy): outline what guided our decision for feature expansion and issue/PR discussions.
-1. [How to Contribute](#how_to_contribute): tips on how to setup your local vscode-jest development environment; as well as test and debug it before submission.
+1. [Code of Conduct](#code-of-conduct): the standard open source contribution guideline.
+1. [Our Philosophy](#our-philosophy): outline what guided our decision for feature expansion and issue/PR discussions.
+1. [How to Contribute](#how-to-contribute): tips on how to setup your local vscode-jest development environment; as well as test and debug it before submission.
 
 ## Code of Conduct
 
