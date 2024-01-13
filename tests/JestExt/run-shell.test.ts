@@ -30,6 +30,7 @@ describe('RunnerShell', () => {
       ${6} | ${'darwin'} | ${{ path: 'bash', args: ['--login'] }} | ${{ path: 'bash', args: ['--login'] }} | ${true}       | ${undefined}
       ${7} | ${'linux'}  | ${undefined}                           | ${LoginShells.sh}                      | ${false}      | ${undefined}
       ${8} | ${'linux'}  | ${'whatever'}                          | ${undefined}                           | ${'never'}    | ${undefined}
+      ${9} | ${'darwin'} | ${{ path: '/bin/zsh' }}                | ${LoginShells.zsh}                     | ${false}      | ${'/bin/zsh'}
     `('case $case', ({ platform, setting, loginShell, settingOverride, useLoginShell }) => {
       jest.clearAllMocks();
       mockPlatform.mockReturnValue(platform);
