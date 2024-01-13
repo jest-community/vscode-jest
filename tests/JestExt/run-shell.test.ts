@@ -17,7 +17,7 @@ describe('RunnerShell', () => {
     console.error = jest.fn();
     console.warn = jest.fn();
   });
-  beforeEach(() => { });
+  beforeEach(() => {});
 
   describe('can initialize from a shell setting', () => {
     it.each`
