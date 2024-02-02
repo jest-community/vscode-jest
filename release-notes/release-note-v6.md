@@ -1,11 +1,14 @@
 # vscode-jest v6.x Releases <!-- omit in toc --> 
 
-Release Notes
+Release Notes <!-- omit in toc --> 
 ---
 
-- [Release Notes](#release-notes)
-- [v6.1.0 (pre-release)](#v610-pre-release)
+- [v6.2.0](#v620)
   - [Main Features](#main-features)
+  - [Bug Fixes and Technical Debt Reduction](#bug-fixes-and-technical-debt-reduction)
+  - [Breaking Changes](#breaking-changes)
+- [v6.1.0 (pre-release)](#v610-pre-release)
+  - [Main Features](#main-features-1)
     - [1. Enhanced Test Execution Control with "runMode"](#1-enhanced-test-execution-control-with-runmode)
       - [1.1 The "deferred" mode](#11-the-deferred-mode)
       - [1.2 Configuration and Examples](#12-configuration-and-examples)
@@ -17,13 +20,39 @@ Release Notes
   - [Bug Fixes](#bug-fixes)
   - [Technical Debt](#technical-debt)
 - [v6.0.0 (pre-release)](#v600-pre-release)
-  - [Main Features](#main-features-1)
+  - [Main Features](#main-features-2)
     - [1. Virtual Folders](#1-virtual-folders)
     - [2. Support spawning jest with dashed arguments](#2-support-spawning-jest-with-dashed-arguments)
-    - [3. control extension activation within each folder](#3-control-extension-activation-within-each-folder)
+    - [3. Control extension activation within each folder](#3-control-extension-activation-within-each-folder)
     - [4. Auto clear output upon test run](#4-auto-clear-output-upon-test-run)
   - [Fixes](#fixes)
   - [CHANGELOG](#changelog)
+
+---
+
+## v6.2.0
+This version is a comprehensive rollup of the key improvements and fixes introduced from pre-releases [v6.0.0](#v600-pre-release) through [v6.1.0](#v610-pre-release), which focuses on optimizing workflows, enhancing usability and integration, and improving project management and configuration.
+
+### Main Features
+- **Virtual Folders**: New in v6.0.0, [jest.virtualFolders](https://github.com/jest-community/vscode-jest#virtualfolders) now allow for support of mono-repos in single-root workspaces and the use of multiple Jest configurations in the same folder — long-awaited capabilities for developers dealing with complex project setups.  [Details](#1-virtual-folders)
+- **Enhanced Test Execution Control with "runMode"**: Debuting in v6.1.0, [jest.runMode](https://github.com/jest-community/vscode-jest#runmode) replaces and expands upon [jest.autoRun](https://github.com/jest-community/vscode-jest#autorun) with options like `'deferred'` mode, ideal for large projects seeking just-in-time test execution. It also consolidates related settings for a cleaner configuration experience. [Details](#1-enhanced-test-execution-control-with-runmode) (:warning: **Breaking Change**)
+- **Integration with VSCode "TEST RESULTS" Panel**: Introduced in v6.1.0, the [jest.outputConfig](https://github.com/jest-community/vscode-jest#outputconfig) setting streamlines and enhance Jest integration by consolidating various output settings and enabling the display of test results directly in the VSCode "TEST RESULTS" panel.  [Details](#2-support-vscode-test-results-panel-with-jestoutputconfig) (:warning: **Breaking Change**)
+- **Support for Spawning Jest with Dashed Arguments**: Available from v6.0.0, the new [jest.useDashedArgs](https://github.com/jest-community/vscode-jest?tab=readme-ov-file#settings) setting  allows the extension to spawn Jest processes with dashed arguments, required by some frameworks such as Angular. [Details](#2-support-spawning-jest-with-dashed-arguments) 
+- **Control Extension Activation within Each Folder:** Introduced in v6.0.0, the [jest.enable](https://github.com/jest-community/vscode-jest?tab=readme-ov-file#settings) setting allows granular control over the Jest extension's activation on a per-folder basis in VS Code workspaces. This enhancement is particularly beneficial for developers working in multi-root workspaces or projects with mixed languages. [Details](#3-control-extension-activation-within-each-folder)
+
+### Bug Fixes and Technical Debt Reduction
+- A few bug fixes were implemented to address issues related to test discovery, execution reliability, and UI glitches. Please refer to the detailed pre-release notes for a comprehensive list of bug fixes and technical debt reduction. 
+
+### Breaking Changes
+- The following settings have been consolidated into `runMode` and `outputConfig` and will be removed in the future release: 
+  - `"jest.autoRun"`
+  - `"jest.showCoverageOnLoad"`
+  - `"TestExplorer"`
+  - `"jest.autoRevealOutput"`
+  - `"jest.autoClearTerminal"`
+- While we strive for seamless auto migration and backward compatibility, it might not cover all configurations. Should you discover any discrepancies or unexpected behavior, further guidance and support can be found in the detailed release notes linked above.
+
+This release is packed with significant changes. Despite the extensive testing during the pre-release phase, there's always a chance something might not be quite right yet. If you encounter any issues or have questions, please don't hesitate to file a GitHub [issue](https://github.com/jest-community/vscode-jest/issues) or ask questions in the [discussion forum](https://github.com/jest-community/vscode-jest/discussions). 
 
 ---
 
@@ -212,7 +241,7 @@ See [useDashedArgs](https://github.com/jest-community/vscode-jest#usedashedargs)
 - [jest-community/jest-editor-support#103](https://github.com/jest-community/jest-editor-support/pull/103) - @mjamin
 - [#1034](https://github.com/jest-community/vscode-jest/pull/1034) - @connectdotz
 
-#### 3. control extension activation within each folder
+#### 3. Control extension activation within each folder
 A new setting`"jest.enable"` is added as a quick way to turn off the extension feature for the given folder/virtual-folder without uninstall/disable completely in vscode. 
 
 This is indeed similar to `"jest.disabledWorkspaceFolders"`, which is a "window" level setting (on the root of the workspace). Given the target is the folder itself, we believe it makes more sense to put the control `"jest.enable"` in folder level instead. It could also provide better extensibility down the road, such as "deferred-activation". We hope `"jest.enable"` will eventually replace `"jest.disabledWorkspaceFolders"`.

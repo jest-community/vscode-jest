@@ -26,9 +26,9 @@ You can see the full [features](#features) and learn more details in the [How-To
 Happy testing!
 
 ## Releases 
-- **Next** ([v6.1.1](https://github.com/jest-community/vscode-jest/releases/tag/v6.1.1-next)): [release note](release-notes/release-note-v6.md#v610-pre-release)
-- **Current** ([v5.2.3](https://github.com/jest-community/vscode-jest/releases/tag/v5.2.3)): [release note](release-notes/release-note-v5.x.md#v523)
-- **Previous** ([v5.1.0](https://github.com/jest-community/vscode-jest/releases/tag/v5.1.0)): [release note](release-notes/release-note-v5.x.md#v510)
+- **Current** ([v6.2.0](https://github.com/jest-community/vscode-jest/releases/tag/v6.2.0)): [release note](release-notes/release-note-v6.md#v620)
+- **Previous** ([v5.2.3](https://github.com/jest-community/vscode-jest/releases/tag/v5.2.3)): [release note](release-notes/release-note-v5.x.md#v523)
+
  
 All: [Release Notes](release-notes/release-notes.md)
 
@@ -86,15 +86,15 @@ Content
 ## Features
 
 * Starts Jest automatically for most projects with runnable jest configurations.
+* Supports monorepo, react, react-native, angular, vue and various configurations/platforms.
+* Supports running multiple jest processes within the same workspace folder.
 * Fully integrated with the vscode TestExplorer.
+* Help debug jest tests in vscode.
+* View and update snapshots interactively. 
+* Show coverage information in files being tested.
 * Supports both automatic and manual test runs at any level, and easy-switch via UI.
 * Supports additional IntelliSense for jest methods.
 * Show fails inline of the `expect` function, as well as in the problem inspector.
-* View and update snapshots interactively. 
-* Help debug jest tests in vscode.
-* Show coverage information in files being tested.
-* Supports monorepo, react, react-native, angular, vue and various configurations/platforms.
-* Supports running multiple jest processes from the same workspace folder.
 * active community support.
 
 ## Installation
