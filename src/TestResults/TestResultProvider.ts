@@ -267,17 +267,28 @@ export class TestResultProvider {
     if (this.testFiles && this.testFiles.length > 0) {
       return this.testFiles;
     }
-    return Array.from(this.testSuites.keys());
+    return Array.from(this.testSuites.keys()).filter((f) => this.isTestFile(f));
   }
 
-  isTestFile(fileName: string): 'yes' | 'no' | 'maybe' {
+  isTestFile(fileName: string): boolean {
     if (this.testFiles?.includes(fileName) || this.testSuites.get(fileName)?.isTestFile) {
-      return 'yes';
+      return true;
     }
-    if (!this.testFiles) {
-      return 'maybe';
+
+    //if we already have testFiles, then we can be certain that the file is not a test file
+    if (this.testFiles) {
+      return false;
     }
-    return 'no';
+
+    const _record = this.testSuites.get(fileName) ?? this.addTestSuiteRecord(fileName);
+    if (_record.isTestFile === false) {
+      return false;
+    }
+
+    // check if the file is a test file by parsing the content
+    const isTestFile = _record.testBlocks !== 'failed';
+    _record.update({ isTestFile });
+    return isTestFile;
   }
 
   public getTestSuiteResult(filePath: string): TestSuiteResult | undefined {
@@ -293,7 +304,8 @@ export class TestResultProvider {
    **/
   private updateMatchedResults(filePath: string, record: TestSuiteRecord): void {
     let error: string | undefined;
-    // make sure we do not fire changeEvent since that will be proceeded with match or unmatch event anyway
+    let status = record.status;
+    // make sure we do not fire changeEvent since that will be proceeded with match or unmatched event anyway
     const testBlocks = record.testBlocks;
     if (testBlocks === 'failed') {
       record.update({ status: 'KnownFail', message: 'test file parse error', results: [] });
@@ -321,14 +333,16 @@ export class TestResultProvider {
       } catch (e) {
         console.warn(`failed to match test results for ${filePath}:`, e);
         error = `encountered internal match error: ${e}`;
+        status = 'KnownFail';
       }
     } else {
+      // there might be many reasons for this, for example the test is not yet run, so leave it as unknown
       error = 'no assertion generated for file';
     }
 
     // no need to do groupByRange as the source block will not have blocks under the same location
     record.update({
-      status: 'KnownFail',
+      status,
       message: error,
       results: itBlocks.map((t) => match.toMatchResult(t, 'no assertion found', 'match-failed')),
     });
@@ -347,7 +361,7 @@ export class TestResultProvider {
    * @returns valid test result list or an empty array if the source file is not a test or can not be parsed.
    */
   getResults(filePath: string, record?: TestSuiteRecord): TestResult[] | undefined {
-    if (this.isTestFile(filePath) === 'no') {
+    if (!this.isTestFile(filePath)) {
       return;
     }
 
@@ -367,7 +381,7 @@ export class TestResultProvider {
    */
 
   getSortedResults(filePath: string): SortedTestResults | undefined {
-    if (this.isTestFile(filePath) === 'no') {
+    if (!this.isTestFile(filePath)) {
       return;
     }
 
