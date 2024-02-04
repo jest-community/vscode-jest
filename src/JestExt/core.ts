@@ -413,8 +413,8 @@ export class JestExt {
 
   /**
    * Updates the valid text editors based on the specified document.
-   * If a document is provided, it triggers an update for the active editor if it matches the document.
-   * If no document is provided, it triggers an update for all editors that are in the workspace folder or are test file editors.
+   * If a document is provided, it triggers an update for the active editor matches the document.
+   * If no document is provided, it triggers an update for all editors that are in the workspace folder
    *
    * @param document The document to match against the active editor. Optional.
    */
