@@ -494,18 +494,15 @@ describe('JestExt', () => {
   describe('onDidSaveTextDocument', () => {
     describe('should handle onSave run', () => {
       it.each`
-        runConfig                                  | languageId      | isTestFile   | shouldSchedule | isDirty
-        ${'on-demand'}                             | ${'javascript'} | ${'yes'}     | ${false}       | ${false}
-        ${'watch'}                                 | ${'javascript'} | ${'yes'}     | ${false}       | ${false}
-        ${'on-save'}                               | ${'javascript'} | ${'no'}      | ${true}        | ${false}
-        ${'on-save'}                               | ${'javascript'} | ${'unknown'} | ${true}        | ${false}
-        ${'on-save'}                               | ${'javascript'} | ${'yes'}     | ${true}        | ${false}
-        ${'on-save'}                               | ${'json'}       | ${'no'}      | ${false}       | ${false}
-        ${{ type: 'on-save', testFileOnly: true }} | ${'javascript'} | ${'no'}      | ${false}       | ${true}
-        ${{ type: 'on-save', testFileOnly: true }} | ${'javascript'} | ${'unknown'} | ${true}        | ${false}
-        ${{ type: 'on-save', testFileOnly: true }} | ${'javascript'} | ${'yes'}     | ${true}        | ${false}
-        ${{ type: 'on-save', testFileOnly: true }} | ${'javascript'} | ${'unknown'} | ${true}        | ${false}
-        ${{ type: 'on-save', testFileOnly: true }} | ${'json'}       | ${'unknown'} | ${false}       | ${false}
+        runConfig                                  | languageId      | isTestFile | shouldSchedule | isDirty
+        ${'on-demand'}                             | ${'javascript'} | ${true}    | ${false}       | ${false}
+        ${'watch'}                                 | ${'javascript'} | ${true}    | ${false}       | ${false}
+        ${'on-save'}                               | ${'javascript'} | ${false}   | ${true}        | ${false}
+        ${'on-save'}                               | ${'javascript'} | ${true}    | ${true}        | ${false}
+        ${'on-save'}                               | ${'json'}       | ${false}   | ${false}       | ${false}
+        ${{ type: 'on-save', testFileOnly: true }} | ${'javascript'} | ${false}   | ${false}       | ${true}
+        ${{ type: 'on-save', testFileOnly: true }} | ${'javascript'} | ${true}    | ${true}        | ${false}
+        ${{ type: 'on-save', testFileOnly: true }} | ${'json'}       | ${true}    | ${false}       | ${false}
       `(
         'with runMode: $runConfig $languageId $isTestFile => $shouldSchedule, $isDirty',
         ({ runConfig, languageId, isTestFile, shouldSchedule, isDirty }) => {
@@ -529,7 +526,7 @@ describe('JestExt', () => {
               expect.objectContaining({
                 type: 'by-file',
                 testFileName: fileName,
-                notTestFile: isTestFile !== 'yes',
+                notTestFile: !isTestFile,
               })
             );
           } else {
@@ -575,19 +572,19 @@ describe('JestExt', () => {
     });
   });
 
-  describe('triggerUpdateActiveEditor', () => {
+  describe('when active text editor changed', () => {
     beforeEach(() => {
       mockIsInFolder.mockReturnValueOnce(true);
     });
-    it('should update the coverage overlay in visible editors', () => {
+    it('should update the coverage overlay in the given editor', () => {
       const editor: any = { document: { uri: 'whatever', languageId: 'javascript' } };
 
       const sut = newJestExt();
-      sut.triggerUpdateActiveEditor(editor);
+      sut.onDidChangeActiveTextEditor(editor);
 
-      expect(sut.coverageOverlay.updateVisibleEditors).toHaveBeenCalled();
+      expect(sut.coverageOverlay.update).toHaveBeenCalled();
     });
-    it('should update both decorators and diagnostics for valid editor', () => {
+    it('should update both decorators and diagnostics for the given editor', () => {
       const sut = newJestExt();
       const editor = mockEditor('file://a/b/c.ts');
 
@@ -597,7 +594,9 @@ describe('JestExt', () => {
         skip: [],
         unknown: [],
       });
-      sut.triggerUpdateActiveEditor(editor);
+      (sut.testResultProvider.isTestFile as jest.Mocked<any>).mockReturnValueOnce(true);
+
+      sut.onDidChangeActiveTextEditor(editor);
 
       expect(updateCurrentDiagnostics).toHaveBeenCalled();
     });
@@ -607,8 +606,9 @@ describe('JestExt', () => {
       (sut.testResultProvider.getSortedResults as jest.Mocked<any>).mockImplementation(() => {
         throw new Error('force error');
       });
+      (sut.testResultProvider.isTestFile as jest.Mocked<any>).mockReturnValueOnce(true);
 
-      sut.triggerUpdateActiveEditor(editor);
+      sut.onDidChangeActiveTextEditor(editor);
       expect(mockOutputTerminal.write).toHaveBeenCalledWith(
         expect.stringContaining('force error'),
         'error'
@@ -643,6 +643,7 @@ describe('JestExt', () => {
         ${'vue'}             | ${false}
       `('if languageId=languageId => skip? $shouldSkip', ({ languageId, shouldSkip }) => {
         const editor = mockEditor('file', languageId);
+        (sut.testResultProvider.isTestFile as jest.Mocked<any>).mockReturnValueOnce(true);
         sut.triggerUpdateActiveEditor(editor);
         if (shouldSkip) {
           expect(updateCurrentDiagnostics).not.toHaveBeenCalled();
@@ -652,10 +653,9 @@ describe('JestExt', () => {
       });
 
       it.each`
-        isTestFile   | shouldUpdate
-        ${'yes'}     | ${true}
-        ${'no'}      | ${false}
-        ${'unknown'} | ${true}
+        isTestFile | shouldUpdate
+        ${true}    | ${true}
+        ${false}   | ${false}
       `(
         'isTestFile: $isTestFile => shouldUpdate? $shouldUpdate',
         async ({ isTestFile, shouldUpdate }) => {
@@ -682,7 +682,7 @@ describe('JestExt', () => {
       const editor: any = { document: { uri: 'whatever' } };
       (vscode.workspace.getWorkspaceFolder as jest.Mocked<any>).mockReturnValue({});
       const sut = newJestExt();
-      sut.triggerUpdateActiveEditor(editor);
+      sut.onDidChangeActiveTextEditor(editor);
       expect(updateCurrentDiagnostics).not.toHaveBeenCalled();
     });
   });
@@ -705,7 +705,7 @@ describe('JestExt', () => {
           expect.objectContaining({ session: mockProcessSession })
         );
       });
-      it('will refresh the visible editors, if any', async () => {
+      it('will refresh the visible editors for the given workspace, if any', async () => {
         const sut = createJestExt();
         const spy = jest.spyOn(sut, 'triggerUpdateActiveEditor').mockImplementation(() => {});
 
@@ -719,9 +719,17 @@ describe('JestExt', () => {
           {
             document: { uri: 'whatever' },
           },
+          {
+            document: { uri: 'whatever' },
+          },
+          {
+            document: { uri: 'whatever' },
+          },
         ];
+
+        mockIsInFolder.mockReturnValueOnce(true).mockReturnValueOnce(true);
         await sut.startSession();
-        expect(spy).toHaveBeenCalled();
+        expect(spy).toHaveBeenCalledTimes(2);
       });
       it('if failed to start session, show error message and quick fix link', async () => {
         mockProcessSession.start.mockReturnValueOnce(Promise.reject('forced error'));
@@ -893,12 +901,11 @@ describe('JestExt', () => {
       });
     });
     it.each`
-      isTestFile   | notTestFile
-      ${'yes'}     | ${false}
-      ${'no'}      | ${true}
-      ${'unknown'} | ${true}
+      isTestFile | notTestFile
+      ${true}    | ${false}
+      ${false}   | ${true}
     `(
-      'treat unknown as notTestFile: isTestFile=$isTestFile => notTestFile=$notTestFile',
+      'pass testFile status: isTestFile=$isTestFile => notTestFile=$notTestFile',
       async ({ isTestFile, notTestFile }) => {
         const sut = newJestExt();
         const editor: any = { document: { fileName: 'whatever' } };
@@ -1402,6 +1409,7 @@ describe('JestExt', () => {
       doc = { uri: 'whatever', languageId: 'javascript' };
       editor = { document: doc };
       vscode.window.visibleTextEditors = [editor];
+      mockIsInFolder.mockReturnValueOnce(true);
     });
     it('will still create testProvider and parse test blocks while skipping the rest', async () => {
       expect.hasAssertions();
@@ -1410,13 +1418,15 @@ describe('JestExt', () => {
       const jestExt = newJestExt({ settings: { runMode } });
 
       const validateJestCommandLineSpy = jest.spyOn(jestExt, 'validateJestCommandLine');
-
-      jestExt.triggerUpdateActiveEditor = jest.fn();
+      (jestExt.testResultProvider.isTestFile as jest.Mocked<any>).mockReturnValueOnce(true);
+      (jestExt.testResultProvider.getSortedResults as jest.Mocked<any>).mockReturnValueOnce([]);
 
       await jestExt.startSession();
 
       expect(JestTestProvider).toHaveBeenCalledTimes(1);
-      expect(jestExt.triggerUpdateActiveEditor).toHaveBeenCalledWith(editor);
+      expect(jestExt.testResultProvider.getSortedResults).toHaveBeenCalled();
+      expect(jestExt.coverageOverlay.update).toHaveBeenCalled();
+      expect(updateCurrentDiagnostics).toHaveBeenCalled();
 
       expect(validateJestCommandLineSpy).not.toHaveBeenCalled();
       expect(mockProcessSession.scheduleProcess).not.toHaveBeenCalled();

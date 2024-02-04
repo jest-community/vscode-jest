@@ -937,31 +937,43 @@ describe('TestResultProvider', () => {
       mockReconciler.updateFileWithJestStatus.mockClear();
     });
     it.each`
-      testFiles               | testResults   | expected
-      ${undefined}            | ${undefined}  | ${'maybe'}
-      ${undefined}            | ${['file-2']} | ${'maybe'}
-      ${[]}                   | ${[]}         | ${'no'}
-      ${[]}                   | ${['file-1']} | ${'yes'}
-      ${[]}                   | ${['file-2']} | ${'no'}
-      ${['file-1']}           | ${undefined}  | ${'yes'}
-      ${['file-2']}           | ${undefined}  | ${'no'}
-      ${['file-1', 'file-2']} | ${undefined}  | ${'yes'}
-      ${['file-1']}           | ${['file-1']} | ${'yes'}
-      ${['file-2']}           | ${['file-1']} | ${'yes'}
-      ${['file-2']}           | ${['file-2']} | ${'no'}
-    `('$testFiles, $testResults => $expected', ({ testFiles, testResults, expected }) => {
-      const sut = new TestResultProvider(eventsMock);
-      if (testFiles) {
-        sut.updateTestFileList(testFiles);
-      }
-      if (testResults) {
-        const mockResults = testResults.map((file) => ({ file, status: 'KnownSuccess' }));
-        mockReconciler.updateFileWithJestStatus.mockReturnValueOnce(mockResults);
-        sut.updateTestResults({} as any, {} as any);
-      }
+      testFiles               | testResults   | hasTestBlocks | expected
+      ${undefined}            | ${undefined}  | ${false}      | ${false}
+      ${undefined}            | ${['file-2']} | ${true}       | ${true}
+      ${undefined}            | ${['file-1']} | ${true}       | ${true}
+      ${[]}                   | ${[]}         | ${true}       | ${false}
+      ${[]}                   | ${['file-1']} | ${true}       | ${true}
+      ${[]}                   | ${['file-1']} | ${false}      | ${true}
+      ${[]}                   | ${['file-2']} | ${true}       | ${false}
+      ${['file-1']}           | ${undefined}  | ${true}       | ${true}
+      ${['file-1']}           | ${undefined}  | ${false}      | ${true}
+      ${['file-2']}           | ${undefined}  | ${true}       | ${false}
+      ${['file-1', 'file-2']} | ${undefined}  | ${true}       | ${true}
+      ${['file-1']}           | ${['file-1']} | ${true}       | ${true}
+      ${['file-2']}           | ${['file-1']} | ${true}       | ${true}
+      ${['file-2']}           | ${['file-2']} | ${true}       | ${false}
+    `(
+      '$testFiles, $testResults, $hasTestBlocks => $expected',
+      ({ testFiles, testResults, hasTestBlocks, expected }) => {
+        if (hasTestBlocks) {
+          const tBlock = helper.makeItBlock('a test', [8, 0, 20, 20]);
+          setupMockParse([tBlock]);
+        } else {
+          forceParseError();
+        }
+        const sut = new TestResultProvider(eventsMock);
+        if (testFiles) {
+          sut.updateTestFileList(testFiles);
+        }
+        if (testResults) {
+          const mockResults = testResults.map((file) => ({ file, status: 'KnownSuccess' }));
+          mockReconciler.updateFileWithJestStatus.mockReturnValueOnce(mockResults);
+          sut.updateTestResults({} as any, {} as any);
+        }
 
-      expect(sut.isTestFile(target)).toEqual(expected);
-    });
+        expect(sut.isTestFile(target)).toEqual(expected);
+      }
+    );
   });
   describe('snapshot', () => {
     const testPath = 'test-file';

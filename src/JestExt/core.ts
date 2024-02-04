@@ -280,9 +280,7 @@ export class JestExt {
         this.testProvider = new JestTestProvider(this.getExtExplorerContext());
         this.resetStatusBar();
 
-        vscode.window.visibleTextEditors.forEach((editor) => {
-          this.triggerUpdateActiveEditor(editor);
-        });
+        this.updateVisibleTextEditors();
         return;
       }
 
@@ -310,9 +308,7 @@ export class JestExt {
       await this.updateTestFileList();
 
       // update visible editors that belong to this folder
-      vscode.window.visibleTextEditors.forEach((editor) => {
-        this.triggerUpdateActiveEditor(editor);
-      });
+      this.updateVisibleTextEditors();
     } catch (e) {
       this.outputActionMessages(
         `Failed to start jest session: ${e}`,
@@ -372,13 +368,8 @@ export class JestExt {
     updateCurrentDiagnostics(sortedResults.fail, this.failDiagnostics, editor);
   }
 
-  public triggerUpdateActiveEditor(editor: vscode.TextEditor): void {
-    // there is use case that the active editor is not in the workspace but is in jest test file list
-    if (!this.isInWorkspaceFolder(editor) && !this.isTestFileEditor(editor)) {
-      return;
-    }
-    this.coverageOverlay.updateVisibleEditors();
-
+  private triggerUpdateActiveEditor(editor: vscode.TextEditor): void {
+    this.coverageOverlay.update(editor);
     this.updateTestFileEditor(editor);
   }
 
@@ -420,6 +411,25 @@ export class JestExt {
     await this.startSession(true);
   }
 
+  /**
+   * Updates the valid text editors based on the specified document.
+   * If a document is provided, it triggers an update for the active editor if it matches the document.
+   * If no document is provided, it triggers an update for all editors that are in the workspace folder or are test file editors.
+   *
+   * @param document The document to match against the active editor. Optional.
+   */
+  private updateVisibleTextEditors(document?: vscode.TextDocument): void {
+    vscode.window.visibleTextEditors.forEach((editor) => {
+      if (document) {
+        if (editor.document === document) {
+          this.triggerUpdateActiveEditor(editor);
+        }
+      } else if (this.isInWorkspaceFolder(editor)) {
+        this.triggerUpdateActiveEditor(editor);
+      }
+    });
+  }
+
   private isInWorkspaceFolder(editor: vscode.TextEditor): boolean {
     return isInFolder(editor.document.uri, this.extContext.workspace);
   }
@@ -429,17 +439,19 @@ export class JestExt {
     return (document && SupportedLanguageIds.includes(document.languageId)) ?? false;
   }
 
+  /**
+   * Check if the editor contains a test file. If the file is not in the test file list, it will return false.
+   * If there is no test file list yet, it will return the maybeValue.
+   *
+   * @param editor
+   * @returns
+   */
   private isTestFileEditor(editor: vscode.TextEditor): boolean {
     if (!this.isSupportedDocument(editor.document)) {
       return false;
     }
 
-    if (this.testResultProvider.isTestFile(editor.document.fileName) === 'no') {
-      return false;
-    }
-
-    // if isTestFile returns unknown or true, treated it like a test file to give it best chance to display any test result if ever available
-    return true;
+    return this.testResultProvider.isTestFile(editor.document.fileName);
   }
 
   /**
@@ -613,7 +625,7 @@ export class JestExt {
     } else {
       const name = editor.document.fileName;
       let pInfo;
-      if (this.testResultProvider.isTestFile(name) !== 'yes') {
+      if (!this.testResultProvider.isTestFile(name)) {
         // run related tests from source file
         pInfo = this.processSession.scheduleProcess({
           type: 'by-file',
@@ -670,14 +682,14 @@ export class JestExt {
     }
     const isTestFile = this.testResultProvider.isTestFile(document.fileName);
 
-    if (isTestFile === 'no' && this.extContext.settings.runMode.config.testFileOnly) {
+    if (!isTestFile && this.extContext.settings.runMode.config.testFileOnly) {
       // not a test file and configured not to re-run test for non-test files => mark the workspace dirty
       this.dirtyFiles.add(document.fileName);
     } else {
       this.processSession.scheduleProcess({
         type: 'by-file',
         testFileName: document.fileName,
-        notTestFile: isTestFile !== 'yes',
+        notTestFile: !isTestFile,
       });
     }
   }
@@ -687,15 +699,7 @@ export class JestExt {
    * @param document refresh UI for the specific document. if undefined, refresh all active editors in the workspace.
    */
   private refreshDocumentChange(document?: vscode.TextDocument): void {
-    for (const editor of vscode.window.visibleTextEditors) {
-      if (
-        (document && editor.document === document) ||
-        this.isInWorkspaceFolder(editor) ||
-        this.isTestFileEditor(editor)
-      ) {
-        this.triggerUpdateActiveEditor(editor);
-      }
-    }
+    this.updateVisibleTextEditors(document);
 
     this.updateStatusBar({
       stats: this.toSBStats(this.testResultProvider.getTestSuiteStats()),
