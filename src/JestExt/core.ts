@@ -439,13 +439,6 @@ export class JestExt {
     return (document && SupportedLanguageIds.includes(document.languageId)) ?? false;
   }
 
-  /**
-   * Check if the editor contains a test file. If the file is not in the test file list, it will return false.
-   * If there is no test file list yet, it will return the maybeValue.
-   *
-   * @param editor
-   * @returns
-   */
   private isTestFileEditor(editor: vscode.TextEditor): boolean {
     if (!this.isSupportedDocument(editor.document)) {
       return false;
