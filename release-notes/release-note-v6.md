@@ -1,10 +1,14 @@
 # vscode-jest v6.x Releases <!-- omit in toc --> 
 
-Release Notes
+Release Notes <!-- omit in toc --> 
 ---
 
-- [Release Notes](#release-notes)
-- [v6.1.0 (pre-release)](#v610-pre-release)
+- [v6.2.0](#v620)
+  - [New Features Summary](#new-features-summary)
+  - [Bug Fixes and Technical Debt Reduction](#bug-fixes-and-technical-debt-reduction)
+  - [Breaking Changes](#breaking-changes)
+  - [CHANGELOG](#changelog)
+- [v6.1 (pre-release)](#v61-pre-release)
   - [Main Features](#main-features)
     - [1. Enhanced Test Execution Control with "runMode"](#1-enhanced-test-execution-control-with-runmode)
       - [1.1 The "deferred" mode](#11-the-deferred-mode)
@@ -16,18 +20,51 @@ Release Notes
       - [2.3 Deprecations and Migration](#23-deprecations-and-migration)
   - [Bug Fixes](#bug-fixes)
   - [Technical Debt](#technical-debt)
-- [v6.0.0 (pre-release)](#v600-pre-release)
+- [v6.0 (pre-release)](#v60-pre-release)
   - [Main Features](#main-features-1)
     - [1. Virtual Folders](#1-virtual-folders)
     - [2. Support spawning jest with dashed arguments](#2-support-spawning-jest-with-dashed-arguments)
-    - [3. control extension activation within each folder](#3-control-extension-activation-within-each-folder)
+    - [3. Control extension activation within each folder](#3-control-extension-activation-within-each-folder)
     - [4. Auto clear output upon test run](#4-auto-clear-output-upon-test-run)
   - [Fixes](#fixes)
-  - [CHANGELOG](#changelog)
+  - [CHANGELOG](#changelog-1)
 
 ---
 
-## v6.1.0 (pre-release)
+## v6.2.0
+This version is a rollup of pre-releases [v6.0](#v60-pre-release) through [v6.1](#v61-pre-release), which implemented a few long requested features, such as better monorepo project support, more intuitive ways to defer and resume testing, and showing accurate test results in TEST RESULT panel.
+
+![v6.2.0-intro](../images/v6.2.0-intro.png)
+
+### New Features Summary
+- **Virtual Folders**: New in v6.0.0, [jest.virtualFolders](https://github.com/jest-community/vscode-jest#virtualfolders) now supports monorepos for single-root workspaces and multiple Jest configurations in the same folder — long-awaited capabilities for developers dealing with complex project setups.  [Details](#1-virtual-folders)
+- **Integration with VSCode "TEST RESULTS" Panel**: Introduced in v6.1.0, the [jest.outputConfig](https://github.com/jest-community/vscode-jest#outputconfig) setting enables the display of test results directly in the VSCode "TEST RESULTS" panel and consolidates various output settings.  [Details](#2-support-vscode-test-results-panel-with-jestoutputconfig) (:warning: **Breaking Change**)
+- **Replace "autoRun" with "runMode"**: Debuting in v6.1.0, [jest.runMode](https://github.com/jest-community/vscode-jest#runmode) replaces and expands upon [jest.autoRun](https://github.com/jest-community/vscode-jest#autorun) with options like `'deferred'` mode, ideal for large projects seeking just-in-time test execution. It also consolidates related settings for a cleaner configuration experience. [Details](#1-enhanced-test-execution-control-with-runmode) (:warning: **Breaking Change**)
+- **Support for Spawning Jest with Dashed Arguments**: Available from v6.0.0, the new [jest.useDashedArgs](https://github.com/jest-community/vscode-jest?tab=readme-ov-file#settings) setting  allows the extension to spawn Jest processes with dashed arguments, required by some frameworks such as Angular. [Details](#2-support-spawning-jest-with-dashed-arguments) 
+- **Control Extension Activation within Each Folder:** Introduced in v6.0.0, the [jest.enable](https://github.com/jest-community/vscode-jest?tab=readme-ov-file#settings) setting allows granular control over the Jest extension's activation on a per-folder basis in VS Code workspaces. This enhancement is beneficial for developers working in multi-root workspaces or projects with mixed languages. [Details](#3-control-extension-activation-within-each-folder)
+
+### Bug Fixes and Technical Debt Reduction
+- Please refer to the pre-release notes for a comprehensive list. 
+
+### Breaking Changes
+- The following settings have been consolidated into `runMode` and `outputConfig` and will be removed in the future release: 
+  - `"jest.autoRun"`
+  - `"jest.showCoverageOnLoad"`
+  - `"jest.TestExplorer"`
+  - `"jest.autoRevealOutput"`
+  - `"jest.autoClearTerminal"`
+
+- While we strive for seamless auto migration and backward compatibility, it might not cover all configurations. Should you discover any discrepancies or unexpected behavior, further guidance and support can be found in the detailed release notes linked above and the migrationn guides below:
+  - [RunMode Migration Guide](https://github.com/jest-community/vscode-jest#runmode-migration)
+  - [OutputConfig Migration Guide](https://github.com/jest-community/vscode-jest#outputconfig-migration)
+  
+### CHANGELOG
+- [v6.2.0](https://github.com/jest-community/vscode-jest/releases/tag/v6.2.0)
+
+---
+
+<a id="v610-pre-release"></a>
+## v6.1 (pre-release)
 
 This release introduces a more streamlined ["jest.runMode"](https://github.com/jest-community/vscode-jest#runmode) setting to boost test execution efficiency, coupled with the integration of the "TEST RESULTS" panel via the new ["jest.outputConfig"](https://github.com/jest-community/vscode-jest#outputconfig) for a consistent test results display. These enhancements should simplify the transition for newcomers and also improve startup times for larger projects, while offering more control over test output visibility.
 
@@ -87,7 +124,7 @@ The following settings have been consolidated into `runMode` and will be removed
 
 - "jest.autoRun"
 - "jest.showCoverageOnLoad"
-- "TestExplorer"
+- "jest.TestExplorer"
 
 For a smooth transition, users should migrate to the new `runMode`` setting. Assistance with migration is provided by the `"Jest: Save Current RunMode"`` command in the command palette. Complete migration steps can be found in the [RunMode Migration Guide](https://github.com/jest-community/vscode-jest#runmode-migration).
 
@@ -149,13 +186,17 @@ For a step-by-step migration process, see the [OutputConfig Migration Guide](htt
 - Fixed an issue where the virtual folder `rootPath` was not resolved correctly for folder test items, causing test runs or debugging to fail. ([#1080](https://github.com/jest-community/vscode-jest/pull/1080) - @akwodkiewicz)
 - Resolved a matching problem during manual test runs where a non-exact match led to more tests being run than specified. ([#1091](https://github.com/jest-community/vscode-jest/pull/1091) - @connectdotz)
 - Corrected the status recording for running `".each"` test/describe blocks which sometimes did not reflect accurately. ([#1092](https://github.com/jest-community/vscode-jest/pull/1092) - @connectdotz)
+- fix anchors in contributing.md file by @krivonos28 in [#1102](https://github.com/jest-community/vscode-jest/pull/1102)
+- more fault-tolerant for shell setting by @connectdotz in [#1100](https://github.com/jest-community/vscode-jest/pull/1100)
+-  fix active editor files sometimes got attached to the wrong workspace folder by @connectdotz in [#1108](https://github.com/jest-community/vscode-jest/pull/1108)
 
 ### Technical Debt
 - Updated the CI node version check to now include versions 18 through 20, ensuring compatibility with the latest node releases. ([#1088](https://github.com/jest-community/vscode-jest/pull/1088) - @connectdotz)
 - Upgraded tooling dependencies to their latest versions to improve development workflows and bring in new features and bug fixes from those tools. ([#1089](https://github.com/jest-community/vscode-jest/pull/1089) - @connectdotz)
 
 
-## v6.0.0 (pre-release)
+<a id="v610-pre-release"></a>
+## v6.0 (pre-release)
 
 This major release introduces the 'Virtual Folders' feature. Much like a VSCode workspace folder, a 'Virtual Folder' allows you to manage a custom Jest runtime environment, each configurable with its own resource-level settings. This is particularly useful for projects with multiple Jest configurations or monorepo structures. While we've ensured backward compatibility, the introduction of 'Virtual Folders' involved significant internal changes that prompted a major version bump. 
 
@@ -212,7 +253,7 @@ See [useDashedArgs](https://github.com/jest-community/vscode-jest#usedashedargs)
 - [jest-community/jest-editor-support#103](https://github.com/jest-community/jest-editor-support/pull/103) - @mjamin
 - [#1034](https://github.com/jest-community/vscode-jest/pull/1034) - @connectdotz
 
-#### 3. control extension activation within each folder
+#### 3. Control extension activation within each folder
 A new setting`"jest.enable"` is added as a quick way to turn off the extension feature for the given folder/virtual-folder without uninstall/disable completely in vscode. 
 
 This is indeed similar to `"jest.disabledWorkspaceFolders"`, which is a "window" level setting (on the root of the workspace). Given the target is the folder itself, we believe it makes more sense to put the control `"jest.enable"` in folder level instead. It could also provide better extensibility down the road, such as "deferred-activation". We hope `"jest.enable"` will eventually replace `"jest.disabledWorkspaceFolders"`.

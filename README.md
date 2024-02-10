@@ -13,7 +13,7 @@ This extension supports full [jest](https://jestjs.io/) features in vscode envir
 
 If the extension can find the jest command, by default it will automatically run and monitor all tests in watch mode upon launch, and you should see tests, status, errors, coverage (if enabled) in TestExplorer and editors like this:
 
-![image](images/v5-output-terminals.png)
+![image](images/v6-quick-start.png)
 
 If you have a more sophisticated project configuration or prefer to run tests differently, fear not, the extension supports extensive [customization settings](#customization). For example:
 
@@ -26,9 +26,9 @@ You can see the full [features](#features) and learn more details in the [How-To
 Happy testing!
 
 ## Releases 
-- **Next** ([v6.1.2](https://github.com/jest-community/vscode-jest/releases/tag/v6.1.2-next)): [release note](release-notes/release-note-v6.md#v610-pre-release)
-- **Current** ([v5.2.3](https://github.com/jest-community/vscode-jest/releases/tag/v5.2.3)): [release note](release-notes/release-note-v5.x.md#v523)
-- **Previous** ([v5.1.0](https://github.com/jest-community/vscode-jest/releases/tag/v5.1.0)): [release note](release-notes/release-note-v5.x.md#v510)
+- **Current** ([v6.2.0](https://github.com/jest-community/vscode-jest/releases/tag/v6.2.0)): [release note](release-notes/release-note-v6.md#v620)
+- **Previous** ([v5.2.3](https://github.com/jest-community/vscode-jest/releases/tag/v5.2.3)): [release note](release-notes/release-note-v5.x.md#v523)
+
  
 All: [Release Notes](release-notes/release-notes.md)
 
@@ -86,15 +86,15 @@ Content
 ## Features
 
 * Starts Jest automatically for most projects with runnable jest configurations.
+* Supports monorepo, react, react-native, angular, vue and various configurations/platforms.
+* Supports running multiple jest processes within the same workspace folder.
 * Fully integrated with the vscode TestExplorer.
+* Help debug jest tests in vscode.
+* View and update snapshots interactively. 
+* Show coverage information in files being tested.
 * Supports both automatic and manual test runs at any level, and easy-switch via UI.
 * Supports additional IntelliSense for jest methods.
 * Show fails inline of the `expect` function, as well as in the problem inspector.
-* View and update snapshots interactively. 
-* Help debug jest tests in vscode.
-* Show coverage information in files being tested.
-* Supports monorepo, react, react-native, angular, vue and various configurations/platforms.
-* Supports running multiple jest processes from the same workspace folder.
 * active community support.
 
 ## Installation
@@ -117,13 +117,13 @@ This extension fully integrates with the VSCode testing framework, supporting bo
    We realized that runMode preference could change even within a given project, for example developers  prefer "watch" runMode when doing light code changes to ensure nothing breaks, may prefer the 'on-demand' mode during heavy test development for greater control over test execution. A static runMode config in "settings.json" is simply not sufficient. Therefore, we added the [runMode quick switch](#runmode-chooser) so users can easily switch to different runMode without permanently modifying the "settings.json".
    <br> 
 
-2. **Interactive Test Run**: Besides automatic test executions ("watch", "on-save"), users can initiate full test actions, such as run, debug, [update/view snapshot](#how-to-update-and-view-snapshots), from both editor and Test Explorer through various [UI components](#how-to-trigger-the-test-run).
+2. **Interactive Test Run**: Besides automatic test executions ("watch", "on-save"), users can initiate full test actions, such as run, debug, [update/view snapshot](#how-to-update-and-view-snapshots), from both editor and Test Explorer through various [UI components](#how-to-trigger-a-test-run).
    <br>
 
 3. **Test Output**: The extension offers native jest run outputs in both the "TERMINAL" and "TEST RESULTS" panel. "TEST RESULTS" panel mainly displays test run output in execution order, while "TERMINAL" groups test output by workspace folder/virtual-folder, and also includes extension configuration details, [quick-fix](#quick-fix-chooser) suggestions, etc. By default, the output appears when tests run, but this can be adjusted via the [outputConfig](#outputconfig) setting.
    <br>
 
-4. **Extension Status**: Upon successful launch of the extension, the [status bar](#how-to-trigger-the-test-run) shows the run status for the active folder, and the aggregated test status for the whole workspace. Clicking on each status reveals the associated output window.  
+4. **Extension Status**: Upon successful launch of the extension, the [status bar](#how-to-read-the-statusbar) shows the run status for the active folder, and the aggregated test status for the whole workspace. Clicking on each status reveals the associated output window.  
 
 ## How To?
 ### How to set up the extension?
@@ -176,14 +176,14 @@ The extension will try to generate a debug config, but if you encounter a debug 
 ### How to use code coverage?
 
 Code coverage can be triggered via
-1. change [runMode](#runmode) config via [chooser](#run-modoe-chooser) or settings.
+1. change [runMode](#runmode) config via [chooser](#runmode-chooser) or settings.
 2. [Command Palette](https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette), select command like **Jest: Toggle Coverage** to activate or deactivate code coverage (see full list in [commands](#commands). 
   
 The coverage stats will be displayed at the source code editor: summary at the top and inline coverage indicator based on the formatter selected.
 
 <img src="images/coverage-screen-shot.png" alt="coverage-screen-shot" width="500"/>
 
-To verify the coverage mode is on, one can check the [runMode chooser](#run-mode-choose) or the status bar (see [how to read the status bar](#how-to-read-the-statusbar))
+To verify the coverage mode is on, one can check the [runMode chooser](#runmode-chooser) or the status bar (see [how to read the status bar](#how-to-read-the-statusbar))
 
 Note: this extension supports both `babel` and `v8` coverageProviders. However, please note the coverage might not be exactly the same, see [facebook/jest#11188](https://github.com/facebook/jest/issues/11188) for more details.
 
@@ -348,7 +348,7 @@ for example:
 
 #### outputConfig
 
-The `outputConfig` controls the Jest output experience by specifying when and where to create, display, and clear the output content. It supports 2 output panels: `TEST RESULTS` and `TERMINAL`. The `TEST RESULTS` panel displays test results in the order they were run, while the `TERMINAL` panel organizes outputs by workspace folder. `TERMINAL` panel also contains the non-test run outputs, such as [quick-fix link](quick-fix-chooser), extension auto-config info and tips. 
+The `outputConfig` controls the Jest output experience by specifying when and where to create, display, and clear the output content. It supports 2 output panels: `TEST RESULTS` and `TERMINAL`. The `TEST RESULTS` panel displays test results in the order they were run, while the `TERMINAL` panel organizes outputs by workspace folder. `TERMINAL` panel also contains the non-test run outputs, such as [quick-fix link](#quick-fix-chooser), extension auto-config info and tips. 
 
 **Type Definitions**
 ```ts
@@ -556,8 +556,8 @@ While the concepts of performance and automation are generally clear, "completen
 3. Tests bearing dynamic names, like those using test.each with variables or template literals, won't be translated. As a result, they must be executed through higher-level constructs, such as describe blocks with static names or entire test suites.
 
 
-**Migration Guide**
 <a id="runmode-migration"></a>
+**Migration Guide**
 Starting from v6.1.0, if no runMode is defined in settings.json, the extension will automatically generate one using legacy settings (`autoRun`, `showCoverageOnLoad`). To migrate, simply use the `"Jest: Save Current RunMode"` command from the command palette to update the setting, then remove the deprecated settings.
 
 ---
@@ -579,7 +579,7 @@ Performance and automation are self-explanatory, "completeness" might not:
 3. tests with dynamic names (test.each with variables, template-literals, etc.) will not be translated; therefore, they can only be run through parent blocks (describe-with-static-name or test suite, etc.).
 
 There are 2 ways to change autoRun: 
-1. Temporarily [toggle autoRun on/off in TestExplorer](#how-to-toggle-auto-run)
+1. Temporarily toggle autoRun on/off in TestExplorer
 2. Change "jest.autoRun" in `settings.json` file.
 
 <a id="autorun-config">**autoRun Configuration**</a>
@@ -609,7 +609,7 @@ There are 2 ways to change autoRun:
   <details>
   <summary>example</summary>
 
-  - Turn off auto run, users need to trigger tests run manually via [run commands](#commands-run) and [menus](#context-menu):
+  - Turn off auto run, users need to trigger tests run manually via run commands or context menu:
     ```json
     "jest.autoRun": "off"
     ```
@@ -677,7 +677,8 @@ By default, jest command is executed in default shell ('cmd' for windows, '/bin/
 Note the LoginShell is only applicable for non-windows platform and could cause a bit more overhead.
 
 <a id="auto-recovery-login-shell"></a>
-_Note_: Since v5, if detected shell env issue, such as `node: command not found` or `npm: no such file or directory`, the extension will fallback to a login shell to ensure tests can run correctly. If will try to auto generate a login shell configuration based on the `jest.shell` setting, otherwise, it will use the default `bash` login-shell. Currently supported auto-fallback shells are `bash`, `zsh`, `fish`.
+**Auto recovery with login shell**
+Since v5, if detected shell env issue, such as `node: command not found` or `npm: no such file or directory`, the extension will fallback to a login shell to ensure tests can run correctly. If will try to auto generate a login shell configuration based on the `jest.shell` setting, otherwise, it will use the default `bash` login-shell. Currently supported auto-fallback shells are `bash`, `zsh`, `fish`.
 
 
 ---
@@ -729,6 +730,7 @@ This extension uses babel to parse the test files. For decorators [plugin option
 
 ---
 
+<a id="virtual-folders"></a?
 #### virtualFolders
 
 Much like a vscode workspace folder, which manages a runtime environment for a specific folder, a virtualFolder manages a custom Jest runtime environment. Each virtualFolder can have its own resource-level [settings](#settings), such as `jestCommandLine` and `rootPath`.

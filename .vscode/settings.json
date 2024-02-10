@@ -18,8 +18,13 @@
   "cSpell.words": [
     "unmock"
   ],
-  "testing.openTesting": "neverOpen",
-  "jest.outputConfig": {
-    "clearOnRun": "terminal"
-  }
+  "markdown.validate.ignoredLinks": [
+    "#runmode-chooser",
+    "#runmode-tradeoff",
+    "#quick-fix-chooser",
+    "#virtual-folders",
+    "#outputconfig-conflict",
+    "#runmode-migration",
+    "#auto-recovery-login-shell"
+  ]
 }
