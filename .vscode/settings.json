@@ -9,6 +9,9 @@
     "node_modules/jest-editor-support/src": false
   },
   "typescript.tsdk": "./node_modules/typescript/lib",
+  // jest
+  "jest.runMode":"on-demand",
+  // "testing.openTesting": "neverOpen",
   // eslint
   "tslint.enable": false,
   "eslint.enable": true,
