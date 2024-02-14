@@ -36,7 +36,7 @@ Release Notes <!-- omit in toc -->
 ## v6.2.1
 This release is a patch release with the following bug fix:
 
-- Fixed test run errors due to incorrect sub folder paths from the test Explorer panel. ([#1113](https://github.com/jest-community/vscode-jest/pull/1113) - @connectdotz)
+- Fixed test run errors due to incorrect sub folder paths from the test Explorer panel. ([#1114](https://github.com/jest-community/vscode-jest/pull/1114) - @connectdotz)
 
 ### CHANGELOG
 - [v6.2.1](https://github.com/jest-community/vscode-jest/releases/tag/v6.2.1)
