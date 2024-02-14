@@ -3,11 +3,13 @@
 Release Notes <!-- omit in toc --> 
 ---
 
+- [v6.2.1](#v621)
+  - [CHANGELOG](#changelog)
 - [v6.2.0](#v620)
   - [New Features Summary](#new-features-summary)
   - [Bug Fixes and Technical Debt Reduction](#bug-fixes-and-technical-debt-reduction)
   - [Breaking Changes](#breaking-changes)
-  - [CHANGELOG](#changelog)
+  - [CHANGELOG](#changelog-1)
 - [v6.1 (pre-release)](#v61-pre-release)
   - [Main Features](#main-features)
     - [1. Enhanced Test Execution Control with "runMode"](#1-enhanced-test-execution-control-with-runmode)
@@ -27,10 +29,18 @@ Release Notes <!-- omit in toc -->
     - [3. Control extension activation within each folder](#3-control-extension-activation-within-each-folder)
     - [4. Auto clear output upon test run](#4-auto-clear-output-upon-test-run)
   - [Fixes](#fixes)
-  - [CHANGELOG](#changelog-1)
+  - [CHANGELOG](#changelog-2)
 
 ---
 
+## v6.2.1
+This release is a patch release with the following bug fix:
+
+- Fixed test run errors due to incorrect sub folder paths from the test Explorer panel. ([#1113](https://github.com/jest-community/vscode-jest/pull/1113) - @connectdotz)
+
+### CHANGELOG
+- [v6.2.1](https://github.com/jest-community/vscode-jest/releases/tag/v6.2.1)
+ 
 ## v6.2.0
 This version is a rollup of pre-releases [v6.0](#v60-pre-release) through [v6.1](#v61-pre-release), which implemented a few long requested features, such as better monorepo project support, more intuitive ways to defer and resume testing, and showing accurate test results in TEST RESULT panel.
 

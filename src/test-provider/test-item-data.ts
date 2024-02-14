@@ -14,7 +14,6 @@ import { JestTestRun } from './jest-test-run';
 import { JestProcessInfo, JestProcessRequest } from '../JestProcessManagement';
 import { GENERIC_ERROR, LONG_RUNNING_TESTS, getExitErrorDef } from '../errors';
 import { tiContextManager } from './test-item-context-manager';
-import { toAbsoluteRootPath } from '../helpers';
 import { runModeDescription } from '../JestExt/run-mode';
 import { isVirtualWorkspaceFolder } from '../virtual-workspace-folder';
 import { outputManager } from '../output-manager';
@@ -203,11 +202,7 @@ export class WorkspaceRoot extends TestItemDataBase {
     );
   };
   private addPath = (absoluteFileName: string): FolderData | undefined => {
-    const absoluteRoot = toAbsoluteRootPath(
-      this.context.ext.workspace,
-      this.context.ext.settings.rootPath
-    );
-    const relativePath = path.relative(absoluteRoot, absoluteFileName);
+    const relativePath = path.relative(this.item.uri!.fsPath, absoluteFileName);
     const folders = relativePath.split(path.sep).slice(0, -1);
 
     return folders.reduce(this.addFolder, undefined);
