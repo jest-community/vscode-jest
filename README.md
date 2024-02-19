@@ -444,7 +444,7 @@ The extension also features built-in conflict detection and quick fixes to assis
     "clearOnRun": "terminal"
   }
   ```
- ``
+  
 **Migration Guide**
 <a id="outputconfig-migration"></a>
 
