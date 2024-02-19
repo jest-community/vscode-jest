@@ -444,7 +444,7 @@ The extension also features built-in conflict detection and quick fixes to assis
     "clearOnRun": "terminal"
   }
   ```
- 
+ ``
 **Migration Guide**
 <a id="outputconfig-migration"></a>
 
@@ -563,9 +563,9 @@ Starting from v6.1.0, if no runMode is defined in settings.json, the extension w
 ---
 
 #### autoRun
- <div style="background-color: yellow; color: black; padding: 10px; border-radius: 5px;">
-  Note: As of v6.1.0, autoRun will be replaced by <a href="#runmode">runMode</a>. For transition details, please refer to the <a href="#runmode-migration">runMode migration</a>.
-</div>
+
+> [!WARNING]
+>  As of v6.1.0, autoRun will be replaced by <a href="#runmode">runMode</a>. For transition details, please refer to the <a href="#runmode-migration">runMode migration</a>.
 
 AutoRun controls when tests should be executed automatically.
 
@@ -651,9 +651,8 @@ There are 2 ways to change autoRun:
 
 #### testExplorer
 
- <div style="background-color: yellow; color: black; padding: 10px; border-radius: 5px;">
-  As of v6.1.0, this setting has been folded into <a href="#runmode">runMode</a>. For transition details, please refer to the <a href="#runmode-migration">runMode migration</a>.
-</div>
+> [!WARNING]
+>   As of v6.1.0, this setting has been folded into <a href="#runmode">runMode</a>. For transition details, please refer to the <a href="#runmode-migration">runMode migration</a>.
 
   ```ts
   testExplorer = {showInlineError?: boolean}
@@ -697,9 +696,9 @@ Default is `"jest.monitorLongRun":60000` (1 minute)
 ---
 
 #### autoRevealOutput
- <div style="background-color: yellow; color: black; padding: 10px; border-radius: 5px;">
-  As of v6.1.0, this setting has been folded into <a href="#outputconfig">outputConfig</a>. For transition details, please refer to the <a href="#outputconfig-migration">outputConfig migration</a>.
-</div>
+
+> [!WARNING]
+>  As of v6.1.0, this setting has been folded into <a href="#outputconfig">outputConfig</a>. For transition details, please refer to the <a href="#outputconfig-migration">outputConfig migration</a>.
 
 ```ts
 autoRevealOutput = "on-run" | "on-exec-error" | "off"
