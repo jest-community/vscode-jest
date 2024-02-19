@@ -698,7 +698,7 @@ Default is `"jest.monitorLongRun":60000` (1 minute)
 
 #### autoRevealOutput
  <div style="background-color: yellow; color: black; padding: 10px; border-radius: 5px;">
-  As of v6.1.0, this setting has been folded into <a href="#runmode">runMode</a>. For transition details, please refer to the <a href="#runmode-migration">runMode migration</a>.
+  As of v6.1.0, this setting has been folded into <a href="#outputconfig">outputConfig</a>. For transition details, please refer to the <a href="#outputconfig-migration">outputConfig migration</a>.
 </div>
 
 ```ts
