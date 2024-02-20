@@ -444,22 +444,23 @@ The extension also features built-in conflict detection and quick fixes to assis
     "clearOnRun": "terminal"
   }
   ```
-  
-**Migration Guide**
-<a id="outputconfig-migration"></a>
 
-Migrating to the new `"jest.outputConfig"` can require some manual adjustments, especially if you're working in a multi-root workspace. Here are some guidelines to help with the transition:
-
-1. **Workspace Level vs Workspace-Folder Level**: The new `"jest.outputConfig"` is a workspace-level setting, unlike legacy settings like `"jest.autoClearTerminal"` and `"jest.autoRevealOutput"`, which are workspace-folder level settings.
-
-2. **Backward Compatibility**: If no `"jest.outputConfig"` is defined in your settings.json, the extension will attempt to generate a backward-compatible outputConfig in memory. This uses the `"testing.openTesting"` setting and any legacy settings (`"jest.autoClearTerminal"`, `"jest.autoRevealOutput"`) you might have. Note that this might only work for single-root workspaces.
-
-3. **Migration Steps**:
-   - Use the `"Jest: Save Current Output Config"` command from the command palette to update your settings.json.
-   - (optional) Fix warning: The save does not include `"testing.openTesting"`, so you might see the conflict warning message. You can either use the "Quick Fix" action or adjust the `settings.json` manually (see [handling conflict](#outputconfig-conflict)).
-   - Finally, remove any deprecated settings.
-
-By following these guidelines, you should be able to smoothly transition to using `"jest.outputConfig"`.
+> [!NOTE] 
+> **Migration Guide**
+> <a id="outputconfig-migration"></a>
+>
+> Migrating to the new `"jest.outputConfig"` can require some manual adjustments, especially if you're working in a multi-root workspace. Here are some guidelines to help with the transition:
+> 
+> 1. **Workspace Level vs Workspace-Folder Level**: The new `"jest.outputConfig"` is a workspace-level setting, unlike legacy settings like `"jest.autoClearTerminal"` and `"jest.autoRevealOutput"`, which are workspace-folder level settings.
+> 
+> 2. **Backward Compatibility**: If no `"jest.outputConfig"` is defined in your settings.json, the extension will attempt to generate a backward-compatible outputConfig in memory. This uses the `"testing.openTesting"` setting and any legacy settings (`"jest.autoClearTerminal"`, `"jest.autoRevealOutput"`) you might have. Note that this might only work for single-root workspaces.
+> 
+> 3. **Migration Steps**:
+>    - Use the `"Jest: Save Current Output Config"` command from the command palette to update your settings.json.
+>    - (optional) Fix warning: The save does not include `"testing.openTesting"`, so you might see the conflict warning message. You can either use the "Quick Fix" action or adjust the `settings.json` manually (see [handling conflict](#outputconfig-conflict)).
+>   - Finally, remove any deprecated settings.
+> 
+> By following these guidelines, you should be able to smoothly transition to using `"jest.outputConfig"`.
 
 ---
 
