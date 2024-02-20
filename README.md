@@ -446,8 +446,8 @@ The extension also features built-in conflict detection and quick fixes to assis
   ```
 
 > [!NOTE] 
-> **Migration Guide**
 > <a id="outputconfig-migration"></a>
+> **Migration Guide**
 >
 > Migrating to the new `"jest.outputConfig"` can require some manual adjustments, especially if you're working in a multi-root workspace. Here are some guidelines to help with the transition:
 > 
