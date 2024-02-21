@@ -38,7 +38,7 @@ interface JestCommandSettings {
   jestCommandLine: string;
 }
 
-const AUTO_FOCUS_WARNING = `The Test Results panel has auto-focus enabled, which may cause unexpected focus shifts during the current run mode. If this becomes a problem, you can disable the autofocus using the command "Jest: Disable Auto Focus Test Output". Alternatively, click on the action link below. For more details, see ${OUTPUT_CONFIG_HELP_URL}`;
+const AUTO_FOCUS_WARNING = `The TEST RESULTS panel has auto-focus enabled, which may cause frequent focus shifts during the current run mode. If this becomes a problem, you can disable the auto-focus using the command "Jest: Disable Auto Focus Test Output". Alternatively, click on the action link below. For more details, see ${OUTPUT_CONFIG_HELP_URL}`;
 
 /** extract lines starts and end with [] */
 export class JestExt {

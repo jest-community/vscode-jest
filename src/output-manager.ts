@@ -216,7 +216,7 @@ export class OutputManager {
     }
 
     const detail =
-      `test-results panel setting \r\n"testing.openTesting: ${this.openTesting}"\r\n` +
+      `Output Config Conflict Detected: test-results panel setting "testing.openTesting: ${this.openTesting}" ` +
       `conflicts with jest.outputConfig:\r\n ${JSON.stringify(this.config, undefined, 4)}.`;
     console.warn(detail);
 
@@ -228,8 +228,7 @@ export class OutputManager {
 
     const buttons: string[] = [actions.fixIt, actions.help, actions.cancel];
     const selection = await vscode.window.showWarningMessage(
-      `Output Config Conflict Detected:`,
-      { modal: true, detail },
+      `Output Config Conflict Detected (see console log for more details)`,
       ...buttons
     );
     switch (selection) {
