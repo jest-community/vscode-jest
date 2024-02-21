@@ -13,6 +13,7 @@ import { startWizard } from '../src/setup-wizard';
 import { VirtualWorkspaceFolder } from '../src/virtual-workspace-folder';
 import { updateSetting } from '../src/Settings';
 import { showQuickFix } from '../src/quick-fix';
+import { outputManager } from '../src/output-manager';
 
 const mockEnabledWorkspaceFolders = jest.fn();
 jest.mock('../src/workspace-manager', () => ({
@@ -1246,6 +1247,7 @@ describe('ExtensionManager', () => {
           get: jest.fn((key) => map.get(key)),
           update: jest.fn((key: string, value: boolean) => map.set(key, value)),
         };
+        outputManager.validate = jest.fn();
 
         extensionManager = createExtensionManager(['ws-1', 'ws-2'], { globalState });
         ext1 = extensionManager.getByName('ws-1');
@@ -1265,6 +1267,7 @@ describe('ExtensionManager', () => {
         extensionManager.activate();
         expect(ext1.activate).not.toHaveBeenCalled();
         expect(ext2.activate).toHaveBeenCalled();
+        expect(outputManager.validate).toHaveBeenCalled();
       });
       it('without active editor => do nothing', () => {
         (vscode.window.activeTextEditor as any) = undefined;

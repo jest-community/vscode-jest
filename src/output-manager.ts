@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { AutoRevealOutputType, JestOutputSetting, JestRawOutputSetting } from './Settings/types';
 import { ExtOutputTerminal } from './JestExt/output-terminal';
-import { extensionName } from './appGlobals';
+import { OUTPUT_CONFIG_HELP_URL, extensionName } from './appGlobals';
 
 export type OutputConfig = Required<JestRawOutputSetting>;
 export const DefaultJestOutputSetting: OutputConfig = {
@@ -9,19 +9,24 @@ export const DefaultJestOutputSetting: OutputConfig = {
   revealWithFocus: 'none',
   clearOnRun: 'none',
 };
-
-const OUTPUT_CONFIG_HELP_URL = 'https://github.com/jest-community/vscode-jest#outputconfig';
+export interface OutputConfigs {
+  outputConfig: OutputConfig;
+  openTesting: string | undefined;
+}
 
 export class OutputManager {
-  private config: OutputConfig;
+  private config!: OutputConfig;
+  private openTesting: string | undefined;
+  private skipValidation = false;
 
   constructor() {
-    this.config = this.getConfig();
+    this.initConfigs();
   }
 
-  private getConfig(): OutputConfig {
+  private initConfigs(): void {
+    this.openTesting = vscode.workspace.getConfiguration('testing').get<string>('openTesting');
     const config = vscode.workspace.getConfiguration('jest').get<JestOutputSetting>('outputConfig');
-    return config
+    this.config = config
       ? this.resolveSetting(config)
       : { ...DefaultJestOutputSetting, ...this.fromLegacySettings() };
   }
@@ -59,11 +64,10 @@ export class OutputManager {
     const vscodeConfig = vscode.workspace.getConfiguration('jest', scope);
     const autoClearTerminal = vscodeConfig.get<boolean>('autoClearTerminal');
     const autoRevealOutput = vscodeConfig.get<AutoRevealOutputType>('autoRevealOutput');
-    const openTesting = vscode.workspace.getConfiguration('testing').get<string>('openTesting');
 
     const config = {} as JestRawOutputSetting;
 
-    switch (openTesting) {
+    switch (this.openTesting) {
       case 'neverOpen':
       case 'openExplorerOnTestStart':
         // no-op
@@ -76,22 +80,19 @@ export class OutputManager {
         config.revealWithFocus = 'test-results';
         break;
       default:
-        console.warn(`Unrecognized "testing.openTesting" setting: ${openTesting}`);
+        console.warn(`Unrecognized "testing.openTesting" setting: ${this.openTesting}`);
     }
 
-    switch (autoRevealOutput) {
-      case undefined:
-        // no-op
-        break;
-      case 'on-run':
-      case 'on-exec-error':
-        config.revealOn = 'run';
-        break;
-      case 'off':
-        config.revealOn = 'demand';
-        config.revealWithFocus = 'none';
-        break;
+    if (autoRevealOutput === 'off') {
+      config.revealOn = 'demand';
+      config.revealWithFocus = 'none';
+      if (this.openTesting !== 'neverOpen') {
+        console.warn(
+          'The "autoRevealOutput" setting is set to "off", but "testing.openTesting" is not set to "neverOpen".'
+        );
+      }
     }
+
     config.clearOnRun = autoClearTerminal ? 'terminal' : 'none';
     return config;
   }
@@ -155,6 +156,7 @@ export class OutputManager {
     await vscode.workspace
       .getConfiguration('testing')
       .update('openTesting', value, vscode.ConfigurationTarget.Workspace);
+
     console.warn(`set "testing.openTesting" to "${value}"`);
   }
 
@@ -164,33 +166,58 @@ export class OutputManager {
       vscode.commands.registerCommand(`${extensionName}.save-output-config`, async () =>
         this.save()
       ),
+      vscode.commands.registerCommand(`${extensionName}.disable-auto-focus`, async () =>
+        this.disableAutoFocus()
+      ),
     ];
   }
 
-  /**
-   * Check if "testing.openTesting" setting conflict with outputConfig.
-   * This occurred when "testing.openTesting" is not set to "neverOpen"
-   * and the 'revealWithFocus' is not set to "test-results"
-   *
-   * @returns boolean
-   */
-  private isTestingSettingValid(): boolean {
-    const testingSetting = vscode.workspace.getConfiguration('testing').get<string>('openTesting');
-    return testingSetting === 'neverOpen' || this.config.revealWithFocus === 'test-results';
+  public isAutoFocus(): boolean {
+    return this.config.revealWithFocus !== 'none' || this.openTesting !== 'neverOpen';
+  }
+  public async disableAutoFocus(): Promise<void> {
+    this.skipValidation = true;
+    await this.updateTestResultsSettings();
+    this.config.revealWithFocus = 'none';
+    await this.save();
+    this.skipValidation = false;
+  }
+
+  /** returns a readonly settings related to jest output */
+  public outputConfigs(): OutputConfigs {
+    return { outputConfig: { ...this.config }, openTesting: this.openTesting };
+  }
+
+  public isTestResultsConfigsValid(): boolean {
+    switch (this.openTesting) {
+      case 'openOnTestStart':
+        return this.config.revealWithFocus === 'test-results' && this.config.revealOn === 'run';
+      case 'openOnTestFailure':
+        return this.config.revealWithFocus === 'test-results' && this.config.revealOn === 'error';
+      default:
+        return true;
+    }
   }
 
   /**
    * Validates output settings for potential conflicts.
    * If conflict detected, show a warning message with options to update the settings.
+   * @returns true if no conflict detected or user has resolved the conflict; false otherwise; undefined if validation is skipped.
    * @returns void
    */
-  public async validate(): Promise<boolean> {
-    if (this.isTestingSettingValid()) {
+  public async validate(): Promise<boolean | undefined> {
+    if (this.skipValidation) {
+      return;
+    }
+
+    //check for conflicts between testing.openTesting and jest.outputConfig.revealWithFocus
+    if (this.isTestResultsConfigsValid()) {
       return true;
     }
 
-    const testingSetting = vscode.workspace.getConfiguration('testing').get<string>('openTesting');
-    const detail = `test-results panel setting "testing.openTesting: ${testingSetting}" conflicts with jest.outputConfig "revalWithFocus: ${this.config.revealWithFocus}".`;
+    const detail =
+      `test-results panel setting \r\n"testing.openTesting: ${this.openTesting}"\r\n` +
+      `conflicts with jest.outputConfig:\r\n ${JSON.stringify(this.config, undefined, 4)}.`;
     console.warn(detail);
 
     const actions = {
@@ -201,7 +228,8 @@ export class OutputManager {
 
     const buttons: string[] = [actions.fixIt, actions.help, actions.cancel];
     const selection = await vscode.window.showWarningMessage(
-      `Output Config Conflict Detected`,
+      `Output Config Conflict Detected:`,
+      { modal: true, detail },
       ...buttons
     );
     switch (selection) {
@@ -223,8 +251,8 @@ export class OutputManager {
       },
       fixOutputConfig: {
         label: '$(sync-ignored) Fix outputConfig setting',
-        description: '(Extension will NOT manage the test-results panel)',
-        detail: 'Set "jest.outputConfig.revealWithFocus" to "test-results"',
+        description: '(Match output config with current test-results panel setting)',
+        detail: 'Set "jest.outputConfig.revealWithFocus" to "test-results" etc.',
       },
       editSettings: {
         label: '$(tools) Edit Settings Manually',
@@ -247,6 +275,7 @@ export class OutputManager {
         return true;
       case items.fixOutputConfig:
         this.config.revealWithFocus = 'test-results';
+        this.config.revealOn = this.openTesting === 'openOnTestFailure' ? 'error' : 'run';
         await this.save();
         return true;
       case items.editSettings:
@@ -264,7 +293,7 @@ export class OutputManager {
       e.affectsConfiguration('jest.outputConfig') ||
       e.affectsConfiguration('testing.openTesting')
     ) {
-      this.config = this.getConfig();
+      this.initConfigs();
       this.validate();
     }
   }

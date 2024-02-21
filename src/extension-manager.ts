@@ -17,6 +17,7 @@ import { enabledWorkspaceFolders } from './workspace-manager';
 import { VirtualFolderBasedCache } from './virtual-workspace-folder';
 import { updateSetting } from './Settings';
 import { showQuickFix } from './quick-fix';
+import { outputManager } from './output-manager';
 
 export type GetJestExtByURI = (uri: vscode.Uri) => JestExt[];
 
@@ -518,6 +519,7 @@ export class ExtensionManager {
 
   activate(): void {
     this.showReleaseMessage();
+    outputManager.validate();
 
     if (vscode.window.activeTextEditor?.document.uri) {
       this.onExtensionByUri(vscode.window.activeTextEditor?.document.uri, (ext) => {

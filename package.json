@@ -407,6 +407,10 @@
         "title": "Jest: Save Current Output Config"
       },
       {
+        "command": "io.orta.jest.disable-auto-focus",
+        "title": "Jest: Disable Auto Focus Test Output"
+      },
+      {
         "command": "io.orta.jest.run-all-tests",
         "title": "Jest: Run All Tests"
       },
