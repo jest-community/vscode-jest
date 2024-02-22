@@ -40,7 +40,7 @@ This release is a patch release with the following changes:
 
 **Enhancement**  
 
-- Improved output config validation logic and showed warning when detected upon starting up. ([#1119](https://github.com/jest-community/vscode-jest/pull/1119) - @connectdotz)
+- Improved output config validation logic and showed warning if detected upon starting up. ([#1119](https://github.com/jest-community/vscode-jest/pull/1119) - @connectdotz)
 
 - Added more diagnosis and fix-it instructions in the jest terminal: ([#1119](https://github.com/jest-community/vscode-jest/pull/1119) - @connectdotz)
 
@@ -57,6 +57,7 @@ This release is a patch release with the following changes:
   
 **Documentation**
 - Minor docs updates for the migration guides. ([#1116](https://github.com/jest-community/vscode-jest/pull/1116) - @pmcelhaney)
+- Minor update for the output config info in README and release notes. ([#1119](https://github.com/jest-community/vscode-jest/pull/1119) - @connectdotz)
 
 ### CHANGELOG
 - [v6.2.2](https://github.com/jest-community/vscode-jest/releases/tag/v6.2.2)
