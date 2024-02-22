@@ -29,6 +29,8 @@ jest.mock('../../src/workspace-manager', () => ({
 }));
 const mockOutputManager = {
   showOutputOn: jest.fn(),
+  isAutoFocus: jest.fn(),
+  outputConfigs: jest.fn(),
 };
 jest.mock('../../src/output-manager', () => ({
   outputManager: mockOutputManager,
@@ -42,7 +44,6 @@ import { updateCurrentDiagnostics, updateDiagnostics } from '../../src/diagnosti
 import { CoverageMapProvider } from '../../src/Coverage';
 import * as helper from '../../src/helpers';
 import { resultsWithLowerCaseWindowsDriveLetters } from '../../src/TestResults';
-import * as messaging from '../../src/messaging';
 import { PluginResourceSettings } from '../../src/Settings';
 import * as extHelper from '../../src/JestExt/helper';
 import { workspaceLogging } from '../../src/logging';
@@ -150,7 +151,9 @@ describe('JestExt', () => {
       jestCommandLine: 'jest',
     };
     getConfiguration.mockReturnValue({});
+    mockOutputManager.outputConfigs.mockReturnValue({});
 
+    vscode.window.visibleTextEditors = [];
     (createProcessSession as jest.Mocked<any>).mockReturnValue(mockProcessSession);
     (ProjectWorkspace as jest.Mocked<any>).mockImplementation(mockProjectWorkspace);
     (workspaceLogging as jest.Mocked<any>).mockImplementation(mockWorkspaceLogging);
@@ -239,8 +242,6 @@ describe('JestExt', () => {
             testNamePattern,
             workspaceFolder
           );
-
-          expect(messaging.systemWarningMessage).not.toHaveBeenCalled();
         });
         describe('can fallback to workspace config if no folder config found', () => {
           const defaultConfig = { name: 'vscode-jest-tests.v2' };
@@ -812,6 +813,39 @@ describe('JestExt', () => {
         expect(update.state).toEqual('initial');
         expect(update.mode.config.coverage).toEqual(true);
       });
+      describe('emit auto-focus warnings for auto-run modes', () => {
+        it.each`
+          case | runMode                               | isAutoFocus | showWarning
+          ${1} | ${'watch'}                            | ${true}     | ${true}
+          ${2} | ${'watch'}                            | ${false}    | ${false}
+          ${3} | ${'on-save'}                          | ${true}     | ${true}
+          ${4} | ${'on-save'}                          | ${false}    | ${false}
+          ${5} | ${'on-demand'}                        | ${true}     | ${false}
+          ${6} | ${{ type: 'watch', deferred: true }}  | ${true}     | ${false}
+          ${7} | ${{ type: 'watch', deferred: false }} | ${true}     | ${true}
+        `(
+          'case $case: showWarning: $showWarning',
+          async ({ runMode, isAutoFocus, showWarning }) => {
+            expect.hasAssertions();
+
+            const sut = newJestExt({ settings: { runMode: new RunMode(runMode) } });
+            mockOutputManager.isAutoFocus.mockReturnValueOnce(isAutoFocus);
+
+            await sut.startSession();
+            if (showWarning) {
+              expect(mockOutputTerminal.write).toHaveBeenCalledWith(
+                expect.stringContaining('auto-focus'),
+                'warn'
+              );
+            } else {
+              expect(mockOutputTerminal.write).not.toHaveBeenCalledWith(
+                expect.stringContaining('auto focus'),
+                'warn'
+              );
+            }
+          }
+        );
+      });
     });
     describe('stopSession', () => {
       it('will fire event', async () => {
@@ -1281,11 +1315,11 @@ describe('JestExt', () => {
         } else {
           expect(updateSettingSpy).not.toHaveBeenCalled();
         }
-        if (!validationResult) {
+        if (validationResult !== 'pass') {
           if (updateSettings) {
-            expect(messaging.systemErrorMessage).not.toHaveBeenCalled();
+            expect(mockOutputTerminal.write).not.toHaveBeenCalledWith(expect.anything(), 'error');
           } else {
-            expect(messaging.systemErrorMessage).toHaveBeenCalled();
+            expect(mockOutputTerminal.write).toHaveBeenCalledWith(expect.anything(), 'error');
             expect(sbUpdateMock).toHaveBeenCalledWith({ state: 'exec-error' });
           }
         }

@@ -9,22 +9,31 @@ const mockWorkspace = {
 };
 (vscode.workspace as jest.Mocked<any>) = mockWorkspace;
 
-jest.dontMock('../src/output-manager');
+// jest.dontMock('../src/output-manager');
+jest.unmock('../src/output-manager');
 
 import { OutputManager, DefaultJestOutputSetting } from '../src/output-manager';
 
 describe('OutputManager', () => {
-  const getOutputConfig = (om: OutputManager) => {
-    mockConfig.update.mockClear();
-    om.save();
-    const config = mockConfig.update.mock.calls[0][1];
-    return config;
+  const mockWorkspaceConfig = (outputConfig?: any, openTesting = 'openOnTestStart') => {
+    mockConfig.get.mockImplementation((key: string) => {
+      if (key === 'outputConfig') {
+        return outputConfig;
+      }
+      if (key === 'openTesting') {
+        return openTesting;
+      }
+      return undefined;
+    });
   };
+
   let showWarningMessageSpy: any;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    showWarningMessageSpy = jest.spyOn(vscode.window, 'showWarningMessage');
+    showWarningMessageSpy = vscode.window.showWarningMessage as jest.Mocked<any>;
+    // returns default config
+    mockWorkspaceConfig();
   });
 
   describe('constructor', () => {
@@ -32,7 +41,7 @@ describe('OutputManager', () => {
       describe('can resolve outputConfig settings', () => {
         it.each`
           case | outputConfig                                               | expected
-          ${1} | ${undefined}                                               | ${DefaultJestOutputSetting}
+          ${1} | ${undefined}                                               | ${{ ...DefaultJestOutputSetting, revealWithFocus: 'test-results' }}
           ${2} | ${'neutral'}                                               | ${DefaultJestOutputSetting}
           ${3} | ${'terminal-based'}                                        | ${{ revealOn: 'run', revealWithFocus: 'terminal', clearOnRun: 'none' }}
           ${4} | ${'test-results-based'}                                    | ${{ revealOn: 'run', revealWithFocus: 'test-results', clearOnRun: 'none' }}
@@ -41,9 +50,9 @@ describe('OutputManager', () => {
           ${7} | ${{ revealWithFocus: 'terminal', clearOnRun: 'terminal' }} | ${{ revealOn: 'run', revealWithFocus: 'terminal', clearOnRun: 'terminal' }}
           ${8} | ${'wrong-type'}                                            | ${DefaultJestOutputSetting}
         `('case $case', ({ outputConfig, expected }) => {
-          mockConfig.get.mockImplementationOnce(() => outputConfig);
+          mockWorkspaceConfig(outputConfig);
           const om = new OutputManager();
-          const config = getOutputConfig(om);
+          const { outputConfig: config } = om.outputConfigs();
           expect(config).toEqual(expected);
         });
       });
@@ -58,7 +67,7 @@ describe('OutputManager', () => {
           return undefined;
         });
         const om = new OutputManager();
-        const config = getOutputConfig(om);
+        const { outputConfig: config } = om.outputConfigs();
         expect(config).toEqual({
           revealOn: 'run',
           revealWithFocus: 'terminal',
@@ -76,8 +85,8 @@ describe('OutputManager', () => {
           ${4}  | ${'neverOpen'}         | ${undefined}      | ${undefined}       | ${DefaultJestOutputSetting}
           ${5}  | ${'neverOpen'}         | ${true}           | ${undefined}       | ${{ revealOn: 'run', revealWithFocus: 'none', clearOnRun: 'terminal' }}
           ${6}  | ${'openOnTestFailure'} | ${undefined}      | ${undefined}       | ${{ revealOn: 'error', revealWithFocus: 'test-results', clearOnRun: 'none' }}
-          ${7}  | ${'openOnTestFailure'} | ${undefined}      | ${'on-run'}        | ${{ revealOn: 'run', revealWithFocus: 'test-results', clearOnRun: 'none' }}
-          ${8}  | ${'openOnTestFailure'} | ${undefined}      | ${'on-exec-error'} | ${{ revealOn: 'run', revealWithFocus: 'test-results', clearOnRun: 'none' }}
+          ${7}  | ${'openOnTestFailure'} | ${undefined}      | ${'on-run'}        | ${{ revealOn: 'error', revealWithFocus: 'test-results', clearOnRun: 'none' }}
+          ${8}  | ${'openOnTestFailure'} | ${undefined}      | ${'on-exec-error'} | ${{ revealOn: 'error', revealWithFocus: 'test-results', clearOnRun: 'none' }}
           ${9}  | ${'openOnTestFailure'} | ${true}           | ${'off'}           | ${{ revealOn: 'demand', revealWithFocus: 'none', clearOnRun: 'terminal' }}
           ${10} | ${'whatever'}          | ${undefined}      | ${undefined}       | ${DefaultJestOutputSetting}
           ${11} | ${'openOnTestStart'}   | ${undefined}      | ${'whatever'}      | ${{ revealOn: 'run', revealWithFocus: 'test-results', clearOnRun: 'none' }}
@@ -97,7 +106,7 @@ describe('OutputManager', () => {
             }
           });
           const om = new OutputManager();
-          const config = getOutputConfig(om);
+          const { outputConfig: config } = om.outputConfigs();
           expect(config).toEqual(expected);
         });
       });
@@ -181,7 +190,7 @@ describe('OutputManager', () => {
       ${3} | ${'test-results'} | ${false}      | ${true}
       ${4} | ${'both'}         | ${true}       | ${true}
     `('case $case', ({ clearOnRun, clearTerminal, clearTestResults }) => {
-      mockConfig.get.mockImplementationOnce(() => ({ ...DefaultJestOutputSetting, clearOnRun }));
+      mockWorkspaceConfig({ ...DefaultJestOutputSetting, clearOnRun });
       const om = new OutputManager();
       om.clearOutputOnRun(mockTerminalOutput);
       if (clearTerminal) {
@@ -197,23 +206,97 @@ describe('OutputManager', () => {
     });
   });
 
+  describe('autoFocus', () => {
+    it.each`
+      case | outputConfig                           | openTesting          | expected
+      ${1} | ${undefined}                           | ${'openOnTestStart'} | ${true}
+      ${2} | ${undefined}                           | ${'neverOpen'}       | ${false}
+      ${3} | ${{ revealWithFocus: 'none' }}         | ${'openOnTestStart'} | ${true}
+      ${4} | ${{ revealWithFocus: 'none' }}         | ${'neverOpen'}       | ${false}
+      ${5} | ${{ revealWithFocus: 'test-results' }} | ${'neverOpen'}       | ${true}
+      ${6} | ${{ revealWithFocus: 'terminal' }}     | ${'neverOpen'}       | ${true}
+    `('case $case: isAutoFocus = $expected', ({ outputConfig, openTesting, expected }) => {
+      mockConfig.get.mockImplementation((key: string) => {
+        switch (key) {
+          case 'outputConfig':
+            return outputConfig;
+          case 'openTesting':
+            return openTesting;
+        }
+      });
+      const om = new OutputManager();
+      const result = om.isAutoFocus();
+      expect(result).toEqual(expected);
+    });
+    describe('disableAutoFocus', () => {
+      it('disableAutoFocus() will update both openTesting and outputConfig settings', async () => {
+        const om = new OutputManager();
+        await om.disableAutoFocus();
+        expect(mockConfig.update).toHaveBeenCalledWith(
+          'openTesting',
+          'neverOpen',
+          vscode.ConfigurationTarget.Workspace
+        );
+        expect(mockConfig.update).toHaveBeenCalledWith(
+          'outputConfig',
+          expect.objectContaining({ revealWithFocus: 'none' })
+        );
+      });
+      it('during the update, validation will be skipped', async () => {
+        const om = new OutputManager();
+
+        let validateCount = 0;
+        mockConfig.update.mockImplementation(async () => {
+          // check if validation is skipped
+          await expect(om.validate()).resolves.toBeUndefined();
+          validateCount++;
+        });
+
+        await om.disableAutoFocus();
+        expect(validateCount).toEqual(2);
+
+        mockConfig.update.mockReset();
+      });
+    });
+  });
+
   describe('register', () => {
-    it('will register onDidChangeConfiguration and a save command', async () => {
+    it('will register onDidChangeConfiguration and commands', async () => {
       const om = new OutputManager();
       const disposables = om.register();
-      expect(disposables).toHaveLength(2);
+      expect(disposables).toHaveLength(3);
       expect(mockWorkspace.onDidChangeConfiguration).toHaveBeenCalled();
       expect(vscode.commands.registerCommand).toHaveBeenCalledWith(
         expect.stringContaining('save-output-config'),
         expect.anything()
       );
+      expect(vscode.commands.registerCommand).toHaveBeenCalledWith(
+        expect.stringContaining('disable-auto-focus'),
+        expect.anything()
+      );
       const onDidChangeConfiguration = mockWorkspace.onDidChangeConfiguration.mock.calls[0][0];
       expect(onDidChangeConfiguration).not.toBeUndefined();
 
-      const saveCommand = (vscode.commands.registerCommand as jest.Mocked<any>).mock.calls[0][1];
+      expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(2);
+      let matched = 0;
       const saveSpy = jest.spyOn(om, 'save');
-      await saveCommand();
-      expect(saveSpy).toHaveBeenCalled();
+      const disableAutoFocusSpy = jest.spyOn(om, 'disableAutoFocus');
+
+      for (const [command, func] of (vscode.commands.registerCommand as jest.Mocked<any>).mock
+        .calls) {
+        if (command.includes('save-output-config')) {
+          matched |= 0x01;
+          await func();
+          expect(saveSpy).toHaveBeenCalled();
+        } else if (command.includes('disable-auto-focus')) {
+          matched |= 0x02;
+          await func();
+          expect(disableAutoFocusSpy).toHaveBeenCalled();
+        } else {
+          throw new Error(`Unexpected command: ${command}`);
+        }
+      }
+      expect(matched).toBe(0x03);
     });
     describe('onDidChangeConfiguration', () => {
       let om: OutputManager;
@@ -226,26 +309,19 @@ describe('OutputManager', () => {
         mockChangeEvent = { affectsConfiguration: jest.fn() };
       });
       it('no-op if no outputConfig related changes detected', () => {
-        mockConfig.get.mockImplementationOnce(() => ({ revealOn: 'error' }));
+        mockWorkspaceConfig({ revealOn: 'error' });
         mockChangeEvent.affectsConfiguration.mockReturnValue(false);
 
         onDidChangeConfiguration.call(om, mockChangeEvent);
-        const config = getOutputConfig(om);
+        const { outputConfig: config } = om.outputConfigs();
         expect(config.revealOn).not.toBe('error');
       });
       it('if outputConfig related changes detected, will load new config', () => {
-        mockConfig.get.mockImplementation((key: string) => {
-          if (key === 'openTesting') {
-            return 'neverOpen';
-          }
-          if (key === 'outputConfig') {
-            return { revealOn: 'error' };
-          }
-        });
+        mockWorkspaceConfig({ revealOn: 'error' }, 'neverOpen');
         mockChangeEvent.affectsConfiguration.mockReturnValue(true);
 
         onDidChangeConfiguration.call(om, mockChangeEvent);
-        const config = getOutputConfig(om);
+        const { outputConfig: config } = om.outputConfigs();
         expect(config.revealOn).toBe('error');
         expect(showWarningMessageSpy).not.toHaveBeenCalled();
       });
@@ -267,6 +343,39 @@ describe('OutputManager', () => {
   });
 
   describe('validation and fix', () => {
+    describe('isTestResultsConfigsValid', () => {
+      it.each`
+        case  | outputConfig                                               | openTesting                  | expected
+        ${1}  | ${undefined}                                               | ${'openOnTestStart'}         | ${true}
+        ${2}  | ${undefined}                                               | ${'neverOpen'}               | ${true}
+        ${3}  | ${{ revealWithFocus: 'none' }}                             | ${'neverOpen'}               | ${true}
+        ${4}  | ${{ revealWithFocus: 'none' }}                             | ${'openOnTestStart'}         | ${false}
+        ${5}  | ${{ revealWithFocus: 'none' }}                             | ${'openOnTestFailure'}       | ${false}
+        ${6}  | ${{ revealWithFocus: 'none' }}                             | ${'openExplorerOnTestStart'} | ${true}
+        ${7}  | ${{ revealWithFocus: 'test-results' }}                     | ${'neverOpen'}               | ${true}
+        ${8}  | ${{ revealWithFocus: 'test-results' }}                     | ${'openOnTestStart'}         | ${true}
+        ${9}  | ${{ revealWithFocus: 'test-results' }}                     | ${'openOnTestFailure'}       | ${false}
+        ${10} | ${{ revealWithFocus: 'test-results', revealOn: 'error' }}  | ${'openOnTestFailure'}       | ${true}
+        ${11} | ${{ revealWithFocus: 'test-results', revealOn: 'error' }}  | ${'openOnTestStart'}         | ${false}
+        ${12} | ${{ revealWithFocus: 'test-results', revealOn: 'demand' }} | ${'openOnTestStart'}         | ${false}
+        ${13} | ${{ revealWithFocus: 'test-results', revealOn: 'demand' }} | ${'openOnTestFailure'}       | ${false}
+        ${14} | ${{ revealWithFocus: 'terminal' }}                         | ${'neverOpen'}               | ${true}
+        ${15} | ${{ revealWithFocus: 'terminal' }}                         | ${'openOnTestStart'}         | ${false}
+        ${16} | ${{ revealWithFocus: 'terminal' }}                         | ${'openOnTestFailure'}       | ${false}
+        ${17} | ${{ revealWithFocus: 'terminal' }}                         | ${'openExplorerOnTestStart'} | ${true}
+      `('case $case: isAutoFocus = $expected', ({ outputConfig, openTesting, expected }) => {
+        mockConfig.get.mockImplementation((key: string) => {
+          switch (key) {
+            case 'outputConfig':
+              return outputConfig;
+            case 'openTesting':
+              return openTesting;
+          }
+        });
+        const om = new OutputManager();
+        expect(om.isTestResultsConfigsValid()).toEqual(expected);
+      });
+    });
     it('when no conflict, will return true', async () => {
       mockConfig.get.mockImplementation((key: string) => {
         if (key === 'openTesting') {
@@ -282,14 +391,7 @@ describe('OutputManager', () => {
     });
     describe('when conflict detected', () => {
       beforeEach(() => {
-        mockConfig.get.mockImplementation((key: string) => {
-          if (key === 'openTesting') {
-            return 'openOnTestStart';
-          }
-          if (key === 'outputConfig') {
-            return { revealOn: 'error' };
-          }
-        });
+        mockWorkspaceConfig({ revealOn: 'error' });
       });
       it('will show warning message', async () => {
         showWarningMessageSpy.mockResolvedValue(undefined);
@@ -361,6 +463,10 @@ describe('OutputManager', () => {
             const item = items.find((item) => item.label.includes('Fix test-results'));
             return item;
           });
+          mockConfig.update.mockImplementation(() => {
+            return Promise.resolve();
+          });
+
           const om = new OutputManager();
           await expect(om.validate()).resolves.toEqual(true);
           expect(showWarningMessageSpy).toHaveBeenCalled();

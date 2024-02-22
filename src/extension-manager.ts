@@ -17,6 +17,7 @@ import { enabledWorkspaceFolders } from './workspace-manager';
 import { VirtualFolderBasedCache } from './virtual-workspace-folder';
 import { updateSetting } from './Settings';
 import { showQuickFix } from './quick-fix';
+import { outputManager } from './output-manager';
 
 export type GetJestExtByURI = (uri: vscode.Uri) => JestExt[];
 
@@ -518,6 +519,7 @@ export class ExtensionManager {
 
   activate(): void {
     this.showReleaseMessage();
+    outputManager.validate();
 
     if (vscode.window.activeTextEditor?.document.uri) {
       this.onExtensionByUri(vscode.window.activeTextEditor?.document.uri, (ext) => {
@@ -529,7 +531,7 @@ export class ExtensionManager {
 
 const ReleaseNoteBase = 'https://github.com/jest-community/vscode-jest/blob/master/release-notes';
 const ReleaseNotes: Record<string, string> = {
-  '6.2.1': `${ReleaseNoteBase}/release-note-v6.md#v621`,
+  '6.2.2': `${ReleaseNoteBase}/release-note-v6.md#v622`,
   '6.2.0': `${ReleaseNoteBase}/release-note-v6.md#v620`,
   '6.1.0': `${ReleaseNoteBase}/release-note-v6.md#v610-pre-release`,
   '6.0.0': `${ReleaseNoteBase}/release-note-v6.md#v600-pre-release`,

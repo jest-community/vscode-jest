@@ -2,7 +2,7 @@
   "name": "vscode-jest",
   "displayName": "Jest",
   "description": "Use Facebook's Jest With Pleasure.",
-  "version": "6.2.1",
+  "version": "6.2.2",
   "publisher": "Orta",
   "engines": {
     "vscode": "^1.68.1"
@@ -405,6 +405,10 @@
       {
         "command": "io.orta.jest.save-output-config",
         "title": "Jest: Save Current Output Config"
+      },
+      {
+        "command": "io.orta.jest.disable-auto-focus",
+        "title": "Jest: Disable Auto Focus Test Output"
       },
       {
         "command": "io.orta.jest.run-all-tests",

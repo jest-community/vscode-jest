@@ -26,7 +26,7 @@ You can see the full [features](#features) and learn more details in the [How-To
 Happy testing!
 
 ## Releases 
-- **Current** ([v6.2.1](https://github.com/jest-community/vscode-jest/releases/tag/v6.2.1)): [release note](release-notes/release-note-v6.md#v621)
+- **Current** ([v6.2.2](https://github.com/jest-community/vscode-jest/releases/tag/v6.2.2)): [release note](release-notes/release-note-v6.md#v622)
 - **Previous** ([v5.2.3](https://github.com/jest-community/vscode-jest/releases/tag/v5.2.3)): [release note](release-notes/release-note-v5.x.md#v523)
 
  
@@ -348,7 +348,7 @@ for example:
 
 #### outputConfig
 
-The `outputConfig` controls the Jest output experience by specifying when and where to create, display, and clear the output content. It supports 2 output panels: `TEST RESULTS` and `TERMINAL`. The `TEST RESULTS` panel displays test results in the order they were run, while the `TERMINAL` panel organizes outputs by workspace folder. `TERMINAL` panel also contains the non-test run outputs, such as [quick-fix link](#quick-fix-chooser), extension auto-config info and tips. 
+The `outputConfig` controls the Jest output experience by specifying when and where to create, display, and clear the output content. It supports 2 output panels: `TEST RESULTS` and `TERMINAL`. The `TEST RESULTS` panel displays test results in the order they were run, while the `TERMINAL` panel organizes outputs by workspace folder. `TERMINAL` panel also contains the non-test run outputs, such as [quick-fix link](#quick-fix-chooser), extension auto-config info, and tips. 
 
 **Type Definitions**
 ```ts
@@ -387,8 +387,8 @@ This setting can be one of the predefined types or a custom object.
     4. "none": Do not clear any panel. (default)
     (_**Note**: As of the current version, the testing framework does not support the clearing of the "TEST RESULTS" panel without side effects. The closest available command also clears all test item statuses, which may not be desirable. We are aware of this limitation and will raise the issue with the VS Code team._)
 
-**Handling Conflicts with "TEST RESULTS" panel**
 <a id="outputconfig-conflict"></a>
+**Handling Conflicts with "TEST RESULTS" panel**
 
 _The Problem_
 
@@ -404,14 +404,25 @@ _Further Customization_
 
 However, if you prefer "TEST RESULTS" and "TERMINAL" panels to behave differently and don't mind managing 2 settings yourself, you could play with different combinations. 
 
-For instance, if `"testing.openTesting"` is set to `"openOnTestFailure"`, and you want your terminal panel to still reveal when any tests run, your setting would look like this: `"jest.outputConfig": {revealWithFocus: "test-results"}` 
+For instance, if `"testing.openTesting"` is set to `"openOnTestFailure"`, and you want your terminal panel to still reveal when any tests run, your setting would look like this: `"jest.outputConfig": {revealWithFocus: "terminal"}`.  
 
-_Built-in Validation_
+_Validation and Diagnosis_
 
-The extension also features built-in conflict detection and quick fixes to assist.
+The extension features output config diagnosis information in the jest terminal, as well as the built-in conflict detection and quick fixes to assist with the transition.
+
+<a id="outputconfig-issues"></a>
+**Common Issues**
+
+Upon upgrading to v6.2, some users, frequently with auto run modes (e.g., 'watch', 'on-save'), might experience frequent "TEST RESULTS" panel automatically grabbing focus whenever files are saved or tests are run.
+
+This is due to the extension generates a default `jest.outputConfig`, if none is existing in your settings, to match the existing `testing.openTesting` setting, which defaults to `"openOnTestStart"`. If this is not your desired output experience, you can easily disable `testing.openTesting` in your settings.json: 
+```json
+"testing.openTesting": "neverOpen"
+```
+Then use the `jest.outputConfig` to find-tune the output experience you prefer.
 
 **Examples**
-- Choose a passive output experience that is identical to the previous version.
+- Choose a passive output experience that is identical to the previous version: no automatic focus switch, no automatic clear.
   ```json
   "testing.openTesting": "neverOpen",
   "jest.outputConfig": "neutral"
@@ -421,20 +432,17 @@ The extension also features built-in conflict detection and quick fixes to assis
   "testing.openTesting": "neverOpen",
   "jest.outputConfig": "terminal-based"
   ```
+- Choose a test-results-based experience and switch focus to it when test run starts.
+  ```json
+  "testing.openTesting": "neverOpen",
+  "jest.outputConfig": "test-results-based"
+  ```
 - Choose a test-results-based experience and switch focus to it when test fails.
   ```json
   "testing.openTesting": "neverOpen",
   "jest.outputConfig": {
     "revealOn": "error",
     "revealWithFocus": "test-results",
-  }
-  ```
-   alternatively:
-  ```json
-  "testing.openTesting": "openOnTestFailure",
-  "jest.outputConfig": {
-    "revealOn": "error",
-    "revealWithFocus": "test-results"
   }
   ```
 - Clear the terminal output on each run but do not automatically switch focus to any panel.
@@ -556,10 +564,11 @@ While the concepts of performance and automation are generally clear, "completen
 2. If you modify the source or test code, potential failures in other tests may remain hidden until they are explicitly run.
 3. Tests bearing dynamic names, like those using test.each with variables or template literals, won't be translated. As a result, they must be executed through higher-level constructs, such as describe blocks with static names or entire test suites.
 
-
-<a id="runmode-migration"></a>
-**Migration Guide**
-Starting from v6.1.0, if no runMode is defined in settings.json, the extension will automatically generate one using legacy settings (`autoRun`, `showCoverageOnLoad`). To migrate, simply use the `"Jest: Save Current RunMode"` command from the command palette to update the setting, then remove the deprecated settings.
+> [!NOTE] 
+> <a id="runmode-migration"></a>
+> **Migration Guide**
+> 
+> Starting from v6.1.0, if no runMode is defined in settings.json, the extension will automatically generate one using legacy settings (`autoRun`, `showCoverageOnLoad`). To migrate, simply use the `"Jest: Save Current RunMode"` command from the command palette to update the setting, then remove the deprecated settings.
 
 ---
 

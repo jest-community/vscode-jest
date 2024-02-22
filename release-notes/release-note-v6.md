@@ -3,13 +3,15 @@
 Release Notes <!-- omit in toc --> 
 ---
 
-- [v6.2.1](#v621)
+- [v6.2.2](#v622)
   - [CHANGELOG](#changelog)
+- [v6.2.1](#v621)
+  - [CHANGELOG](#changelog-1)
 - [v6.2.0](#v620)
   - [New Features Summary](#new-features-summary)
   - [Bug Fixes and Technical Debt Reduction](#bug-fixes-and-technical-debt-reduction)
   - [Breaking Changes](#breaking-changes)
-  - [CHANGELOG](#changelog-1)
+  - [CHANGELOG](#changelog-2)
 - [v6.1 (pre-release)](#v61-pre-release)
   - [Main Features](#main-features)
     - [1. Enhanced Test Execution Control with "runMode"](#1-enhanced-test-execution-control-with-runmode)
@@ -29,9 +31,36 @@ Release Notes <!-- omit in toc -->
     - [3. Control extension activation within each folder](#3-control-extension-activation-within-each-folder)
     - [4. Auto clear output upon test run](#4-auto-clear-output-upon-test-run)
   - [Fixes](#fixes)
-  - [CHANGELOG](#changelog-2)
+  - [CHANGELOG](#changelog-3)
 
 ---
+
+## v6.2.2
+This release is a patch release with the following changes:
+
+**Enhancement**  
+
+- Improved output config validation logic and showed warning if detected upon starting up. ([#1119](https://github.com/jest-community/vscode-jest/pull/1119) - @connectdotz)
+
+- Added more diagnosis and fix-it instructions in the jest terminal: ([#1119](https://github.com/jest-community/vscode-jest/pull/1119) - @connectdotz)
+
+  - Display critical settings such as "jest.runMode", "jest.outputConfig" and "testing.openTesting" settings
+  - Provide warning messages for common output issues, such as aggressive auto-focus for auto run modes, when detected. Provides quick fix instructions to address them. 
+
+
+**Bug Fixes**
+- Fixed an outputConfig initialization bug that did not honor "testing.openTesting": "openOnTestFailure" setting correctly. ([#1119](https://github.com/jest-community/vscode-jest/pull/1119) - @connectdotz)
+ 
+**New Command**
+- Added a new command `"Jest: Disable Auto Focus Test Output"` to easily disable TEST RESULTS panel auto focus. It will set the output to the "neutral" mode, i.e., no auto focusing. ([#1119](https://github.com/jest-community/vscode-jest/pull/1119) - @connectdotz)
+
+  
+**Documentation**
+- Minor docs updates for the migration guides. ([#1116](https://github.com/jest-community/vscode-jest/pull/1116) - @pmcelhaney)
+- Minor update for the output config info in README and release notes. ([#1119](https://github.com/jest-community/vscode-jest/pull/1119) - @connectdotz)
+
+### CHANGELOG
+- [v6.2.2](https://github.com/jest-community/vscode-jest/releases/tag/v6.2.2)
 
 ## v6.2.1
 This release is a patch release with the following bug fix:
@@ -161,7 +190,25 @@ Here are a few scenarios and how to configure them:
   "jest.outputConfig": "neutral"
 }
 
-// Auto-focus on "TEST RESULTS" when errors occur, ideal for on-demand testing
+// or semi-minimal interaction, suitable for watch/on-save modes prefer to see output if there is errors
+{
+  "testing.openTesting": "neverOpen",
+  "jest.outputConfig": {
+    "revealOn": "error",
+    "revealWithFocus": "test-results"
+  }
+}
+
+// Auto-focus on "TEST RESULTS" when run starts, ideal for on-demand testing
+{
+  "testing.openTesting": "neverOpen",
+  "jest.outputConfig": {
+    "revealOn": "run",
+    "revealWithFocus": "test-results"
+  }
+}
+
+// or Auto-focus on "TEST RESULTS" when errors occurred, for on-demand testing prefer to only show output with errors 
 {
   "testing.openTesting": "neverOpen",
   "jest.outputConfig": {

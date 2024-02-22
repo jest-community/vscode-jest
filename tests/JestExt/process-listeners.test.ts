@@ -10,7 +10,6 @@ import {
   DEFAULT_LONG_RUN_THRESHOLD,
 } from '../../src/JestExt/process-listeners';
 import { cleanAnsi, toErrorString } from '../../src/helpers';
-import * as messaging from '../../src/messaging';
 import { extensionName } from '../../src/appGlobals';
 
 class DummyListener extends AbstractProcessListener {
@@ -477,26 +476,34 @@ describe('jest process listeners', () => {
       );
     });
     describe('upon process exit', () => {
-      it('do nothing if not a watch process', () => {
+      it('not report error if not a watch process', () => {
         expect.hasAssertions();
         mockProcess.request = { type: 'all-tests' };
-        (messaging as jest.Mocked<any>).systemErrorMessage = jest.fn();
 
         const listener = new RunTestListener(mockSession);
 
         listener.onEvent(mockProcess, 'processClose', 1);
-        expect(messaging.systemErrorMessage).not.toHaveBeenCalled();
+        expect(mockSession.context.onRunEvent.fire).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'exit',
+            error: undefined,
+          })
+        );
       });
-      it('do nothing if watch run exit due to on-demand stop', () => {
+      it('not report error if watch run exit due to on-demand stop', () => {
         expect.hasAssertions();
         mockProcess.request = { type: 'watch-tests' };
         mockProcess.stopReason = 'on-demand';
-        (messaging as jest.Mocked<any>).systemErrorMessage = jest.fn();
 
         const listener = new RunTestListener(mockSession);
 
         listener.onEvent(mockProcess, 'processClose', 1);
-        expect(messaging.systemErrorMessage).not.toHaveBeenCalled();
+        expect(mockSession.context.onRunEvent.fire).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'exit',
+            error: undefined,
+          })
+        );
       });
       describe('if watch exit not caused by on-demand stop', () => {
         beforeEach(() => {

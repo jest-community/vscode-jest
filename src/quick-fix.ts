@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
-import { extensionName } from './appGlobals';
+import { LONG_RUN_TROUBLESHOOTING_URL, TROUBLESHOOTING_URL, extensionName } from './appGlobals';
 import { WizardTaskId } from './setup-wizard';
-import * as messaging from './messaging';
 
 export type QuickFixActionType =
   | 'help'
@@ -44,10 +43,7 @@ export const showQuickFix = async (folderName: string, types: QuickFixActionType
             label: '$(info) Help',
             description: 'See troubleshooting guide',
             action: () => {
-              vscode.commands.executeCommand(
-                'vscode.open',
-                vscode.Uri.parse(messaging.TROUBLESHOOTING_URL)
-              );
+              vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(TROUBLESHOOTING_URL));
             },
           });
           break;
@@ -88,7 +84,7 @@ export const showQuickFix = async (folderName: string, types: QuickFixActionType
             action: () => {
               vscode.commands.executeCommand(
                 'vscode.open',
-                vscode.Uri.parse(messaging.LONG_RUN_TROUBLESHOOTING_URL)
+                vscode.Uri.parse(LONG_RUN_TROUBLESHOOTING_URL)
               );
             },
           });
