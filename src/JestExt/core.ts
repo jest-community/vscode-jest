@@ -204,6 +204,12 @@ export class JestExt {
         case 'end': {
           const state = event.error ? 'exec-error' : 'done';
           this.updateStatusBar({ state });
+
+          // testError should be persistent per run-cycle. Not clear up this flag at end end of the cycle
+          // could cause the processes with multiple run cycles, such as watch mode, to failed to act properly.
+          if (event.process.userData?.testError) {
+            event.process.userData.testError = undefined;
+          }
           break;
         }
         case 'exit':

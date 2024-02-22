@@ -50,7 +50,8 @@ This release is a patch release with the following changes:
 
 **Bug Fixes**
 - Fixed an outputConfig initialization bug that did not honor "testing.openTesting": "openOnTestFailure" setting correctly. ([#1119](https://github.com/jest-community/vscode-jest/pull/1119) - @connectdotz)
- 
+- Fixed missing test error auto focusing for watch mode run. ([#1120](https://github.com/jest-community/vscode-jest/pull/1120) - @connectdotz) 
+  
 **New Command**
 - Added a new command `"Jest: Disable Auto Focus Test Output"` to easily disable TEST RESULTS panel auto focus. It will set the output to the "neutral" mode, i.e., no auto focusing. ([#1119](https://github.com/jest-community/vscode-jest/pull/1119) - @connectdotz)
 
