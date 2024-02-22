@@ -1362,13 +1362,47 @@ describe('JestExt', () => {
       onRunEvent({ type: 'start', process });
       expect(mockOutputManager.showOutputOn).toHaveBeenCalledWith('run', expect.anything());
     });
-    it('notify outputManager for test-error event', () => {
-      const sut = newJestExt();
-      const onRunEvent = (sut.events.onRunEvent.event as jest.Mocked<any>).mock.calls[0][0];
-      const process = { id: 'a process id', request: { type: 'watch' } };
-      onRunEvent({ type: 'test-error', process });
-      expect(mockOutputManager.showOutputOn).toHaveBeenCalledWith('run', expect.anything());
-      expect(mockOutputManager.showOutputOn).toHaveBeenCalledWith('test-error', expect.anything());
+    describe('when test errors occurred', () => {
+      it('will notify outputManager', () => {
+        const sut = newJestExt();
+        const onRunEvent = (sut.events.onRunEvent.event as jest.Mocked<any>).mock.calls[0][0];
+        const process = { id: 'a process id', request: { type: 'watch' } };
+        onRunEvent({ type: 'test-error', process });
+        expect(mockOutputManager.showOutputOn).toHaveBeenCalledWith('run', expect.anything());
+        expect(mockOutputManager.showOutputOn).toHaveBeenCalledWith(
+          'test-error',
+          expect.anything()
+        );
+      });
+      it('will only notify outputManager once per run cycle', () => {
+        const sut = newJestExt();
+        const onRunEvent = (sut.events.onRunEvent.event as jest.Mocked<any>).mock.calls[0][0];
+        const process = { id: 'a process id', request: { type: 'watch' } };
+
+        onRunEvent({ type: 'test-error', process, userData: {} });
+        expect(mockOutputManager.showOutputOn).toHaveBeenCalledWith(
+          'test-error',
+          expect.anything()
+        );
+        mockOutputManager.showOutputOn.mockClear();
+
+        onRunEvent({ type: 'test-error', process });
+        expect(mockOutputManager.showOutputOn).not.toHaveBeenCalledWith(
+          'test-error',
+          expect.anything()
+        );
+      });
+      it('will reset testError state when test run ended', () => {
+        const sut = newJestExt();
+        const onRunEvent = (sut.events.onRunEvent.event as jest.Mocked<any>).mock.calls[0][0];
+        const process: any = { id: 'a process id', request: { type: 'watch' } };
+
+        onRunEvent({ type: 'test-error', process });
+        expect(process.userData?.testError).toEqual(true);
+
+        onRunEvent({ type: 'end', process });
+        expect(process.userData?.testError).toBeUndefined();
+      });
     });
     it('when setting changed, output setting will change accordingly', () => {
       const runMode = new RunMode({ type: 'watch', deferred: false });
