@@ -739,7 +739,7 @@ This extension uses babel to parse the test files. For decorators [plugin option
 
 ---
 
-<a id="virtual-folders"></a?
+<a id="virtual-folders"></a>
 #### virtualFolders
 
 Much like a vscode workspace folder, which manages a runtime environment for a specific folder, a virtualFolder manages a custom Jest runtime environment. Each virtualFolder can have its own resource-level [settings](#settings), such as `jestCommandLine` and `rootPath`.
