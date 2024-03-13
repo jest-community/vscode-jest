@@ -518,10 +518,10 @@ The following are the predefined `runMode` configurations for convenience. They 
 
 |Predefined runMode|Description|JestRunMode|
 |:---:|---|---|
-|"watch"| run tests by watchman | {type: "watch", revealOutput: "on-run"} |
-|"on-save"| run tests when test or source files are saved|{type: "on-run", revealOutput: "on-run"}|
-|"on-demand"|run tests on-demand through UI | {type: "on-demand", revealOutput: "on-run"} |
-|"deferred"|defer test run and discovery until the first on-demand run | {type: "on-demand", revealOutput: "on-run", deferred: true } |
+|"watch"| run tests by watchman | {type: "watch"} |
+|"on-save"| run tests when test or source files are saved|{type: "on-save"}|
+|"on-demand"|run tests on-demand through UI | {type: "on-demand"} |
+|"deferred"|defer test run and discovery until the first on-demand run | {type: "on-demand", deferred: true} |
 
 **Examples**
 - Run jest with watch mode - the default runMode if none is specified.
