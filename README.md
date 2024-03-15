@@ -419,7 +419,7 @@ Upon upgrading to v6.2, some users, frequently with auto run modes (e.g., 'watch
 > [!NOTE] 
 > 
 > **update**
-> In version 6.2.3, we've resolved this issue by modifying the default auto-focus behavior so the 'TEST RESULTS' panel will not automatically grab focus in auto-run modes, particularly when `"testing.openTesting"` or `"jest.outputConfig"` settings are not specified. This change should completely eliminate this issue.
+> In version 6.2.3, we've resolved this issue by modifying the default auto-focus behavior so the 'TEST RESULTS' panel will not automatically grab focus in auto-run modes, particularly when `"testing.openTesting"` and `"jest.outputConfig"` settings are not specified. This change should completely eliminate this issue.
 >
 > 
 
