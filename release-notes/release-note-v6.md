@@ -3,6 +3,7 @@
 Release Notes <!-- omit in toc --> 
 ---
 
+- [v6.2.3](#v623)
 - [v6.2.2](#v622)
   - [CHANGELOG](#changelog)
 - [v6.2.1](#v621)
@@ -35,6 +36,14 @@ Release Notes <!-- omit in toc -->
 
 ---
 
+## v6.2.3
+This release is a patch release with the following changes:
+
+**Enhancement**  
+
+- Improve output-focus default behavior for auto runs (e.g., "watch", "on-save"). This will eliminate the issue that the focus auto switching to "TEST RESULTS" panel whenever files are saved in auto-run modes. Now the default behavior is runMode aware and will not auto switch for auto runs unless specifically configured to do so. See [default output focus behavior](https://github.com/jest-community/vscode-jest#default-output-focus). ([#1128](https://github.com/jest-community/vscode-jest/pull/1128) - @connectdotz)
+- docs: update README to fix jest run mode type. ([#1126](https://github.com/jest-community/vscode-jest/pull/1126) - @kota-kamikawa)
+  
 ## v6.2.2
 This release is a patch release with the following changes:
 

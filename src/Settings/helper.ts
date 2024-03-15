@@ -1,5 +1,10 @@
 import * as vscode from 'vscode';
-import { GetConfigFunction, VirtualFolderSettings, VirtualFolderSettingKey } from './types';
+import {
+  GetConfigFunction,
+  VirtualFolderSettings,
+  VirtualFolderSettingKey,
+  SettingDetail,
+} from './types';
 import { isVirtualWorkspaceFolder } from '../virtual-workspace-folder';
 
 /**
@@ -54,4 +59,24 @@ export const updateSetting = async (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (vFolder as any)[key] = value;
   await config.update('virtualFolders', virtualFolders);
+};
+
+export const getSettingDetail = <T>(configName: string, section: string): SettingDetail<T> => {
+  // Use the `inspect` method to get detailed information about the setting
+  const config = vscode.workspace.getConfiguration(configName);
+  const value = config.get<T>(section);
+  const settingInspection = config.inspect<T>(section);
+
+  if (settingInspection) {
+    const isExplicitlySet =
+      settingInspection.globalValue !== undefined ||
+      settingInspection.workspaceValue !== undefined ||
+      settingInspection.workspaceFolderValue !== undefined ||
+      settingInspection.globalLanguageValue !== undefined ||
+      settingInspection.workspaceLanguageValue !== undefined ||
+      settingInspection.workspaceFolderLanguageValue !== undefined;
+
+    return { value, isExplicitlySet };
+  }
+  return { value: undefined, isExplicitlySet: false };
 };

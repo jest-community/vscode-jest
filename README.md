@@ -387,14 +387,15 @@ This setting can be one of the predefined types or a custom object.
     4. "none": Do not clear any panel. (default)
     (_**Note**: As of the current version, the testing framework does not support the clearing of the "TEST RESULTS" panel without side effects. The closest available command also clears all test item statuses, which may not be desirable. We are aware of this limitation and will raise the issue with the VS Code team._)
 
+
 <a id="outputconfig-conflict"></a>
-**Handling Conflicts with "TEST RESULTS" panel**
+**Handling Conflicts with "TEST RESULTS" panel setting**
 
 _The Problem_
 
 The behavior of the "TEST RESULTS" panel is influenced by VSCode's native `"testing.openTesting"` setting. This can cause inconsistencies with your `"jest.outputConfig"` settings.
 
-For instance, if you set `"jest.outputConfig": {"revealWithFocus": "none"}` to prevent automatic focus changes, but leave `"testing.openTesting"` at its default value of `"openOnTestStart"`, the "TEST RESULTS" panel will still automatically switch focus whenever tests run.
+For instance, if you set `"jest.outputConfig": {"revealWithFocus": "none"}` to prevent automatic focus changes, but leave `"testing.openTesting"` at its default value of `"openOnTestStart"`, the "TEST RESULTS" panel will still automatically switch focus when the tests are run via UI.
 
 _The Universal Solution_
 
@@ -410,18 +411,18 @@ _Validation and Diagnosis_
 
 The extension features output config diagnosis information in the jest terminal, as well as the built-in conflict detection and quick fixes to assist with the transition.
 
-<a id="outputconfig-issues"></a>
-**Common Issues**
+<a id="default-output-focus"></a>
+**Default Output Focus Behavior by RunMode**
+When none of the output settings (`"testing.openTesting"` and `"jest.outputConfig"`) are present, The default output behavior is determined by [runMode](#runmode):
 
-Upon upgrading to v6.2, some users, frequently with auto run modes (e.g., 'watch', 'on-save'), might experience frequent "TEST RESULTS" panel automatically grabbing focus whenever files are saved or tests are run.
+| runMode| auto reveal "TEST RESULTS" | auto reveal "TERMINAL" |
+|:--:|:--:|:--:|
+| "watch" | :heavy_multiplication_x: | :heavy_multiplication_x:|
+| "on-save" | :heavy_multiplication_x: | :heavy_multiplication_x: |
+| "on-demand" | :heavy_check_mark: | :heavy_multiplication_x:|
 
-This is due to the extension generates a default `jest.outputConfig`, if none is existing in your settings, to match the existing `testing.openTesting` setting, which defaults to `"openOnTestStart"`. If this is not your desired output experience, you can easily disable `testing.openTesting` in your settings.json: 
-```json
-"testing.openTesting": "neverOpen"
-```
-Then use the `jest.outputConfig` to find-tune the output experience you prefer.
 
-**Examples**
+**Configuration Examples**
 - Choose a passive output experience that is identical to the previous version: no automatic focus switch, no automatic clear.
   ```json
   "testing.openTesting": "neverOpen",
@@ -432,12 +433,7 @@ Then use the `jest.outputConfig` to find-tune the output experience you prefer.
   "testing.openTesting": "neverOpen",
   "jest.outputConfig": "terminal-based"
   ```
-- Choose a test-results-based experience and switch focus to it when test run starts.
-  ```json
-  "testing.openTesting": "neverOpen",
-  "jest.outputConfig": "test-results-based"
-  ```
-- Choose a test-results-based experience and switch focus to it when test fails.
+- Choose a test-results-based experience and switch focus to it only when test fails.
   ```json
   "testing.openTesting": "neverOpen",
   "jest.outputConfig": {
@@ -457,16 +453,17 @@ Then use the `jest.outputConfig` to find-tune the output experience you prefer.
 > <a id="outputconfig-migration"></a>
 > **Migration Guide**
 >
-> Migrating to the new `"jest.outputConfig"` can require some manual adjustments, especially if you're working in a multi-root workspace. Here are some guidelines to help with the transition:
+> Migrating to the new `"jest.outputConfig"` might require some manual adjustments, especially if you're working in a multi-root workspace. Here are some guidelines to help with the transition:
 > 
 > 1. **Workspace Level vs Workspace-Folder Level**: The new `"jest.outputConfig"` is a workspace-level setting, unlike legacy settings like `"jest.autoClearTerminal"` and `"jest.autoRevealOutput"`, which are workspace-folder level settings.
 > 
 > 2. **Backward Compatibility**: If no `"jest.outputConfig"` is defined in your settings.json, the extension will attempt to generate a backward-compatible outputConfig in memory. This uses the `"testing.openTesting"` setting and any legacy settings (`"jest.autoClearTerminal"`, `"jest.autoRevealOutput"`) you might have. Note that this might only work for single-root workspaces.
 > 
-> 3. **Migration Steps**:
->    - Use the `"Jest: Save Current Output Config"` command from the command palette to update your settings.json.
->    - (optional) Fix warning: The save does not include `"testing.openTesting"`, so you might see the conflict warning message. You can either use the "Quick Fix" action or adjust the `settings.json` manually (see [handling conflict](#outputconfig-conflict)).
->   - Finally, remove any deprecated settings.
+> 3. **Customization Steps**:
+In general it should work out of the box, but if you encounter any issues, here are some steps to help adjusting the output behavior:
+>    - Use the `"Jest: Save Current Output Config"` command from the command palette to update your settings.json. Then adjust it to fit your needs.
+>    - Fix warning if any: The save does not include `"testing.openTesting"`, so you might see the conflict warning message. You can either use the "Quick Fix" action or adjust the `settings.json` manually (see [handling conflict](#outputconfig-conflict)).
+>    - Finally, remove any deprecated settings.
 > 
 > By following these guidelines, you should be able to smoothly transition to using `"jest.outputConfig"`.
 

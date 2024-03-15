@@ -97,3 +97,9 @@ export interface VirtualFolderSettings extends AllPluginResourceSettings {
 }
 
 export type GetConfigFunction = <T>(key: VirtualFolderSettingKey) => T | undefined;
+
+export interface SettingDetail<T> {
+  value: T | undefined;
+  /** true if the setting is explicitly defined in a settings file, i.e., not from default value */
+  isExplicitlySet: boolean;
+}

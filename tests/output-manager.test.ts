@@ -9,31 +9,38 @@ const mockWorkspace = {
 };
 (vscode.workspace as jest.Mocked<any>) = mockWorkspace;
 
-// jest.dontMock('../src/output-manager');
+import { getSettingDetail } from '../src/Settings';
+
+const mockSettings = (outputConfig?: any, openTesting?: string) => {
+  (getSettingDetail as jest.Mocked<any>).mockImplementation((_name: string, key: string) => {
+    console.log('getSettingDetail key', key);
+    if (key === 'outputConfig') {
+      return { value: outputConfig, isExplicitlySet: outputConfig !== undefined };
+    }
+    if (key === 'openTesting') {
+      return {
+        value: openTesting ?? 'openOnTestStart',
+        isExplicitlySet: openTesting !== undefined,
+      };
+    }
+    return undefined;
+  });
+};
+
+mockSettings();
+
 jest.unmock('../src/output-manager');
 
 import { OutputManager, DefaultJestOutputSetting } from '../src/output-manager';
 
 describe('OutputManager', () => {
-  const mockWorkspaceConfig = (outputConfig?: any, openTesting = 'openOnTestStart') => {
-    mockConfig.get.mockImplementation((key: string) => {
-      if (key === 'outputConfig') {
-        return outputConfig;
-      }
-      if (key === 'openTesting') {
-        return openTesting;
-      }
-      return undefined;
-    });
-  };
-
   let showWarningMessageSpy: any;
 
   beforeEach(() => {
     jest.clearAllMocks();
     showWarningMessageSpy = vscode.window.showWarningMessage as jest.Mocked<any>;
     // returns default config
-    mockWorkspaceConfig();
+    mockSettings();
   });
 
   describe('constructor', () => {
@@ -50,25 +57,18 @@ describe('OutputManager', () => {
           ${7} | ${{ revealWithFocus: 'terminal', clearOnRun: 'terminal' }} | ${{ revealOn: 'run', revealWithFocus: 'terminal', clearOnRun: 'terminal' }}
           ${8} | ${'wrong-type'}                                            | ${DefaultJestOutputSetting}
         `('case $case', ({ outputConfig, expected }) => {
-          mockWorkspaceConfig(outputConfig);
+          mockSettings(outputConfig);
           const om = new OutputManager();
           const { outputConfig: config } = om.outputConfigs();
-          expect(config).toEqual(expected);
+          expect(config.value).toEqual(expected);
         });
       });
       it('will ignore legacy settings', () => {
-        mockConfig.get.mockImplementation((key: string) => {
-          if (key === 'outputConfig') {
-            return 'terminal-based';
-          }
-          if (key === 'openTesting') {
-            return 'openOnTestStart';
-          }
-          return undefined;
-        });
+        mockSettings('terminal-based', 'openOnTestStart');
+
         const om = new OutputManager();
         const { outputConfig: config } = om.outputConfigs();
-        expect(config).toEqual({
+        expect(config.value).toEqual({
           revealOn: 'run',
           revealWithFocus: 'terminal',
           clearOnRun: 'none',
@@ -91,12 +91,9 @@ describe('OutputManager', () => {
           ${10} | ${'whatever'}          | ${undefined}      | ${undefined}       | ${DefaultJestOutputSetting}
           ${11} | ${'openOnTestStart'}   | ${undefined}      | ${'whatever'}      | ${{ revealOn: 'run', revealWithFocus: 'test-results', clearOnRun: 'none' }}
         `('case $case', ({ openTesting, autoClearTerminal, autoRevealOutput, expected }) => {
+          mockSettings(undefined, openTesting);
           mockConfig.get.mockImplementation((key: string) => {
             switch (key) {
-              case 'outputConfig':
-                return undefined;
-              case 'openTesting':
-                return openTesting;
               case 'autoClearTerminal':
                 return autoClearTerminal;
               case 'autoRevealOutput':
@@ -107,7 +104,7 @@ describe('OutputManager', () => {
           });
           const om = new OutputManager();
           const { outputConfig: config } = om.outputConfigs();
-          expect(config).toEqual(expected);
+          expect(config.value).toEqual(expected);
         });
       });
     });
@@ -116,61 +113,190 @@ describe('OutputManager', () => {
   describe('showOutputOn', () => {
     let mockTerminalOutput: any;
     const showTestResultsCommand = 'workbench.panel.testResults.view.focus';
-
     beforeEach(() => {
       mockTerminalOutput = {
         enable: jest.fn(),
         show: jest.fn(),
       };
     });
-    it.each`
-      case  | outputConfig                                               | type            | enableTerminal | showOutput
-      ${1}  | ${undefined}                                               | ${'run'}        | ${true}        | ${undefined}
-      ${2}  | ${undefined}                                               | ${'test-error'} | ${undefined}   | ${undefined}
-      ${3}  | ${undefined}                                               | ${'exec-error'} | ${true}        | ${undefined}
-      ${4}  | ${{ revealOn: 'error' }}                                   | ${'run'}        | ${undefined}   | ${undefined}
-      ${5}  | ${{ revealOn: 'error' }}                                   | ${'test-error'} | ${true}        | ${undefined}
-      ${6}  | ${{ revealOn: 'error' }}                                   | ${'exec-error'} | ${true}        | ${undefined}
-      ${7}  | ${{ revealWithFocus: 'terminal' }}                         | ${'run'}        | ${true}        | ${'terminal'}
-      ${8}  | ${{ revealWithFocus: 'terminal' }}                         | ${'test-error'} | ${undefined}   | ${undefined}
-      ${9}  | ${{ revealWithFocus: 'terminal' }}                         | ${'exec-error'} | ${true}        | ${'terminal'}
-      ${10} | ${{ revealWithFocus: 'test-results' }}                     | ${'run'}        | ${true}        | ${'test-results'}
-      ${11} | ${{ revealWithFocus: 'test-results' }}                     | ${'test-error'} | ${undefined}   | ${undefined}
-      ${12} | ${{ revealWithFocus: 'test-results' }}                     | ${'exec-error'} | ${true}        | ${undefined}
-      ${13} | ${{ revealOn: 'error', revealWithFocus: 'terminal' }}      | ${'run'}        | ${undefined}   | ${undefined}
-      ${14} | ${{ revealOn: 'error', revealWithFocus: 'terminal' }}      | ${'test-error'} | ${true}        | ${'terminal'}
-      ${15} | ${{ revealOn: 'error', revealWithFocus: 'test-results' }}  | ${'test-error'} | ${true}        | ${'test-results'}
-      ${16} | ${{ revealOn: 'demand', revealWithFocus: 'test-results' }} | ${'run'}        | ${undefined}   | ${undefined}
-      ${17} | ${{ revealOn: 'demand', revealWithFocus: 'test-results' }} | ${'test-error'} | ${undefined}   | ${undefined}
-      ${18} | ${{ revealOn: 'demand', revealWithFocus: 'test-results' }} | ${'exec-error'} | ${undefined}   | ${undefined}
-    `('case $case', ({ outputConfig, type, enableTerminal, showOutput }) => {
-      mockConfig.get.mockImplementation((key) => {
-        switch (key) {
-          case 'outputConfig':
-            return outputConfig;
-          case 'openTesting':
-            return 'neverOpen';
-        }
+    describe('without runMode', () => {
+      describe('when no outputConfig is defined', () => {
+        it.each`
+          case  | openTesting                  | type            | enableTerminal | showTestResults
+          ${1}  | ${'neverOpen'}               | ${'run'}        | ${true}        | ${false}
+          ${2}  | ${'neverOpen'}               | ${'test-error'} | ${undefined}   | ${false}
+          ${3}  | ${'neverOpen'}               | ${'exec-error'} | ${true}        | ${false}
+          ${4}  | ${'openOnTestStart'}         | ${'run'}        | ${true}        | ${true}
+          ${5}  | ${'openOnTestStart'}         | ${'test-error'} | ${undefined}   | ${false}
+          ${6}  | ${'openOnTestStart'}         | ${'exec-error'} | ${true}        | ${false}
+          ${7}  | ${'openOnTestFailure'}       | ${'run'}        | ${false}       | ${false}
+          ${8}  | ${'openOnTestFailure'}       | ${'test-error'} | ${true}        | ${true}
+          ${9}  | ${'openOnTestFailure'}       | ${'exec-error'} | ${true}        | ${false}
+          ${10} | ${'openExplorerOnTestStart'} | ${'run'}        | ${true}        | ${false}
+          ${11} | ${'openExplorerOnTestStart'} | ${'test-error'} | ${undefined}   | ${false}
+          ${12} | ${'openExplorerOnTestStart'} | ${'exec-error'} | ${true}        | ${false}
+          ${13} | ${undefined}                 | ${'run'}        | ${true}        | ${true}
+          ${14} | ${undefined}                 | ${'test-error'} | ${undefined}   | ${false}
+          ${15} | ${undefined}                 | ${'exec-error'} | ${true}        | ${false}
+        `(
+          'case $case openTesting=$openTesting, type=$type',
+          ({ openTesting, type, enableTerminal, showTestResults }) => {
+            mockSettings(undefined, openTesting);
+            const om = new OutputManager();
+            om.showOutputOn(type, mockTerminalOutput);
+
+            if (enableTerminal) {
+              expect(mockTerminalOutput.enable).toHaveBeenCalled();
+            } else {
+              expect(mockTerminalOutput.enable).not.toHaveBeenCalled();
+            }
+
+            expect(mockTerminalOutput.show).not.toHaveBeenCalled();
+
+            if (showTestResults) {
+              expect(vscode.commands.executeCommand).toHaveBeenCalledWith(showTestResultsCommand, {
+                preserveFocus: true,
+              });
+            } else {
+              expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+            }
+          }
+        );
       });
-      const om = new OutputManager();
-      om.showOutputOn(type, mockTerminalOutput);
-      if (enableTerminal) {
-        expect(mockTerminalOutput.enable).toHaveBeenCalled();
-      } else {
-        expect(mockTerminalOutput.enable).not.toHaveBeenCalled();
-      }
-      if (showOutput) {
-        if (showOutput === 'terminal') {
-          expect(mockTerminalOutput.show).toHaveBeenCalled();
-          expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(showTestResultsCommand);
-        } else {
-          expect(mockTerminalOutput.show).not.toHaveBeenCalled();
-          expect(vscode.commands.executeCommand).toHaveBeenCalledWith(showTestResultsCommand);
+      describe.each([
+        ['neverOpen'],
+        ['openOnTestStart'],
+        ['openOnTestFailure'],
+        ['openExplorerOnTestStart'],
+      ])(`when openTesting is "%s"`, (openTesting) => {
+        it.each`
+          case  | outputConfig                                               | type            | enableTerminal | showOutput
+          ${4}  | ${{ revealOn: 'error' }}                                   | ${'run'}        | ${undefined}   | ${undefined}
+          ${5}  | ${{ revealOn: 'error' }}                                   | ${'test-error'} | ${true}        | ${undefined}
+          ${6}  | ${{ revealOn: 'error' }}                                   | ${'exec-error'} | ${true}        | ${undefined}
+          ${7}  | ${{ revealWithFocus: 'terminal' }}                         | ${'run'}        | ${true}        | ${'terminal'}
+          ${8}  | ${{ revealWithFocus: 'terminal' }}                         | ${'test-error'} | ${undefined}   | ${undefined}
+          ${9}  | ${{ revealWithFocus: 'terminal' }}                         | ${'exec-error'} | ${true}        | ${'terminal'}
+          ${10} | ${{ revealWithFocus: 'test-results' }}                     | ${'run'}        | ${true}        | ${'test-results'}
+          ${11} | ${{ revealWithFocus: 'test-results' }}                     | ${'test-error'} | ${undefined}   | ${undefined}
+          ${12} | ${{ revealWithFocus: 'test-results' }}                     | ${'exec-error'} | ${true}        | ${undefined}
+          ${13} | ${{ revealOn: 'error', revealWithFocus: 'terminal' }}      | ${'run'}        | ${undefined}   | ${undefined}
+          ${14} | ${{ revealOn: 'error', revealWithFocus: 'terminal' }}      | ${'test-error'} | ${true}        | ${'terminal'}
+          ${15} | ${{ revealOn: 'error', revealWithFocus: 'test-results' }}  | ${'test-error'} | ${true}        | ${'test-results'}
+          ${16} | ${{ revealOn: 'demand', revealWithFocus: 'test-results' }} | ${'run'}        | ${undefined}   | ${undefined}
+          ${17} | ${{ revealOn: 'demand', revealWithFocus: 'test-results' }} | ${'test-error'} | ${undefined}   | ${undefined}
+          ${18} | ${{ revealOn: 'demand', revealWithFocus: 'test-results' }} | ${'exec-error'} | ${undefined}   | ${undefined}
+        `(
+          'case $case when outputConfig is defined',
+          ({ outputConfig, type, enableTerminal, showOutput }) => {
+            mockSettings(outputConfig, openTesting);
+            const om = new OutputManager();
+            om.showOutputOn(type, mockTerminalOutput);
+            if (enableTerminal) {
+              expect(mockTerminalOutput.enable).toHaveBeenCalled();
+            } else {
+              expect(mockTerminalOutput.enable).not.toHaveBeenCalled();
+            }
+            if (showOutput) {
+              if (showOutput === 'terminal') {
+                expect(mockTerminalOutput.show).toHaveBeenCalled();
+                expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+              } else {
+                expect(mockTerminalOutput.show).not.toHaveBeenCalled();
+                expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+                  showTestResultsCommand,
+                  { preserveFocus: true }
+                );
+              }
+            } else {
+              expect(mockTerminalOutput.show).not.toHaveBeenCalled();
+              expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+            }
+          }
+        );
+      });
+    });
+    describe('with auto runMode', () => {
+      describe.each([['watch'], ['on-save']])('runMode=%s', (runMode) => {
+        it.each`
+          case  | openTesting                  | outputConfig                                              | type            | execShowTestResults
+          ${1}  | ${'neverOpen'}               | ${undefined}                                              | ${'run'}        | ${false}
+          ${2}  | ${'neverOpen'}               | ${undefined}                                              | ${'test-error'} | ${false}
+          ${3}  | ${'neverOpen'}               | ${undefined}                                              | ${'exec-error'} | ${false}
+          ${4}  | ${'neverOpen'}               | ${{ revealOn: 'run', revealWithFocus: 'test-results' }}   | ${'run'}        | ${true}
+          ${5}  | ${'neverOpen'}               | ${{ revealOn: 'run', revealWithFocus: 'test-results' }}   | ${'test-error'} | ${false}
+          ${6}  | ${'neverOpen'}               | ${{ revealOn: 'error', revealWithFocus: 'test-results' }} | ${'test-error'} | ${true}
+          ${7}  | ${'openOnTestStart'}         | ${undefined}                                              | ${'run'}        | ${true}
+          ${8}  | ${'openOnTestStart'}         | ${undefined}                                              | ${'test-error'} | ${false}
+          ${9}  | ${'openOnTestStart'}         | ${undefined}                                              | ${'exec-error'} | ${false}
+          ${10} | ${'openOnTestStart'}         | ${{ revealOn: 'error', revealWithFocus: 'test-results' }} | ${'run'}        | ${false}
+          ${11} | ${'openOnTestStart'}         | ${{ revealOn: 'error', revealWithFocus: 'test-results' }} | ${'test-error'} | ${true}
+          ${12} | ${'openOnTestFailure'}       | ${undefined}                                              | ${'run'}        | ${false}
+          ${13} | ${'openOnTestFailure'}       | ${undefined}                                              | ${'test-error'} | ${true}
+          ${14} | ${'openOnTestFailure'}       | ${undefined}                                              | ${'exec-error'} | ${false}
+          ${15} | ${'openOnTestFailure'}       | ${{ revealOn: 'error', revealWithFocus: 'test-results' }} | ${'test-error'} | ${true}
+          ${16} | ${'openOnTestFailure'}       | ${{ revealOn: 'run', revealWithFocus: 'test-results' }}   | ${'test-error'} | ${false}
+          ${17} | ${'openExplorerOnTestStart'} | ${undefined}                                              | ${'run'}        | ${false}
+          ${18} | ${'openExplorerOnTestStart'} | ${undefined}                                              | ${'test-error'} | ${false}
+          ${19} | ${'openExplorerOnTestStart'} | ${undefined}                                              | ${'exec-error'} | ${false}
+          ${20} | ${undefined}                 | ${undefined}                                              | ${'run'}        | ${false}
+          ${21} | ${undefined}                 | ${undefined}                                              | ${'test-error'} | ${false}
+          ${22} | ${undefined}                 | ${undefined}                                              | ${'exec-error'} | ${false}
+        `('case $case', ({ openTesting, outputConfig, type, execShowTestResults }) => {
+          mockSettings(outputConfig, openTesting);
+          const om = new OutputManager();
+          const mockRunMode: any = { config: { type: runMode } };
+          om.showOutputOn(type, mockTerminalOutput, mockRunMode);
+
+          if (execShowTestResults) {
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(showTestResultsCommand, {
+              preserveFocus: true,
+            });
+          } else {
+            expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+          }
+        });
+      });
+    });
+    describe('with on-demand runMode', () => {
+      it.each`
+        case  | openTesting                  | outputConfig                                              | type            | execShowTestResults
+        ${1}  | ${'neverOpen'}               | ${undefined}                                              | ${'run'}        | ${false}
+        ${2}  | ${'neverOpen'}               | ${undefined}                                              | ${'test-error'} | ${false}
+        ${3}  | ${'neverOpen'}               | ${undefined}                                              | ${'exec-error'} | ${false}
+        ${4}  | ${'neverOpen'}               | ${{ revealOn: 'run', revealWithFocus: 'test-results' }}   | ${'run'}        | ${true}
+        ${5}  | ${'neverOpen'}               | ${{ revealOn: 'run', revealWithFocus: 'test-results' }}   | ${'test-error'} | ${false}
+        ${6}  | ${'neverOpen'}               | ${{ revealOn: 'error', revealWithFocus: 'test-results' }} | ${'test-error'} | ${true}
+        ${7}  | ${'openOnTestStart'}         | ${undefined}                                              | ${'run'}        | ${false}
+        ${8}  | ${'openOnTestStart'}         | ${undefined}                                              | ${'test-error'} | ${false}
+        ${9}  | ${'openOnTestStart'}         | ${undefined}                                              | ${'exec-error'} | ${false}
+        ${10} | ${'openOnTestStart'}         | ${{ revealOn: 'error', revealWithFocus: 'test-results' }} | ${'run'}        | ${false}
+        ${11} | ${'openOnTestStart'}         | ${{ revealOn: 'error', revealWithFocus: 'test-results' }} | ${'test-error'} | ${false}
+        ${12} | ${'openOnTestFailure'}       | ${undefined}                                              | ${'run'}        | ${false}
+        ${13} | ${'openOnTestFailure'}       | ${undefined}                                              | ${'test-error'} | ${false}
+        ${14} | ${'openOnTestFailure'}       | ${undefined}                                              | ${'exec-error'} | ${false}
+        ${15} | ${'openOnTestFailure'}       | ${{ revealOn: 'error', revealWithFocus: 'test-results' }} | ${'test-error'} | ${false}
+        ${16} | ${'openOnTestFailure'}       | ${{ revealOn: 'run', revealWithFocus: 'test-results' }}   | ${'test-error'} | ${false}
+        ${17} | ${'openExplorerOnTestStart'} | ${undefined}                                              | ${'run'}        | ${false}
+        ${18} | ${'openExplorerOnTestStart'} | ${undefined}                                              | ${'test-error'} | ${false}
+        ${19} | ${'openExplorerOnTestStart'} | ${undefined}                                              | ${'exec-error'} | ${false}
+      `(
+        'case $case should be lazy in invoking command',
+        ({ openTesting, outputConfig, type, execShowTestResults }) => {
+          mockSettings(outputConfig, openTesting);
+          const om = new OutputManager();
+          const mockRunMode: any = { config: { type: 'on-demand' } };
+          om.showOutputOn(type, mockTerminalOutput, mockRunMode);
+
+          if (execShowTestResults) {
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(showTestResultsCommand, {
+              preserveFocus: true,
+            });
+          } else {
+            expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+          }
         }
-      } else {
-        expect(mockTerminalOutput.show).not.toHaveBeenCalled();
-        expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(showTestResultsCommand);
-      }
+      );
     });
   });
 
@@ -190,7 +316,7 @@ describe('OutputManager', () => {
       ${3} | ${'test-results'} | ${false}      | ${true}
       ${4} | ${'both'}         | ${true}       | ${true}
     `('case $case', ({ clearOnRun, clearTerminal, clearTestResults }) => {
-      mockWorkspaceConfig({ ...DefaultJestOutputSetting, clearOnRun });
+      mockSettings({ ...DefaultJestOutputSetting, clearOnRun });
       const om = new OutputManager();
       om.clearOutputOnRun(mockTerminalOutput);
       if (clearTerminal) {
@@ -206,57 +332,34 @@ describe('OutputManager', () => {
     });
   });
 
-  describe('autoFocus', () => {
-    it.each`
-      case | outputConfig                           | openTesting          | expected
-      ${1} | ${undefined}                           | ${'openOnTestStart'} | ${true}
-      ${2} | ${undefined}                           | ${'neverOpen'}       | ${false}
-      ${3} | ${{ revealWithFocus: 'none' }}         | ${'openOnTestStart'} | ${true}
-      ${4} | ${{ revealWithFocus: 'none' }}         | ${'neverOpen'}       | ${false}
-      ${5} | ${{ revealWithFocus: 'test-results' }} | ${'neverOpen'}       | ${true}
-      ${6} | ${{ revealWithFocus: 'terminal' }}     | ${'neverOpen'}       | ${true}
-    `('case $case: isAutoFocus = $expected', ({ outputConfig, openTesting, expected }) => {
-      mockConfig.get.mockImplementation((key: string) => {
-        switch (key) {
-          case 'outputConfig':
-            return outputConfig;
-          case 'openTesting':
-            return openTesting;
-        }
-      });
+  describe('disableAutoFocus', () => {
+    it('disableAutoFocus() will update both openTesting and outputConfig settings', async () => {
       const om = new OutputManager();
-      const result = om.isAutoFocus();
-      expect(result).toEqual(expected);
+      await om.disableAutoFocus();
+      expect(mockConfig.update).toHaveBeenCalledWith(
+        'openTesting',
+        'neverOpen',
+        vscode.ConfigurationTarget.Workspace
+      );
+      expect(mockConfig.update).toHaveBeenCalledWith(
+        'outputConfig',
+        expect.objectContaining({ revealWithFocus: 'none' })
+      );
     });
-    describe('disableAutoFocus', () => {
-      it('disableAutoFocus() will update both openTesting and outputConfig settings', async () => {
-        const om = new OutputManager();
-        await om.disableAutoFocus();
-        expect(mockConfig.update).toHaveBeenCalledWith(
-          'openTesting',
-          'neverOpen',
-          vscode.ConfigurationTarget.Workspace
-        );
-        expect(mockConfig.update).toHaveBeenCalledWith(
-          'outputConfig',
-          expect.objectContaining({ revealWithFocus: 'none' })
-        );
+    it('during the update, validation will be skipped', async () => {
+      const om = new OutputManager();
+
+      let validateCount = 0;
+      mockConfig.update.mockImplementation(async () => {
+        // check if validation is skipped
+        await expect(om.validate()).resolves.toBeUndefined();
+        validateCount++;
       });
-      it('during the update, validation will be skipped', async () => {
-        const om = new OutputManager();
 
-        let validateCount = 0;
-        mockConfig.update.mockImplementation(async () => {
-          // check if validation is skipped
-          await expect(om.validate()).resolves.toBeUndefined();
-          validateCount++;
-        });
+      await om.disableAutoFocus();
+      expect(validateCount).toEqual(2);
 
-        await om.disableAutoFocus();
-        expect(validateCount).toEqual(2);
-
-        mockConfig.update.mockReset();
-      });
+      mockConfig.update.mockReset();
     });
   });
 
@@ -309,31 +412,24 @@ describe('OutputManager', () => {
         mockChangeEvent = { affectsConfiguration: jest.fn() };
       });
       it('no-op if no outputConfig related changes detected', () => {
-        mockWorkspaceConfig({ revealOn: 'error' });
+        mockSettings({ revealOn: 'error' });
         mockChangeEvent.affectsConfiguration.mockReturnValue(false);
 
         onDidChangeConfiguration.call(om, mockChangeEvent);
         const { outputConfig: config } = om.outputConfigs();
-        expect(config.revealOn).not.toBe('error');
+        expect(config.value.revealOn).not.toBe('error');
       });
       it('if outputConfig related changes detected, will load new config', () => {
-        mockWorkspaceConfig({ revealOn: 'error' }, 'neverOpen');
+        mockSettings({ revealOn: 'error' }, 'neverOpen');
         mockChangeEvent.affectsConfiguration.mockReturnValue(true);
 
         onDidChangeConfiguration.call(om, mockChangeEvent);
         const { outputConfig: config } = om.outputConfigs();
-        expect(config.revealOn).toBe('error');
+        expect(config.value.revealOn).toBe('error');
         expect(showWarningMessageSpy).not.toHaveBeenCalled();
       });
       it('will show warning message if outputConfig related changes detected and config is not valid', () => {
-        mockConfig.get.mockImplementation((key: string) => {
-          if (key === 'openTesting') {
-            return 'openOnTestStart';
-          }
-          if (key === 'outputConfig') {
-            return { revealOn: 'error' };
-          }
-        });
+        mockSettings({ revealOn: 'error' }, 'openOnTestStart');
         mockChangeEvent.affectsConfiguration.mockReturnValue(true);
 
         onDidChangeConfiguration.call(om, mockChangeEvent);
@@ -364,14 +460,7 @@ describe('OutputManager', () => {
         ${16} | ${{ revealWithFocus: 'terminal' }}                         | ${'openOnTestFailure'}       | ${false}
         ${17} | ${{ revealWithFocus: 'terminal' }}                         | ${'openExplorerOnTestStart'} | ${true}
       `('case $case: isAutoFocus = $expected', ({ outputConfig, openTesting, expected }) => {
-        mockConfig.get.mockImplementation((key: string) => {
-          switch (key) {
-            case 'outputConfig':
-              return outputConfig;
-            case 'openTesting':
-              return openTesting;
-          }
-        });
+        mockSettings(outputConfig, openTesting);
         const om = new OutputManager();
         expect(om.isTestResultsConfigsValid()).toEqual(expected);
       });
@@ -391,7 +480,7 @@ describe('OutputManager', () => {
     });
     describe('when conflict detected', () => {
       beforeEach(() => {
-        mockWorkspaceConfig({ revealOn: 'error' });
+        mockSettings({ revealOn: 'error' });
       });
       it('will show warning message', async () => {
         showWarningMessageSpy.mockResolvedValue(undefined);
