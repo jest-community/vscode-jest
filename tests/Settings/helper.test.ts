@@ -139,3 +139,78 @@ describe('updateSetting', () => {
     await expect(updateSetting(v2, key, value)).rejects.toThrow();
   });
 });
+import { getSettingDetail } from '../../src/Settings/helper';
+
+describe('getSettingDetail', () => {
+  it('should return the value and isExplicitlySet true when the setting is explicitly set', () => {
+    const configName = 'testing';
+    const section = 'openTesting';
+    const explicitValue = 'openOnTestFailure';
+    const settingInspection = {
+      globalValue: undefined,
+      workspaceValue: explicitValue,
+      workspaceFolderValue: undefined,
+      globalLanguageValue: undefined,
+      workspaceLanguageValue: undefined,
+      workspaceFolderLanguageValue: undefined,
+    };
+
+    const mockConfig = {
+      get: jest.fn().mockReturnValue(explicitValue),
+      inspect: jest.fn().mockReturnValue(settingInspection),
+    };
+    vscode.workspace.getConfiguration = jest.fn().mockReturnValue(mockConfig);
+
+    const result = getSettingDetail<string>(configName, section);
+
+    expect(vscode.workspace.getConfiguration).toHaveBeenCalledWith(configName);
+    expect(mockConfig.get).toHaveBeenCalledWith(section);
+    expect(mockConfig.inspect).toHaveBeenCalledWith(section);
+    expect(result).toEqual({ value: explicitValue, isExplicitlySet: true });
+  });
+  it('should return the default value and isExplicitlySet false when the setting is not explicitly set', () => {
+    const configName = 'testing';
+    const section = 'openTesting';
+    const defaultValue = 'openOnTestStart';
+    const settingInspection = {
+      globalValue: undefined,
+      workspaceValue: undefined,
+      workspaceFolderValue: undefined,
+      globalLanguageValue: undefined,
+      workspaceLanguageValue: undefined,
+      workspaceFolderLanguageValue: undefined,
+    };
+
+    const mockConfig = {
+      get: jest.fn().mockReturnValue(defaultValue),
+      inspect: jest.fn().mockReturnValue(settingInspection),
+    };
+    vscode.workspace.getConfiguration = jest.fn().mockReturnValue(mockConfig);
+
+    const result = getSettingDetail<string>(configName, section);
+
+    expect(vscode.workspace.getConfiguration).toHaveBeenCalledWith(configName);
+    expect(mockConfig.get).toHaveBeenCalledWith(section);
+    expect(mockConfig.inspect).toHaveBeenCalledWith(section);
+    expect(result).toEqual({ value: defaultValue, isExplicitlySet: false });
+  });
+
+  it('should return undefined value and isExplicitlySet flag as false when inspection failed', () => {
+    const configName = 'jest';
+    const section = 'wrongSetting';
+    const settingInspection = null;
+
+    const mockConfig = {
+      get: jest.fn(),
+      inspect: jest.fn().mockReturnValue(settingInspection),
+    };
+    vscode.workspace.getConfiguration = jest.fn().mockReturnValue(mockConfig);
+
+    const result = getSettingDetail<string>(configName, section);
+
+    expect(vscode.workspace.getConfiguration).toHaveBeenCalledWith(configName);
+    expect(mockConfig.get).toHaveBeenCalledWith(section);
+    expect(mockConfig.inspect).toHaveBeenCalledWith(section);
+    expect(result).toEqual({ value: undefined, isExplicitlySet: false });
+  });
+});

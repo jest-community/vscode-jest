@@ -29,7 +29,6 @@ jest.mock('../../src/workspace-manager', () => ({
 }));
 const mockOutputManager = {
   showOutputOn: jest.fn(),
-  isAutoFocus: jest.fn(),
   outputConfigs: jest.fn(),
 };
 jest.mock('../../src/output-manager', () => ({
@@ -151,7 +150,10 @@ describe('JestExt', () => {
       jestCommandLine: 'jest',
     };
     getConfiguration.mockReturnValue({});
-    mockOutputManager.outputConfigs.mockReturnValue({});
+    mockOutputManager.outputConfigs.mockReturnValue({
+      outputConfig: { value: {}, isExplicitlySet: false },
+      openTesting: { value: {}, isExplicitlySet: false },
+    });
 
     vscode.window.visibleTextEditors = [];
     (createProcessSession as jest.Mocked<any>).mockReturnValue(mockProcessSession);
@@ -813,39 +815,6 @@ describe('JestExt', () => {
         expect(update.state).toEqual('initial');
         expect(update.mode.config.coverage).toEqual(true);
       });
-      describe('emit auto-focus warnings for auto-run modes', () => {
-        it.each`
-          case | runMode                               | isAutoFocus | showWarning
-          ${1} | ${'watch'}                            | ${true}     | ${true}
-          ${2} | ${'watch'}                            | ${false}    | ${false}
-          ${3} | ${'on-save'}                          | ${true}     | ${true}
-          ${4} | ${'on-save'}                          | ${false}    | ${false}
-          ${5} | ${'on-demand'}                        | ${true}     | ${false}
-          ${6} | ${{ type: 'watch', deferred: true }}  | ${true}     | ${false}
-          ${7} | ${{ type: 'watch', deferred: false }} | ${true}     | ${true}
-        `(
-          'case $case: showWarning: $showWarning',
-          async ({ runMode, isAutoFocus, showWarning }) => {
-            expect.hasAssertions();
-
-            const sut = newJestExt({ settings: { runMode: new RunMode(runMode) } });
-            mockOutputManager.isAutoFocus.mockReturnValueOnce(isAutoFocus);
-
-            await sut.startSession();
-            if (showWarning) {
-              expect(mockOutputTerminal.write).toHaveBeenCalledWith(
-                expect.stringContaining('auto-focus'),
-                'warn'
-              );
-            } else {
-              expect(mockOutputTerminal.write).not.toHaveBeenCalledWith(
-                expect.stringContaining('auto focus'),
-                'warn'
-              );
-            }
-          }
-        );
-      });
     });
     describe('stopSession', () => {
       it('will fire event', async () => {
@@ -1355,41 +1324,55 @@ describe('JestExt', () => {
     });
   });
   describe('output handling', () => {
+    let runMode;
+    let sut: JestExt;
+    beforeEach(() => {
+      runMode = new RunMode('on-demand');
+      sut = newJestExt({ settings: { runMode } });
+    });
     it('delegate output handling to outputManager during runEvent', () => {
-      const sut = newJestExt();
       const onRunEvent = (sut.events.onRunEvent.event as jest.Mocked<any>).mock.calls[0][0];
       const process = { id: 'a process id', request: { type: 'watch' } };
       onRunEvent({ type: 'start', process });
-      expect(mockOutputManager.showOutputOn).toHaveBeenCalledWith('run', expect.anything());
+      expect(mockOutputManager.showOutputOn).toHaveBeenCalledWith(
+        'run',
+        expect.anything(),
+        runMode
+      );
     });
     describe('when test errors occurred', () => {
       it('will notify outputManager', () => {
-        const sut = newJestExt();
         const onRunEvent = (sut.events.onRunEvent.event as jest.Mocked<any>).mock.calls[0][0];
         const process = { id: 'a process id', request: { type: 'watch' } };
         onRunEvent({ type: 'test-error', process });
-        expect(mockOutputManager.showOutputOn).toHaveBeenCalledWith('run', expect.anything());
+        expect(mockOutputManager.showOutputOn).toHaveBeenCalledWith(
+          'run',
+          expect.anything(),
+          runMode
+        );
         expect(mockOutputManager.showOutputOn).toHaveBeenCalledWith(
           'test-error',
-          expect.anything()
+          expect.anything(),
+          runMode
         );
       });
       it('will only notify outputManager once per run cycle', () => {
-        const sut = newJestExt();
         const onRunEvent = (sut.events.onRunEvent.event as jest.Mocked<any>).mock.calls[0][0];
         const process = { id: 'a process id', request: { type: 'watch' } };
 
         onRunEvent({ type: 'test-error', process, userData: {} });
         expect(mockOutputManager.showOutputOn).toHaveBeenCalledWith(
           'test-error',
-          expect.anything()
+          expect.anything(),
+          runMode
         );
         mockOutputManager.showOutputOn.mockClear();
 
         onRunEvent({ type: 'test-error', process });
         expect(mockOutputManager.showOutputOn).not.toHaveBeenCalledWith(
           'test-error',
-          expect.anything()
+          expect.anything(),
+          runMode
         );
       });
       it('will reset testError state when test run ended', () => {
@@ -1535,7 +1518,11 @@ describe('JestExt', () => {
         await jestExt.runAllTests();
 
         expect(runMode.config.deferred).toBe(false);
-        expect(mockOutputManager.showOutputOn).toHaveBeenCalledWith('run', expect.anything());
+        expect(mockOutputManager.showOutputOn).toHaveBeenCalledWith(
+          'run',
+          expect.anything(),
+          runMode
+        );
         expect(mockOutputTerminal.revealOnError).toEqual(true);
         expect(mockProcessSession.scheduleProcess).toHaveBeenCalledWith(
           expect.objectContaining({ type: 'all-tests' })
@@ -1557,7 +1544,11 @@ describe('JestExt', () => {
         await jestExt.runItemCommand(testItem, itemCommand);
 
         expect(runMode.config.deferred).toBe(false);
-        expect(mockOutputManager.showOutputOn).toHaveBeenCalledWith('run', expect.anything());
+        expect(mockOutputManager.showOutputOn).toHaveBeenCalledWith(
+          'run',
+          expect.anything(),
+          runMode
+        );
         expect(mockTestProvider.runItemCommand).toHaveBeenCalled();
       });
       describe('when triggered explicitly (by UI)', () => {

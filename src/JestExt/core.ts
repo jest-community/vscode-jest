@@ -19,7 +19,7 @@ import { CoverageMapData } from 'istanbul-lib-coverage';
 import { Logging } from '../logging';
 import { createProcessSession, ProcessSession } from './process-session';
 import { JestExtContext, JestSessionEvents, JestExtSessionContext, JestRunEvent } from './types';
-import { extensionName, OUTPUT_CONFIG_HELP_URL, SupportedLanguageIds } from '../appGlobals';
+import { extensionName, SupportedLanguageIds } from '../appGlobals';
 import { createJestExtContext, getExtensionResourceSettings, prefixWorkspace } from './helper';
 import { PluginResourceSettings } from '../Settings';
 import { WizardTaskId } from '../setup-wizard';
@@ -37,8 +37,6 @@ interface JestCommandSettings {
   rootPath: string;
   jestCommandLine: string;
 }
-
-const AUTO_FOCUS_WARNING = `The TEST RESULTS panel has auto-focus enabled, which may cause frequent focus shifts during the current run mode. If this becomes a problem, you can disable the auto-focus using the command "Jest: Disable Auto Focus Test Output". Alternatively, click on the action link below. For more details, see ${OUTPUT_CONFIG_HELP_URL}`;
 
 /** extract lines starts and end with [] */
 export class JestExt {
@@ -145,8 +143,8 @@ export class JestExt {
     this.output.write(
       'Critical Settings:\r\n' +
         `jest.runMode: ${JSON.stringify(pluginSettings.runMode.config, undefined, 4)}\r\n` +
-        `jest.outputConfig: ${JSON.stringify(outputConfig, undefined, 4)}\r\n` +
-        `testing.openTesting: ${JSON.stringify(openTesting, undefined, 4)}\r\n`,
+        `jest.outputConfig: ${JSON.stringify(outputConfig.value, undefined, 4)}\r\n` +
+        `testing.openTesting: ${JSON.stringify(openTesting.value, undefined, 4)}\r\n`,
       'info'
     );
     return pluginSettings;
@@ -186,7 +184,7 @@ export class JestExt {
   }
 
   private enableOutputOnRun(): void {
-    outputManager.showOutputOn('run', this.output);
+    outputManager.showOutputOn('run', this.output, this.extContext.settings.runMode);
   }
   private setupRunEvents(events: JestSessionEvents): void {
     events.onRunEvent.event((event: JestRunEvent) => {
@@ -236,7 +234,7 @@ export class JestExt {
         }
         case 'test-error': {
           if (!event.process.userData?.testError) {
-            outputManager.showOutputOn('test-error', this.output);
+            outputManager.showOutputOn('test-error', this.output, this.extContext.settings.runMode);
             event.process.userData = { ...(event.process.userData ?? {}), testError: true };
           }
           break;
@@ -321,7 +319,6 @@ export class JestExt {
 
       // update visible editors that belong to this folder
       this.updateVisibleTextEditors();
-      this.warnAutoRunAutoFocus();
     } catch (e) {
       this.outputActionMessages(
         `Failed to start jest session: ${e}`,
@@ -352,24 +349,6 @@ export class JestExt {
       );
       this.updateStatusBar({ state: 'exec-error' });
     }
-  }
-
-  // check if output config has conflict, especially for auto-run modes
-  private async warnAutoRunAutoFocus(): Promise<void> {
-    if (
-      this.extContext.settings.runMode.config.deferred ||
-      this.extContext.settings.runMode.config.type === 'on-demand' ||
-      outputManager.isAutoFocus() === false
-    ) {
-      return;
-    }
-    const cmdLink = executableTerminalLinkProvider.executableLink(
-      this.extContext.workspace.name,
-      `${extensionName}.disable-auto-focus`
-    );
-
-    this.output.write(AUTO_FOCUS_WARNING, 'warn');
-    this.output.write(`Disable Auto Focus: \u2192 ${cmdLink}\r\n`, 'info');
   }
 
   private updateTestFileEditor(editor: vscode.TextEditor): void {
