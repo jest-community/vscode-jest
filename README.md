@@ -389,7 +389,7 @@ This setting can be one of the predefined types or a custom object.
 
 
 <a id="outputconfig-conflict"></a>
-**Handling Conflicts with "TEST RESULTS" panel**
+**Handling Conflicts with "TEST RESULTS" panel setting**
 
 _The Problem_
 
@@ -411,32 +411,18 @@ _Validation and Diagnosis_
 
 The extension features output config diagnosis information in the jest terminal, as well as the built-in conflict detection and quick fixes to assist with the transition.
 
-<a id="outputconfig-issues"></a>
-**Common Issues**
+<a id="default-output-focus"></a>
+**Default Output Focus Behavior by RunMode**
+When none of the output settings (`"testing.openTesting"` and `"jest.outputConfig"`) are present, The default output behavior is determined by [runMode](#runmode):
 
-Upon upgrading to v6.2, some users, frequently with auto run modes (e.g., 'watch', 'on-save'), might experience frequent "TEST RESULTS" panel automatically grabbing focus whenever files are saved or tests are run.
-
-> [!NOTE] 
-> 
-> **update**
-> In version 6.2.3, we've resolved this issue by modifying the default auto-focus behavior so the 'TEST RESULTS' panel will not automatically grab focus in auto-run modes, particularly when `"testing.openTesting"` and `"jest.outputConfig"` settings are not specified. This change should completely eliminate this issue.
->
-> 
-
-<details>
-
-<summary>Previous Workaround</summary>
-
-This is due to the extension generates a default `jest.outputConfig`, if none is existing in your settings, to match the existing `testing.openTesting` setting, which defaults to `"openOnTestStart"`. If this is not your desired output experience, you can easily disable `testing.openTesting` in your settings.json: 
-```json
-"testing.openTesting": "neverOpen"
-```
-Then use the `jest.outputConfig` to find-tune the output experience you prefer.
-
-</details>
+| runMode| auto reveal "TEST RESULTS" | auto reveal "TERMINAL" |
+|:--:|:--:|:--:|
+| "watch" | :heavy_multiplication_x: | :heavy_multiplication_x:|
+| "on-save" | :heavy_multiplication_x: | :heavy_multiplication_x: |
+| "on-demand" | :heavy_check_mark: | :heavy_multiplication_x:|
 
 
-**Examples**
+**Configuration Examples**
 - Choose a passive output experience that is identical to the previous version: no automatic focus switch, no automatic clear.
   ```json
   "testing.openTesting": "neverOpen",
@@ -447,7 +433,7 @@ Then use the `jest.outputConfig` to find-tune the output experience you prefer.
   "testing.openTesting": "neverOpen",
   "jest.outputConfig": "terminal-based"
   ```
-- Choose a test-results-based experience and switch focus to it when test fails.
+- Choose a test-results-based experience and switch focus to it only when test fails.
   ```json
   "testing.openTesting": "neverOpen",
   "jest.outputConfig": {
