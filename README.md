@@ -26,7 +26,7 @@ You can see the full [features](#features) and learn more details in the [How-To
 Happy testing!
 
 ## Releases 
-- **Current** ([v6.2.2](https://github.com/jest-community/vscode-jest/releases/tag/v6.2.2)): [release note](release-notes/release-note-v6.md#v622)
+- **Current** ([v6.2.3](https://github.com/jest-community/vscode-jest/releases/tag/v6.2.3)): [release note](release-notes/release-note-v6.md#v623)
 - **Previous** ([v5.2.3](https://github.com/jest-community/vscode-jest/releases/tag/v5.2.3)): [release note](release-notes/release-note-v5.x.md#v523)
 
  
@@ -99,8 +99,7 @@ Content
 
 ## Installation
 
-Simply open [Jest - Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=Orta.vscode-jest) and click "Install".
-Alternatively open Visual Studio Code, go to the extension view and search for "Jest".
+Simply open Visual Studio Code, go to the extension view and search for "Jest". Alternatively, open [Jest - Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=Orta.vscode-jest) and click "Install".
 
 For detailed releases and migration help, please see [releases](https://github.com/jest-community/vscode-jest/releases).
 
