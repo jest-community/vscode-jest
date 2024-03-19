@@ -181,9 +181,9 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
       program: undefined,
     };
 
-    if (cmd === 'npm') {
+    if (cmd === 'npm' || cmd === 'pnpm') {
       const extraArgs = args.includes('--') ? [] : ['--'];
-      return { runtimeExecutable: 'npm', args: extraArgs, ...commonConfig };
+      return { runtimeExecutable: cmd, args: extraArgs, ...commonConfig };
     }
     if (cmd === 'yarn') {
       return { runtimeExecutable: 'yarn', args: [], ...commonConfig };
