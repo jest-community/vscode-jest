@@ -8,9 +8,9 @@ import {
   ParsedRange,
   ItBlock,
   SnapshotParserOptions,
+  TestReconciliationState,
 } from 'jest-editor-support';
-import { TestReconciliationState, TestReconciliationStateType } from './TestReconciliationState';
-import { TestResult, TestResultStatusInfo } from './TestResult';
+import { TestResult, TestResultStatusInfo, TestStatus } from './TestResult';
 import * as match from './match-by-context';
 import { JestSessionEvents } from '../JestExt';
 import { TestStats } from '../types';
@@ -25,7 +25,7 @@ interface TestSuiteParseResultRaw {
   testBlocks: TestBlocks | 'failed';
 }
 interface TestSuiteResultRaw {
-  status: TestReconciliationStateType;
+  status: TestReconciliationState;
   message: string;
   assertionContainer?: ContainerNode<TestAssertionStatus>;
   results?: TestResult[];
@@ -53,7 +53,7 @@ const sortByStatus = (a: TestResult, b: TestResult): number => {
 };
 
 export class TestSuiteRecord implements TestSuiteUpdatable {
-  private _status: TestReconciliationStateType;
+  private _status: TestReconciliationState;
   private _message: string;
   private _results?: TestResult[];
   private _sorted?: SortedTestResults;
@@ -67,10 +67,10 @@ export class TestSuiteRecord implements TestSuiteUpdatable {
     private reconciler: TestReconciler,
     private parser: Parser
   ) {
-    this._status = TestReconciliationState.Unknown;
+    this._status = TestStatus.Unknown;
     this._message = '';
   }
-  public get status(): TestReconciliationStateType {
+  public get status(): TestReconciliationState {
     return this._status;
   }
   public get message(): string {
@@ -132,6 +132,9 @@ export class TestSuiteRecord implements TestSuiteUpdatable {
     snapshots: ExtSnapshotBlock[]
   ): void {
     const isWithin = (snapshot: ExtSnapshotBlock, range?: ParsedRange): boolean => {
+      if (!snapshot.node.loc) {
+        return false;
+      }
       const zeroBasedLine = snapshot.node.loc.start.line - 1;
       return !!range && range.start.line <= zeroBasedLine && range.end.line >= zeroBasedLine;
     };
@@ -402,11 +405,11 @@ export class TestResultProvider {
       return;
     }
     for (const test of testResults) {
-      if (test.status === TestReconciliationState.KnownFail) {
+      if (test.status === TestStatus.KnownFail) {
         sorted.fail.push(test);
-      } else if (test.status === TestReconciliationState.KnownSkip) {
+      } else if (test.status === TestStatus.KnownSkip) {
         sorted.skip.push(test);
-      } else if (test.status === TestReconciliationState.KnownSuccess) {
+      } else if (test.status === TestStatus.KnownSuccess) {
         sorted.success.push(test);
       } else {
         sorted.unknown.push(test);

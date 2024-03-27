@@ -14,12 +14,11 @@ import {
   TestAssertionStatus,
   ParsedNode,
   DescribeBlock,
-  Location,
+  CodeLocation as Location,
   NamedBlock,
-  ParsedNodeTypes,
+  ParsedNodeType,
 } from 'jest-editor-support';
-import { TestReconciliationState } from './TestReconciliationState';
-import { TestResult } from './TestResult';
+import { TestResult, TestStatus, LocationRange } from './TestResult';
 import {
   DataNode,
   ContainerNode,
@@ -31,6 +30,14 @@ import {
   NodeType,
   MatchOptions,
 } from './match-node';
+
+interface MaybeWithLocation {
+  start?: Location;
+  end?: Location;
+}
+
+export const hasLocation = (loc: MaybeWithLocation): loc is LocationRange =>
+  loc.start != null && loc.end != null;
 
 export const buildAssertionContainer = (
   assertions: TestAssertionStatus[]
@@ -80,11 +87,12 @@ export const buildSourceContainer = (sourceRoot: ParsedNode): ContainerNode<ItBl
         end: namedNode.end ? adjustLocation(namedNode.end) : UnknownRange.end,
       },
     });
+    const start = (node.start?.line ?? 0) - 1;
     if (isDescribeBlock(node)) {
-      container = new ContainerNode(node.name, node.start?.line - 1, attrs(node));
+      container = new ContainerNode(node.name, start, attrs(node));
       parent.addContainerNode(container);
     } else if (isItBlock(node)) {
-      parent.addDataNode(new DataNode(node.name, node.start.line - 1, node, attrs(node)));
+      parent.addDataNode(new DataNode(node.name, start, node, attrs(node)));
     }
 
     node.children?.forEach((n) => buildNode(n, container));
@@ -103,6 +111,9 @@ export const buildSourceContainer = (sourceRoot: ParsedNode): ContainerNode<ItBl
 
 const adjustLocation = (l: Location): Location => ({ column: l.column - 1, line: l.line - 1 });
 const matchPos = (t: ItBlock, a: TestAssertionStatus, forError = false): boolean => {
+  if (!hasLocation(t)) {
+    return false;
+  }
   const line = forError ? a.line : a.line ?? a.location?.line;
   return (line != null && line >= t.start.line && line <= t.end.line) || false;
 };
@@ -126,19 +137,20 @@ export const toMatchResult = (
       : [assertionOrErr.data, assertionOrErr.history(reason), undefined];
 
   // Note the shift from one-based to zero-based line number and columns
+  // assumption: if we reached here, the test start/end must have been defined
   return {
     name: assertion?.fullName ?? assertion?.title ?? sourceName,
     identifier: {
       title: assertion?.title || test.name,
       ancestorTitles: assertion?.ancestorTitles || [],
     },
-    start: adjustLocation(test.start),
-    end: adjustLocation(test.end),
-    status: assertion?.status ?? TestReconciliationState.Unknown,
+    start: adjustLocation(test.start!),
+    end: adjustLocation(test.end!),
+    status: assertion?.status ?? TestStatus.Unknown,
     shortMessage: assertion?.shortMessage ?? err,
     terseMessage: assertion?.terseMessage,
     lineNumberOfError:
-      assertion?.line && matchPos(test, assertion, true) ? assertion.line - 1 : test.end.line - 1,
+      assertion?.line && matchPos(test, assertion, true) ? assertion.line - 1 : test.end!.line - 1,
     sourceHistory,
     assertionHistory,
   };
@@ -458,8 +470,10 @@ const ContextMatch = (): ContextMatchAlgorithm => {
 
 const { match } = ContextMatch();
 const isParsedNode = (source: ParsedNode | ContainerNode<ItBlock>): source is ParsedNode =>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (source as any).type in ParsedNodeTypes;
+  typeof source === 'object' &&
+  'type' in source &&
+  Object.values(ParsedNodeType).includes(source.type);
+
 export const matchTestAssertions = (
   fileName: string,
   source: ParsedNode | ContainerNode<ItBlock>,

@@ -1,12 +1,19 @@
 /* istanbul ignore file */
-import { Location, LocationRange, TestResult } from '../src/TestResults/TestResult';
-import { TestReconciliationStateType } from '../src/TestResults';
-import { ItBlock, TestAssertionStatus } from 'jest-editor-support';
+import { LocationRange, TestResult } from '../src/TestResults/TestResult';
+import {
+  CodeLocation as Location,
+  ItBlock,
+  TestAssertionStatus,
+  TestReconciliationState,
+} from 'jest-editor-support';
 import { JestProcessRequest } from '../src/JestProcessManagement';
 import { JestTestProcessType } from '../src/Settings';
 import { MatchEvent } from '../src/TestResults/match-node';
 import * as path from 'path';
 import { RunMode } from '../src/JestExt/run-mode';
+
+// hack: redefine hasLocation so we don't need to unmock match-by-context just for this function
+const hasLocation = (loc: any): loc is LocationRange => loc.start != null && loc.end != null;
 
 export const EmptyLocation = {
   line: 0,
@@ -34,6 +41,9 @@ export const makeZeroBased = (r: LocationRange): LocationRange => ({
   end: { line: r.end.line - 1, column: r.end.column - 1 },
 });
 export const findResultForTest = (results: TestResult[], itBlock: ItBlock): TestResult[] => {
+  if (!hasLocation(itBlock)) {
+    return [];
+  }
   const zeroBasedRange = makeZeroBased(itBlock);
   return results.filter((r) => r.name === itBlock.name && isSameLocationRange(r, zeroBasedRange));
 };
@@ -79,7 +89,7 @@ export const makeRoot = (children: any[]): any => ({
 });
 export const makeAssertion = (
   title: string,
-  status: TestReconciliationStateType,
+  status: TestReconciliationState,
   ancestorTitles: string[] = [],
   location?: [number, number],
   override?: Partial<TestAssertionStatus>
@@ -95,7 +105,7 @@ export const makeAssertion = (
 
 export const makeTestResult = (
   title: string,
-  status: TestReconciliationStateType,
+  status: TestReconciliationState,
   ancestorTitles: string[] = [],
   range?: [number, number, number, number],
   override?: Partial<TestResult>
@@ -178,7 +188,7 @@ export const mockJestProcessContext = (): any => {
 };
 
 // custom matcher to test matchResults
-type ResultRecord = [string, number, TestReconciliationStateType, MatchEvent[]];
+type ResultRecord = [string, number, TestReconciliationState, MatchEvent[]];
 const allHistory = (m: TestResult) => [...m.sourceHistory, ...(m.assertionHistory ?? [])];
 export const toTestResultRecord = (m: TestResult): ResultRecord => [
   m.name,
