@@ -875,7 +875,10 @@ describe('JestExt', () => {
         dirtyFiles.clear = jest.fn();
 
         await sut.runAllTests();
-        expect(mockProcessSession.scheduleProcess).toHaveBeenCalledWith({ type: 'all-tests' });
+        expect(mockProcessSession.scheduleProcess).toHaveBeenCalledWith({
+          type: 'all-tests',
+          nonBlocking: true,
+        });
         if (scheduleProcess) {
           expect(dirtyFiles.clear).toHaveBeenCalled();
         } else {

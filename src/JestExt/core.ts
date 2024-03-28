@@ -621,7 +621,7 @@ export class JestExt {
     await this.exitDeferMode();
 
     if (!editor) {
-      if (this.processSession.scheduleProcess({ type: 'all-tests' })) {
+      if (this.processSession.scheduleProcess({ type: 'all-tests', nonBlocking: true })) {
         this.dirtyFiles.clear();
         return;
       }

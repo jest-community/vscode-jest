@@ -33,36 +33,44 @@ const getTransform = (request: JestExtRequestType): JestProcessRequestTransform 
   }
 };
 
-const ProcessScheduleStrategy: Record<JestTestProcessType, ScheduleStrategy> = {
-  // abort if there is already an pending request
-  'all-tests': { queue: 'blocking', dedupe: { filterByStatus: ['pending'] } },
-  'watch-tests': { queue: 'blocking', dedupe: { filterByStatus: ['pending'] } },
-  'watch-all-tests': {
-    queue: 'blocking',
-    dedupe: { filterByStatus: ['pending'] },
-  },
-
-  // abort if there is already identical pending request
-  'by-file': {
-    queue: 'blocking-2',
-    dedupe: { filterByStatus: ['pending'] },
-  },
-  'by-file-test': {
-    queue: 'blocking-2',
-    dedupe: { filterByStatus: ['pending'], filterByContent: true },
-  },
-  'by-file-pattern': {
-    queue: 'blocking-2',
-    dedupe: { filterByStatus: ['pending'] },
-  },
-  'by-file-test-pattern': {
-    queue: 'blocking-2',
-    dedupe: { filterByStatus: ['pending'], filterByContent: true },
-  },
-  'not-test': {
-    queue: 'non-blocking',
-    dedupe: { filterByStatus: ['pending'] },
-  },
+const getScheduleStrategy = (requestType: JestTestProcessType): ScheduleStrategy => {
+  switch (requestType) {
+    // abort if there is already an pending request
+    case 'all-tests':
+      return { queue: 'blocking', dedupe: { filterByStatus: ['pending'] } };
+    case 'watch-tests':
+      return { queue: 'blocking', dedupe: { filterByStatus: ['pending'] } };
+    case 'watch-all-tests':
+      return {
+        queue: 'blocking',
+        dedupe: { filterByStatus: ['pending'] },
+      };
+    case 'by-file':
+      return {
+        queue: 'blocking-2',
+        dedupe: { filterByStatus: ['pending'] },
+      };
+    case 'by-file-test':
+      return {
+        queue: 'blocking-2',
+        dedupe: { filterByStatus: ['pending'], filterByContent: true },
+      };
+    case 'by-file-pattern':
+      return {
+        queue: 'blocking-2',
+        dedupe: { filterByStatus: ['pending'] },
+      };
+    case 'by-file-test-pattern':
+      return {
+        queue: 'blocking-2',
+        dedupe: { filterByStatus: ['pending'], filterByContent: true },
+      };
+    case 'not-test':
+      return {
+        queue: 'non-blocking',
+        dedupe: { filterByStatus: ['pending'] },
+      };
+  }
 };
 
 export interface ProcessSession {
@@ -127,14 +135,24 @@ export const createProcessSession = (context: JestExtProcessContext): ProcessSes
 
     const lSession = listenerSession;
     switch (request.type) {
-      case 'all-tests':
+      case 'all-tests': {
+        const schedule = getScheduleStrategy(request.type);
+        if (request.nonBlocking) {
+          schedule.queue = 'blocking-2';
+        }
+        return transform({
+          ...request,
+          listener: new RunTestListener(lSession),
+          schedule,
+        });
+      }
       case 'watch-all-tests':
       case 'watch-tests':
       case 'by-file':
       case 'by-file-pattern':
       case 'by-file-test':
       case 'by-file-test-pattern': {
-        const schedule = ProcessScheduleStrategy[request.type];
+        const schedule = getScheduleStrategy(request.type);
         return transform({
           ...request,
           listener: new RunTestListener(lSession),
@@ -142,7 +160,7 @@ export const createProcessSession = (context: JestExtProcessContext): ProcessSes
         });
       }
       case 'list-test-files': {
-        const schedule = ProcessScheduleStrategy['not-test'];
+        const schedule = getScheduleStrategy('not-test');
         return transform({
           ...request,
           type: 'not-test',
@@ -165,7 +183,8 @@ export const createProcessSession = (context: JestExtProcessContext): ProcessSes
     }
 
     if (context.settings.runMode.config.runAllTestsOnStartup) {
-      scheduleProcess({ type: 'all-tests' });
+      // on startup, run all tests in blocking mode always
+      scheduleProcess({ type: 'all-tests', nonBlocking: false });
     }
     if (context.settings.runMode.config.type === 'watch') {
       scheduleProcess({ type: 'watch-tests' });
