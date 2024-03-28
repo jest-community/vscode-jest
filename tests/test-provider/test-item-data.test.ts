@@ -693,14 +693,13 @@ describe('test-item-data', () => {
         process = mockScheduleProcess(context);
       });
       describe('run request', () => {
-        it('WorkspaceRoot runs all tests in the workspace in blocking-2 queue', () => {
+        it('WorkspaceRoot runs all tests in the workspace with non-blocking flag', () => {
           const wsRoot = new WorkspaceRoot(context);
           const jestRun = createTestRun();
           wsRoot.scheduleTest(jestRun);
           const r = context.ext.session.scheduleProcess.mock.calls[0][0];
           expect(r.type).toEqual('all-tests');
-          const transformed = r.transform({ schedule: { queue: 'blocking' } });
-          expect(transformed.schedule.queue).toEqual('blocking-2');
+          expect(r.nonBlocking).toEqual(true);
         });
         it('FolderData runs all tests inside the folder', () => {
           const parent: any = controllerMock.createTestItem('ws-1', 'ws-1', { fsPath: '/ws-1' });

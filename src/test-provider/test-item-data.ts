@@ -11,7 +11,7 @@ import { TestSuitChangeEvent } from '../TestResults/test-result-events';
 import { Debuggable, ItemCommand, TestItemData } from './types';
 import { JestTestProviderContext } from './test-provider-context';
 import { JestTestRun } from './jest-test-run';
-import { JestProcessInfo, JestProcessRequest } from '../JestProcessManagement';
+import { JestProcessInfo } from '../JestProcessManagement';
 import { GENERIC_ERROR, LONG_RUNNING_TESTS, getExitErrorDef } from '../errors';
 import { tiContextManager } from './test-item-context-manager';
 import { runModeDescription } from '../JestExt/run-mode';
@@ -153,12 +153,8 @@ export class WorkspaceRoot extends TestItemDataBase {
   }
 
   getJestRunRequest(itemCommand?: ItemCommand): JestExtRequestType {
-    const transform = (request: JestProcessRequest) => {
-      request.schedule.queue = 'blocking-2';
-      return request;
-    };
     const updateSnapshot = itemCommand === ItemCommand.updateSnapshot;
-    return { type: 'all-tests', updateSnapshot, transform };
+    return { type: 'all-tests', nonBlocking: true, updateSnapshot };
   }
   discoverTest(run: JestTestRun): void {
     const testList = this.context.ext.testResultProvider.getTestList();

@@ -143,6 +143,22 @@ describe('ProcessSession', () => {
         expect(requestTypes).toEqual(expectedRequests);
       }
     );
+    it('if runAllTestsOnStartup is true, it will run all tests in blocking queue', async () => {
+      expect.hasAssertions();
+      const runMode = new RunMode({ type: 'watch', runAllTestsOnStartup: true });
+      context.settings = { runMode };
+      processManagerMock.numberOfProcesses.mockReturnValue(0);
+      const session = createProcessSession(context);
+      await session.start();
+
+      expect(processManagerMock.scheduleJestProcess).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'all-tests',
+          schedule: expect.objectContaining({ queue: 'blocking' }),
+        }),
+        undefined
+      );
+    });
     it('will clear all process before starting new ones', async () => {
       expect.hasAssertions();
       context.settings = { runMode: new RunMode() };
