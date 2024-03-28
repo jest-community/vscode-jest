@@ -50,6 +50,7 @@ describe('ProcessSession', () => {
     it.each`
       type                      | inputProperty                                                | expectedSchedule                                                                           | expectedExtraProperty
       ${'all-tests'}            | ${undefined}                                                 | ${{ queue: 'blocking', dedupe: { filterByStatus: ['pending'] } }}                          | ${undefined}
+      ${'all-tests'}            | ${{ nonBlocking: true }}                                     | ${{ queue: 'blocking-2', dedupe: { filterByStatus: ['pending'] } }}                        | ${undefined}
       ${'all-tests'}            | ${{ transform }}                                             | ${{ queue: 'blocking-2', dedupe: { filterByStatus: ['pending'] } }}                        | ${undefined}
       ${'watch-tests'}          | ${undefined}                                                 | ${{ queue: 'blocking', dedupe: { filterByStatus: ['pending'] } }}                          | ${undefined}
       ${'watch-all-tests'}      | ${undefined}                                                 | ${{ queue: 'blocking', dedupe: { filterByStatus: ['pending'] } }}                          | ${undefined}

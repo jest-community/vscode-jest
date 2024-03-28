@@ -70,8 +70,6 @@ const getScheduleStrategy = (requestType: JestTestProcessType): ScheduleStrategy
         queue: 'non-blocking',
         dedupe: { filterByStatus: ['pending'] },
       };
-    default:
-      throw new Error(`Unexpected request type ${requestType}`);
   }
 };
 
