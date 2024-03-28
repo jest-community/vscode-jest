@@ -62,6 +62,7 @@ export type JestProcessRequestSimple =
   | {
       type: Extract<JestTestProcessType, 'all-tests'>;
       updateSnapshot?: boolean;
+      nonBlocking?: boolean;
     }
   | {
       type: Extract<JestTestProcessType, 'by-file'>;
