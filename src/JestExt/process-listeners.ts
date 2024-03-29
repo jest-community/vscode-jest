@@ -364,6 +364,12 @@ export class RunTestListener extends AbstractProcessListener {
         error = `process ${process.id} exited with code= ${code}`;
       }
     }
-    this.onRunEvent.fire({ type: 'exit', process, error, code });
+    this.onRunEvent.fire({
+      type: 'exit',
+      process,
+      error,
+      code,
+      isCancelled: process.stopReason === 'on-demand',
+    });
   }
 }

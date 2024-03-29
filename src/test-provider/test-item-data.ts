@@ -84,7 +84,7 @@ abstract class TestItemDataBase implements TestItemData, JestRunnable, WithUri {
       run.write(msg, 'error');
       run.end({ reason: 'failed to schedule test' });
     } else {
-      run.addProcess(process.id);
+      run.addProcess(process);
     }
   }
 
@@ -279,7 +279,7 @@ export class WorkspaceRoot extends TestItemDataBase {
         } else {
           event.files.forEach((f) => this.addTestFile(f, (testRoot) => testRoot.discoverTest(run)));
         }
-        run.end({ pid: event.process.id, delay: 1000, reason: 'assertions-updated' });
+        run.end({ process: event.process, delay: 1000, reason: 'assertions-updated' });
         break;
       }
       case 'result-matched': {
@@ -365,19 +365,16 @@ export class WorkspaceRoot extends TestItemDataBase {
   private getJestRun(event: TypedRunEvent, createIfMissing?: false): JestTestRun | undefined;
   // istanbul ignore next
   private getJestRun(event: TypedRunEvent, createIfMissing = false): JestTestRun | undefined {
-    if (event.process.userData?.run) {
-      return event.process.userData.run;
-    }
+    let run = event.process.userData?.run;
 
-    if (createIfMissing) {
+    if (!run && createIfMissing) {
       const name = (event.process.userData?.run?.name ?? event.process.id) + `:${event.type}`;
       const testItem = this.getItemFromProcess(event.process) ?? this.item;
-      const run = this.createRun(name, testItem);
-      run.addProcess(event.process.id);
+      run = this.createRun(name, testItem);
       event.process.userData = { ...event.process.userData, run, testItem };
-
-      return run;
     }
+    run?.addProcess(event.process);
+    return run;
   }
 
   private runLog(type: string): void {
@@ -419,7 +416,7 @@ export class WorkspaceRoot extends TestItemDataBase {
             event.process.userData = { ...(event.process.userData ?? {}), execError: true };
           }
           this.runLog('finished');
-          run.end({ pid: event.process.id, delay: 30000, reason: 'process end' });
+          run.end({ process: event.process, delay: 30000, reason: 'process end' });
           break;
         }
         case 'exit': {
@@ -435,7 +432,7 @@ export class WorkspaceRoot extends TestItemDataBase {
             }
           }
           this.runLog('exited');
-          run.end({ pid: event.process.id, delay: 1000, reason: 'process exit' });
+          run.end({ process: event.process, delay: 1000, reason: 'process exit' });
           break;
         }
         case 'long-run': {

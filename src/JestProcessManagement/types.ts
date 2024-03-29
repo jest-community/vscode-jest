@@ -21,6 +21,7 @@ export interface JestProcessInfo {
   // user data is a way to store data that is outside of the process managed by the processManager.
   // subsequent use of this data is up to the user but should be aware that multiple components might contribute to this data.
   userData?: UserDataType;
+  stop: () => Promise<void>;
 }
 
 export type TaskStatus = 'running' | 'pending';

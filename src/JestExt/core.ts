@@ -222,6 +222,12 @@ export class JestExt {
               );
               event.process.userData = { ...(event.process.userData ?? {}), execError: true };
             }
+          } else if (
+            this.extContext.settings.runMode.config.type === 'watch' &&
+            event.isCancelled
+          ) {
+            // user cancelled a watch run: show warning still
+            this.updateStatusBar({ state: 'exec-error' });
           } else {
             this.updateStatusBar({ state: 'done' });
           }
