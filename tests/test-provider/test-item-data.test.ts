@@ -48,11 +48,12 @@ import {
   buildSourceContainer,
 } from '../../src/TestResults/match-by-context';
 import * as path from 'path';
-import { mockController, mockExtExplorerContext } from './test-helper';
+import { mockController, mockExtExplorerContext, mockJestProcess } from './test-helper';
 import * as errors from '../../src/errors';
 import { ItemCommand } from '../../src/test-provider/types';
 import { RunMode } from '../../src/JestExt/run-mode';
 import { VirtualWorkspaceFolder } from '../../src/virtual-workspace-folder';
+import { ProcessStatus } from '../../src/JestProcessManagement';
 
 const mockPathSep = (newSep: string) => {
   (path as jest.Mocked<any>).setSep(newSep);
@@ -70,7 +71,7 @@ const getChildItem = (item: vscode.TestItem, partialId: string): vscode.TestItem
 };
 
 const mockScheduleProcess = (context, id = 'whatever') => {
-  const process: any = { id, request: { type: 'watch-tests' } };
+  const process: any = mockJestProcess(id, { request: { type: 'watch-tests' } });
   context.ext.session.scheduleProcess.mockImplementation((request, userData) => {
     process.request = request;
     process.userData = userData;
@@ -185,7 +186,6 @@ describe('test-item-data', () => {
     (tiContextManager.setItemContext as jest.Mocked<any>).mockClear();
 
     (vscode.Location as jest.Mocked<any>).mockReturnValue({});
-
     (toAbsoluteRootPath as jest.Mocked<any>).mockImplementation((p) => p.uri.fsPath);
   });
   describe('discover children', () => {
@@ -317,6 +317,11 @@ describe('test-item-data', () => {
           (vscode.Range as jest.Mocked<any>).mockImplementation((n1, n2, n3, n4) => ({
             args: [n1, n2, n3, n4],
           }));
+          (vscode.Location as jest.Mocked<any>).mockImplementation((uri, range) => ({
+            uri,
+            range,
+          }));
+
           (vscode.TestMessage as jest.Mocked<any>).mockImplementation((message) => ({
             message,
           }));
@@ -382,6 +387,7 @@ describe('test-item-data', () => {
             // assertions are available now
             const a1 = helper.makeAssertion('test-a', 'KnownFail', [], [1, 0], {
               message: 'test error',
+              line: 2,
             });
             const assertionContainer = buildAssertionContainer([a1]);
             const testSuiteResult: any = {
@@ -394,9 +400,15 @@ describe('test-item-data', () => {
             // triggers testSuiteChanged event listener
             contextCreateTestRunSpy.mockClear();
             mockedJestTestRun.mockClear();
+
+            // mock a non-watch process that is still running
+            const process = {
+              id: 'whatever',
+              request: { type: 'watch-tests' },
+            };
             context.ext.testResultProvider.events.testSuiteChanged.event.mock.calls[0][0]({
               type: 'assertions-updated',
-              process: { id: 'whatever', request: { type: 'watch-tests' } },
+              process,
               files: ['/ws-1/a.test.ts'],
             });
             const run = mockedJestTestRun.mock.results[0].value;
@@ -417,8 +429,44 @@ describe('test-item-data', () => {
             expect(docItem.children.size).toEqual(1);
             const tItem = getChildItem(docItem, 'test-a');
             expect(tItem).not.toBeUndefined();
-            expect(run.failed).toHaveBeenCalledWith(tItem, { message: a1.message });
             expect(tItem.range).toEqual({ args: [1, 0, 1, 0] });
+
+            // error location within message
+            expect(run.failed).toHaveBeenCalledWith(tItem, {
+              message: a1.message,
+              location: expect.objectContaining({ range: { args: [1, 0, 1, 0] } }),
+            });
+          });
+          describe('will auto stop zombie process', () => {
+            it.each`
+              case | processStatus              | isWatchMode | autoStopCalled
+              ${1} | ${ProcessStatus.Running}   | ${true}     | ${false}
+              ${2} | ${ProcessStatus.Running}   | ${false}    | ${true}
+              ${3} | ${ProcessStatus.Done}      | ${false}    | ${false}
+              ${4} | ${ProcessStatus.Done}      | ${true}     | ${false}
+              ${5} | ${ProcessStatus.Cancelled} | ${false}    | ${false}
+            `('case $case', ({ processStatus, isWatchMode, autoStopCalled }) => {
+              const wsRoot = new WorkspaceRoot(context);
+              expect(wsRoot.item.children.size).toBe(0);
+
+              const run = createTestRun();
+              const process = {
+                id: 'whatever',
+                request: { type: 'watch-tests' },
+                status: processStatus,
+                isWatchMode,
+                userData: { run },
+                autoStop: jest.fn(),
+              };
+              context.ext.testResultProvider.events.testSuiteChanged.event.mock.calls[0][0]({
+                type: 'assertions-updated',
+                process,
+                files: [],
+              });
+              // no tests items to be added
+              expect(run.end).toHaveBeenCalled();
+              expect(process.autoStop).toHaveBeenCalledTimes(autoStopCalled ? 1 : 0);
+            });
           });
           it('if nothing is updated, output the message', () => {
             const wsRoot = new WorkspaceRoot(context);
@@ -1579,7 +1627,7 @@ describe('test-item-data', () => {
         const endOption1 = jestRun.end.mock.calls[0][0];
         expect(endOption1).toEqual(
           expect.objectContaining({
-            pid: env.process.id,
+            process: env.process,
             delay: expect.anything(),
             reason: expect.anything(),
           })
@@ -1596,7 +1644,7 @@ describe('test-item-data', () => {
         const endOption2 = jestRun.end.mock.calls[1][0];
         expect(endOption2).toEqual(
           expect.objectContaining({
-            pid: env.process.id,
+            process: env.process,
             delay: expect.anything(),
             reason: expect.anything(),
           })
@@ -1610,7 +1658,7 @@ describe('test-item-data', () => {
         const endOption3 = jestRun.end.mock.calls[2][0];
         expect(endOption3).toEqual(
           expect.objectContaining({
-            pid: env.process.id,
+            process: env.process,
             delay: expect.anything(),
             reason: expect.anything(),
           })

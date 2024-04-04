@@ -69,7 +69,6 @@ export class JestTestRun implements JestExtOutput, TestRunProtocol {
       const runName = `${this.name} (${this.runCount++})`;
 
       this._run = this.createRun(this.request, runName);
-      this._run.token.onCancellationRequested(this.onCancel);
       this._run.appendOutput(`\r\nTestRun "${runName}" started\r\n`);
 
       // ignore skipped tests if there are more than one test to run
@@ -160,6 +159,7 @@ export class JestTestRun implements JestExtOutput, TestRunProtocol {
   };
 
   endVscodeRun(reason: string): void {
+    /* istanbul ignore next */
     if (!this._run) {
       return;
     }
@@ -174,7 +174,7 @@ export class JestTestRun implements JestExtOutput, TestRunProtocol {
   updateRequest(request: vscode.TestRunRequest): void {
     this.request = request;
   }
-  onCancel = (): void => {
+  cancel(): void {
     if (!this._run) {
       return;
     }
@@ -192,5 +192,5 @@ export class JestTestRun implements JestExtOutput, TestRunProtocol {
     this.processes.clear();
     this.isCancelled = true;
     this.endVscodeRun('user cancellation');
-  };
+  }
 }

@@ -40,7 +40,7 @@ export type JestRunEvent = RunEventBase &
     | { type: 'process-start' }
     | { type: 'start' }
     | { type: 'end'; error?: string }
-    | { type: 'exit'; error?: string; code?: number; isCancelled?: boolean }
+    | { type: 'exit'; error?: string; code?: number }
     | { type: 'long-run'; threshold: number; numTotalTestSuites?: number }
   );
 export interface JestSessionEvents {

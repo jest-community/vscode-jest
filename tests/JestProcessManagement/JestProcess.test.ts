@@ -13,7 +13,7 @@ import { JestProcess, RunnerEvents } from '../../src/JestProcessManagement/JestP
 import { EventEmitter } from 'events';
 import { mockProcessRequest, mockJestExtContext } from '../test-helper';
 import { normalize } from 'path';
-import { JestProcessRequest } from '../../src/JestProcessManagement/types';
+import { JestProcessRequest, ProcessStatus } from '../../src/JestProcessManagement/types';
 import { JestTestProcessType } from '../../src/Settings';
 jest.unmock('path');
 jest.mock('vscode', () => ({
@@ -59,7 +59,7 @@ describe('JestProcess', () => {
     jestProcess = new JestProcess(extContext, request);
     expect(`${jestProcess}`).toEqual(jestProcess.toString());
     expect(jestProcess.toString()).toMatchInlineSnapshot(
-      `"JestProcess: id: all-tests-0, request: {"type":"all-tests","schedule":{"queue":"blocking"},"listener":"function"}; stopReason: undefined"`
+      `"JestProcess: id: all-tests-0, request: {"type":"all-tests","schedule":{"queue":"blocking"},"listener":"function"}; status: "pending""`
     );
   });
   describe('when creating', () => {
@@ -67,7 +67,7 @@ describe('JestProcess', () => {
       const request = mockProcessRequest('all-tests');
       jestProcess = new JestProcess(extContext, request);
       expect(jestProcess.request).toEqual(request);
-      expect(jestProcess.stopReason).toBeUndefined();
+      expect(jestProcess.status).toEqual(ProcessStatus.Pending);
     });
     it('uses loggingFactory to create logging', async () => {
       const request = mockProcessRequest('all-tests');
@@ -80,6 +80,23 @@ describe('JestProcess', () => {
       jestProcess = new JestProcess(extContext, request);
       expect(RunnerClassMock).not.toHaveBeenCalled();
     });
+    describe('isWatchMode', () => {
+      it.each`
+        requestType               | isWatchMode
+        ${'all-tests'}            | ${false}
+        ${'watch-tests'}          | ${true}
+        ${'watch-all-tests'}      | ${true}
+        ${'by-file'}              | ${false}
+        ${'by-file-test'}         | ${false}
+        ${'by-file-pattern'}      | ${false}
+        ${'by-file-test-pattern'} | ${false}
+        ${'not-test'}             | ${false}
+      `('for $requestType isWatchMode=$isWatchMode', ({ requestType, isWatchMode }) => {
+        const request = mockProcessRequest(requestType);
+        jestProcess = new JestProcess(extContext, request);
+        expect(jestProcess.isWatchMode).toEqual(isWatchMode);
+      });
+    });
   });
   describe('when start', () => {
     it('returns a promise that resolved when process closed', async () => {
@@ -88,23 +105,23 @@ describe('JestProcess', () => {
       const jp = new JestProcess(extContext, request);
       const p = jp.start();
 
+      expect(jp.status).toEqual(ProcessStatus.Running);
       expect(RunnerClassMock).toHaveBeenCalled();
 
       closeRunner();
       await expect(p).resolves.not.toThrow();
-      expect(jp.stopReason).toEqual('process-end');
+      expect(jp.status).toEqual(ProcessStatus.Done);
     });
-    it.each`
-      event                 | willEndProcess
-      ${'processClose'}     | ${true}
-      ${'processExit'}      | ${false}
-      ${'executableJSON'}   | ${false}
-      ${'executableStdErr'} | ${false}
-      ${'executableOutput'} | ${false}
-      ${'terminalError'}    | ${false}
-    `(
-      'register and propagate $event to the request.listener',
-      async ({ event, willEndProcess }) => {
+    describe('register and propagate the following event to the request.listener', () => {
+      it.each`
+        event                 | willEndProcess
+        ${'processClose'}     | ${true}
+        ${'processExit'}      | ${false}
+        ${'executableJSON'}   | ${false}
+        ${'executableStdErr'} | ${false}
+        ${'executableOutput'} | ${false}
+        ${'terminalError'}    | ${false}
+      `('$event', async ({ event, willEndProcess }) => {
         expect.hasAssertions();
         const request = mockRequest('all-tests');
         const jp = new JestProcess(extContext, request);
@@ -124,49 +141,51 @@ describe('JestProcess', () => {
         }
 
         await expect(p).resolves.not.toThrow();
-      }
-    );
+      });
+    });
 
-    it.each`
-      type                      | extraProperty                                                    | startArgs         | includeReporter | extraRunnerOptions
-      ${'all-tests'}            | ${undefined}                                                     | ${[false, false]} | ${true}         | ${undefined}
-      ${'watch-tests'}          | ${undefined}                                                     | ${[true, false]}  | ${true}         | ${undefined}
-      ${'watch-all-tests'}      | ${undefined}                                                     | ${[true, true]}   | ${true}         | ${undefined}
-      ${'by-file'}              | ${{ testFileName: '"c:\\a\\b.ts"' }}                             | ${[false, false]} | ${true}         | ${{ args: { args: ['--runTestsByPath'] }, testFileNamePattern: '"C:\\a\\b.ts"' }}
-      ${'by-file'}              | ${{ testFileName: '"c:\\a\\b.ts"', notTestFile: true }}          | ${[false, false]} | ${true}         | ${{ args: { args: ['--findRelatedTests', '"C:\\a\\b.ts"'] } }}
-      ${'by-file-test'}         | ${{ testFileName: '"/a/b.js"', testNamePattern: 'a test' }}      | ${[false, false]} | ${true}         | ${{ args: { args: ['--runTestsByPath'] }, testFileNamePattern: '"/a/b.js"', testNamePattern: 'a\\ test' }}
-      ${'by-file-pattern'}      | ${{ testFileNamePattern: '"c:\\a\\b.ts"' }}                      | ${[false, false]} | ${true}         | ${{ args: { args: ['--testPathPattern', '"c:\\\\a\\\\b\\.ts"'] } }}
-      ${'by-file-test-pattern'} | ${{ testFileNamePattern: '/a/b.js', testNamePattern: 'a test' }} | ${[false, false]} | ${true}         | ${{ args: { args: ['--testPathPattern', '"/a/b\\.js"'] }, testNamePattern: 'a\\ test' }}
-      ${'not-test'}             | ${{ args: ['--listTests', '--watchAll=false'] }}                 | ${[false, false]} | ${false}        | ${{ args: { args: ['--listTests'], replace: true } }}
-    `(
-      'supports jest process request: $type',
-      async ({ type, extraProperty, startArgs, includeReporter, extraRunnerOptions }) => {
-        expect.hasAssertions();
-        const request = mockRequest(type, extraProperty);
-        jestProcess = new JestProcess(extContext, request);
-        const p = jestProcess.start();
-        const [, options] = RunnerClassMock.mock.calls[0];
-        if (includeReporter) {
-          expect(options.reporters).toEqual([
-            'default',
-            `"${normalize('/my/vscode/extensions/out/reporter.js')}"`,
-          ]);
-        } else {
-          expect(options.reporters).toBeUndefined();
-        }
+    describe('Supports the following jest process request type', () => {
+      it.each`
+        type                      | extraProperty                                                    | startArgs         | includeReporter | extraRunnerOptions
+        ${'all-tests'}            | ${undefined}                                                     | ${[false, false]} | ${true}         | ${undefined}
+        ${'watch-tests'}          | ${undefined}                                                     | ${[true, false]}  | ${true}         | ${undefined}
+        ${'watch-all-tests'}      | ${undefined}                                                     | ${[true, true]}   | ${true}         | ${undefined}
+        ${'by-file'}              | ${{ testFileName: '"c:\\a\\b.ts"' }}                             | ${[false, false]} | ${true}         | ${{ args: { args: ['--runTestsByPath'] }, testFileNamePattern: '"C:\\a\\b.ts"' }}
+        ${'by-file'}              | ${{ testFileName: '"c:\\a\\b.ts"', notTestFile: true }}          | ${[false, false]} | ${true}         | ${{ args: { args: ['--findRelatedTests', '"C:\\a\\b.ts"'] } }}
+        ${'by-file-test'}         | ${{ testFileName: '"/a/b.js"', testNamePattern: 'a test' }}      | ${[false, false]} | ${true}         | ${{ args: { args: ['--runTestsByPath'] }, testFileNamePattern: '"/a/b.js"', testNamePattern: 'a\\ test' }}
+        ${'by-file-pattern'}      | ${{ testFileNamePattern: '"c:\\a\\b.ts"' }}                      | ${[false, false]} | ${true}         | ${{ args: { args: ['--testPathPattern', '"c:\\\\a\\\\b\\.ts"'] } }}
+        ${'by-file-test-pattern'} | ${{ testFileNamePattern: '/a/b.js', testNamePattern: 'a test' }} | ${[false, false]} | ${true}         | ${{ args: { args: ['--testPathPattern', '"/a/b\\.js"'] }, testNamePattern: 'a\\ test' }}
+        ${'not-test'}             | ${{ args: ['--listTests', '--watchAll=false'] }}                 | ${[false, false]} | ${false}        | ${{ args: { args: ['--listTests'], replace: true } }}
+      `(
+        '$type',
+        async ({ type, extraProperty, startArgs, includeReporter, extraRunnerOptions }) => {
+          expect.hasAssertions();
+          const request = mockRequest(type, extraProperty);
+          jestProcess = new JestProcess(extContext, request);
+          const p = jestProcess.start();
+          const [, options] = RunnerClassMock.mock.calls[0];
+          if (includeReporter) {
+            expect(options.reporters).toEqual([
+              'default',
+              `"${normalize('/my/vscode/extensions/out/reporter.js')}"`,
+            ]);
+          } else {
+            expect(options.reporters).toBeUndefined();
+          }
 
-        if (extraRunnerOptions) {
-          const { args, ...restOptions } = extraRunnerOptions;
-          expect(options).toEqual(expect.objectContaining(restOptions));
-          const { args: flags, replace } = args;
-          expect(options.args.replace).toEqual(replace);
-          expect(options.args.args).toEqual(expect.arrayContaining(flags));
+          if (extraRunnerOptions) {
+            const { args, ...restOptions } = extraRunnerOptions;
+            expect(options).toEqual(expect.objectContaining(restOptions));
+            const { args: flags, replace } = args;
+            expect(options.args.replace).toEqual(replace);
+            expect(options.args.args).toEqual(expect.arrayContaining(flags));
+          }
+          expect(mockRunner.start).toHaveBeenCalledWith(...startArgs);
+          closeRunner();
+          await p;
         }
-        expect(mockRunner.start).toHaveBeenCalledWith(...startArgs);
-        closeRunner();
-        await p;
-      }
-    );
+      );
+    });
     describe('common flags', () => {
       it.each`
         type                      | extraProperty                                                    | excludeWatch | withColors
@@ -234,6 +253,16 @@ describe('JestProcess', () => {
       expect(RunnerClassMock).toHaveBeenCalledTimes(1);
       expect(mockRunner.start).toHaveBeenCalledTimes(1);
       expect(p1).toBe(p2);
+    });
+    it('starting a cancelled process will resolved immediate', async () => {
+      expect.hasAssertions();
+      const request = mockRequest('all-tests');
+
+      jestProcess = new JestProcess(extContext, request);
+      jestProcess.stop();
+      expect(jestProcess.status).toEqual(ProcessStatus.Cancelled);
+      await expect(jestProcess.start()).resolves.not.toThrow();
+      expect(RunnerClassMock).not.toHaveBeenCalled();
     });
     describe('can prepare testNamePattern for used in corresponding spawned shell', () => {
       it.each`
@@ -314,7 +343,7 @@ describe('JestProcess', () => {
       expect(mockRunner.closeProcess).toHaveBeenCalledTimes(1);
       expect(startDone).toBeFalsy();
       expect(stopDone).toBeFalsy();
-      expect(jestProcess.stopReason).toEqual('on-demand');
+      expect(jestProcess.status).toEqual(ProcessStatus.Cancelled);
 
       closeRunner();
 
@@ -323,12 +352,86 @@ describe('JestProcess', () => {
 
       expect(startDone).toBeTruthy();
       expect(stopDone).toBeTruthy();
-      expect(jestProcess.stopReason).toEqual('on-demand');
+      expect(jestProcess.status).toEqual(ProcessStatus.Cancelled);
     });
     it('call stop before start will resolve right away', async () => {
       expect.hasAssertions();
       await expect(jestProcess.stop()).resolves.not.toThrow();
-      expect(jestProcess.stopReason).toEqual('on-demand');
+      expect(jestProcess.status).toEqual(ProcessStatus.Cancelled);
+    });
+  });
+  describe('autoStop', () => {
+    let clearTimeoutSpy;
+    let stopSpy;
+    beforeAll(() => {
+      jest.useFakeTimers();
+    });
+    beforeEach(() => {
+      const request = mockRequest('all-tests');
+      jestProcess = new JestProcess(extContext, request);
+      stopSpy = jest.spyOn(jestProcess, 'stop');
+      clearTimeoutSpy = jest.spyOn(global, 'clearTimeout');
+    });
+    it('should stop the process after a delay', () => {
+      jestProcess.start();
+      jestProcess.autoStop(30000);
+
+      expect(jestProcess.status).toEqual(ProcessStatus.Running);
+
+      jest.advanceTimersByTime(30000);
+
+      expect(stopSpy).toHaveBeenCalled();
+      expect(jestProcess.status).toEqual(ProcessStatus.Cancelled);
+    });
+
+    it('should call the onStop callback when the process is force closed', () => {
+      const onStopMock = jest.fn();
+      jestProcess.start();
+      jestProcess.autoStop(30000, onStopMock);
+
+      expect(jestProcess.status).toEqual(ProcessStatus.Running);
+
+      jest.advanceTimersByTime(30000);
+
+      expect(stopSpy).toHaveBeenCalled();
+      expect(jestProcess.status).toEqual(ProcessStatus.Cancelled);
+      expect(onStopMock).toHaveBeenCalledWith(jestProcess);
+    });
+
+    it('should not stop the process if it is not running', () => {
+      jestProcess.autoStop(30000);
+
+      expect(jestProcess.status).not.toEqual(ProcessStatus.Running);
+
+      jest.advanceTimersByTime(30000);
+
+      expect(jestProcess.status).not.toEqual(ProcessStatus.Cancelled);
+      expect(stopSpy).not.toHaveBeenCalled();
+    });
+
+    it('will clear previous timer if called again', () => {
+      jestProcess.start();
+      jestProcess.autoStop(30000);
+
+      expect(jestProcess.status).toEqual(ProcessStatus.Running);
+      expect(clearTimeoutSpy).not.toHaveBeenCalled();
+
+      jestProcess.autoStop(10000);
+      expect(clearTimeoutSpy).toHaveBeenCalled();
+      expect(jestProcess.status).toEqual(ProcessStatus.Running);
+
+      jest.advanceTimersByTime(10000);
+
+      expect(jestProcess.status).toEqual(ProcessStatus.Cancelled);
+      expect(stopSpy).toHaveBeenCalledTimes(1);
+    });
+    it('if process ends before the autoStop timer, it will clear the timer', () => {
+      jestProcess.start();
+      jestProcess.autoStop(30000);
+      closeRunner();
+      expect(clearTimeoutSpy).toHaveBeenCalledTimes(1);
+      jest.advanceTimersByTime(30000);
+      expect(stopSpy).not.toHaveBeenCalled();
     });
   });
 });

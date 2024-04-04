@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { JestTotalResults, RunnerEvent } from 'jest-editor-support';
 import { cleanAnsi, toErrorString } from '../helpers';
-import { JestProcess } from '../JestProcessManagement';
+import { JestProcess, ProcessStatus } from '../JestProcessManagement';
 import { ListenerSession, ListTestFilesCallback } from './process-session';
 import { Logging } from '../logging';
 import { JestRunEvent } from './types';
@@ -279,10 +279,7 @@ export class RunTestListener extends AbstractProcessListener {
 
   // watch process should not exit unless we request it to be closed
   private handleWatchProcessCrash(process: JestProcess): string | undefined {
-    if (
-      (process.request.type === 'watch-tests' || process.request.type === 'watch-all-tests') &&
-      process.stopReason !== 'on-demand'
-    ) {
+    if (process.isWatchMode && process.status !== ProcessStatus.Cancelled) {
       const msg = `Jest process "${process.request.type}" ended unexpectedly`;
       this.logging('warn', msg);
 
@@ -364,12 +361,6 @@ export class RunTestListener extends AbstractProcessListener {
         error = `process ${process.id} exited with code= ${code}`;
       }
     }
-    this.onRunEvent.fire({
-      type: 'exit',
-      process,
-      error,
-      code,
-      isCancelled: process.stopReason === 'on-demand',
-    });
+    this.onRunEvent.fire({ type: 'exit', process, error, code });
   }
 }

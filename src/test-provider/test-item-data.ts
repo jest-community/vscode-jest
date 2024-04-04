@@ -11,7 +11,7 @@ import { TestSuitChangeEvent } from '../TestResults/test-result-events';
 import { Debuggable, ItemCommand, TestItemData } from './types';
 import { JestTestProviderContext } from './test-provider-context';
 import { JestTestRun } from './jest-test-run';
-import { JestProcessInfo } from '../JestProcessManagement';
+import { JestProcessInfo, ProcessStatus } from '../JestProcessManagement';
 import { GENERIC_ERROR, LONG_RUNNING_TESTS, getExitErrorDef } from '../errors';
 import { tiContextManager } from './test-item-context-manager';
 import { runModeDescription } from '../JestExt/run-mode';
@@ -258,10 +258,23 @@ export class WorkspaceRoot extends TestItemDataBase {
     this.item.canResolveChildren = false;
   };
 
+  // prevent a jest non-watch mode runs failed to stop, which could block the process queue from running other tests.
+  // by default it will wait 10 seconds before killing the process
+  private preventZombieProcess = (process: JestProcessInfo, delay = 10000): void => {
+    if (process.status === ProcessStatus.Running && !process.isWatchMode) {
+      process.autoStop(delay, () => {
+        this.context.output.write(
+          `Zombie jest process "${process.id}" is killed. Please investigate the root cause or file an issue.`,
+          'warn'
+        );
+      });
+    }
+  };
+
   /**
    * invoked when external test result changed, this could be caused by the watch-mode or on-demand test run, includes vscode's runTest.
-   * We will try to find the run based on the event's id, if found, means a vscode runTest initiated such run, will use that run to
-   * ask all touched DocumentRoot to refresh both the test items and their states.
+   * We will use either existing run or creating a new one if none exist yet,
+   * and ask all touched DocumentRoot to refresh both the test items and their states.
    *
    * @param event
    */
@@ -280,6 +293,8 @@ export class WorkspaceRoot extends TestItemDataBase {
           event.files.forEach((f) => this.addTestFile(f, (testRoot) => testRoot.discoverTest(run)));
         }
         run.end({ process: event.process, delay: 1000, reason: 'assertions-updated' });
+        this.preventZombieProcess(event.process);
+
         break;
       }
       case 'result-matched': {
@@ -596,10 +611,7 @@ abstract class TestResultData extends TestItemDataBase {
   }
 
   createLocation(uri: vscode.Uri, zeroBasedLine = 0): vscode.Location {
-    return new vscode.Location(
-      uri,
-      new vscode.Range(new vscode.Position(zeroBasedLine, 0), new vscode.Position(zeroBasedLine, 0))
-    );
+    return new vscode.Location(uri, new vscode.Range(zeroBasedLine, 0, zeroBasedLine, 0));
   }
 
   forEachChild(onTestData: (child: TestData) => void): void {
