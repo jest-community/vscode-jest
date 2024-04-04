@@ -465,7 +465,16 @@ describe('test-item-data', () => {
               });
               // no tests items to be added
               expect(run.end).toHaveBeenCalled();
-              expect(process.autoStop).toHaveBeenCalledTimes(autoStopCalled ? 1 : 0);
+              if (autoStopCalled) {
+                expect(process.autoStop).toHaveBeenCalledTimes(1);
+                const [delay, onCancel] = process.autoStop.mock.calls[0];
+                expect(delay).toBeGreaterThan(1000);
+                context.output.write.mockClear();
+                onCancel();
+                expect(context.output.write).toHaveBeenCalledWith(expect.anything(), 'warn');
+              } else {
+                expect(process.autoStop).not.toHaveBeenCalled();
+              }
             });
           });
           it('if nothing is updated, output the message', () => {
