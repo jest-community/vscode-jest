@@ -5,6 +5,7 @@ jest.unmock('./test-helper');
 
 import * as vscode from 'vscode';
 import { JestTestRun } from '../../src/test-provider/jest-test-run';
+import { mockJestProcess } from './test-helper';
 
 jest.useFakeTimers();
 jest.spyOn(global, 'setTimeout');
@@ -208,8 +209,10 @@ describe('JestTestRun', () => {
         expect(run.end).toHaveBeenCalledTimes(1);
       });
       it('can only close a run after all processes are done', () => {
-        jestRun.addProcess('p1');
-        jestRun.addProcess('p2');
+        const p1 = mockJestProcess('p1');
+        const p2 = mockJestProcess('p2');
+        jestRun.addProcess(p1);
+        jestRun.addProcess(p2);
         jestRun.enqueued(mockTestItem);
 
         expect(mockCreateTestRun).toHaveBeenCalledTimes(1);
@@ -219,29 +222,29 @@ describe('JestTestRun', () => {
         expect(jestRun.isClosed()).toBe(false);
         expect(run.end).toHaveBeenCalledTimes(0);
 
-        jestRun.end({ pid: 'p1' });
+        jestRun.end({ process: p1 });
         expect(jestRun.isClosed()).toBe(false);
         expect(run.end).toHaveBeenCalledTimes(0);
 
         // when the last process is closed, the whole run is then closed
-        jestRun.end({ pid: 'p2' });
+        jestRun.end({ process: p2 });
         expect(jestRun.isClosed()).toBe(true);
         expect(run.end).toHaveBeenCalledTimes(1);
       });
       it('with verbose, more information will be logged', () => {
-        const pid = '123';
+        const process = mockJestProcess('123');
         const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
         mockContext.ext.settings.debugMode = true;
 
         jestRun = new JestTestRun('test', mockContext, mockRequest, mockCreateTestRun);
-        jestRun.addProcess(pid);
+        jestRun.addProcess(process);
         expect(mockCreateTestRun).toHaveBeenCalledTimes(0);
 
         jestRun.started(mockTestItem);
         expect(mockCreateTestRun).toHaveBeenCalledTimes(1);
 
-        jestRun.end({ pid, reason: 'testReason' });
-        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining(pid));
+        jestRun.end({ process, reason: 'testReason' });
+        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining(process.id));
         expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('testReason'));
       });
       describe('when close the process-run with delayed', () => {
@@ -252,7 +255,7 @@ describe('JestTestRun', () => {
           expect(jestRun.isClosed()).toBe(false);
 
           // close with 1000 msec delay
-          jestRun.end({ pid: 'whatever', delay: 1000 });
+          jestRun.end({ process: mockJestProcess('whatever'), delay: 1000 });
 
           expect(jestRun.isClosed()).toBe(false);
           expect(run.end).not.toHaveBeenCalled();
@@ -266,16 +269,16 @@ describe('JestTestRun', () => {
         });
 
         it('the subsequent end will cancel any running timer earlier', () => {
-          const pid = '123';
+          const process = mockJestProcess('123');
           jest.spyOn(global, 'clearTimeout');
 
-          jestRun.addProcess(pid);
+          jestRun.addProcess(process);
           jestRun.started(mockTestItem);
 
           expect(mockCreateTestRun).toHaveBeenCalledTimes(1);
           const run = mockCreateTestRun.mock.results[0].value;
 
-          jestRun.end({ pid, delay: 30000 });
+          jestRun.end({ process, delay: 30000 });
           expect(jestRun.isClosed()).toBe(false);
 
           // advance timer by 1000 msec, the run is still not closed
@@ -283,7 +286,7 @@ describe('JestTestRun', () => {
           expect(jestRun.isClosed()).toBe(false);
 
           // another end with 1000 msec delay, will cancel the previous 30000 msec delay
-          jestRun.end({ pid, delay: 1000 });
+          jestRun.end({ process, delay: 1000 });
           expect(global.clearTimeout).toHaveBeenCalledTimes(1);
           expect(jestRun.isClosed()).toBe(false);
 
@@ -294,21 +297,21 @@ describe('JestTestRun', () => {
           expect(run.end).toHaveBeenCalledTimes(1);
         });
         it('with verbose, more information will be logged', () => {
-          const pid = '123';
+          const process = mockJestProcess('123');
           const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
           mockContext.ext.settings.debugMode = true;
 
           jestRun = new JestTestRun('test', mockContext, mockRequest, mockCreateTestRun);
-          jestRun.addProcess(pid);
+          jestRun.addProcess(process);
           expect(mockCreateTestRun).toHaveBeenCalledTimes(0);
 
           jestRun.started(mockTestItem);
           expect(mockCreateTestRun).toHaveBeenCalledTimes(1);
 
-          jestRun.end({ pid, delay: 1000, reason: 'testReason' });
+          jestRun.end({ process, delay: 1000, reason: 'testReason' });
           jest.runAllTimers();
 
-          expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining(pid));
+          expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining(process.id));
           expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('testReason'));
         });
       });
@@ -366,6 +369,83 @@ describe('JestTestRun', () => {
       jestRun.started({} as any);
       expect(mockCreateTestRun).toHaveBeenCalledTimes(2);
       expect(mockCreateTestRun.mock.calls[1][0]).toBe(newRequest);
+    });
+  });
+  describe('cancel', () => {
+    it('should cancel the run', () => {
+      jestRun.started({} as any);
+      expect(mockCreateTestRun).toHaveBeenCalledTimes(1);
+      const run = mockCreateTestRun.mock.results[0].value;
+      expect(run.started).toHaveBeenCalled();
+
+      jestRun.cancel();
+      expect(run.started).toHaveBeenCalled();
+      expect(run.end).toHaveBeenCalled();
+    });
+    it('will stops all processes and timers associated with the run', () => {
+      const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout');
+
+      const process1 = mockJestProcess('123');
+      const process2 = mockJestProcess('456');
+      jestRun.started({} as any);
+      jestRun.addProcess(process1);
+      jestRun.addProcess(process2);
+      expect(process1.stop).not.toHaveBeenCalled();
+      expect(process2.stop).not.toHaveBeenCalled();
+      clearTimeoutSpy.mockClear();
+
+      // a timer will be created
+      jestRun.end({ process: process1, delay: 1000 });
+      expect(clearTimeoutSpy).toHaveBeenCalledTimes(0);
+
+      jestRun.cancel();
+      expect(process1.stop).toHaveBeenCalled();
+      expect(process2.stop).toHaveBeenCalled();
+      expect(clearTimeoutSpy).toHaveBeenCalledTimes(1);
+    });
+    it('cancel a already cancelled run will do nothing', () => {
+      jestRun.started({} as any);
+      expect(mockCreateTestRun).toHaveBeenCalledTimes(1);
+      const run = mockCreateTestRun.mock.results[0].value;
+      expect(run.started).toHaveBeenCalled();
+
+      jestRun.cancel();
+      expect(run.end).toHaveBeenCalledTimes(1);
+
+      jestRun.cancel();
+      expect(run.end).toHaveBeenCalledTimes(1);
+    });
+    it('call run methods after cancel will do nothing', () => {
+      jestRun.started({} as any);
+      expect(mockCreateTestRun).toHaveBeenCalled();
+      const run = mockCreateTestRun.mock.results[0].value;
+      expect(run.started).toHaveBeenCalled();
+      run.started.mockClear();
+      mockCreateTestRun.mockClear();
+
+      jestRun.cancel();
+      expect(run.end).toHaveBeenCalled();
+
+      jestRun.started({} as any);
+      expect(run.started).not.toHaveBeenCalled();
+
+      jestRun.errored({} as any, {} as any);
+      expect(run.errored).not.toHaveBeenCalled();
+
+      jestRun.failed({} as any, {} as any);
+      expect(run.failed).not.toHaveBeenCalled();
+
+      jestRun.enqueued({} as any);
+      expect(run.enqueued).not.toHaveBeenCalled();
+
+      jestRun.passed({} as any);
+      expect(run.passed).not.toHaveBeenCalled();
+
+      jestRun.skipped({} as any);
+      expect(run.skipped).not.toHaveBeenCalled();
+
+      // no new run should be created
+      expect(mockCreateTestRun).not.toHaveBeenCalled();
     });
   });
 });

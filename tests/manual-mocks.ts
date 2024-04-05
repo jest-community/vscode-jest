@@ -9,23 +9,9 @@ jest.mock('../src/output-manager', () => ({
   outputManager: { clearOutputOnRun: jest.fn() },
 }));
 
+import { mockRun } from './test-provider/test-helper';
 jest.mock('../src/test-provider/jest-test-run', () => {
   return {
-    JestTestRun: jest.fn().mockImplementation((name: string) => {
-      return {
-        name,
-        enqueued: jest.fn(),
-        started: jest.fn(),
-        errored: jest.fn(),
-        failed: jest.fn(),
-        passed: jest.fn(),
-        skipped: jest.fn(),
-        end: jest.fn(),
-        write: jest.fn(),
-        addProcess: jest.fn(),
-        isClosed: jest.fn(() => false),
-        updateRequest: jest.fn(),
-      };
-    }),
+    JestTestRun: jest.fn().mockImplementation((name) => mockRun({}, name)),
   };
 });

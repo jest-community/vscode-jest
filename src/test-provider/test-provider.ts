@@ -163,6 +163,11 @@ export class JestTestProvider {
     const run = this.context.createTestRun(req, {
       name: `runTest: ${this.controller.id}`,
     });
+
+    cancelToken?.onCancellationRequested(() => {
+      run.cancel();
+    });
+
     const tests = (req.include ?? this.getAllItems()).filter((t) => !req.exclude?.includes(t));
 
     for (const test of tests) {

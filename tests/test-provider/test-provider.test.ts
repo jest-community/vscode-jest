@@ -216,7 +216,7 @@ describe('JestTestProvider', () => {
       return itemDataList;
     };
     beforeEach(() => {
-      cancelToken = { onCancellationRequested: jest.fn() };
+      cancelToken = { onCancellationRequested: jest.fn(), isCancellationRequested: false };
     });
     describe('debug tests', () => {
       let debugDone;
@@ -319,7 +319,7 @@ describe('JestTestProvider', () => {
         // the run will be closed
         expect(jestRun.end).toHaveBeenCalled();
       });
-      it('cancellation means skip the rest of tests', async () => {
+      it('cancellation means stop the run and skip the rest of tests', async () => {
         expect.hasAssertions();
 
         extExplorerContextMock.debugTests.mockImplementation(controlled);
@@ -336,6 +336,7 @@ describe('JestTestProvider', () => {
         // a run is created
         expect(JestTestRun).toHaveBeenCalledTimes(1);
         const jestRun = mockedJestTestRun.mock.results[0].value;
+        const onCancel = cancelToken.onCancellationRequested.mock.calls[0][0];
 
         expect(extExplorerContextMock.debugTests).toHaveBeenCalledTimes(1);
 
@@ -344,6 +345,8 @@ describe('JestTestProvider', () => {
 
         // cancel the run during 2nd debug, the 3rd one should be skipped
         cancelToken.isCancellationRequested = true;
+        onCancel();
+        expect(jestRun.cancel).toHaveBeenCalled();
 
         await finishDebug();
         expect(extExplorerContextMock.debugTests).toHaveBeenCalledTimes(2);
@@ -386,14 +389,13 @@ describe('JestTestProvider', () => {
       const resolveSchedule = (_r, resolve) => {
         resolve();
       };
-      it.each`
-        scheduleTest       | isCancelled | state
-        ${resolveSchedule} | ${false}    | ${undefined}
-        ${resolveSchedule} | ${true}     | ${'skipped'}
-        ${throwError}      | ${false}    | ${'errored'}
-      `(
-        'run test should always resolve: schedule test pid = $pid, isCancelled=$isCancelled => state? $state',
-        async ({ scheduleTest, isCancelled, state }) => {
+      describe('run test should update test item status', () => {
+        it.each`
+          case | scheduleTest       | isCancelled | state
+          ${1} | ${resolveSchedule} | ${false}    | ${undefined}
+          ${2} | ${resolveSchedule} | ${true}     | ${'skipped'}
+          ${3} | ${throwError}      | ${false}    | ${'errored'}
+        `('case $case', async ({ scheduleTest, isCancelled, state }) => {
           expect.hasAssertions();
 
           const testProvider = new JestTestProvider(extExplorerContextMock);
@@ -436,8 +438,8 @@ describe('JestTestProvider', () => {
               expect('unhandled state type').toBeUndefined();
               break;
           }
-        }
-      );
+        });
+      });
       it('running tests in parallel', async () => {
         expect.hasAssertions();
 
@@ -468,7 +470,7 @@ describe('JestTestProvider', () => {
         expect(jestRun.end).toHaveBeenCalledTimes(itemDataList.length + 1);
       });
 
-      it('cancellation is passed to the itemData to handle', async () => {
+      it('cancellation will cancel all testRun and items', async () => {
         expect.hasAssertions();
 
         const testProvider = new JestTestProvider(extExplorerContextMock);
@@ -480,13 +482,16 @@ describe('JestTestProvider', () => {
           profile: { kind: vscode.TestRunProfileKind.Run },
         };
         const p = testProvider.runTests(request, cancelToken);
+        const onCancel = cancelToken.onCancellationRequested.mock.calls[0][0];
 
-        // cancel after run
+        // cancel the run
         cancelToken.isCancellationRequested = true;
+        onCancel();
 
         // a run is already created
         expect(JestTestRun).toHaveBeenCalledTimes(1);
         const jestRun = mockedJestTestRun.mock.results[0].value;
+        expect(jestRun.cancel).toHaveBeenCalled();
 
         itemDataList.forEach((d) => {
           expect(d.scheduleTest).toHaveBeenCalled();

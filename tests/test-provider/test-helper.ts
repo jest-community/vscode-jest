@@ -58,6 +58,10 @@ export const mockRun = (request?: any, name?: any): any => ({
   enqueued: jest.fn(),
   appendOutput: jest.fn(),
   end: jest.fn(),
+  cancel: jest.fn(),
+  write: jest.fn(),
+  addProcess: jest.fn(),
+  updateRequest: jest.fn(),
   token: { onCancellationRequested: jest.fn() },
 });
 export const mockController = (): any => {
@@ -90,5 +94,15 @@ export const mockController = (): any => {
       return item;
     }),
     items: new TestItemCollectionMock(),
+  };
+};
+
+export const mockJestProcess = (id: string, extra?: any): any => {
+  return {
+    id,
+    start: jest.fn(),
+    stop: jest.fn(),
+    status: 'pending',
+    ...(extra ?? {}),
   };
 };

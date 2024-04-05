@@ -4,7 +4,7 @@ import { Runner, RunnerEvent, Options } from 'jest-editor-support';
 import { JestExtContext, WatchMode } from '../JestExt/types';
 import { extensionId } from '../appGlobals';
 import { Logging } from '../logging';
-import { JestProcessInfo, JestProcessRequest, UserDataType } from './types';
+import { JestProcessInfo, JestProcessRequest, ProcessStatus, UserDataType } from './types';
 import { requestString } from './helper';
 import { toFilePath, removeSurroundingQuote, escapeRegExp, shellQuote } from '../helpers';
 
@@ -23,20 +23,18 @@ interface RunnerTask {
   reject: (reason: unknown) => unknown;
   runner: Runner;
 }
-export type StopReason = 'on-demand' | 'process-end';
 
 let SEQ = 0;
 
 export class JestProcess implements JestProcessInfo {
-  static readonly stopHangTimeout = 500;
-
   private task?: RunnerTask;
   private extContext: JestExtContext;
   private logging: Logging;
-  private _stopReason?: StopReason;
   public readonly id: string;
   private desc: string;
   public readonly request: JestProcessRequest;
+  public _status: ProcessStatus;
+  private autoStopTimer?: NodeJS.Timeout;
 
   constructor(
     extContext: JestExtContext,
@@ -48,10 +46,11 @@ export class JestProcess implements JestProcessInfo {
     this.logging = extContext.loggingFactory.create(`JestProcess ${request.type}`);
     this.id = `${request.type}-${SEQ++}`;
     this.desc = `id: ${this.id}, request: ${requestString(request)}`;
+    this._status = ProcessStatus.Pending;
   }
 
-  public get stopReason(): StopReason | undefined {
-    return this._stopReason;
+  public get status(): ProcessStatus {
+    return this._status;
   }
 
   private get watchMode(): WatchMode {
@@ -64,15 +63,39 @@ export class JestProcess implements JestProcessInfo {
     return WatchMode.None;
   }
 
+  public get isWatchMode(): boolean {
+    return this.watchMode !== WatchMode.None;
+  }
+
   public toString(): string {
-    return `JestProcess: ${this.desc}; stopReason: ${this.stopReason}`;
+    return `JestProcess: ${this.desc}; status: "${this.status}"`;
   }
-  public start(): Promise<void> {
-    this._stopReason = undefined;
-    return this.startRunner();
+
+  /**
+   * To prevent zombie process, this method will automatically stops the Jest process if it is running for too long. The process will be marked as "Cancelled" and stopped.
+   * Warning: This should only be called when you are certain the process should end soon, for example a non-watch mode process should end after the test results have been processed.
+   * @param delay The delay in milliseconds after which the process will be considered hung and stopped. Default is 30000 milliseconds (30 seconds ).
+   */
+  public autoStop(delay = 30000, onStop?: (process: JestProcessInfo) => void): void {
+    if (this.status === ProcessStatus.Running) {
+      if (this.autoStopTimer) {
+        clearTimeout(this.autoStopTimer);
+      }
+      this.autoStopTimer = setTimeout(() => {
+        if (this.status === ProcessStatus.Running) {
+          console.warn(
+            `Jest Process "${this.id}": will be force closed due to the autoStop Timer (${delay} msec) `
+          );
+          this.stop();
+          onStop?.(this);
+        }
+      }, delay);
+    }
   }
+
   public stop(): Promise<void> {
-    this._stopReason = 'on-demand';
+    this._status = ProcessStatus.Cancelled;
+
     if (!this.task) {
       this.logging('debug', 'nothing to stop, no pending runner/promise');
       this.taskDone();
@@ -99,11 +122,18 @@ export class JestProcess implements JestProcessInfo {
     return `"${removeSurroundingQuote(aString)}"`;
   }
 
-  private startRunner(): Promise<void> {
+  public start(): Promise<void> {
+    if (this.status === ProcessStatus.Cancelled) {
+      this.logging('warn', `the runner task has been cancelled!`);
+      return Promise.resolve();
+    }
+
     if (this.task) {
       this.logging('warn', `the runner task has already started!`);
       return this.task.promise;
     }
+
+    this._status = ProcessStatus.Running;
 
     const options: Options = {
       noColor: false,
@@ -196,7 +226,13 @@ export class JestProcess implements JestProcessInfo {
     if (event === 'processClose' || event === 'processExit') {
       this.task?.resolve();
       this.task = undefined;
-      this._stopReason = this._stopReason ?? 'process-end';
+
+      clearTimeout(this.autoStopTimer);
+      this.autoStopTimer = undefined;
+
+      if (this._status !== ProcessStatus.Cancelled) {
+        this._status = ProcessStatus.Done;
+      }
     }
     this.request.listener.onEvent(this, event, ...args);
   }

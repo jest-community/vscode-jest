@@ -11,6 +11,8 @@ import {
 } from '../../src/JestExt/process-listeners';
 import { cleanAnsi, toErrorString } from '../../src/helpers';
 import { extensionName } from '../../src/appGlobals';
+import { ProcessStatus } from '../../src/JestProcessManagement/types';
+import { JestTestProcessType } from '../../src/Settings';
 
 class DummyListener extends AbstractProcessListener {
   constructor(session) {
@@ -20,6 +22,16 @@ class DummyListener extends AbstractProcessListener {
     return super.retryWithLoginShell(process, code, signal);
   }
 }
+
+const initMockProcess = (requestType: JestTestProcessType) => {
+  return {
+    id: `${requestType}-0`,
+    request: { type: requestType },
+    stop: jest.fn(),
+    isWatchMode: requestType === 'watch-tests' || requestType === 'watch-all-tests',
+    status: ProcessStatus.Pending,
+  };
+};
 
 describe('jest process listeners', () => {
   let mockSession: any;
@@ -46,7 +58,7 @@ describe('jest process listeners', () => {
         onRunEvent: { fire: jest.fn() },
       },
     };
-    mockProcess = { request: { type: 'watch' } };
+    mockProcess = initMockProcess('watch-tests');
     (cleanAnsi as jest.Mocked<any>).mockImplementation((s) => s);
   });
   afterEach(() => {
@@ -62,7 +74,6 @@ describe('jest process listeners', () => {
       ${'executableOutput'} | ${false}
       ${'terminalError'}    | ${true}
     `('listening for runner event $event,  will log=$log', ({ event, log }) => {
-      mockProcess = { id: 'all-tests-0', request: { type: 'all-tests' } };
       const listener = new AbstractProcessListener(mockSession);
       listener.onEvent(mockProcess, event, jest.fn(), jest.fn());
       if (log) {
@@ -86,7 +97,6 @@ describe('jest process listeners', () => {
         ${7} | ${'/bin/sh: react-scripts: command not found'}         | ${false}
         ${8} | ${'/bin/sh: react-scripts: No such file or directory'} | ${false}
       `('case $case', ({ data, CmdNotFoundEnv }) => {
-        mockProcess = { id: 'all-tests-0', request: { type: 'all-tests' } };
         const listener = new AbstractProcessListener(mockSession);
         listener.onEvent(mockProcess, 'executableStdErr', data, '');
         expect((listener as any).CmdNotFoundEnv).toEqual(CmdNotFoundEnv);
@@ -102,7 +112,6 @@ describe('jest process listeners', () => {
         ${5} | ${false}      | ${136}   | ${true}     | ${true}
         ${6} | ${false}      | ${1}     | ${true}     | ${false}
       `('case $case', ({ useLoginShell, exitCode, hasEnvIssue, retry }) => {
-        mockProcess = { id: 'all-tests-0', request: { type: 'all-tests' } };
         mockSession.context.settings.shell.useLoginShell = useLoginShell;
         const listener = new DummyListener(mockSession);
         if (hasEnvIssue) {
@@ -233,7 +242,6 @@ describe('jest process listeners', () => {
         show: jest.fn(),
       };
       mockSession.context.updateWithData = jest.fn();
-      mockProcess = { request: { type: 'watch-tests' } };
     });
 
     describe('can handle test result', () => {
@@ -245,7 +253,6 @@ describe('jest process listeners', () => {
         expect.hasAssertions();
         const listener = new RunTestListener(mockSession);
         const mockData = {};
-        mockProcess = { id: 'mock-id' };
         listener.onEvent(mockProcess, 'executableJSON', mockData);
         expect(mockSession.context.updateWithData).toHaveBeenCalledWith(mockData, mockProcess);
       });
@@ -461,8 +468,7 @@ describe('jest process listeners', () => {
         'can detect and switch from watch to watch-all: #$seq',
         ({ processType, output, expectToRestart }) => {
           expect.hasAssertions();
-          mockProcess.stop = jest.fn();
-          mockProcess.request.type = processType;
+          mockProcess = initMockProcess(processType);
           const listener = new RunTestListener(mockSession);
 
           listener.onEvent(mockProcess, 'executableStdErr', Buffer.from(output));
@@ -476,99 +482,97 @@ describe('jest process listeners', () => {
       );
     });
     describe('upon process exit', () => {
-      it('not report error if not a watch process', () => {
-        expect.hasAssertions();
-        mockProcess.request = { type: 'all-tests' };
+      describe('determining execution error', () => {
+        describe('when user cancels => no error', () => {
+          it.each`
+            requestType      | exitCode
+            ${'watch-tests'} | ${0}
+            ${'watch-tests'} | ${1}
+            ${'watch-tests'} | ${127}
+            ${'all-tests'}   | ${0}
+            ${'all-tests'}   | ${1}
+            ${'all-tests'}   | ${127}
+          `('$requestType, exitCode=$exitCode', ({ requestType, exitCode }) => {
+            expect.hasAssertions();
+            mockProcess = initMockProcess(requestType);
+            mockProcess.status = ProcessStatus.Cancelled;
 
-        const listener = new RunTestListener(mockSession);
+            const listener = new RunTestListener(mockSession);
 
-        listener.onEvent(mockProcess, 'processClose', 1);
-        expect(mockSession.context.onRunEvent.fire).toHaveBeenCalledWith(
-          expect.objectContaining({
-            type: 'exit',
-            error: undefined,
-          })
-        );
-      });
-      it('not report error if watch run exit due to on-demand stop', () => {
-        expect.hasAssertions();
-        mockProcess.request = { type: 'watch-tests' };
-        mockProcess.stopReason = 'on-demand';
-
-        const listener = new RunTestListener(mockSession);
-
-        listener.onEvent(mockProcess, 'processClose', 1);
-        expect(mockSession.context.onRunEvent.fire).toHaveBeenCalledWith(
-          expect.objectContaining({
-            type: 'exit',
-            error: undefined,
-          })
-        );
-      });
-      describe('if watch exit not caused by on-demand stop', () => {
-        beforeEach(() => {
-          mockSession.context.workspace = { name: 'workspace-xyz' };
-          mockProcess.request = { type: 'watch-tests' };
+            listener.onEvent(mockProcess, 'processClose', exitCode);
+            expect(mockSession.context.onRunEvent.fire).toHaveBeenCalledWith(
+              expect.objectContaining({
+                type: 'exit',
+                error: undefined,
+              })
+            );
+          });
         });
-        it('will fire exit with error for watch run', () => {
-          expect.hasAssertions();
+        describe('when not by user cancellation', () => {
+          it.each`
+            case  | requestType      | exitCode | willRetry | isError
+            ${1}  | ${'all-tests'}   | ${0}     | ${false}  | ${false}
+            ${2}  | ${'all-tests'}   | ${1}     | ${false}  | ${false}
+            ${3}  | ${'all-tests'}   | ${2}     | ${false}  | ${true}
+            ${4}  | ${'all-tests'}   | ${127}   | ${true}   | ${false}
+            ${5}  | ${'all-tests'}   | ${127}   | ${false}  | ${true}
+            ${6}  | ${'watch-tests'} | ${0}     | ${false}  | ${true}
+            ${7}  | ${'watch-tests'} | ${1}     | ${false}  | ${true}
+            ${8}  | ${'watch-tests'} | ${2}     | ${false}  | ${true}
+            ${9}  | ${'watch-tests'} | ${127}   | ${true}   | ${false}
+            ${10} | ${'watch-tests'} | ${127}   | ${false}  | ${true}
+          `('case $case', ({ requestType, exitCode, willRetry, isError }) => {
+            expect.hasAssertions();
+            mockProcess = initMockProcess(requestType);
+            mockProcess.status = ProcessStatus.Running;
 
+            const listener = new RunTestListener(mockSession);
+            (listener as any).CmdNotFoundEnv = willRetry;
+
+            listener.onEvent(mockProcess, 'processClose', exitCode);
+            const error = isError ? expect.anything() : undefined;
+            if (willRetry) {
+              expect(mockSession.context.onRunEvent.fire).not.toHaveBeenCalled();
+            } else {
+              expect(mockSession.context.onRunEvent.fire).toHaveBeenCalledWith(
+                expect.objectContaining({
+                  type: 'exit',
+                  error,
+                })
+              );
+            }
+          });
+        });
+      });
+      describe('can retry with login-shell if process.env is not correct', () => {
+        it.each`
+          case | useLoginShell | exitCode | willRetry
+          ${1} | ${false}      | ${1}     | ${false}
+          ${2} | ${false}      | ${127}   | ${true}
+          ${3} | ${false}      | ${136}   | ${true}
+          ${4} | ${true}       | ${127}   | ${false}
+          ${5} | ${'never'}    | ${127}   | ${false}
+        `('case $case', ({ useLoginShell, exitCode, willRetry }) => {
+          mockSession.context.settings.shell.useLoginShell = useLoginShell;
           const listener = new RunTestListener(mockSession);
 
-          listener.onEvent(mockProcess, 'processClose', 1);
-          expect(mockSession.context.onRunEvent.fire).toHaveBeenCalledWith(
-            expect.objectContaining({
-              type: 'exit',
-              error: expect.anything(),
-            })
-          );
+          listener.onEvent(mockProcess, 'executableStdErr', Buffer.from('node: command not found'));
+          listener.onEvent(mockProcess, 'processClose', exitCode);
+
+          if (willRetry) {
+            expect(mockSession.context.onRunEvent.fire).not.toHaveBeenCalledWith(
+              expect.objectContaining({
+                type: 'exit',
+              })
+            );
+          } else {
+            expect(mockSession.context.onRunEvent.fire).toHaveBeenCalledWith(
+              expect.objectContaining({
+                type: 'exit',
+              })
+            );
+          }
         });
-        it('will always file error if error code > 1, regardless of request type', () => {
-          expect.hasAssertions();
-
-          mockProcess.request = { type: 'all-tests' };
-          const listener = new RunTestListener(mockSession);
-
-          listener.onEvent(mockProcess, 'processClose', 127);
-          expect(mockSession.context.onRunEvent.fire).toHaveBeenCalledWith(
-            expect.objectContaining({
-              type: 'exit',
-              error: expect.anything(),
-            })
-          );
-        });
-      });
-    });
-    describe('can retry with login-shell if process.env is not correct', () => {
-      it.each`
-        case | useLoginShell | exitCode | willRetry
-        ${1} | ${false}      | ${1}     | ${false}
-        ${2} | ${false}      | ${127}   | ${true}
-        ${3} | ${false}      | ${136}   | ${true}
-        ${4} | ${true}       | ${127}   | ${false}
-        ${5} | ${'never'}    | ${127}   | ${false}
-      `('will retry with login-shell', ({ useLoginShell, exitCode, willRetry }) => {
-        mockSession.context.settings.shell.useLoginShell = useLoginShell;
-        const listener = new RunTestListener(mockSession);
-
-        listener.onEvent(mockProcess, 'executableStdErr', Buffer.from('node: command not found'));
-        listener.onEvent(mockProcess, 'processClose', exitCode);
-
-        if (willRetry) {
-          expect(mockSession.context.onRunEvent.fire).not.toHaveBeenCalledWith(
-            expect.objectContaining({
-              type: 'exit',
-              error: expect.anything(),
-            })
-          );
-        } else {
-          expect(mockSession.context.onRunEvent.fire).toHaveBeenCalledWith(
-            expect.objectContaining({
-              type: 'exit',
-              error: expect.anything(),
-            })
-          );
-        }
       });
     });
   });

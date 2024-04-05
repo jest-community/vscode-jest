@@ -15,12 +15,25 @@ export interface UserDataType {
   testError?: boolean;
   testItem?: vscode.TestItem;
 }
+export enum ProcessStatus {
+  Pending = 'pending',
+  Running = 'running',
+  Cancelled = 'cancelled',
+  // process exited not because of cancellation
+  Done = 'done',
+}
+
 export interface JestProcessInfo {
   readonly id: string;
   readonly request: JestProcessRequest;
   // user data is a way to store data that is outside of the process managed by the processManager.
   // subsequent use of this data is up to the user but should be aware that multiple components might contribute to this data.
   userData?: UserDataType;
+  stop: () => Promise<void>;
+  status: ProcessStatus;
+  isWatchMode: boolean;
+  // starting a timer to automatically kill the process after x milliseconds if the process is still running.
+  autoStop: (delay?: number, onStop?: (process: JestProcessInfo) => void) => void;
 }
 
 export type TaskStatus = 'running' | 'pending';
