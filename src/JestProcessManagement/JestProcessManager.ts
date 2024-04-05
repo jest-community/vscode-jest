@@ -6,6 +6,7 @@ import {
   Task,
   JestProcessInfo,
   UserDataType,
+  ProcessStatus,
 } from './types';
 import { Logging } from '../logging';
 import { createTaskQueue, TaskQueue } from './task-queue';
@@ -78,11 +79,13 @@ export class JestProcessManager implements TaskArrayFunctions<JestProcess> {
       return;
     }
     const process = task.data;
-
     try {
-      const promise = process.start();
-      this.extContext.onRunEvent.fire({ type: 'process-start', process });
-      await promise;
+      // process could be cancelled before it starts, so check before starting
+      if (process.status === ProcessStatus.Pending) {
+        const promise = process.start();
+        this.extContext.onRunEvent.fire({ type: 'process-start', process });
+        await promise;
+      }
     } catch (e) {
       this.logging('error', `${queue.name}: process failed to start:`, process, e);
       this.extContext.onRunEvent.fire({

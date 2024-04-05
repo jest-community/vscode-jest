@@ -7,7 +7,7 @@ import { JestProcessManager } from '../../src/JestProcessManagement/JestProcessM
 import { JestProcess } from '../../src/JestProcessManagement/JestProcess';
 import { mockJestProcessContext, mockProcessRequest } from '../test-helper';
 import * as taskQueue from '../../src/JestProcessManagement/task-queue';
-import { ScheduleStrategy } from '../../src/JestProcessManagement/types';
+import { ProcessStatus, ScheduleStrategy } from '../../src/JestProcessManagement/types';
 
 interface ProcessState {
   inQ?: boolean;
@@ -44,6 +44,7 @@ describe('JestProcessManager', () => {
       request,
       start: jest.fn().mockReturnValueOnce(promise),
       stop: jest.fn().mockImplementation(() => resolve('requested to stop')),
+      status: 'pending',
       resolve,
       reject,
     };
@@ -320,7 +321,7 @@ describe('JestProcessManager', () => {
         expect(getState(pm, process2)).toEqual({ inQ: true, started: false, qSize: 2 });
         expect(getState(pm, process3)).toEqual({ inQ: false, qSize: 2 });
       });
-      it('will not schedule if there is pending process with the same content', async () => {
+      it('will not schedule if there is pending process with the same content', () => {
         expect.hasAssertions();
         const schedule: ScheduleStrategy = {
           queue: 'blocking',
@@ -339,27 +340,64 @@ describe('JestProcessManager', () => {
 
         // schedule the first process: no problem
         const process1 = mockJestProcess(request1);
-        let scheduled = await pm.scheduleJestProcess(request1);
+        let scheduled = pm.scheduleJestProcess(request1);
         expect(scheduled.id).toContain(request1.type);
         expect(getState(pm, process1)).toEqual({ inQ: true, started: true, qSize: 1 });
 
         // schedule the 2nd process with request1, fine because process1 is running, not pending
         const process2 = mockJestProcess(request1);
-        scheduled = await pm.scheduleJestProcess(request1);
+        scheduled = pm.scheduleJestProcess(request1);
         expect(scheduled.id).toContain(request1.type);
         expect(getState(pm, process2)).toEqual({ inQ: true, started: false, qSize: 2 });
 
         // schedule the 3rd one with different request2, should be fine, no dup
         const process3 = mockJestProcess(request2);
-        scheduled = await pm.scheduleJestProcess(request2);
+        scheduled = pm.scheduleJestProcess(request2);
         expect(scheduled.id).toContain(request2.type);
         expect(getState(pm, process3)).toEqual({ inQ: true, started: false, qSize: 3 });
 
         // schedule the 4th one with request1, should be rejected as there is already one request pending
         const process4 = mockJestProcess(request1);
-        scheduled = await pm.scheduleJestProcess(request1);
+        scheduled = pm.scheduleJestProcess(request1);
         expect(scheduled).toBeUndefined();
         expect(getState(pm, process4)).toEqual({ inQ: false, qSize: 3 });
+      });
+    });
+    describe('handling cancelled process in queues', () => {
+      it('if a scheduled process is cancelled, it will be removed from the queue upon executing', async () => {
+        expect.hasAssertions();
+
+        const process1 = mockJestProcess(
+          mockProcessRequest('all-tests', { schedule: { queue: 'blocking-2' } })
+        );
+        const process2 = mockJestProcess(
+          mockProcessRequest('by-file', { schedule: { queue: 'blocking-2' } })
+        );
+
+        const pm = new JestProcessManager(extContext);
+        pm.scheduleJestProcess(process1.request);
+        pm.scheduleJestProcess(process2.request);
+        expect(pm.numberOfProcesses()).toEqual(2);
+
+        // only the first process should be running
+        expect(process1.start).toHaveBeenCalled();
+        expect(process2.start).not.toHaveBeenCalled();
+        expect(extContext.onRunEvent.fire).toHaveBeenCalledTimes(1);
+
+        extContext.onRunEvent.fire.mockClear();
+
+        // cancel the 2nd process sitting in the queue
+        process2.status = ProcessStatus.Cancelled;
+
+        // finish the first process
+        await process1.resolve();
+
+        // the queue will be zero but process2 was never run
+        expect(pm.numberOfProcesses()).toEqual(0);
+        expect(process2.start).not.toHaveBeenCalled();
+
+        // no runEvent should be fired either
+        expect(extContext.onRunEvent.fire).not.toHaveBeenCalled();
       });
     });
   });
@@ -486,10 +524,15 @@ describe('JestProcessManager', () => {
       const nonBlockingRequests = [
         mockProcessRequest('not-test', { schedule: nonBlockingSchedule }),
       ];
+
       const pm = new JestProcessManager(extContext);
-      blockingRequests.forEach((r) => pm.scheduleJestProcess(r));
-      blockingRequests2.forEach((r) => pm.scheduleJestProcess(r));
-      nonBlockingRequests.forEach((r) => pm.scheduleJestProcess(r));
+      // mock jest process and then schedule them
+      [blockingRequests, blockingRequests2, nonBlockingRequests].forEach((requests) => {
+        requests.forEach((r) => {
+          mockJestProcess(r);
+          pm.scheduleJestProcess(r);
+        });
+      });
 
       expect(pm.numberOfProcesses()).toEqual(4);
     });
