@@ -1,17 +1,13 @@
-import { TestReconciliationStateType } from './TestReconciliationState';
-import { JestFileResults, JestTotalResults } from 'jest-editor-support';
-import { FileCoverage } from 'istanbul-lib-coverage';
+import {
+  JestFileResults,
+  JestTotalResults,
+  CodeLocation as Location,
+  TestReconciliationState,
+} from 'jest-editor-support';
+import { CoverageMapData, FileCoverageData } from 'istanbul-lib-coverage';
 import * as path from 'path';
 import { cleanAnsi, toLowerCaseDriveLetter } from '../helpers';
 import { MatchEvent } from './match-node';
-
-export interface Location {
-  /** Zero-based column number */
-  column: number;
-
-  /** Zero-based line number */
-  line: number;
-}
 
 export interface LocationRange {
   start: Location;
@@ -28,7 +24,7 @@ export interface TestResult extends LocationRange {
 
   identifier: TestIdentifier;
 
-  status: TestReconciliationStateType;
+  status: TestReconciliationState;
   shortMessage?: string;
   terseMessage?: string;
 
@@ -65,7 +61,9 @@ export const testResultsWithLowerCaseWindowsDriveLetters = (
   return testResults.map(testResultWithLowerCaseWindowsDriveLetter);
 };
 
-function fileCoverageWithLowerCaseWindowsDriveLetter(fileCoverage: FileCoverage) {
+function fileCoverageWithLowerCaseWindowsDriveLetter(
+  fileCoverage: FileCoverageData
+): FileCoverageData {
   const newFilePath = toLowerCaseDriveLetter(fileCoverage.path);
   if (newFilePath) {
     return {
@@ -77,20 +75,18 @@ function fileCoverageWithLowerCaseWindowsDriveLetter(fileCoverage: FileCoverage)
   return fileCoverage;
 }
 
-// TODO should fix jest-editor-support type declaration, the coverageMap should not be "any"
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const coverageMapWithLowerCaseWindowsDriveLetters = (data: JestTotalResults): any => {
+export const coverageMapWithLowerCaseWindowsDriveLetters = (
+  data: JestTotalResults
+): CoverageMapData | undefined => {
   if (!data.coverageMap) {
     return;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const result: any = {};
+  const result: CoverageMapData = {};
   const filePaths = Object.keys(data.coverageMap);
+
   for (const filePath of filePaths) {
-    const newFileCoverage = fileCoverageWithLowerCaseWindowsDriveLetter(
-      data.coverageMap[filePath] as FileCoverage
-    );
+    const newFileCoverage = fileCoverageWithLowerCaseWindowsDriveLetter(data.coverageMap[filePath]);
     result[newFileCoverage.path] = newFileCoverage;
   }
 
@@ -133,10 +129,21 @@ export const resultsWithoutAnsiEscapeSequence = (data: JestTotalResults): JestTo
       message: cleanAnsi(result.message),
       assertionResults: result.assertionResults.map((assertion) => ({
         ...assertion,
-        failureMessages: assertion.failureMessages.map((message) => cleanAnsi(message)),
+        failureMessages: (assertion.failureMessages ?? []).map((message) => cleanAnsi(message)),
       })),
     })),
   };
+};
+
+// enum based on TestReconciliationState
+export const TestStatus: {
+  [key in TestReconciliationState]: TestReconciliationState;
+} = {
+  Unknown: 'Unknown',
+  KnownSuccess: 'KnownSuccess',
+  KnownFail: 'KnownFail',
+  KnownSkip: 'KnownSkip',
+  KnownTodo: 'KnownTodo',
 };
 
 // export type StatusInfo<T> = {[key in TestReconciliationState]: T};
@@ -145,7 +152,7 @@ export interface StatusInfo {
   desc: string;
 }
 
-export const TestResultStatusInfo: { [key in TestReconciliationStateType]: StatusInfo } = {
+export const TestResultStatusInfo: { [key in TestReconciliationState]: StatusInfo } = {
   KnownFail: { precedence: 1, desc: 'Failed' },
   Unknown: {
     precedence: 2,

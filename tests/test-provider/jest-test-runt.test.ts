@@ -41,6 +41,7 @@ describe('JestTestRun', () => {
         passed: jest.fn(),
         skipped: jest.fn(),
         end: jest.fn(),
+        addCoverage: jest.fn(),
       }));
 
     mockRequest = {};
@@ -49,7 +50,7 @@ describe('JestTestRun', () => {
 
   describe('constructor', () => {
     it('should set the name property', () => {
-      expect(jestRun.name).toBe('testWorkspace:test:0');
+      expect(jestRun.name).toBe('[testWorkspace] test:0');
     });
     it('does not create vscode TestRun until it is needed', () => {
       expect(mockCreateTestRun).not.toHaveBeenCalled();
@@ -316,6 +317,16 @@ describe('JestTestRun', () => {
         });
       });
     });
+    describe('addCoverage', () => {
+      it('should call the addCoverage method on the test run', () => {
+        const coverage = {} as vscode.FileCoverage;
+        expect(mockCreateTestRun).toHaveBeenCalledTimes(0);
+        jestRun.addCoverage(coverage);
+        expect(mockCreateTestRun).toHaveBeenCalledTimes(1);
+        const run = mockCreateTestRun.mock.results[0].value;
+        expect(run.addCoverage).toHaveBeenCalledWith(coverage);
+      });
+    });
   });
   it('print warning for runs re-created after close: this means the test-run will be splitted into multiple TestRun', () => {
     mockContext.ext.settings.debugMode = true;
@@ -443,6 +454,9 @@ describe('JestTestRun', () => {
 
       jestRun.skipped({} as any);
       expect(run.skipped).not.toHaveBeenCalled();
+
+      jestRun.addCoverage({} as any);
+      expect(run.addCoverage).not.toHaveBeenCalled();
 
       // no new run should be created
       expect(mockCreateTestRun).not.toHaveBeenCalled();

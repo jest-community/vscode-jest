@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { join } from 'path';
 import { Runner, RunnerEvent, Options } from 'jest-editor-support';
 import { JestExtContext, WatchMode } from '../JestExt/types';
+import { collectCoverage } from '../JestExt/helper';
 import { extensionId } from '../appGlobals';
 import { Logging } from '../logging';
 import { JestProcessInfo, JestProcessRequest, ProcessStatus, UserDataType } from './types';
@@ -34,6 +35,7 @@ export class JestProcess implements JestProcessInfo {
   private desc: string;
   public readonly request: JestProcessRequest;
   public _status: ProcessStatus;
+  private coverage: boolean | undefined;
   private autoStopTimer?: NodeJS.Timeout;
 
   constructor(
@@ -44,9 +46,11 @@ export class JestProcess implements JestProcessInfo {
     this.extContext = extContext;
     this.request = request;
     this.logging = extContext.loggingFactory.create(`JestProcess ${request.type}`);
-    this.id = `${request.type}-${SEQ++}`;
-    this.desc = `id: ${this.id}, request: ${requestString(request)}`;
     this._status = ProcessStatus.Pending;
+    this.coverage = collectCoverage(this.getRequestCoverage(), this.extContext.settings);
+    const extra = (this.coverage ? 'with-coverage:' : '') + `${SEQ++}`;
+    this.id = `${request.type}:${extra}`;
+    this.desc = `id: ${this.id}, request: ${requestString(request)}`;
   }
 
   public get status(): ProcessStatus {
@@ -120,6 +124,15 @@ export class JestProcess implements JestProcessInfo {
   }
   private quoteFilePattern(aString: string): string {
     return `"${removeSurroundingQuote(aString)}"`;
+  }
+
+  private getRequestCoverage(): boolean | undefined {
+    if (this.request.type === 'not-test') {
+      return;
+    }
+    // Note, we are ignoring coverage = false use-case, which doesn't exist yet, by returning undefined
+    // and let the runMode to decide in createRunnerWorkspace()
+    return this.request.coverage || undefined;
   }
 
   public start(): Promise<void> {
@@ -205,6 +218,7 @@ export class JestProcess implements JestProcessInfo {
 
     const runnerWorkspace = this.extContext.createRunnerWorkspace({
       outputFileSuffix: this.request.schedule.queue === 'blocking-2' ? '2' : undefined,
+      collectCoverage: this.coverage,
     });
 
     const runner = new Runner(runnerWorkspace, options);

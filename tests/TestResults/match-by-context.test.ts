@@ -4,8 +4,8 @@ jest.unmock('../test-helper');
 
 import * as helper from '../test-helper';
 import * as match from '../../src/TestResults/match-by-context';
-import { TestReconciliationStateType, TestResult } from '../../src/TestResults';
-import { TestAssertionStatus, ParsedNode } from 'jest-editor-support';
+import { TestResult } from '../../src/TestResults';
+import { TestAssertionStatus, ParsedNode, TestReconciliationState } from 'jest-editor-support';
 import { toTestResultRecord } from '../test-helper';
 
 const reason = (m: TestResult) => m.sourceHistory[m.sourceHistory.length - 1];
@@ -284,7 +284,7 @@ describe('matchTestAssertions', () => {
   });
   describe('1-many (jest.each) match', () => {
     const createTestData = (
-      statusList: (TestReconciliationStateType | [TestReconciliationStateType, number])[]
+      statusList: (TestReconciliationState | [TestReconciliationState, number])[]
     ): [ParsedNode, TestAssertionStatus[]] => {
       const t1 = helper.makeItBlock('', [12, 1, 20, 1], {
         nameType: 'TemplateLiteral',
@@ -294,7 +294,7 @@ describe('matchTestAssertions', () => {
 
       // this match jest.each with 2 assertions
       const assertions = statusList.map((s, idx) => {
-        let state: TestReconciliationStateType;
+        let state: TestReconciliationState;
         let override: Partial<TestAssertionStatus>;
         if (typeof s === 'string') {
           state = s;
@@ -885,6 +885,44 @@ describe('matchTestAssertions', () => {
         [a1.fullName, t1.start.line - 1, a1.status, ['match-by-name']],
         [a2.fullName, t2.start.line - 1, a2.status, ['match-by-location']],
         [a3.fullName, t2.start.line - 1, a3.status, ['match-by-location']],
+      ]);
+    });
+    it('when missing assertion location info, should still try to match by other mechanisms', () => {
+      const t1 = helper.makeItBlock('a test', [1, 0, 6, 0]);
+      const t2 = helper.makeItBlock('test 2.each %i', [10, 0, 16, 0], { lastProperty: 'each' });
+
+      const a1 = helper.makeAssertion('a test', 'KnownSuccess', undefined, null);
+      const a2 = helper.makeAssertion('test 2.each 1 ', 'KnownFail', undefined, [10, 0], {
+        line: 12,
+      });
+      const a3 = helper.makeAssertion('test 2.each 2', 'KnownSuccess', undefined, [10, 0]);
+
+      const sourceRoot = helper.makeRoot([t1, t2]);
+      const matched = match.matchTestAssertions('a file', sourceRoot, [a1, a2, a3]);
+
+      expect(matched.map((m) => toTestResultRecord(m))).toMatchTestResults([
+        [a1.fullName, t1.start.line - 1, a1.status, ['match-by-name']],
+        [a2.fullName, t2.start.line - 1, a2.status, ['match-by-context']],
+        [a3.fullName, t2.start.line - 1, a3.status, ['match-by-context']],
+      ]);
+    });
+    it('when missing ItBlock location, should still try to match by other mechanisms', () => {
+      const t1 = helper.makeItBlock('a test', undefined);
+      const t2 = helper.makeItBlock('test 2.each %i', [10, 0, 16, 0], { lastProperty: 'each' });
+
+      const a1 = helper.makeAssertion('a test', 'KnownFail', undefined, [2, 0], { line: 2 });
+      const a2 = helper.makeAssertion('test 2.each 1 ', 'KnownFail', undefined, [10, 0], {
+        line: 12,
+      });
+      const a3 = helper.makeAssertion('test 2.each 2', 'KnownSuccess', undefined, [10, 0]);
+
+      const sourceRoot = helper.makeRoot([t1, t2]);
+      const matched = match.matchTestAssertions('a file', sourceRoot, [a1, a2, a3]);
+
+      expect(matched.map((m) => toTestResultRecord(m))).toMatchTestResults([
+        [a1.fullName, 0, a1.status, ['match-by-context']],
+        [a2.fullName, t2.start.line - 1, a2.status, ['match-by-context']],
+        [a3.fullName, t2.start.line - 1, a3.status, ['match-by-context']],
       ]);
     });
   });

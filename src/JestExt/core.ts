@@ -18,7 +18,13 @@ import { resultsWithoutAnsiEscapeSequence } from '../TestResults/TestResult';
 import { CoverageMapData } from 'istanbul-lib-coverage';
 import { Logging } from '../logging';
 import { createProcessSession, ProcessSession } from './process-session';
-import { JestExtContext, JestSessionEvents, JestExtSessionContext, JestRunEvent } from './types';
+import {
+  JestExtContext,
+  JestSessionEvents,
+  JestExtSessionContext,
+  JestRunEvent,
+  JestTestDataAvailableEvent,
+} from './types';
 import { extensionName, SupportedLanguageIds } from '../appGlobals';
 import { createJestExtContext, getExtensionResourceSettings, prefixWorkspace } from './helper';
 import { PluginResourceSettings } from '../Settings';
@@ -99,6 +105,7 @@ export class JestExt {
       onRunEvent: new vscode.EventEmitter<JestRunEvent>(),
       onTestSessionStarted: new vscode.EventEmitter<JestExtSessionContext>(),
       onTestSessionStopped: new vscode.EventEmitter<void>(),
+      onTestDataAvailable: new vscode.EventEmitter<JestTestDataAvailableEvent>(),
     };
     this.setupRunEvents(this.events);
 
@@ -863,8 +870,10 @@ export class JestExt {
   private updateWithData(data: JestTotalResults, process: JestProcessInfo): void {
     const noAnsiData = resultsWithoutAnsiEscapeSequence(data);
     const normalizedData = resultsWithLowerCaseWindowsDriveLetters(noAnsiData);
-    this._updateCoverageMap(normalizedData.coverageMap);
 
+    this.events.onTestDataAvailable.fire({ data: normalizedData, process });
+
+    this._updateCoverageMap(normalizedData.coverageMap);
     const statusList = this.testResultProvider.updateTestResults(normalizedData, process);
 
     updateDiagnostics(statusList, this.failDiagnostics);

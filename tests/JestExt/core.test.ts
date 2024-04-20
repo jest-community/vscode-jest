@@ -1024,6 +1024,13 @@ describe('JestExt', () => {
       updateWithData();
       expect(triggerUpdateActiveEditorSpy).toHaveBeenCalledTimes(2);
     });
+    it('will fire onTestDataAvailable event', () => {
+      const process: any = { id: 'a process id' };
+      updateWithData({}, process);
+      expect(sut.events.onTestDataAvailable.fire).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.anything(), process })
+      );
+    });
   });
 
   describe('deactivate', () => {

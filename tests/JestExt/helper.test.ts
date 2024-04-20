@@ -10,6 +10,7 @@ jest.mock('os', () => ({ platform: mockPlatform, userInfo: mockUserInfo }));
 import * as vscode from 'vscode';
 import { readFileSync } from 'fs';
 import {
+  collectCoverage,
   createJestExtContext,
   getExtensionResourceSettings,
   isWatchRequest,
@@ -233,5 +234,18 @@ describe('prefixWorkspace', () => {
   it('prefix workspace name for multi-root workspace message', () => {
     (vscode.workspace as any).workspaceFolders = [{}, {}];
     expect(prefixWorkspace(context, 'a message')).toEqual('(ws) a message');
+  });
+});
+
+describe('collectCoverage', () => {
+  it.each`
+    case | coverage     | settings                                        | expected
+    ${1} | ${undefined} | ${undefined}                                    | ${false}
+    ${2} | ${true}      | ${{ runMode: { config: { coverage: false } } }} | ${true}
+    ${3} | ${false}     | ${{ runMode: { config: { coverage: true } } }}  | ${false}
+    ${4} | ${undefined} | ${{ runMode: { config: { coverage: true } } }}  | ${true}
+    ${5} | ${undefined} | ${{ runMode: { config: { coverage: false } } }} | ${false}
+  `('case $case', ({ coverage, settings, expected }) => {
+    expect(collectCoverage(coverage, settings)).toEqual(expected);
   });
 });

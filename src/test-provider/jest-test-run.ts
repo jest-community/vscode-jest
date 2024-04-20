@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { JestExtOutput, JestOutputTerminal, OutputOptions } from '../JestExt/output-terminal';
-import { JestTestProviderContext } from './test-provider-context';
+import { JestTestProviderContext, CreateTestRun } from './test-provider-context';
 import { JestProcessInfo } from '../JestProcessManagement';
 
 export type TestRunProtocol = Pick<
@@ -8,7 +8,6 @@ export type TestRunProtocol = Pick<
   'name' | 'enqueued' | 'started' | 'errored' | 'failed' | 'passed' | 'skipped' | 'end'
 >;
 
-export type CreateTestRun = (request: vscode.TestRunRequest, name: string) => vscode.TestRun;
 export type EndProcessOption = { process: JestProcessInfo; delay?: number; reason?: string };
 export type EndOption = EndProcessOption | { reason: string };
 const isEndProcessOption = (arg?: EndOption): arg is EndProcessOption =>
@@ -41,7 +40,7 @@ export class JestTestRun implements JestExtOutput, TestRunProtocol {
     private request: vscode.TestRunRequest,
     private createRun: CreateTestRun
   ) {
-    this.name = `${this.context.ext.workspace.name}:${name}:${SEQ++}`;
+    this.name = `[${this.context.ext.workspace.name}] ${name}:${SEQ++}`;
     this.output = context.output;
     this.processes = new Map();
     this.verbose = context.ext.settings.debugMode === true;
@@ -69,7 +68,7 @@ export class JestTestRun implements JestExtOutput, TestRunProtocol {
       const runName = `${this.name} (${this.runCount++})`;
 
       this._run = this.createRun(this.request, runName);
-      this._run.appendOutput(`\r\nTestRun "${runName}" started\r\n`);
+      this._run.appendOutput(`\r\nTest run "${runName}" started\r\n`);
 
       // ignore skipped tests if there are more than one test to run
       // this is to prevent the later runs override the previous runs's result
@@ -83,6 +82,9 @@ export class JestTestRun implements JestExtOutput, TestRunProtocol {
   }
 
   // TestRunProtocol
+  public addCoverage = (fileCoverage: vscode.FileCoverage): void => {
+    this.vscodeRun()?.addCoverage(fileCoverage);
+  };
   public enqueued = (test: vscode.TestItem): void => {
     this.vscodeRun()?.enqueued(test);
   };
@@ -123,7 +125,7 @@ export class JestTestRun implements JestExtOutput, TestRunProtocol {
       const pid = process.id;
       const pInfo = this.processes.get(pid);
       if (pInfo?.timeoutId) {
-        clearTimeout(pInfo?.timeoutId);
+        clearTimeout(pInfo.timeoutId);
       }
 
       if (!delay) {
