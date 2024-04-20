@@ -3,6 +3,7 @@
 Release Notes <!-- omit in toc --> 
 ---
 
+- [v6.2.4](#v624)
 - [v6.2.3](#v623)
 - [v6.2.2](#v622)
   - [CHANGELOG](#changelog)
@@ -35,6 +36,16 @@ Release Notes <!-- omit in toc -->
   - [CHANGELOG](#changelog-3)
 
 ---
+
+## v6.2.4
+
+**Enhancements**
+- Improved handling of zombie Jest processes during on-demand runs for scenarios like [stencil](https://github.com/jest-community/vscode-jest/issues/1124#issuecomment-2000596099) and [rt-test](https://github.com/jest-community/vscode-jest/issues/1137#issuecomment-2048570421), which previously failed to correctly interpret `"watchAll=false"`. We encourage users to report issues to the underlying systems. In the meantime, this extension will automatically terminate such zombie processes during on-demand runs, preventing them from blocking the execution queue. ([#1134](https://github.com/jest-community/vscode-jest/pull/1134) - @connectdotz)
+  
+**Bug Fixes**
+- Fixed an issue where the Test Explorer's `Stop` button did not terminate the underlying Jest process, potentially blocking the execution queue for subsequent on-demand runs. ([#1134](https://github.com/jest-community/vscode-jest/pull/1134) - @connectdotz)
+- Resolved a problem where the "Jest: Run All Tests" command was obstructed by the watch mode's ongoing execution. ([#1132](https://github.com/jest-community/vscode-jest/pull/1132) - @connectdotz)
+
 
 ## v6.2.3
 This release is a patch release with the following changes:
