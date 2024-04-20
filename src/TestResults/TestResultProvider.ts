@@ -114,7 +114,7 @@ export class TestSuiteRecord implements TestSuiteUpdatable {
       }
     }
 
-    return this._testBlocks ?? 'failed';
+    return this._testBlocks;
   }
 
   public get assertionContainer(): ContainerNode<TestAssertionStatus> | undefined {
@@ -133,6 +133,7 @@ export class TestSuiteRecord implements TestSuiteUpdatable {
   ): void {
     const isWithin = (snapshot: ExtSnapshotBlock, range?: ParsedRange): boolean => {
       if (!snapshot.node.loc) {
+        console.warn('snapshot will be ignored because it has no loc:', snapshot.node);
         return false;
       }
       const zeroBasedLine = snapshot.node.loc.start.line - 1;
@@ -229,9 +230,6 @@ export class TestResultProvider {
   }
 
   private groupByRange(results: TestResult[]): TestResult[] {
-    if (!results.length) {
-      return results;
-    }
     // build a range based map
     const byRange: Map<string, TestResult[]> = new Map();
     results.forEach((r) => {

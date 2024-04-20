@@ -64,7 +64,7 @@ export const makeItBlock = (
   pos?: [number, number, number, number],
   override?: Partial<ItBlock>
 ): any => {
-  const loc = pos ? makePositionRange(pos) : EmptyLocationRange;
+  const loc = pos ? makePositionRange(pos) : {};
   return {
     type: 'it',
     name,
@@ -99,7 +99,7 @@ export const makeAssertion = (
     ancestorTitles,
     fullName: [...ancestorTitles, title].join(' '),
     status,
-    location: location ? makeLocation(location) : EmptyLocation,
+    location: location ? makeLocation(location) : null,
     ...(override || {}),
   }) as TestAssertionStatus;
 

@@ -156,11 +156,14 @@ describe('TestResultProvider', () => {
   };
 
   let mockSnapshotProvider;
+  let logSpy;
+  let warnSpy;
   beforeEach(() => {
     jest.resetAllMocks();
     jest.restoreAllMocks();
-    console.warn = jest.fn();
-    console.log = jest.fn();
+
+    logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     mockTestReconciler.mockReturnValue(mockReconciler);
     (vscode.EventEmitter as jest.Mocked<any>) = jest.fn().mockImplementation(helper.mockEvent);
     mockSnapshotProvider = {
@@ -168,6 +171,11 @@ describe('TestResultProvider', () => {
       previewSnapshot: jest.fn().mockReturnValue(Promise.resolve()),
     };
     (SnapshotProvider as jest.Mocked<any>).mockReturnValue(mockSnapshotProvider);
+  });
+  afterEach(() => {
+    // Restore the original implementations
+    logSpy.mockRestore();
+    warnSpy.mockRestore();
   });
 
   describe('getResults()', () => {
@@ -598,12 +606,12 @@ describe('TestResultProvider', () => {
         });
         sut.getResults('whatever');
         forceParseError();
-        expect(console.log).not.toHaveBeenCalled();
+        expect(logSpy).not.toHaveBeenCalled();
 
         sut = newProviderWithData([makeData(itBlocks, assertions, 'whatever')], { verbose: true });
         forceParseError();
         sut.getResults('whatever');
-        expect(console.log).toHaveBeenCalled();
+        expect(logSpy).toHaveBeenCalled();
       });
     });
   });
@@ -957,19 +965,24 @@ describe('TestResultProvider', () => {
         blocks: snapshotBlocks,
       }));
     });
-    it('matched result should contain snapshot info', () => {
-      const sut = newProviderWithData([makeData(itBlocks, assertions, testPath)]);
-      sut.getResults(testPath);
-      const call = (sut.events.testSuiteChanged.fire as jest.Mocked<any>).mock.calls.find(
-        (call) => call[0].type === 'result-matched'
-      );
-      expect(call).not.toBeUndefined();
-      const container = sut.getTestSuiteResult(testPath)?.assertionContainer;
-      expect(container).not.toBeUndefined();
+    describe('match snapshot with containers', () => {
+      const traverse = (container: any, callback: (c: any) => void) => {
+        [...container.childContainers.flatMap((c) => c.childData), ...container.childData].forEach(
+          (child) => callback(child)
+        );
+      };
+      it('matched result should contain snapshot info', () => {
+        const sut = newProviderWithData([makeData(itBlocks, assertions, testPath)]);
+        sut.getResults(testPath);
+        const call = (sut.events.testSuiteChanged.fire as jest.Mocked<any>).mock.calls.find(
+          (call) => call[0].type === 'result-matched'
+        );
+        expect(call).not.toBeUndefined();
+        const container = sut.getTestSuiteResult(testPath)?.assertionContainer;
+        expect(container).not.toBeUndefined();
 
-      let matchCount = 0;
-      [...container.childContainers.flatMap((c) => c.childData), ...container.childData].forEach(
-        (child) => {
+        let matchCount = 0;
+        traverse(container, (child) => {
           const sBlock = snapshotBlocks.find((block) => block.marker === child.name);
           if (sBlock) {
             expect(child.attrs.snapshot).toEqual(sBlock.isInline ? 'inline' : 'external');
@@ -977,9 +990,37 @@ describe('TestResultProvider', () => {
           } else {
             expect(child.attrs.snapshot).toBeUndefined();
           }
-        }
-      );
-      expect(matchCount).toEqual(2);
+        });
+        expect(matchCount).toEqual(2);
+      });
+      it('if snapshot has no location, it will be ignored', () => {
+        const sut = newProviderWithData([makeData(itBlocks, assertions, testPath)]);
+
+        // make "test 2" snapshot block has no location
+        let found = false;
+        snapshotBlocks.forEach((block) => {
+          if (block.marker === 'test 2') {
+            block.node.loc = null;
+            found = true;
+          }
+        });
+        expect(found).toBeTruthy();
+        sut.getResults(testPath);
+        const container = sut.getTestSuiteResult(testPath)?.assertionContainer;
+        expect(container).not.toBeUndefined();
+
+        let matchCount = 0;
+        traverse(container, (child) => {
+          const sBlock = snapshotBlocks.find((block) => block.marker === child.name);
+          if (sBlock && sBlock.marker !== 'test 2') {
+            expect(child.attrs.snapshot).toEqual(sBlock.isInline ? 'inline' : 'external');
+            matchCount += 1;
+          } else {
+            expect(child.attrs.snapshot).toBeUndefined();
+          }
+        });
+        expect(matchCount).toEqual(1);
+      });
     });
     it('forward previewSnapshot to the snapshot provider', async () => {
       const sut = newProviderWithData([makeData([], [], '')]);

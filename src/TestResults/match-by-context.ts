@@ -109,7 +109,10 @@ export const buildSourceContainer = (sourceRoot: ParsedNode): ContainerNode<ItBl
   return root;
 };
 
-const adjustLocation = (l: Location): Location => ({ column: l.column - 1, line: l.line - 1 });
+const adjustLocation = (l?: Location): Location => ({
+  column: l ? l.column - 1 : 0,
+  line: l ? l.line - 1 : 0,
+});
 const matchPos = (t: ItBlock, a: TestAssertionStatus, forError = false): boolean => {
   if (!hasLocation(t)) {
     return false;
@@ -136,6 +139,9 @@ export const toMatchResult = (
       ? [undefined, undefined, assertionOrErr]
       : [assertionOrErr.data, assertionOrErr.history(reason), undefined];
 
+  if (!test.start || !test.end) {
+    console.warn(`missing location for test block: ${test.name}`);
+  }
   // Note the shift from one-based to zero-based line number and columns
   // assumption: if we reached here, the test start/end must have been defined
   return {
@@ -144,13 +150,17 @@ export const toMatchResult = (
       title: assertion?.title || test.name,
       ancestorTitles: assertion?.ancestorTitles || [],
     },
-    start: adjustLocation(test.start!),
-    end: adjustLocation(test.end!),
+    start: adjustLocation(test.start),
+    end: adjustLocation(test.end),
     status: assertion?.status ?? TestStatus.Unknown,
     shortMessage: assertion?.shortMessage ?? err,
     terseMessage: assertion?.terseMessage,
     lineNumberOfError:
-      assertion?.line && matchPos(test, assertion, true) ? assertion.line - 1 : test.end!.line - 1,
+      assertion?.line && matchPos(test, assertion, true)
+        ? assertion.line - 1
+        : test.end
+        ? test.end.line - 1
+        : 0,
     sourceHistory,
     assertionHistory,
   };

@@ -46,10 +46,26 @@ describe('TestResult', () => {
   });
 
   describe('resultsWithoutAnsiEscapeSequence', () => {
-    it('should not break when there is no data or testResults', () => {
+    it('should not break when there is no data or testResults or failureMessages', () => {
       expect(resultsWithoutAnsiEscapeSequence(undefined)).toEqual(undefined);
       const noTestResults: any = {};
       expect(resultsWithoutAnsiEscapeSequence(noTestResults)).toEqual({});
+      const noFailureMessage: any = {
+        testResults: [
+          {
+            message: 'no failure messages',
+            assertionResults: [
+              {
+                failureMessages: null,
+              },
+            ],
+          },
+        ],
+      };
+      expect(
+        resultsWithoutAnsiEscapeSequence(noFailureMessage).testResults[0].assertionResults[0]
+          .failureMessages
+      ).toEqual([]);
     });
     it('should remove ANSI characters from the test results when provided', () => {
       const data: any = {
