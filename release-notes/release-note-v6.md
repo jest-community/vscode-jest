@@ -3,6 +3,7 @@
 Release Notes <!-- omit in toc --> 
 ---
 
+- [v6.2.5](#v625)
 - [v6.2.4](#v624)
 - [v6.2.3](#v623)
 - [v6.2.2](#v622)
@@ -37,17 +38,37 @@ Release Notes <!-- omit in toc -->
 
 ---
 
+## v6.2.5
+
+**Bug Fixes**
+
+- Fixed an issue (#1145) where an autoRun (watch, on-save) might not update the test status in Editor and TestExplorer in subsequent runs. ([#1146](https://github.com/jest-community/vscode-jest/pull/1146) - @connectdotz)
+
+**CHANGELOG**
+
+- [v6.2.5](https://github.com/jest-community/vscode-jest/releases/tag/v6.2.5)
+
+---
+
 ## v6.2.4
 
 **Enhancements**
+
 - Improved handling of zombie Jest processes during on-demand runs for scenarios like [stencil](https://github.com/jest-community/vscode-jest/issues/1124#issuecomment-2000596099) and [rt-test](https://github.com/jest-community/vscode-jest/issues/1137#issuecomment-2048570421), which previously failed to correctly interpret `"watchAll=false"`. We encourage users to report issues to the underlying systems. In the meantime, this extension will automatically terminate such zombie processes during on-demand runs, preventing them from blocking the execution queue. ([#1134](https://github.com/jest-community/vscode-jest/pull/1134) - @connectdotz)
   
 **Bug Fixes**
+
 - Fixed an issue where the Test Explorer's `Stop` button did not terminate the underlying Jest process, potentially blocking the execution queue for subsequent on-demand runs. ([#1134](https://github.com/jest-community/vscode-jest/pull/1134) - @connectdotz)
 - Resolved a problem where the "Jest: Run All Tests" command was obstructed by the watch mode's ongoing execution. ([#1132](https://github.com/jest-community/vscode-jest/pull/1132) - @connectdotz)
 
+**CHANGELOG**
+
+- [v6.2.4](https://github.com/jest-community/vscode-jest/releases/tag/v6.2.4)
+
+---
 
 ## v6.2.3
+
 This release is a patch release with the following changes:
 
 **Enhancement**  
@@ -55,7 +76,14 @@ This release is a patch release with the following changes:
 - Improve output-focus default behavior for auto runs (e.g., "watch", "on-save"). This will eliminate the issue that the focus auto switching to "TEST RESULTS" panel whenever files are saved in auto-run modes. Now the default behavior is runMode aware and will not auto switch for auto runs unless specifically configured to do so. See [default output focus behavior](https://github.com/jest-community/vscode-jest#default-output-focus). ([#1128](https://github.com/jest-community/vscode-jest/pull/1128) - @connectdotz)
 - docs: update README to fix jest run mode type. ([#1126](https://github.com/jest-community/vscode-jest/pull/1126) - @kota-kamikawa)
   
+**CHANGELOG**
+
+- [v6.2.3](https://github.com/jest-community/vscode-jest/releases/tag/v6.2.3)
+
+---
+
 ## v6.2.2
+
 This release is a patch release with the following changes:
 
 **Enhancement**  
@@ -81,7 +109,10 @@ This release is a patch release with the following changes:
 - Minor update for the output config info in README and release notes. ([#1119](https://github.com/jest-community/vscode-jest/pull/1119) - @connectdotz)
 
 ### CHANGELOG
+
 - [v6.2.2](https://github.com/jest-community/vscode-jest/releases/tag/v6.2.2)
+
+---
 
 ## v6.2.1
 This release is a patch release with the following bug fix:
@@ -90,6 +121,8 @@ This release is a patch release with the following bug fix:
 
 ### CHANGELOG
 - [v6.2.1](https://github.com/jest-community/vscode-jest/releases/tag/v6.2.1)
+
+---
  
 ## v6.2.0
 This version is a rollup of pre-releases [v6.0](#v60-pre-release) through [v6.1](#v61-pre-release), which implemented a few long requested features, such as better monorepo project support, more intuitive ways to defer and resume testing, and showing accurate test results in TEST RESULT panel.
