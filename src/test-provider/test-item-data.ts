@@ -355,7 +355,6 @@ export class WorkspaceRoot extends TestItemDataBase {
       return process.userData.testItem;
     }
 
-    // should only come here for autoRun processes
     let fileName;
     switch (process.request.type) {
       case 'watch-tests':
@@ -366,6 +365,7 @@ export class WorkspaceRoot extends TestItemDataBase {
         fileName = process.request.testFileName;
         break;
       case 'by-file-pattern':
+      case 'by-file-test-pattern':
         fileName = process.request.testFileNamePattern;
         break;
       default:
