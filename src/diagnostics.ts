@@ -5,7 +5,7 @@
 import * as vscode from 'vscode';
 import { existsSync } from 'fs';
 import { TestFileAssertionStatus } from 'jest-editor-support';
-import { TestReconciliationState, TestResult } from './TestResults';
+import { TestStatus, TestResult } from './TestResults';
 import { testIdString } from './helpers';
 
 function createDiagnosticWithRange(
@@ -46,7 +46,7 @@ export function updateCurrentDiagnostics(
   const allDiagnostics = testResults.reduce((list, tr) => {
     const allResults = tr.multiResults ? [tr, ...tr.multiResults] : [tr];
     const diagnostics = allResults
-      .filter((r) => r.status === TestReconciliationState.KnownFail)
+      .filter((r) => r.status === TestStatus.KnownFail)
       .map((r) => {
         const line = r.lineNumberOfError || r.end.line;
         const textLine = editor.document.lineAt(line);
@@ -83,7 +83,7 @@ export function updateDiagnostics(
     if (!result.assertions) {
       return;
     }
-    const asserts = result.assertions.filter((a) => a.status === TestReconciliationState.KnownFail);
+    const asserts = result.assertions.filter((a) => a.status === TestStatus.KnownFail);
     collection.set(
       uri,
       asserts.map((assertion) => {
@@ -100,7 +100,7 @@ export function updateDiagnostics(
   testResults.forEach((result) => {
     const uri = vscode.Uri.file(result.file);
     switch (result.status) {
-      case TestReconciliationState.KnownFail:
+      case TestStatus.KnownFail:
         if (result.assertions && result.assertions.length <= 0) {
           addTestFileError(result, uri);
         } else {

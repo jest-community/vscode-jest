@@ -38,9 +38,9 @@ import {
   TestResultProvider,
   TestResultProviderOptions,
 } from '../../src/TestResults/TestResultProvider';
-import { TestReconciliationState } from '../../src/TestResults';
+import { TestStatus } from '../../src/TestResults';
 import * as helper from '../test-helper';
-import { ItBlock, TestAssertionStatus, TestReconcilationState } from 'jest-editor-support';
+import { ItBlock, TestAssertionStatus, TestReconciliationState } from 'jest-editor-support';
 import * as match from '../../src/TestResults/match-by-context';
 import { mockJestExtEvents } from '../test-helper';
 import { ExtSnapshotBlock, SnapshotProvider } from '../../src/TestResults/snapshot-provider';
@@ -62,11 +62,11 @@ const createDataSet = (): [ItBlock[], TestAssertionStatus[], ExtSnapshotBlock[]]
     helper.makeItBlock('test 5', [42, 43, 44, 45]),
   ];
   const assertions = [
-    helper.makeAssertion('test 1', TestReconciliationState.KnownSuccess, undefined, [2, 0]),
-    helper.makeAssertion('test 2', TestReconciliationState.KnownFail, undefined, [12, 0]),
-    helper.makeAssertion('test 3', TestReconciliationState.KnownSkip, undefined, [22, 0]),
-    helper.makeAssertion('test 4', TestReconciliationState.Unknown, undefined, [32, 0]),
-    helper.makeAssertion('test 5', TestReconciliationState.KnownSuccess, undefined, [42, 0]),
+    helper.makeAssertion('test 1', TestStatus.KnownSuccess, undefined, [2, 0]),
+    helper.makeAssertion('test 2', TestStatus.KnownFail, undefined, [12, 0]),
+    helper.makeAssertion('test 3', TestStatus.KnownSkip, undefined, [22, 0]),
+    helper.makeAssertion('test 4', TestStatus.Unknown, undefined, [32, 0]),
+    helper.makeAssertion('test 5', TestStatus.KnownSuccess, undefined, [42, 0]),
   ];
   const snapshots = [
     helper.makeSnapshotBlock('test 2', false, 13),
@@ -79,7 +79,7 @@ interface TestData {
   itBlocks: ItBlock[];
   assertions: TestAssertionStatus[];
   file: string;
-  fStatus: TestReconcilationState;
+  fStatus: TestReconciliationState;
   message?: string;
 }
 
@@ -87,7 +87,7 @@ const makeData = (
   itBlocks: ItBlock[],
   assertions: TestAssertionStatus[],
   file: string,
-  fStatus: TestReconcilationState = 'Unknown',
+  fStatus: TestReconciliationState = 'Unknown',
   message?: string
 ): TestData => ({
   itBlocks,
@@ -135,7 +135,7 @@ describe('TestResultProvider', () => {
   const testBlock = helper.makeItBlock('test name', [2, 3, 4, 5]);
   const assertion = helper.makeAssertion(
     testBlock.name,
-    TestReconciliationState.KnownFail,
+    TestStatus.KnownFail,
     undefined,
     undefined,
     {
@@ -156,11 +156,14 @@ describe('TestResultProvider', () => {
   };
 
   let mockSnapshotProvider;
+  let logSpy;
+  let warnSpy;
   beforeEach(() => {
     jest.resetAllMocks();
     jest.restoreAllMocks();
-    console.warn = jest.fn();
-    console.log = jest.fn();
+
+    logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     mockTestReconciler.mockReturnValue(mockReconciler);
     (vscode.EventEmitter as jest.Mocked<any>) = jest.fn().mockImplementation(helper.mockEvent);
     mockSnapshotProvider = {
@@ -168,6 +171,11 @@ describe('TestResultProvider', () => {
       previewSnapshot: jest.fn().mockReturnValue(Promise.resolve()),
     };
     (SnapshotProvider as jest.Mocked<any>).mockReturnValue(mockSnapshotProvider);
+  });
+  afterEach(() => {
+    // Restore the original implementations
+    logSpy.mockRestore();
+    warnSpy.mockRestore();
   });
 
   describe('getResults()', () => {
@@ -200,7 +208,7 @@ describe('TestResultProvider', () => {
       const sut = newProviderWithData([makeData([testBlock], [assertionC], filePath)]);
       const actual = sut.getResults(filePath);
       expect(actual).toHaveLength(1);
-      expect(actual[0].status).toBe(TestReconciliationState.KnownFail);
+      expect(actual[0].status).toBe(TestStatus.KnownFail);
     });
 
     it('should look up the test result by test name', () => {
@@ -230,7 +238,7 @@ describe('TestResultProvider', () => {
       const actual = sut.getResults(filePath);
 
       expect(actual).toHaveLength(1);
-      expect(actual[0].status).toBe(TestReconciliationState.Unknown);
+      expect(actual[0].status).toBe(TestStatus.Unknown);
       expect(actual[0].shortMessage).not.toBeUndefined();
       expect(actual[0].terseMessage).toBeUndefined();
     });
@@ -268,15 +276,15 @@ describe('TestResultProvider', () => {
       beforeEach(() => {});
       it('can resolve as long as they have the same context structure', () => {
         const assertions = [
-          helper.makeAssertion(testBlock.name, TestReconciliationState.KnownFail, [], [1, 0]),
-          helper.makeAssertion(testBlock.name, TestReconciliationState.KnownSuccess, [], [10, 0]),
+          helper.makeAssertion(testBlock.name, TestStatus.KnownFail, [], [1, 0]),
+          helper.makeAssertion(testBlock.name, TestStatus.KnownSuccess, [], [10, 0]),
         ];
         const sut = newProviderWithData([makeData([testBlock, testBlock2], assertions, filePath)]);
         const actual = sut.getResults(filePath);
 
         expect(actual).toHaveLength(2);
-        expect(actual[0].status).toBe(TestReconciliationState.KnownFail);
-        expect(actual[1].status).toBe(TestReconciliationState.KnownSuccess);
+        expect(actual[0].status).toBe(TestStatus.KnownFail);
+        expect(actual[1].status).toBe(TestStatus.KnownSuccess);
       });
       it('however when context structures are different, duplicate names within the same layer can not be resolved.', () => {
         setupMockParse([testBlock, testBlock2]);
@@ -286,22 +294,22 @@ describe('TestResultProvider', () => {
         // into a group-node, which made the context difference: source: 2 nodes, assertion: 1 node.
         // but since the 2 assertions' name matched the testBlock, it will still be considered as 1-to-many match
         mockReconciler.assertionsForTestFile.mockReturnValueOnce([
-          helper.makeAssertion(testBlock.name, TestReconciliationState.KnownSuccess, [], [1, 0]),
-          helper.makeAssertion(testBlock.name, TestReconciliationState.KnownFail, [], [1, 0]),
+          helper.makeAssertion(testBlock.name, TestStatus.KnownSuccess, [], [1, 0]),
+          helper.makeAssertion(testBlock.name, TestStatus.KnownFail, [], [1, 0]),
         ]);
         const actual = sut.getResults(filePath);
 
         expect(actual).toHaveLength(2);
-        expect(actual[0].status).toBe(TestReconciliationState.Unknown);
-        expect(actual[1].status).toBe(TestReconciliationState.Unknown);
+        expect(actual[0].status).toBe(TestStatus.Unknown);
+        expect(actual[1].status).toBe(TestStatus.Unknown);
       });
     });
 
     it('should only mark error line number if it is within the right itBlock', () => {
       const testBlock2 = helper.makeItBlock('test2', [5, 3, 7, 5]);
       const assertions = [
-        helper.makeAssertion(testBlock.name, TestReconciliationState.KnownSuccess, [], [1, 1]),
-        helper.makeAssertion(testBlock2.name, TestReconciliationState.KnownFail, [], [2, 2], {
+        helper.makeAssertion(testBlock.name, TestStatus.KnownSuccess, [], [1, 1]),
+        helper.makeAssertion(testBlock2.name, TestStatus.KnownFail, [], [2, 2], {
           line: 3,
         }),
       ];
@@ -310,13 +318,10 @@ describe('TestResultProvider', () => {
 
       expect(actual).toHaveLength(2);
       expect(actual.map((a) => a.name)).toEqual([testBlock.name, testBlock2.name]);
-      expect(actual.map((a) => a.status)).toEqual([
-        TestReconciliationState.KnownSuccess,
-        TestReconciliationState.KnownFail,
-      ]);
-      expect(
-        actual.find((a) => a.status === TestReconciliationState.KnownFail)?.lineNumberOfError
-      ).toEqual(testBlock2.end.line - 1);
+      expect(actual.map((a) => a.status)).toEqual([TestStatus.KnownSuccess, TestStatus.KnownFail]);
+      expect(actual.find((a) => a.status === TestStatus.KnownFail)?.lineNumberOfError).toEqual(
+        testBlock2.end.line - 1
+      );
     });
 
     it('can handle template literal in the context', () => {
@@ -330,16 +335,16 @@ describe('TestResultProvider', () => {
       );
 
       const assertions = [
-        helper.makeAssertion(testBlock.name, TestReconciliationState.KnownSuccess, [], [1, 0]),
+        helper.makeAssertion(testBlock.name, TestStatus.KnownSuccess, [], [1, 0]),
         helper.makeAssertion(
           'template literal I got something like this',
-          TestReconciliationState.KnownFail,
+          TestStatus.KnownFail,
           [],
           [2, 0]
         ),
         helper.makeAssertion(
           'template literal 1, 2: {something}',
-          TestReconciliationState.KnownSuccess,
+          TestStatus.KnownSuccess,
           [],
           [3, 0]
         ),
@@ -365,9 +370,9 @@ describe('TestResultProvider', () => {
         assertions[2].ancestorTitles,
       ]);
       expect(actual.map((a) => a.status)).toEqual([
-        TestReconciliationState.KnownSuccess,
-        TestReconciliationState.KnownFail,
-        TestReconciliationState.KnownSuccess,
+        TestStatus.KnownSuccess,
+        TestStatus.KnownFail,
+        TestStatus.KnownSuccess,
       ]);
     });
 
@@ -379,44 +384,39 @@ describe('TestResultProvider', () => {
 
       it('report warning if match failed', () => {
         const assertions = [
-          helper.makeAssertion(
-            'another name',
-            TestReconciliationState.KnownSuccess,
-            ['d-1'],
-            [20, 25]
-          ),
+          helper.makeAssertion('another name', TestStatus.KnownSuccess, ['d-1'], [20, 25]),
         ];
         const sut = newProviderWithData([makeData([testBlock], assertions, filePath)]);
         const actual = sut.getResults(filePath);
         expect(actual).toHaveLength(1);
-        expect(actual[0].status).toBe(TestReconciliationState.Unknown);
+        expect(actual[0].status).toBe(TestStatus.Unknown);
         expect(actual[0].shortMessage).not.toBeUndefined();
         expect(consoleWarning).toHaveBeenCalled();
       });
       it('1-many match (jest.each) detected', () => {
         const assertions = [
-          helper.makeAssertion(testBlock.name, TestReconciliationState.KnownSuccess, [], [1, 12]),
-          helper.makeAssertion(testBlock.name, TestReconciliationState.KnownSuccess, [], [1, 12]),
-          helper.makeAssertion(testBlock.name, TestReconciliationState.KnownSuccess, [], [1, 12]),
+          helper.makeAssertion(testBlock.name, TestStatus.KnownSuccess, [], [1, 12]),
+          helper.makeAssertion(testBlock.name, TestStatus.KnownSuccess, [], [1, 12]),
+          helper.makeAssertion(testBlock.name, TestStatus.KnownSuccess, [], [1, 12]),
         ];
         const sut = newProviderWithData([
           makeData([{ ...testBlock, lastProperty: 'each' }], assertions, filePath),
         ]);
         const actual = sut.getResults(filePath);
         expect(actual).toHaveLength(1);
-        expect(actual[0].status).toBe(TestReconciliationState.KnownSuccess);
+        expect(actual[0].status).toBe(TestStatus.KnownSuccess);
         expect(actual[0].shortMessage).toBeUndefined();
         expect(consoleWarning).not.toHaveBeenCalled();
       });
       it('when all goes according to plan, no warning but can still log debug message', () => {
         const assertions = [
-          helper.makeAssertion(testBlock.name, TestReconciliationState.KnownFail, [], [1, 12]),
+          helper.makeAssertion(testBlock.name, TestStatus.KnownFail, [], [1, 12]),
         ];
         const sut = newProviderWithData([makeData([testBlock], assertions, filePath)]);
         sut.options = { verbose: true };
         const actual = sut.getResults(filePath);
         expect(actual).toHaveLength(1);
-        expect(actual[0].status).toBe(TestReconciliationState.KnownFail);
+        expect(actual[0].status).toBe(TestStatus.KnownFail);
         expect(actual[0].shortMessage).toBeUndefined();
         expect(consoleWarning).not.toHaveBeenCalled();
       });
@@ -428,10 +428,10 @@ describe('TestResultProvider', () => {
 
       it('test results shared the same range will be grouped', () => {
         const assertions = [
-          helper.makeAssertion(testBlock.name, TestReconciliationState.KnownFail, [], [1, 12]),
-          helper.makeAssertion('p-test-success', TestReconciliationState.KnownSuccess, [], [8, 20]),
-          helper.makeAssertion('p-test-fail-1', TestReconciliationState.KnownFail, [], [8, 20]),
-          helper.makeAssertion('p-test-fail-2', TestReconciliationState.KnownFail, [], [8, 20]),
+          helper.makeAssertion(testBlock.name, TestStatus.KnownFail, [], [1, 12]),
+          helper.makeAssertion('p-test-success', TestStatus.KnownSuccess, [], [8, 20]),
+          helper.makeAssertion('p-test-fail-1', TestStatus.KnownFail, [], [8, 20]),
+          helper.makeAssertion('p-test-fail-2', TestStatus.KnownFail, [], [8, 20]),
         ];
         const sut = newProviderWithData([makeData([testBlock, testBlock2], assertions, filePath)]);
         const actual = sut.getResults(filePath);
@@ -439,27 +439,24 @@ describe('TestResultProvider', () => {
         // should only have 2 test results returned, as the last 3 assertions match to the same test block
         expect(actual).toHaveLength(2);
         expect(actual.map((a) => a.name)).toEqual([testBlock.name, 'p-test-fail-1']);
-        expect(actual.map((a) => a.status)).toEqual([
-          TestReconciliationState.KnownFail,
-          TestReconciliationState.KnownFail,
-        ]);
+        expect(actual.map((a) => a.status)).toEqual([TestStatus.KnownFail, TestStatus.KnownFail]);
 
         // the parameterized test use the first failed results as its "primary" result and
         // put the other 2 tests in "extraResults" sorted by test precedence: fail > success
         const pResult = actual[1];
         expect(pResult.multiResults).toHaveLength(2);
         expect(pResult.multiResults!.map((a) => [a.name, a.status])).toEqual([
-          ['p-test-fail-2', TestReconciliationState.KnownFail],
-          ['p-test-success', TestReconciliationState.KnownSuccess],
+          ['p-test-fail-2', TestStatus.KnownFail],
+          ['p-test-success', TestStatus.KnownSuccess],
         ]);
       });
       it('grouped test results are sorted by status precedence fail > unknown > skip > success', () => {
         const assertions = [
-          helper.makeAssertion(testBlock.name, TestReconciliationState.KnownFail, [], [1, 12]),
-          helper.makeAssertion('p-test-success', TestReconciliationState.KnownSuccess, [], [8, 20]),
-          helper.makeAssertion('p-test-skip', TestReconciliationState.KnownSkip, [], [8, 20]),
-          helper.makeAssertion('p-test-fail', TestReconciliationState.KnownFail, [], [8, 20]),
-          helper.makeAssertion('p-test-unknown', TestReconciliationState.Unknown, [], [8, 20]),
+          helper.makeAssertion(testBlock.name, TestStatus.KnownFail, [], [1, 12]),
+          helper.makeAssertion('p-test-success', TestStatus.KnownSuccess, [], [8, 20]),
+          helper.makeAssertion('p-test-skip', TestStatus.KnownSkip, [], [8, 20]),
+          helper.makeAssertion('p-test-fail', TestStatus.KnownFail, [], [8, 20]),
+          helper.makeAssertion('p-test-unknown', TestStatus.Unknown, [], [8, 20]),
         ];
         const sut = newProviderWithData([makeData([testBlock, testBlock2], assertions, filePath)]);
 
@@ -479,10 +476,10 @@ describe('TestResultProvider', () => {
       });
       it('parameterized test is consider failed/skip/unknown if any of its test has the corresponding status', () => {
         const assertions = [
-          helper.makeAssertion(testBlock.name, TestReconciliationState.KnownFail, [], [1, 12]),
-          helper.makeAssertion('p-test-success', TestReconciliationState.KnownSuccess, [], [8, 20]),
-          helper.makeAssertion('p-test-skip', TestReconciliationState.KnownSkip, [], [8, 20]),
-          helper.makeAssertion('p-test-unknown', TestReconciliationState.Unknown, [], [8, 20]),
+          helper.makeAssertion(testBlock.name, TestStatus.KnownFail, [], [1, 12]),
+          helper.makeAssertion('p-test-success', TestStatus.KnownSuccess, [], [8, 20]),
+          helper.makeAssertion('p-test-skip', TestStatus.KnownSkip, [], [8, 20]),
+          helper.makeAssertion('p-test-unknown', TestStatus.Unknown, [], [8, 20]),
         ];
         const sut = newProviderWithData([makeData([testBlock, testBlock2], assertions, filePath)]);
         const actual = sut.getResults(filePath);
@@ -497,19 +494,9 @@ describe('TestResultProvider', () => {
       });
       it('parameterized test are successful only if all of its tests succeeded', () => {
         const assertions = [
-          helper.makeAssertion(testBlock.name, TestReconciliationState.KnownFail, [], [1, 12]),
-          helper.makeAssertion(
-            'p-test-success-1',
-            TestReconciliationState.KnownSuccess,
-            [],
-            [8, 20]
-          ),
-          helper.makeAssertion(
-            'p-test-success-2',
-            TestReconciliationState.KnownSuccess,
-            [],
-            [8, 20]
-          ),
+          helper.makeAssertion(testBlock.name, TestStatus.KnownFail, [], [1, 12]),
+          helper.makeAssertion('p-test-success-1', TestStatus.KnownSuccess, [], [8, 20]),
+          helper.makeAssertion('p-test-success-2', TestStatus.KnownSuccess, [], [8, 20]),
         ];
         const sut = newProviderWithData([makeData([testBlock, testBlock2], assertions, filePath)]);
         const actual = sut.getResults(filePath);
@@ -530,30 +517,10 @@ describe('TestResultProvider', () => {
       });
       it('test from different parameter block can still be grouped', () => {
         const assertions = [
-          helper.makeAssertion(
-            'p-test-1',
-            TestReconciliationState.KnownSuccess,
-            ['p-describe-1'],
-            [8, 20]
-          ),
-          helper.makeAssertion(
-            'p-test-2',
-            TestReconciliationState.KnownFail,
-            ['p-describe-1'],
-            [8, 20]
-          ),
-          helper.makeAssertion(
-            'p-test-1',
-            TestReconciliationState.KnownSuccess,
-            ['p-describe-2'],
-            [8, 20]
-          ),
-          helper.makeAssertion(
-            'p-test-2',
-            TestReconciliationState.KnownSuccess,
-            ['p-describe-2'],
-            [8, 20]
-          ),
+          helper.makeAssertion('p-test-1', TestStatus.KnownSuccess, ['p-describe-1'], [8, 20]),
+          helper.makeAssertion('p-test-2', TestStatus.KnownFail, ['p-describe-1'], [8, 20]),
+          helper.makeAssertion('p-test-1', TestStatus.KnownSuccess, ['p-describe-2'], [8, 20]),
+          helper.makeAssertion('p-test-2', TestStatus.KnownSuccess, ['p-describe-2'], [8, 20]),
         ];
         const sut = newProviderWithData([makeData([dBlock], assertions, filePath)]);
         const actual = sut.getResults(filePath);
@@ -563,7 +530,7 @@ describe('TestResultProvider', () => {
         const pResult = actual[0];
         expect([pResult.name, pResult.status]).toEqual([
           'p-describe-1 p-test-2',
-          TestReconciliationState.KnownFail,
+          TestStatus.KnownFail,
         ]);
         expect(pResult.multiResults).toHaveLength(3);
         expect(pResult.multiResults!.map((a) => a.name)).toEqual([
@@ -639,12 +606,12 @@ describe('TestResultProvider', () => {
         });
         sut.getResults('whatever');
         forceParseError();
-        expect(console.log).not.toHaveBeenCalled();
+        expect(logSpy).not.toHaveBeenCalled();
 
         sut = newProviderWithData([makeData(itBlocks, assertions, 'whatever')], { verbose: true });
         forceParseError();
         sut.getResults('whatever');
-        expect(console.log).toHaveBeenCalled();
+        expect(logSpy).toHaveBeenCalled();
       });
     });
   });
@@ -998,19 +965,24 @@ describe('TestResultProvider', () => {
         blocks: snapshotBlocks,
       }));
     });
-    it('matched result should contain snapshot info', () => {
-      const sut = newProviderWithData([makeData(itBlocks, assertions, testPath)]);
-      sut.getResults(testPath);
-      const call = (sut.events.testSuiteChanged.fire as jest.Mocked<any>).mock.calls.find(
-        (call) => call[0].type === 'result-matched'
-      );
-      expect(call).not.toBeUndefined();
-      const container = sut.getTestSuiteResult(testPath)?.assertionContainer;
-      expect(container).not.toBeUndefined();
+    describe('match snapshot with containers', () => {
+      const traverse = (container: any, callback: (c: any) => void) => {
+        [...container.childContainers.flatMap((c) => c.childData), ...container.childData].forEach(
+          (child) => callback(child)
+        );
+      };
+      it('matched result should contain snapshot info', () => {
+        const sut = newProviderWithData([makeData(itBlocks, assertions, testPath)]);
+        sut.getResults(testPath);
+        const call = (sut.events.testSuiteChanged.fire as jest.Mocked<any>).mock.calls.find(
+          (call) => call[0].type === 'result-matched'
+        );
+        expect(call).not.toBeUndefined();
+        const container = sut.getTestSuiteResult(testPath)?.assertionContainer;
+        expect(container).not.toBeUndefined();
 
-      let matchCount = 0;
-      [...container.childContainers.flatMap((c) => c.childData), ...container.childData].forEach(
-        (child) => {
+        let matchCount = 0;
+        traverse(container, (child) => {
           const sBlock = snapshotBlocks.find((block) => block.marker === child.name);
           if (sBlock) {
             expect(child.attrs.snapshot).toEqual(sBlock.isInline ? 'inline' : 'external');
@@ -1018,9 +990,37 @@ describe('TestResultProvider', () => {
           } else {
             expect(child.attrs.snapshot).toBeUndefined();
           }
-        }
-      );
-      expect(matchCount).toEqual(2);
+        });
+        expect(matchCount).toEqual(2);
+      });
+      it('if snapshot has no location, it will be ignored', () => {
+        const sut = newProviderWithData([makeData(itBlocks, assertions, testPath)]);
+
+        // make "test 2" snapshot block has no location
+        let found = false;
+        snapshotBlocks.forEach((block) => {
+          if (block.marker === 'test 2') {
+            block.node.loc = null;
+            found = true;
+          }
+        });
+        expect(found).toBeTruthy();
+        sut.getResults(testPath);
+        const container = sut.getTestSuiteResult(testPath)?.assertionContainer;
+        expect(container).not.toBeUndefined();
+
+        let matchCount = 0;
+        traverse(container, (child) => {
+          const sBlock = snapshotBlocks.find((block) => block.marker === child.name);
+          if (sBlock && sBlock.marker !== 'test 2') {
+            expect(child.attrs.snapshot).toEqual(sBlock.isInline ? 'inline' : 'external');
+            matchCount += 1;
+          } else {
+            expect(child.attrs.snapshot).toBeUndefined();
+          }
+        });
+        expect(matchCount).toEqual(1);
+      });
     });
     it('forward previewSnapshot to the snapshot provider', async () => {
       const sut = newProviderWithData([makeData([], [], '')]);
