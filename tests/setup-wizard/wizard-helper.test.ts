@@ -504,8 +504,8 @@ describe('showActionMessage', () => {
     type === 'info'
       ? vscode.window.showInformationMessage
       : type === 'warning'
-      ? vscode.window.showWarningMessage
-      : vscode.window.showErrorMessage;
+        ? vscode.window.showWarningMessage
+        : vscode.window.showErrorMessage;
 
   beforeEach(() => {
     jest.resetAllMocks();

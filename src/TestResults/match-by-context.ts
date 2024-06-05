@@ -159,8 +159,8 @@ export const toMatchResult = (
       assertion?.line && matchPos(test, assertion, true)
         ? assertion.line - 1
         : test.end
-        ? test.end.line - 1
-        : 0,
+          ? test.end.line - 1
+          : 0,
     sourceHistory,
     assertionHistory,
   };

@@ -67,8 +67,14 @@ export class JestTestRun implements JestExtOutput, TestRunProtocol {
     if (!this._run && !this.isCancelled) {
       const runName = `${this.name} (${this.runCount++})`;
 
-      this._run = this.createRun(this.request, runName);
-      this._run.appendOutput(`\r\nTest run "${runName}" started\r\n`);
+      // vscode seems to identify run by the request instance, so we need to create a new request for each run
+      const request = new vscode.TestRunRequest(
+        this.request.include,
+        this.request.exclude,
+        this.request.profile
+      );
+      this._run = this.createRun(request, runName);
+      this._run.appendOutput(`\r\nTestRun "${runName}" started\r\n`);
 
       // ignore skipped tests if there are more than one test to run
       // this is to prevent the later runs override the previous runs's result

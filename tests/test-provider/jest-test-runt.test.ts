@@ -45,6 +45,8 @@ describe('JestTestRun', () => {
       }));
 
     mockRequest = {};
+    (vscode.TestRunRequest as jest.Mocked<any>).mockClear();
+    (vscode.TestRunRequest as jest.Mocked<any>).mockImplementation(() => mockRequest);
     jestRun = new JestTestRun('test', mockContext, mockRequest, mockCreateTestRun);
   });
 
@@ -376,10 +378,36 @@ describe('JestTestRun', () => {
       expect(run1.end).toHaveBeenCalled();
 
       const newRequest: any = { include: ['test1'] };
+      (vscode.TestRunRequest as jest.Mocked<any>).mockImplementation(() => newRequest);
       jestRun.updateRequest(newRequest);
       jestRun.started({} as any);
       expect(mockCreateTestRun).toHaveBeenCalledTimes(2);
-      expect(mockCreateTestRun.mock.calls[1][0]).toBe(newRequest);
+      expect(mockCreateTestRun.mock.calls[1][0]).toEqual(newRequest);
+      expect(vscode.TestRunRequest).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('supports continuous test run', () => {
+    it('by start/stop underlying TestRun per continuous run session', () => {
+      jestRun = new JestTestRun('test', mockContext, mockRequest, mockCreateTestRun);
+
+      // first run
+      jestRun.started({} as any);
+      expect(mockCreateTestRun).toHaveBeenCalledTimes(1);
+      const run1 = mockCreateTestRun.mock.results[0].value;
+      expect(run1.started).toHaveBeenCalled();
+      jestRun.end();
+      expect(run1.end).toHaveBeenCalled();
+      expect(vscode.TestRunRequest).toHaveBeenCalledTimes(1);
+
+      // 2nd run
+      jestRun.started({} as any);
+      expect(mockCreateTestRun).toHaveBeenCalledTimes(2);
+      const run2 = mockCreateTestRun.mock.results[1].value;
+      expect(run2.started).toHaveBeenCalled();
+      jestRun.end();
+      expect(run2.end).toHaveBeenCalled();
+      expect(vscode.TestRunRequest).toHaveBeenCalledTimes(2);
     });
   });
   describe('cancel', () => {
