@@ -217,8 +217,8 @@ export class StatusBar {
     const summary: SummaryState = stats.isDirty
       ? 'stats-not-sync'
       : stats.fail + stats.unknown === 0 && stats.success > 0
-      ? 'summary-pass'
-      : 'summary-warning';
+        ? 'summary-pass'
+        : 'summary-warning';
     const output: string[] = [this.getMessageByState(summary, showIcon)];
 
     if (summary !== 'summary-pass' || alwaysShowDetails) {

@@ -227,8 +227,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
       let program = path.isAbsolute(cmd)
         ? cmd
         : absoluteRootPath
-        ? path.resolve(absoluteRootPath, cmd)
-        : ['${workspaceFolder}', cmd].join(path.sep);
+          ? path.resolve(absoluteRootPath, cmd)
+          : ['${workspaceFolder}', cmd].join(path.sep);
       program = this.adjustProgram(program);
       const args = [...cmdArgs, ...config.args];
       finalConfig = { ...finalConfig, cwd, program, args };
