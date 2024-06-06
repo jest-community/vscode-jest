@@ -370,6 +370,9 @@ export class WorkspaceRoot extends TestItemDataBase {
         fileName = process.request.testFileNamePattern;
         break;
       default:
+        // the current flow would not reach here, but for future proofing
+        // and avoiding failed silently, we will keep the code around but disable coverage reporting
+        /* istanbul ignore next */
         throw new Error(`unsupported external process type ${process.request.type}`);
     }
 
@@ -405,8 +408,9 @@ export class WorkspaceRoot extends TestItemDataBase {
       return;
     }
 
+    let run;
     try {
-      const run = this.getJestRun(event, true);
+      run = this.getJestRun(event, true);
       switch (event.type) {
         case 'scheduled': {
           this.deepItemState(event.process.userData?.testItem, run.enqueued);
@@ -461,7 +465,8 @@ export class WorkspaceRoot extends TestItemDataBase {
       }
     } catch (err) {
       this.log('error', `<onRunEvent> ${event.type} failed:`, err);
-      this.context.output.write(`<onRunEvent> ${event.type} failed: ${err}`, 'error');
+      run?.write(`<onRunEvent> ${event.type} failed: ${err}`, 'error');
+      run?.end({ reason: 'Internal error onRunEvent' });
     }
   };
 

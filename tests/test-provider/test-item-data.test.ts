@@ -1513,11 +1513,11 @@ describe('test-item-data', () => {
               expect(process.userData.run.write).toHaveBeenCalledWith('whatever', 'error');
             });
           });
-          describe('request not supported', () => {
+          describe('on request not supported', () => {
             it.each`
               request
               ${{ type: 'not-test' }}
-            `('$request', ({ request }) => {
+            `('do nothing for request: $request', ({ request }) => {
               const process = { id: 'whatever', request };
 
               // starting the process
@@ -1556,6 +1556,40 @@ describe('test-item-data', () => {
             expect.stringContaining('60000'),
             errors.LONG_RUNNING_TESTS
           );
+        });
+        describe('will catch runtime error and close the run', () => {
+          let process, jestRun;
+          beforeEach(() => {
+            process = mockScheduleProcess(context);
+            jestRun = createTestRun();
+            process.userData = { run: jestRun, testItem: env.testFile };
+          });
+
+          it('when run failed to be created', () => {
+            // simulate a runtime error
+            jestRun.addProcess = jest.fn(() => {
+              throw new Error('forced error');
+            });
+            // this will not throw error
+            env.onRunEvent({ type: 'start', process });
+
+            expect(jestRun.started).toHaveBeenCalledTimes(0);
+            expect(jestRun.end).toHaveBeenCalledTimes(0);
+            expect(jestRun.write).toHaveBeenCalledTimes(0);
+          });
+          it('when run is created', () => {
+            // simulate a runtime error
+            jestRun.started = jest.fn(() => {
+              throw new Error('forced error');
+            });
+
+            // this will not throw error
+            env.onRunEvent({ type: 'start', process });
+
+            expect(jestRun.started).toHaveBeenCalledTimes(1);
+            expect(jestRun.end).toHaveBeenCalledTimes(1);
+            expect(jestRun.write).toHaveBeenCalledTimes(1);
+          });
         });
       });
     });
