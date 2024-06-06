@@ -1404,13 +1404,15 @@ describe('test-item-data', () => {
             mockedJestTestRun.mockClear();
           });
           describe.each`
-            request                                                              | withFile
-            ${{ type: 'watch-tests' }}                                           | ${false}
-            ${{ type: 'watch-all-tests' }}                                       | ${false}
-            ${{ type: 'all-tests' }}                                             | ${false}
-            ${{ type: 'by-file', testFileName: file }}                           | ${true}
-            ${{ type: 'by-file', testFileName: 'source.ts', notTestFile: true }} | ${false}
-            ${{ type: 'by-file-pattern', testFileNamePattern: file }}            | ${true}
+            request                                                                                     | withFile
+            ${{ type: 'watch-tests' }}                                                                  | ${false}
+            ${{ type: 'watch-all-tests' }}                                                              | ${false}
+            ${{ type: 'all-tests' }}                                                                    | ${false}
+            ${{ type: 'by-file', testFileName: file }}                                                  | ${true}
+            ${{ type: 'by-file', testFileName: 'source.ts', notTestFile: true }}                        | ${false}
+            ${{ type: 'by-file-test', testFileName: file, testNamePattern: 'whatever' }}                | ${true}
+            ${{ type: 'by-file-pattern', testFileNamePattern: file }}                                   | ${true}
+            ${{ type: 'by-file-test-pattern', testFileNamePattern: file, testNamePattern: 'whatever' }} | ${true}
           `('will create a new run and use it throughout: $request', ({ request, withFile }) => {
             it('if only reports assertion-update, everything should still work', () => {
               const process: any = { id: 'whatever', request };
@@ -1515,8 +1517,6 @@ describe('test-item-data', () => {
             it.each`
               request
               ${{ type: 'not-test' }}
-              ${{ type: 'by-file-test', testFileName: file, testNamePattern: 'whatever' }}
-              ${{ type: 'by-file-test-pattern', testFileNamePattern: file, testNamePattern: 'whatever' }}
             `('$request', ({ request }) => {
               const process = { id: 'whatever', request };
 

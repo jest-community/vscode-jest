@@ -362,6 +362,7 @@ export class WorkspaceRoot extends TestItemDataBase {
       case 'all-tests':
         return this.item;
       case 'by-file':
+      case 'by-file-test':
         fileName = process.request.testFileName;
         break;
       case 'by-file-pattern':
