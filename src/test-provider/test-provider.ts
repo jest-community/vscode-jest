@@ -7,6 +7,7 @@ import { Logging } from '../logging';
 import { toErrorString } from '../helpers';
 import { tiContextManager } from './test-item-context-manager';
 import { JestTestRun } from './jest-test-run';
+import { JestTestCoverageProvider } from './test-coverage';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const isDebuggable = (arg: any): arg is Debuggable => arg && typeof arg.getDebugInfo === 'function';
@@ -16,6 +17,7 @@ export class JestTestProvider {
   private context: JestTestProviderContext;
   private workspaceRoot: WorkspaceRoot;
   private log: Logging;
+  private coverageProvider: JestTestCoverageProvider;
 
   constructor(jestContext: JestExtExplorerContext) {
     this.log = jestContext.loggingFactory.create('JestTestProvider');
@@ -29,6 +31,7 @@ export class JestTestProvider {
       this.createProfiles(this.controller)
     );
     this.workspaceRoot = new WorkspaceRoot(this.context);
+    this.coverageProvider = new JestTestCoverageProvider(this.context.ext.sessionEvents);
     this.updateMenuContext();
   }
 
@@ -58,7 +61,7 @@ export class JestTestProvider {
     const runTag = new vscode.TestTag(TestTagId.Run);
     const debugTag = new vscode.TestTag(TestTagId.Debug);
     const runProfile = controller.createRunProfile(
-      'run',
+      'run tests',
       vscode.TestRunProfileKind.Run,
       this.runTests,
       true,
@@ -71,14 +74,28 @@ export class JestTestProvider {
       );
     };
     const debugProfile = controller.createRunProfile(
-      'debug',
+      'debug tests',
       vscode.TestRunProfileKind.Debug,
       this.runTests,
       true,
       debugTag
     );
-    return [runProfile, debugProfile];
+    const coverageProfile = controller.createRunProfile(
+      'run tests with coverage',
+      vscode.TestRunProfileKind.Coverage,
+      this.runTests,
+      false,
+      runTag
+    );
+    coverageProfile.loadDetailedCoverage = this.loadDetailedCoverage;
+    return [runProfile, debugProfile, coverageProfile];
   };
+
+  private loadDetailedCoverage = async (
+    _testRun: vscode.TestRun,
+    fileCoverage: vscode.FileCoverage
+  ): Promise<vscode.FileCoverageDetail[]> =>
+    this.coverageProvider.loadDetailedCoverage(fileCoverage);
 
   private discoverTest = (item: vscode.TestItem | undefined): void => {
     const theItem = item ?? this.workspaceRoot.item;
@@ -161,7 +178,7 @@ export class JestTestProvider {
     }
 
     const run = this.context.createTestRun(req, {
-      name: `runTest: ${this.controller.id}`,
+      name: `${request.profile?.label ?? 'runTest'}: ${this.controller.id}`,
     });
 
     cancelToken?.onCancellationRequested(() => {
@@ -180,7 +197,7 @@ export class JestTestProvider {
         await this.debugTest(tData, run);
       } else {
         try {
-          tData.scheduleTest(run);
+          tData.scheduleTest(run, { profile: request.profile });
         } catch (e) {
           const msg = `failed to schedule test for ${tData.item.id}: ${toErrorString(e)}`;
           this.log('error', msg, e);
@@ -200,5 +217,6 @@ export class JestTestProvider {
   dispose(): void {
     this.workspaceRoot.dispose();
     this.controller.dispose();
+    this.coverageProvider.dispose();
   }
 }

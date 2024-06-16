@@ -53,22 +53,8 @@ export interface TaskPredicate {
   filterByStatus?: TaskStatus[];
   filterByContent?: boolean;
 }
-/**
- * define the eligibility for process scheduling
- * @param queue the type of the queue
- * @param dedupe a predicate to match the task in queue.
- */
-export interface ScheduleStrategy {
-  queue: QueueType;
-  dedupe?: TaskPredicate;
-}
 
-interface JestProcessRequestCommon {
-  schedule: ScheduleStrategy;
-  listener: JestProcessListener;
-}
-
-export type JestProcessRequestSimple =
+type JestProcessTestRequestBase =
   | {
       type: Extract<JestTestProcessType, 'watch-tests' | 'watch-all-tests'>;
     }
@@ -99,15 +85,38 @@ export type JestProcessRequestSimple =
       testFileNamePattern: string;
       testNamePattern: TestNamePattern;
       updateSnapshot?: boolean;
-    }
-  | {
-      type: Extract<JestTestProcessType, 'not-test'>;
-      args: string[];
     };
 
+type JestProcessTestRequestCommon = {
+  coverage?: boolean;
+};
+
+export type JestProcessTestRequestType = JestProcessTestRequestCommon & JestProcessTestRequestBase;
+
+type JestProcessNonTestRequest = {
+  type: Extract<JestTestProcessType, 'not-test'>;
+  args: string[];
+};
+
+type JestProcessRequestType = JestProcessTestRequestType | JestProcessNonTestRequest;
+
+/**
+ * define the eligibility for process scheduling
+ * @param queue the type of the queue
+ * @param dedupe a predicate to match the task in queue.
+ */
+export interface ScheduleStrategy {
+  queue: QueueType;
+  dedupe?: TaskPredicate;
+}
+
+interface JestProcessRequestCommon {
+  schedule: ScheduleStrategy;
+  listener: JestProcessListener;
+}
 export type JestProcessRequestTransform = (request: JestProcessRequest) => JestProcessRequest;
 
-export type JestProcessRequestBase = JestProcessRequestSimple & {
+export type JestProcessRequestBase = JestProcessRequestType & {
   transform?: JestProcessRequestTransform;
 };
 export type JestProcessRequest = JestProcessRequestBase & JestProcessRequestCommon;

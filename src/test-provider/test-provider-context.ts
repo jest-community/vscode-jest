@@ -15,6 +15,7 @@ export type TagIdType = 'run' | 'debug' | 'update-snapshot';
 export interface JestTestRunOptions {
   name?: string;
 }
+export type CreateTestRun = vscode.TestController['createTestRun'];
 
 let SEQ = 0;
 export class JestTestProviderContext {

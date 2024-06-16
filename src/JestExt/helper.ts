@@ -46,6 +46,9 @@ export const outputFileSuffix = (ws: string, extra?: string): string => {
   // replace non-word with '_'
   return s.replace(/\W/g, '_');
 };
+export const collectCoverage = (coverage?: boolean, settings?: PluginResourceSettings) =>
+  coverage ?? settings?.runMode.config.coverage ?? false;
+
 export const createJestExtContext = (
   workspaceFolder: vscode.WorkspaceFolder,
   settings: PluginResourceSettings,
@@ -64,7 +67,7 @@ export const createJestExtContext = (
       '',
       currentJestVersion,
       outputFileSuffix(ws, options?.outputFileSuffix),
-      options?.collectCoverage ?? settings.runMode.config.coverage ?? false,
+      collectCoverage(options?.collectCoverage, settings),
       settings.debugMode,
       settings.nodeEnv,
       settings.shell.toSetting(),

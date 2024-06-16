@@ -25,6 +25,7 @@ class MockDiagnosticCollection implements vscode.DiagnosticCollection {
   get = jest.fn();
   has = jest.fn();
   dispose = jest.fn();
+  [Symbol.iterator] = jest.fn(); // Add this line
 }
 
 vscode.window.visibleTextEditors = [];

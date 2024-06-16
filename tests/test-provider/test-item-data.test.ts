@@ -147,7 +147,6 @@ describe('test-item-data', () => {
       const data = context.getData(item);
       const jestRun = createTestRun();
       data.scheduleTest(jestRun);
-      // mockedJestTestRun.mockClear();
 
       return item;
     };
@@ -879,7 +878,7 @@ describe('test-item-data', () => {
           expect(process.userData.testItem.id).toBe(testItem.item.id);
         });
       });
-      describe('can update snapshot based on runProfile', () => {
+      describe('can update snapshot', () => {
         let wsRoot, folder, doc, testItem;
         beforeEach(() => {
           ({ wsRoot, folder, doc, testItem } = createAllTestItems());
@@ -887,10 +886,32 @@ describe('test-item-data', () => {
         it('with snapshot profile', () => {
           [wsRoot, folder, doc, testItem].forEach((testItem) => {
             const jestRun = createTestRun();
-            testItem.scheduleTest(jestRun, ItemCommand.updateSnapshot);
+            testItem.scheduleTest(jestRun, { itemCommand: ItemCommand.updateSnapshot });
             expect(context.ext.session.scheduleProcess).toHaveBeenCalledWith(
               expect.objectContaining({
                 updateSnapshot: true,
+              }),
+              expect.anything()
+            );
+          });
+        });
+      });
+      describe('can run with coverage', () => {
+        let wsRoot, folder, doc, testItem;
+        beforeEach(() => {
+          ({ wsRoot, folder, doc, testItem } = createAllTestItems());
+        });
+        it('with coverage profile', () => {
+          [wsRoot, folder, doc, testItem].forEach((itemDaa) => {
+            const jestRun = createTestRun();
+            // test for each test data
+            context.ext.session.scheduleProcess.mockClear();
+            itemDaa.scheduleTest(jestRun, {
+              profile: { kind: vscode.TestRunProfileKind.Coverage },
+            });
+            expect(context.ext.session.scheduleProcess).toHaveBeenCalledWith(
+              expect.objectContaining({
+                coverage: true,
               }),
               expect.anything()
             );
