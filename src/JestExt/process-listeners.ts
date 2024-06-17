@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { JestTotalResults, RunnerEvent } from 'jest-editor-support';
 import { cleanAnsi, toErrorString } from '../helpers';
 import { JestProcess, ProcessStatus } from '../JestProcessManagement';
-import { ListenerSession, ListTestFilesCallback } from './process-session';
+import { JestExtRequestType, ListenerSession, ListTestFilesCallback } from './process-session';
 import { Logging } from '../logging';
 import { JestRunEvent } from './types';
 import { MonitorLongRun } from '../Settings';
@@ -12,6 +12,11 @@ import { RunShell } from './run-shell';
 // command not found error for anything but "jest", as it most likely not be caused by env issue
 const POSSIBLE_ENV_ERROR_REGEX =
   /^(((?!(jest|react-scripts)).)*)(command not found|no such file or directory)/im;
+
+const TEST_PATH_PATTERNS_V30_ERROR_REGEX =
+  /Option "testPathPattern" was replaced by "testPathPatterns"\./i;
+const TEST_PATH_PATTERNS_NOT_V30_ERROR_REGEX =
+  /Unrecognized option "testPathPatterns". Did you mean "testPathPattern"\?/i;
 export class AbstractProcessListener {
   protected session: ListenerSession;
   protected readonly logging: Logging;
@@ -271,9 +276,31 @@ export class RunTestListener extends AbstractProcessListener {
         );
         return;
       }
-      this.logging('debug', '--watch is not supported, will start the --watchAll run instead');
-      this.session.scheduleProcess({ type: 'watch-all-tests' });
-      process.stop();
+      this.reScheduleProcess(
+        process,
+        '--watch is not supported, will start the --watchAll run instead',
+        { type: 'watch-all-tests' }
+      );
+    }
+  }
+  private reScheduleProcess(
+    process: JestProcess,
+    message: string,
+    overrideRequest?: JestExtRequestType
+  ): void {
+    this.logging('debug', message);
+    this.session.context.output.write(`${message}\r\nReSchedule the process...`, 'warn');
+
+    this.session.scheduleProcess(overrideRequest ?? process.request);
+    process.stop();
+  }
+  private handleTestPatternsError(process: JestProcess, data: string) {
+    if (TEST_PATH_PATTERNS_V30_ERROR_REGEX.test(data)) {
+      this.session.context.settings.useJest30 = true;
+      this.reScheduleProcess(process, 'detected jest v30, enable useJest30 option');
+    } else if (TEST_PATH_PATTERNS_NOT_V30_ERROR_REGEX.test(data)) {
+      this.session.context.settings.useJest30 = false;
+      this.reScheduleProcess(process, 'detected jest Not v30, disable useJest30 option');
     }
   }
 
@@ -307,6 +334,8 @@ export class RunTestListener extends AbstractProcessListener {
     this.handleRunComplete(process, message);
 
     this.handleWatchNotSupportedError(process, message);
+
+    this.handleTestPatternsError(process, message);
   }
 
   private getNumTotalTestSuites(text: string): number | undefined {

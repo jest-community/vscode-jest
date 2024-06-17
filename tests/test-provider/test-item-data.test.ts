@@ -1404,13 +1404,15 @@ describe('test-item-data', () => {
             mockedJestTestRun.mockClear();
           });
           describe.each`
-            request                                                              | withFile
-            ${{ type: 'watch-tests' }}                                           | ${false}
-            ${{ type: 'watch-all-tests' }}                                       | ${false}
-            ${{ type: 'all-tests' }}                                             | ${false}
-            ${{ type: 'by-file', testFileName: file }}                           | ${true}
-            ${{ type: 'by-file', testFileName: 'source.ts', notTestFile: true }} | ${false}
-            ${{ type: 'by-file-pattern', testFileNamePattern: file }}            | ${true}
+            request                                                                                     | withFile
+            ${{ type: 'watch-tests' }}                                                                  | ${false}
+            ${{ type: 'watch-all-tests' }}                                                              | ${false}
+            ${{ type: 'all-tests' }}                                                                    | ${false}
+            ${{ type: 'by-file', testFileName: file }}                                                  | ${true}
+            ${{ type: 'by-file', testFileName: 'source.ts', notTestFile: true }}                        | ${false}
+            ${{ type: 'by-file-test', testFileName: file, testNamePattern: 'whatever' }}                | ${true}
+            ${{ type: 'by-file-pattern', testFileNamePattern: file }}                                   | ${true}
+            ${{ type: 'by-file-test-pattern', testFileNamePattern: file, testNamePattern: 'whatever' }} | ${true}
           `('will create a new run and use it throughout: $request', ({ request, withFile }) => {
             it('if only reports assertion-update, everything should still work', () => {
               const process: any = { id: 'whatever', request };
@@ -1511,13 +1513,11 @@ describe('test-item-data', () => {
               expect(process.userData.run.write).toHaveBeenCalledWith('whatever', 'error');
             });
           });
-          describe('request not supported', () => {
+          describe('on request not supported', () => {
             it.each`
               request
               ${{ type: 'not-test' }}
-              ${{ type: 'by-file-test', testFileName: file, testNamePattern: 'whatever' }}
-              ${{ type: 'by-file-test-pattern', testFileNamePattern: file, testNamePattern: 'whatever' }}
-            `('$request', ({ request }) => {
+            `('do nothing for request: $request', ({ request }) => {
               const process = { id: 'whatever', request };
 
               // starting the process
@@ -1556,6 +1556,40 @@ describe('test-item-data', () => {
             expect.stringContaining('60000'),
             errors.LONG_RUNNING_TESTS
           );
+        });
+        describe('will catch runtime error and close the run', () => {
+          let process, jestRun;
+          beforeEach(() => {
+            process = mockScheduleProcess(context);
+            jestRun = createTestRun();
+            process.userData = { run: jestRun, testItem: env.testFile };
+          });
+
+          it('when run failed to be created', () => {
+            // simulate a runtime error
+            jestRun.addProcess = jest.fn(() => {
+              throw new Error('forced error');
+            });
+            // this will not throw error
+            env.onRunEvent({ type: 'start', process });
+
+            expect(jestRun.started).toHaveBeenCalledTimes(0);
+            expect(jestRun.end).toHaveBeenCalledTimes(0);
+            expect(jestRun.write).toHaveBeenCalledTimes(0);
+          });
+          it('when run is created', () => {
+            // simulate a runtime error
+            jestRun.started = jest.fn(() => {
+              throw new Error('forced error');
+            });
+
+            // this will not throw error
+            env.onRunEvent({ type: 'start', process });
+
+            expect(jestRun.started).toHaveBeenCalledTimes(1);
+            expect(jestRun.end).toHaveBeenCalledTimes(1);
+            expect(jestRun.write).toHaveBeenCalledTimes(1);
+          });
         });
       });
     });

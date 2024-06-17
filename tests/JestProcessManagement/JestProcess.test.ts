@@ -186,6 +186,28 @@ describe('JestProcess', () => {
         }
       );
     });
+    describe('supports jest v30 options', () => {
+      it.each`
+        case | type                      | extraProperty                                             | useJest30 | expectedOption
+        ${1} | ${'by-file-pattern'}      | ${{ testFileNamePattern: 'abc' }}                         | ${null}   | ${'--testPathPattern'}
+        ${2} | ${'by-file-pattern'}      | ${{ testFileNamePattern: 'abc' }}                         | ${true}   | ${'--testPathPatterns'}
+        ${3} | ${'by-file-pattern'}      | ${{ testFileNamePattern: 'abc' }}                         | ${false}  | ${'--testPathPattern'}
+        ${4} | ${'by-file-test-pattern'} | ${{ testFileNamePattern: 'abc', testNamePattern: 'abc' }} | ${null}   | ${'--testPathPattern'}
+        ${5} | ${'by-file-test-pattern'} | ${{ testFileNamePattern: 'abc', testNamePattern: 'abc' }} | ${true}   | ${'--testPathPatterns'}
+        ${6} | ${'by-file-test-pattern'} | ${{ testFileNamePattern: 'abc', testNamePattern: 'abc' }} | ${false}  | ${'--testPathPattern'}
+      `(
+        'case $case: generate the correct TestPathPattern(s) option',
+        ({ type, extraProperty, useJest30, expectedOption }) => {
+          expect.hasAssertions();
+          extContext.settings.useJest30 = useJest30;
+          const request = mockRequest(type, extraProperty);
+          const jp = new JestProcess(extContext, request);
+          jp.start();
+          const [, options] = RunnerClassMock.mock.calls[0];
+          expect(options.args.args).toContain(expectedOption);
+        }
+      );
+    });
     describe('common flags', () => {
       it.each`
         type                      | extraProperty                                                    | excludeWatch | withColors
