@@ -188,6 +188,9 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     if (cmd === 'yarn') {
       return { runtimeExecutable: 'yarn', args: [], ...commonConfig };
     }
+    if (cmd === 'pnpm') {
+      return { runtimeExecutable: 'pnpm', args: [], ...commonConfig };
+    }
   }
 
   /**
