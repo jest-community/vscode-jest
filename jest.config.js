@@ -10,7 +10,7 @@ module.exports = {
   },
   testEnvironment: 'node',
   testRegex: 'tests/.*\\.test\\.ts$',
-  collectCoverageFrom: ['src/**/*.ts'],
+  coveragePathIgnorePatterns: ['/node_modules/', '/tests/'],
   automock: true,
   moduleFileExtensions: ['ts', 'js', 'json'],
   unmockedModulePathPatterns: [

@@ -2,10 +2,10 @@
   "name": "vscode-jest",
   "displayName": "Jest",
   "description": "Use Facebook's Jest With Pleasure.",
-  "version": "7.0.0",
+  "version": "6.3.0",
   "publisher": "Orta",
   "engines": {
-    "vscode": "^1.68.1"
+    "vscode": "^1.88.1"
   },
   "author": {
     "name": "Orta Therox, ConnectDotz & Sean Poulter",

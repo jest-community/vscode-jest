@@ -9,3 +9,5 @@ generated-icons/
 *.vsix
 *.zip
 coverage_comparison_report.html
+yarn-error.log
+

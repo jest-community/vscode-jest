@@ -166,6 +166,7 @@ export const mockJestExtEvents: any = () => ({
   onRunEvent: mockEvent(),
   onTestSessionStarted: mockEvent(),
   onTestSessionStopped: mockEvent(),
+  onTestDataAvailable: mockEvent(),
 });
 
 export const mockJestExtContext = (runMode?: RunMode): any => {

@@ -8,6 +8,7 @@ const mockRelease = jest.fn();
 mockRelease.mockReturnValue('');
 jest.mock('os', () => ({ platform: mockPlatform, release: mockRelease }));
 
+import * as vscode from 'vscode';
 import { Runner } from 'jest-editor-support';
 import { JestProcess, RunnerEvents } from '../../src/JestProcessManagement/JestProcess';
 import { EventEmitter } from 'events';
@@ -15,14 +16,8 @@ import { mockProcessRequest, mockJestExtContext } from '../test-helper';
 import { normalize } from 'path';
 import { JestProcessRequest, ProcessStatus } from '../../src/JestProcessManagement/types';
 import { JestTestProcessType } from '../../src/Settings';
+import { collectCoverage } from '../../src/JestExt/helper';
 jest.unmock('path');
-jest.mock('vscode', () => ({
-  extensions: {
-    getExtension: () => {
-      return { extensionPath: normalize('/my/vscode/extensions') };
-    },
-  },
-}));
 
 describe('JestProcess', () => {
   let jestProcess;
@@ -52,6 +47,9 @@ describe('JestProcess', () => {
     };
     RunnerClassMock.mockReturnValueOnce(mockRunner);
     extContext = mockJestExtContext();
+    (vscode.extensions.getExtension as jest.Mocked<any>).mockReturnValue({
+      extensionPath: normalize('/my/vscode/extensions'),
+    });
   });
 
   it('can report its own state via toString()', () => {
@@ -59,7 +57,7 @@ describe('JestProcess', () => {
     jestProcess = new JestProcess(extContext, request);
     expect(`${jestProcess}`).toEqual(jestProcess.toString());
     expect(jestProcess.toString()).toMatchInlineSnapshot(
-      `"JestProcess: id: all-tests-0, request: {"type":"all-tests","schedule":{"queue":"blocking"},"listener":"function"}; status: "pending""`
+      `"JestProcess: id: all-tests:0, request: {"type":"all-tests","schedule":{"queue":"blocking"},"listener":"function"}; status: "pending""`
     );
   });
   describe('when creating', () => {
@@ -95,6 +93,19 @@ describe('JestProcess', () => {
         const request = mockProcessRequest(requestType);
         jestProcess = new JestProcess(extContext, request);
         expect(jestProcess.isWatchMode).toEqual(isWatchMode);
+      });
+    });
+    describe('populate an id based on request info', () => {
+      it.each`
+        requestType      | extraProperty         | expected
+        ${'all-tests'}   | ${undefined}          | ${'all-tests:'}
+        ${'all-tests'}   | ${{ coverage: true }} | ${'all-tests:with-coverage:'}
+        ${'watch-tests'} | ${undefined}          | ${'watch-tests:'}
+      `('$requestType:$extraProperty', ({ requestType, extraProperty, expected }) => {
+        (collectCoverage as jest.Mocked<any>).mockImplementation((c) => c);
+        const request = mockProcessRequest(requestType, extraProperty);
+        jestProcess = new JestProcess(extContext, request);
+        expect(jestProcess.id).toEqual(expect.stringContaining(expected));
       });
     });
   });
@@ -336,6 +347,43 @@ describe('JestProcess', () => {
       expect(extContext.createRunnerWorkspace).toHaveBeenCalledWith(
         expect.objectContaining({ outputFileSuffix: expect.stringContaining('2') })
       );
+    });
+    describe('can pass on coverage info from request', () => {
+      it.each`
+        requestType               | extraProperty                                                    | canPassCoverage
+        ${'all-tests'}            | ${undefined}                                                     | ${true}
+        ${'watch-tests'}          | ${undefined}                                                     | ${true}
+        ${'watch-all-tests'}      | ${undefined}                                                     | ${true}
+        ${'by-file'}              | ${{ testFileName: '"c:\\a\\b.ts"' }}                             | ${true}
+        ${'by-file-test'}         | ${{ testFileName: '"/a/b.js"', testNamePattern: 'a test' }}      | ${true}
+        ${'by-file-pattern'}      | ${{ testFileNamePattern: '"c:\\a\\b.ts"' }}                      | ${true}
+        ${'by-file-test-pattern'} | ${{ testFileNamePattern: '/a/b.js', testNamePattern: 'a test' }} | ${true}
+        ${'not-test'}             | ${{ args: ['--listTests', '--watchAll=false'] }}                 | ${false}
+      `('$requestType', ({ requestType, extraProperty, canPassCoverage }) => {
+        expect.hasAssertions();
+        (collectCoverage as jest.Mocked<any>).mockImplementation((c) => c);
+        // when no coverage
+        let req = mockRequest(requestType, extraProperty);
+        jestProcess = new JestProcess(extContext, req);
+        jestProcess.start();
+        expect(extContext.createRunnerWorkspace).not.toHaveBeenCalledWith(
+          expect.objectContaining({ collectCoverage: true })
+        );
+
+        // when with coverage
+        req = mockRequest(requestType, { ...extraProperty, coverage: true });
+        jestProcess = new JestProcess(extContext, req);
+        jestProcess.start();
+        if (canPassCoverage) {
+          expect(extContext.createRunnerWorkspace).toHaveBeenCalledWith(
+            expect.objectContaining({ collectCoverage: true })
+          );
+        } else {
+          expect(extContext.createRunnerWorkspace).not.toHaveBeenCalledWith(
+            expect.objectContaining({ collectCoverage: true })
+          );
+        }
+      });
     });
   });
 

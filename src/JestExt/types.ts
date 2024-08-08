@@ -43,10 +43,16 @@ export type JestRunEvent = RunEventBase &
     | { type: 'exit'; error?: string; code?: number }
     | { type: 'long-run'; threshold: number; numTotalTestSuites?: number }
   );
+
+export interface JestTestDataAvailableEvent {
+  data: JestTotalResults;
+  process: JestProcessInfo;
+}
 export interface JestSessionEvents {
   onRunEvent: vscode.EventEmitter<JestRunEvent>;
   onTestSessionStarted: vscode.EventEmitter<JestExtSessionContext>;
   onTestSessionStopped: vscode.EventEmitter<void>;
+  onTestDataAvailable: vscode.EventEmitter<JestTestDataAvailableEvent>;
 }
 export interface JestExtProcessContextRaw extends JestExtContext {
   updateWithData: (data: JestTotalResults, process: JestProcessInfo) => void;

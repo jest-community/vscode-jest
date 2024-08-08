@@ -22,6 +22,10 @@ const window = {
   createWebviewPanel: jest.fn(),
 };
 
+const extensions = {
+  getExtension: jest.fn(),
+};
+
 const workspace = {
   getConfiguration: jest.fn(),
   workspaceFolders: [],
@@ -66,7 +70,6 @@ const commands = {
   registerTextEditorCommand: jest.fn(),
 };
 
-// eslint-disable-next-line @typescript-eslint/no-empty-function
 const CodeLens = function CodeLens() {};
 
 const QuickInputButtons = {
@@ -102,7 +105,15 @@ const QuickPickItemKind = {
   Default: 0,
 };
 
+// for coverage
+const FileCoverage = jest.fn();
+const StatementCoverage = jest.fn();
+const BranchCoverage = jest.fn();
+const DeclarationCoverage = jest.fn();
+const TestCoverageCount = jest.fn();
+
 export = {
+  extensions,
   ThemeColor,
   CodeLens,
   languages,
@@ -128,4 +139,9 @@ export = {
   TestRunRequest,
   ViewColumn,
   QuickPickItemKind,
+  FileCoverage,
+  StatementCoverage,
+  BranchCoverage,
+  DeclarationCoverage,
+  TestCoverageCount,
 };

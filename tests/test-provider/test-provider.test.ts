@@ -16,6 +16,7 @@ import { tiContextManager } from '../../src/test-provider/test-item-context-mana
 import { ItemCommand } from '../../src/test-provider/types';
 import { RunMode } from '../../src/JestExt/run-mode';
 import { JestTestRun } from '../../src/test-provider/jest-test-run';
+import { JestTestCoverageProvider } from '../../src/test-provider/test-coverage';
 
 const throwError = () => {
   throw new Error('debug error');
@@ -45,14 +46,23 @@ describe('JestTestProvider', () => {
     return data;
   };
 
+  const setupItemData = (context, items = [1, 2, 3]) => {
+    const itemDataList = items.map((n) => setupTestItemData(`item-${n}`, true, context));
+    itemDataList.forEach((d) => {
+      d.context = { workspace: { name: 'whatever' } };
+      d.getDebugInfo = jest.fn().mockReturnValueOnce({});
+    });
+    return itemDataList;
+  };
+
   let controllerMock;
   let extExplorerContextMock;
   let workspaceRootMock;
   let mockTestTag;
   const mockedJestTestRun = JestTestRun as jest.MockedClass<any>;
+  let mockCoverageProvider: any;
 
   beforeEach(() => {
-    // jest.resetAllMocks();
     jest.clearAllMocks();
 
     extExplorerContextMock = mockExtExplorerContext();
@@ -76,6 +86,8 @@ describe('JestTestProvider', () => {
       workspaceRootMock.context = context;
       return workspaceRootMock;
     });
+    mockCoverageProvider = { loadDetailedCoverage: jest.fn(), dispose: jest.fn() };
+    (JestTestCoverageProvider as jest.MockedClass<any>).mockReturnValue(mockCoverageProvider);
   });
 
   describe('upon creation', () => {
@@ -87,29 +99,64 @@ describe('JestTestProvider', () => {
         `${extensionId}:TestProvider:ws-1`,
         expect.stringContaining('ws-1')
       );
-      expect(controllerMock.createRunProfile).toHaveBeenCalledTimes(2);
-      [
-        [vscode.TestRunProfileKind.Run, 'run', true],
-        [vscode.TestRunProfileKind.Debug, 'debug', true],
-      ].forEach(([kind, id, isDefault]) => {
-        const profile = controllerMock.createRunProfile.mock.results.find(
-          (r) => r.value.label === id
-        )?.value;
-        expect(profile.kind).toEqual(kind);
-        expect(profile.isDefault).toEqual(isDefault);
-        if (id === 'run') {
-          expect(profile.configureHandler).toBeDefined();
-          profile.configureHandler();
-          expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-            expect.stringContaining(`with-workspace.change-run-mode`),
-            extExplorerContextMock.workspace
-          );
-        } else {
-          expect(profile.configureHandler).not.toBeDefined();
-        }
-      });
-      controllerMock.createRunProfile.mock.results.find((r) => r.label === 'run');
+      expect(controllerMock.createRunProfile).toHaveBeenCalledTimes(3);
       expect(WorkspaceRoot).toHaveBeenCalled();
+    });
+    describe('profiles', () => {
+      it('the default run profile', () => {
+        new JestTestProvider(extExplorerContextMock);
+        expect(controllerMock.createRunProfile).toHaveBeenCalledWith(
+          'run tests',
+          vscode.TestRunProfileKind.Run,
+          expect.any(Function),
+          true,
+          { id: 'run' }
+        );
+        const profile = controllerMock.createRunProfile.mock.results.find(
+          (r) => r.value.kind === vscode.TestRunProfileKind.Run
+        )?.value;
+        expect(profile.configureHandler).toBeDefined();
+        expect(profile.runHandler).toBeDefined();
+        profile.configureHandler();
+        expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+          expect.stringContaining(`with-workspace.change-run-mode`),
+          extExplorerContextMock.workspace
+        );
+        expect(profile.loadDetailedCoverage).not.toBeDefined();
+      });
+
+      it('the default debug profile', () => {
+        new JestTestProvider(extExplorerContextMock);
+        expect(controllerMock.createRunProfile).toHaveBeenCalledWith(
+          'debug tests',
+          vscode.TestRunProfileKind.Debug,
+          expect.any(Function),
+          true,
+          { id: 'debug' }
+        );
+        const profile = controllerMock.createRunProfile.mock.results.find(
+          (r) => r.value.kind === vscode.TestRunProfileKind.Debug
+        )?.value;
+        expect(profile.runHandler).toBeDefined();
+        expect(profile.configureHandler).not.toBeDefined();
+        expect(profile.loadDetailedCoverage).not.toBeDefined();
+      });
+      it('the coverage profile', () => {
+        new JestTestProvider(extExplorerContextMock);
+        expect(controllerMock.createRunProfile).toHaveBeenCalledWith(
+          'run tests with coverage',
+          vscode.TestRunProfileKind.Coverage,
+          expect.any(Function),
+          false,
+          { id: 'run' }
+        );
+        const profile = controllerMock.createRunProfile.mock.results.find(
+          (r) => r.value.kind === vscode.TestRunProfileKind.Coverage
+        )?.value;
+        expect(profile.runHandler).toBeDefined();
+        expect(profile.configureHandler).not.toBeDefined();
+        expect(profile.loadDetailedCoverage).toBeDefined();
+      });
     });
   });
 
@@ -197,24 +244,33 @@ describe('JestTestProvider', () => {
       });
     });
   });
+  describe('can provide test coverage', () => {
+    it('use coverageProvider to manage coverage', () => {
+      new JestTestProvider(extExplorerContextMock);
+      expect(JestTestCoverageProvider).toHaveBeenCalledWith(extExplorerContextMock.sessionEvents);
+    });
+    it('can load detailed coverage', async () => {
+      new JestTestProvider(extExplorerContextMock);
+      const coverageProfile = controllerMock.createRunProfile.mock.results.find(
+        (r) => r.value.kind === vscode.TestRunProfileKind.Coverage
+      )?.value;
+      const fileCoverage = { path: 'file' };
+      await coverageProfile.loadDetailedCoverage({}, fileCoverage);
+      expect(mockCoverageProvider.loadDetailedCoverage).toHaveBeenCalledWith(fileCoverage);
+    });
+  });
   describe('upon dispose', () => {
     it('vscode.TestController will be disposed', () => {
       const testProvider = new JestTestProvider(extExplorerContextMock);
       testProvider.dispose();
       expect(controllerMock.dispose).toHaveBeenCalled();
       expect(workspaceRootMock.dispose).toHaveBeenCalled();
+      expect(mockCoverageProvider.dispose).toHaveBeenCalled();
     });
   });
   describe('supports explorer UI run and debug request', () => {
     let cancelToken;
-    const setupItemData = (context, items = [1, 2, 3]) => {
-      const itemDataList = items.map((n) => setupTestItemData(`item-${n}`, true, context));
-      itemDataList.forEach((d) => {
-        d.context = { workspace: { name: 'whatever' } };
-        d.getDebugInfo = jest.fn().mockReturnValueOnce({});
-      });
-      return itemDataList;
-    };
+
     beforeEach(() => {
       cancelToken = { onCancellationRequested: jest.fn(), isCancellationRequested: false };
     });
@@ -445,7 +501,6 @@ describe('JestTestProvider', () => {
 
         const testProvider = new JestTestProvider(extExplorerContextMock);
         const itemDataList = setupItemData(workspaceRootMock.context);
-        // itemDataList.forEach((d, idx) => d.scheduleTest.mockReturnValueOnce(`pid-${idx}`));
 
         const request: any = {
           include: itemDataList.map((d) => d.item),
@@ -570,6 +625,25 @@ describe('JestTestProvider', () => {
         await p;
         expect(jestRun.end).toHaveBeenCalledTimes(1);
       });
+      it('if request has exclude, will run test for the whole workplace except the exclude', async () => {
+        expect.hasAssertions();
+
+        const testProvider = new JestTestProvider(extExplorerContextMock);
+
+        const request: any = {
+          exclude: [workspaceRootMock.item],
+          profile: { kind: vscode.TestRunProfileKind.Run },
+        };
+
+        const p = testProvider.runTests(request, cancelToken);
+
+        expect(JestTestRun).toHaveBeenCalledTimes(1);
+        const jestRun = mockedJestTestRun.mock.results[0].value;
+        expect(workspaceRootMock.scheduleTest).not.toHaveBeenCalled();
+
+        await p;
+        expect(jestRun.end).toHaveBeenCalledTimes(1);
+      });
       it('will reject run request without profile', async () => {
         expect.hasAssertions();
 
@@ -582,6 +656,7 @@ describe('JestTestProvider', () => {
       });
     });
   });
+
   describe('supports test-explorer item-menu', () => {
     it('updates item-menu context', () => {
       new JestTestProvider(extExplorerContextMock);
@@ -601,10 +676,37 @@ describe('JestTestProvider', () => {
       );
     });
   });
-  it('supports runItemCommand', () => {
-    const provider = new JestTestProvider(extExplorerContextMock);
-    provider.runItemCommand(workspaceRootMock.item, ItemCommand.updateSnapshot);
-    expect(workspaceRootMock.runItemCommand).toHaveBeenCalled();
+  describe('support direct invocation of runTests', () => {
+    it('use runTests after exiting defer mode', async () => {
+      expect.hasAssertions();
+
+      const testProvider = new JestTestProvider(extExplorerContextMock);
+      const itemDataList = setupItemData(workspaceRootMock.context);
+
+      const requestFromSpy = jest.spyOn(workspaceRootMock.context, 'requestFrom');
+      requestFromSpy.mockImplementation((r) => r);
+      const createTestRunSpy = jest.spyOn(workspaceRootMock.context, 'createTestRun');
+
+      const request: any = {
+        include: [itemDataList[0].item],
+        profile: { kind: vscode.TestRunProfileKind.Run },
+      };
+      await testProvider.runTests(request, undefined, true);
+      expect(requestFromSpy).toHaveBeenCalledWith(request);
+      expect(createTestRunSpy).toHaveBeenCalled();
+    });
+  });
+  describe('runItemCommand', () => {
+    it('supports runItemCommand', () => {
+      const provider = new JestTestProvider(extExplorerContextMock);
+      provider.runItemCommand(workspaceRootMock.item, ItemCommand.updateSnapshot);
+      expect(workspaceRootMock.runItemCommand).toHaveBeenCalled();
+    });
+    it('if no itemData found, will not crash', () => {
+      const provider = new JestTestProvider(extExplorerContextMock);
+      provider.runItemCommand({ id: 'not-found' } as any, ItemCommand.updateSnapshot);
+      expect(workspaceRootMock.runItemCommand).not.toHaveBeenCalled();
+    });
   });
   it('will exit defer mode upon any run request', async () => {
     expect.hasAssertions();

@@ -15,12 +15,16 @@ export interface JestExtExplorerContext extends JestExtSessionContext {
   debugTests: DebugFunction;
 }
 
+export interface ScheduleTestOptions {
+  itemCommand?: ItemCommand;
+  profile?: vscode.TestRunProfile;
+}
 export interface TestItemData {
   readonly item: vscode.TestItem;
   readonly uri: vscode.Uri;
   context: JestTestProviderContext;
   discoverTest?: (run: JestTestRun) => void;
-  scheduleTest: (run: JestTestRun, itemCommand?: ItemCommand) => void;
+  scheduleTest: (run: JestTestRun, options?: ScheduleTestOptions) => void;
   runItemCommand: (command: ItemCommand) => void;
 }
 

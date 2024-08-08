@@ -8,7 +8,7 @@ import { ItBlock, TestAssertionStatus } from 'jest-editor-support';
 import { ContainerNode, DataNode, NodeType, ROOT_NODE_NAME } from '../TestResults/match-node';
 import { Logging } from '../logging';
 import { TestSuitChangeEvent } from '../TestResults/test-result-events';
-import { Debuggable, ItemCommand, TestItemData } from './types';
+import { Debuggable, ItemCommand, ScheduleTestOptions, TestItemData } from './types';
 import { JestTestProviderContext } from './test-provider-context';
 import { JestTestRun } from './jest-test-run';
 import { JestProcessInfo, ProcessStatus } from '../JestProcessManagement';
@@ -20,7 +20,7 @@ import { outputManager } from '../output-manager';
 import { TestNamePattern } from '../types';
 
 interface JestRunnable {
-  getJestRunRequest: () => JestExtRequestType;
+  getJestRunRequest: (options?: ScheduleTestOptions) => JestExtRequestType;
 }
 
 interface WithUri {
@@ -59,18 +59,18 @@ abstract class TestItemDataBase implements TestItemData, JestRunnable, WithUri {
     return true;
   }
 
-  scheduleTest(run: JestTestRun, itemCommand?: ItemCommand): void {
+  scheduleTest(run: JestTestRun, options?: ScheduleTestOptions): void {
     if (!this.isTestNameResolved()) {
       const parent = this.item.parent && this.context.getData(this.item.parent);
       if (parent) {
         run.end({ reason: 'unresolved parameterized test' });
         run.updateRequest(new vscode.TestRunRequest([parent.item]));
-        return parent.scheduleTest(run, itemCommand);
+        return parent.scheduleTest(run, options);
       }
       this.context.output.write(`running an unresolved parameterized test might fail`, 'warn');
     }
 
-    const jestRequest = this.getJestRunRequest(itemCommand);
+    const jestRequest = this.getJestRunRequest(options);
 
     this.deepItemState(this.item, run.enqueued);
 
@@ -88,14 +88,14 @@ abstract class TestItemDataBase implements TestItemData, JestRunnable, WithUri {
     }
   }
 
-  runItemCommand(command: ItemCommand): void | Promise<void> {
-    switch (command) {
+  runItemCommand(itemCommand: ItemCommand): void | Promise<void> {
+    switch (itemCommand) {
       case ItemCommand.updateSnapshot: {
         const request = new vscode.TestRunRequest([this.item]);
         const run = this.context.createTestRun(request, {
-          name: `${command}-${this.item.id}`,
+          name: `${itemCommand}-${this.item.id}`,
         });
-        this.scheduleTest(run, command);
+        this.scheduleTest(run, { itemCommand });
         break;
       }
       case ItemCommand.viewSnapshot: {
@@ -109,7 +109,7 @@ abstract class TestItemDataBase implements TestItemData, JestRunnable, WithUri {
   viewSnapshot(): Promise<void> {
     return Promise.reject(`viewSnapshot is not supported for ${this.item.id}`);
   }
-  abstract getJestRunRequest(itemCommand?: ItemCommand): JestExtRequestType;
+  abstract getJestRunRequest(options?: ScheduleTestOptions): JestExtRequestType;
 }
 
 interface SnapshotItemCollection {
@@ -152,9 +152,13 @@ export class WorkspaceRoot extends TestItemDataBase {
     return item;
   }
 
-  getJestRunRequest(itemCommand?: ItemCommand): JestExtRequestType {
-    const updateSnapshot = itemCommand === ItemCommand.updateSnapshot;
-    return { type: 'all-tests', nonBlocking: true, updateSnapshot };
+  getJestRunRequest(options?: ScheduleTestOptions): JestExtRequestType {
+    return {
+      type: 'all-tests',
+      nonBlocking: true,
+      updateSnapshot: options?.itemCommand === ItemCommand.updateSnapshot,
+      coverage: options?.profile?.kind === vscode.TestRunProfileKind.Coverage,
+    };
   }
   discoverTest(run: JestTestRun): void {
     const testList = this.context.ext.testResultProvider.getTestList();
@@ -427,7 +431,7 @@ export class WorkspaceRoot extends TestItemDataBase {
         case 'start': {
           this.deepItemState(event.process.userData?.testItem, run.started);
           outputManager.clearOutputOnRun(this.context.ext.output);
-          this.runLog('started');
+          this.runLog(`"${event.process.id}" started`);
           break;
         }
         case 'end': {
@@ -435,7 +439,7 @@ export class WorkspaceRoot extends TestItemDataBase {
             run.write(event.error, 'error');
             event.process.userData = { ...(event.process.userData ?? {}), execError: true };
           }
-          this.runLog('finished');
+          this.runLog(`"${event.process.id}" finished`);
           run.end({ process: event.process, delay: 30000, reason: 'process end' });
           break;
         }
@@ -451,7 +455,7 @@ export class WorkspaceRoot extends TestItemDataBase {
               event.process.userData = { ...(event.process.userData ?? {}), execError: true };
             }
           }
-          this.runLog('exited');
+          this.runLog(`"${event.process.id}" exited`);
           run.end({ process: event.process, delay: 1000, reason: 'process exit' });
           break;
         }
@@ -494,12 +498,12 @@ export class FolderData extends TestItemDataBase {
     item.canResolveChildren = false;
     return item;
   }
-  getJestRunRequest(itemCommand?: ItemCommand): JestExtRequestType {
-    const updateSnapshot = itemCommand === ItemCommand.updateSnapshot;
+  getJestRunRequest(options?: ScheduleTestOptions): JestExtRequestType {
     return {
       type: 'by-file-pattern',
-      updateSnapshot,
       testFileNamePattern: this.uri.fsPath,
+      updateSnapshot: options?.itemCommand === ItemCommand.updateSnapshot,
+      coverage: options?.profile?.kind === vscode.TestRunProfileKind.Coverage,
     };
   }
 }
@@ -684,12 +688,12 @@ export class TestDocumentRoot extends TestResultData {
     this.forEachChild((child) => child.updateResultState(run));
   }
 
-  getJestRunRequest(itemCommand?: ItemCommand): JestExtRequestType {
-    const updateSnapshot = itemCommand === ItemCommand.updateSnapshot;
+  getJestRunRequest(options?: ScheduleTestOptions): JestExtRequestType {
     return {
       type: 'by-file-pattern',
-      updateSnapshot,
       testFileNamePattern: this.uri.fsPath,
+      updateSnapshot: options?.itemCommand === ItemCommand.updateSnapshot,
+      coverage: options?.profile?.kind === vscode.TestRunProfileKind.Coverage,
     };
   }
 
@@ -737,12 +741,13 @@ export class TestData extends TestResultData implements Debuggable {
     return { value: this.node.fullName, exactMatch: false };
   }
 
-  getJestRunRequest(itemCommand?: ItemCommand): JestExtRequestType {
+  getJestRunRequest(options?: ScheduleTestOptions): JestExtRequestType {
     return {
       type: 'by-file-test-pattern',
-      updateSnapshot: itemCommand === ItemCommand.updateSnapshot,
       testFileNamePattern: this.uri.fsPath,
       testNamePattern: this.getTestNamePattern(),
+      updateSnapshot: options?.itemCommand === ItemCommand.updateSnapshot,
+      coverage: options?.profile?.kind === vscode.TestRunProfileKind.Coverage,
     };
   }
 
