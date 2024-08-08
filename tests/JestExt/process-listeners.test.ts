@@ -56,6 +56,7 @@ describe('jest process listeners', () => {
           create: jest.fn(() => mockLogging),
         },
         onRunEvent: { fire: jest.fn() },
+        output: { write: jest.fn() },
       },
     };
     mockProcess = initMockProcess('watch-tests');
@@ -240,6 +241,7 @@ describe('jest process listeners', () => {
         append: jest.fn(),
         clear: jest.fn(),
         show: jest.fn(),
+        write: jest.fn(),
       };
       mockSession.context.updateWithData = jest.fn();
     });
@@ -573,6 +575,48 @@ describe('jest process listeners', () => {
             );
           }
         });
+      });
+    });
+    describe('jest 30 support', () => {
+      describe('can restart process if detected jest 30 related error', () => {
+        it.each`
+          case | output                                                                            | useJest30Before | useJest30After | willRestart
+          ${1} | ${'Error in JestTestPatterns'}                                                    | ${null}         | ${null}        | ${false}
+          ${2} | ${'Error in JestTestPatterns'}                                                    | ${true}         | ${true}        | ${false}
+          ${3} | ${'Process Failed\nOption "testPathPattern" was replaced by "testPathPatterns".'} | ${null}         | ${true}        | ${true}
+          ${4} | ${'Process Failed\nOption "testPathPattern" was replaced by "testPathPatterns".'} | ${false}        | ${true}        | ${true}
+        `('case $case', ({ output, useJest30Before, useJest30After, willRestart }) => {
+          expect.hasAssertions();
+          mockSession.context.settings.useJest30 = useJest30Before;
+          const listener = new RunTestListener(mockSession);
+
+          listener.onEvent(mockProcess, 'executableStdErr', Buffer.from(output));
+
+          expect(mockSession.context.settings.useJest30).toEqual(useJest30After);
+
+          if (willRestart) {
+            expect(mockSession.scheduleProcess).toHaveBeenCalledTimes(1);
+            expect(mockSession.scheduleProcess).toHaveBeenCalledWith(mockProcess.request);
+            expect(mockProcess.stop).toHaveBeenCalled();
+          } else {
+            expect(mockSession.scheduleProcess).not.toHaveBeenCalled();
+            expect(mockProcess.stop).not.toHaveBeenCalled();
+          }
+        });
+      });
+      it('can restart process if setting useJest30 for a non jest 30 runtime', () => {
+        expect.hasAssertions();
+        mockSession.context.settings.useJest30 = true;
+        const listener = new RunTestListener(mockSession);
+
+        const output = `whatever\n Unrecognized option "testPathPatterns". Did you mean "testPathPattern"?\n`;
+        listener.onEvent(mockProcess, 'executableStdErr', Buffer.from(output));
+
+        expect(mockSession.context.settings.useJest30).toEqual(false);
+
+        expect(mockSession.scheduleProcess).toHaveBeenCalledTimes(1);
+        expect(mockSession.scheduleProcess).toHaveBeenCalledWith(mockProcess.request);
+        expect(mockProcess.stop).toHaveBeenCalled();
       });
     });
   });

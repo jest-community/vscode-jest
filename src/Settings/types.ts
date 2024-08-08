@@ -77,6 +77,7 @@ export interface PluginResourceSettings {
   enable?: boolean;
   parserPluginOptions?: JESParserPluginOptions;
   useDashedArgs?: boolean;
+  useJest30?: boolean;
 }
 
 export interface DeprecatedPluginResourceSettings {

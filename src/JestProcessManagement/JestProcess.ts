@@ -122,6 +122,11 @@ export class JestProcess implements JestProcessInfo {
     return `"${removeSurroundingQuote(aString)}"`;
   }
 
+  private getTestPathPattern(pattern: string): string[] {
+    return this.extContext.settings.useJest30
+      ? ['--testPathPatterns', pattern]
+      : ['--testPathPattern', pattern];
+  }
   public start(): Promise<void> {
     if (this.status === ProcessStatus.Cancelled) {
       this.logging('warn', `the runner task has been cancelled!`);
@@ -166,7 +171,7 @@ export class JestProcess implements JestProcessInfo {
       }
       case 'by-file-pattern': {
         const regex = this.quoteFilePattern(escapeRegExp(this.request.testFileNamePattern));
-        args.push('--watchAll=false', '--testPathPattern', regex);
+        args.push('--watchAll=false', ...this.getTestPathPattern(regex));
         if (this.request.updateSnapshot) {
           args.push('--updateSnapshot');
         }
@@ -191,7 +196,7 @@ export class JestProcess implements JestProcessInfo {
           escapeRegExp(this.request.testNamePattern),
           this.extContext.settings.shell.toSetting()
         );
-        args.push('--watchAll=false', '--testPathPattern', regex);
+        args.push('--watchAll=false', ...this.getTestPathPattern(regex));
         if (this.request.updateSnapshot) {
           args.push('--updateSnapshot');
         }

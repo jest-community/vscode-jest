@@ -107,6 +107,7 @@ export const getExtensionResourceSettings = (
     parserPluginOptions: getSetting<JESParserPluginOptions>('parserPluginOptions'),
     enable: getSetting<boolean>('enable'),
     useDashedArgs: getSetting<boolean>('useDashedArgs') ?? false,
+    useJest30: getSetting<boolean>('useJest30'),
   };
 };
 

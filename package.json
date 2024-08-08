@@ -366,6 +366,12 @@
               "markdownDescription": "A detailed runMode configuration. See details in [runMode](https://github.com/jest-community/vscode-jest#runmode)"
             }
           ]
+        },
+        "jest.useJest30": {
+          "description": "Use Jest 30+ features",
+          "type": "boolean",
+          "default": null,
+          "scope": "resource"
         }
       }
     },
