@@ -160,6 +160,7 @@ export class WorkspaceRoot extends TestItemDataBase {
       coverage: options?.profile?.kind === vscode.TestRunProfileKind.Coverage,
     };
   }
+
   discoverTest(run: JestTestRun): void {
     const testList = this.context.ext.testResultProvider.getTestList();
     // only trigger update when testList is not empty because it's possible test-list is not available yet,
@@ -294,7 +295,9 @@ export class WorkspaceRoot extends TestItemDataBase {
         if (event.files.length === 0) {
           run.write(`No tests were run.`, `new-line`);
         } else {
-          event.files.forEach((f) => this.addTestFile(f, (testRoot) => testRoot.discoverTest(run)));
+          event.files.forEach((f) =>
+            this.addTestFile(f, (testRoot) => testRoot.onAssertionUpdate(run))
+          );
         }
         run.end({ process: event.process, delay: 1000, reason: 'assertions-updated' });
         this.preventZombieProcess(event.process);
@@ -540,6 +543,15 @@ abstract class TestResultData extends TestItemDataBase {
     super(context, name);
   }
 
+  // TODO - we should use "unknown" state when vscode supports it
+  // (see https://github.com/microsoft/vscode/issues/206139).
+  resetChildrenState(run: JestTestRun, result: TestSuiteResult): void {
+    this.forEachChild((child) => {
+      child.updateItemState(run, result);
+      child.resetChildrenState(run, result);
+    });
+  }
+
   updateItemState(
     run: JestTestRun,
     result?: TestSuiteResult | TestAssertionStatus,
@@ -625,6 +637,7 @@ abstract class TestResultData extends TestItemDataBase {
   }
 
   forEachChild(onTestData: (child: TestData) => void): void {
+    console.log(`${this.item.id} has ${this.item.children.size} children`);
     this.item.children.forEach((childItem) => {
       const child = this.context.getData<TestData>(childItem);
       if (child) {
@@ -653,6 +666,20 @@ export class TestDocumentRoot extends TestResultData {
 
     item.canResolveChildren = true;
     return item;
+  }
+
+  onAssertionUpdate(run: JestTestRun): void {
+    // handle special case when the test results contains no assertions
+    // (usually due to syntax error), we will need to mark the item's children
+    // explicitly failed instead of just removing them. Due to vscode's current
+    // implementation - removing the test item will not reset the item's status,
+    // when they get added back again later (by the parsed source nodes), they
+    // will inherit the previous status, which might not be correct.
+    const suiteResult = this.context.ext.testResultProvider.getTestSuiteResult(this.item.id);
+    if (suiteResult && isContainerEmpty(suiteResult.assertionContainer)) {
+      this.resetChildrenState(run, suiteResult);
+    }
+    this.discoverTest(run);
   }
 
   discoverTest = (run?: JestTestRun, parsedRoot?: ContainerNode<ItBlock>): void => {
