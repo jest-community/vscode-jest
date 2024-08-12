@@ -156,12 +156,21 @@ describe('test-item-data', () => {
 
   const createAllTestItems = () => {
     const wsRoot = new WorkspaceRoot(context);
-    const folder = new FolderData(context, 'dir', wsRoot.item);
-    const uri: any = { fsPath: 'whatever' };
+    const folder = new FolderData(context, 'tests', wsRoot.item);
+    const uri: any = { fsPath: '/ws-1/tests/a.test.ts' };
     const doc = new TestDocumentRoot(context, uri, folder.item);
     const node: any = { fullName: 'a test', attrs: {}, data: {} };
     const testItem = new TestData(context, uri, node, doc.item);
     return { wsRoot, folder, doc, testItem };
+  };
+  // like createAllTestItems but with added a describe block
+  const createTestDataTree = () => {
+    const { wsRoot, folder, doc, testItem } = createAllTestItems();
+    const node1: any = { fullName: 'describe', attrs: {}, data: {} };
+    const desc = new TestData(context, doc.uri, node1, doc.item);
+    const node2: any = { fullName: 'describe test 2', attrs: {}, data: {} };
+    const test2 = new TestData(context, doc.uri, node2, desc.item);
+    return { wsRoot, folder, doc, testItem, desc, test2 };
   };
 
   beforeEach(() => {
@@ -1832,6 +1841,99 @@ describe('test-item-data', () => {
           }
         }
       );
+    });
+  });
+  describe('onAssertionUpdate', () => {
+    let folder, doc, desc, testItem, test2;
+    beforeEach(() => {
+      ({ folder, doc, desc, testItem, test2 } = createTestDataTree());
+    });
+    describe('when test suite failed without assertions', () => {
+      it("all child items should inherit the test suite's status", () => {
+        // address https://github.com/jest-community/vscode-jest/issues/1098
+        const file = '/ws-1/tests/a.test.ts';
+        // context.ext.testResultProvider.getTestList.mockReturnValueOnce([]);
+        const runMode = new RunMode({ type: 'watch' });
+        context.ext.settings = { runMode };
+
+        // test suite failed and there is no assertions
+        const testSuiteResult: any = {
+          status: 'KnownFail',
+          message: 'test file failed',
+        };
+        context.ext.testResultProvider.getTestSuiteResult.mockReturnValue(testSuiteResult);
+
+        // doc has 2 children before the test suite event
+        expect(doc.item.children.size).toBe(2);
+
+        // triggers testSuiteChanged event listener
+        contextCreateTestRunSpy.mockClear();
+        mockedJestTestRun.mockClear();
+
+        // mock a non-watch process that is still running
+        const process = {
+          id: 'whatever',
+          request: { type: 'watch-tests' },
+        };
+        context.ext.testResultProvider.events.testSuiteChanged.event.mock.calls[0][0]({
+          type: 'assertions-updated',
+          process,
+          files: [file],
+        });
+
+        // all child items should have been removed
+        expect(doc.item.children.size).toBe(0);
+
+        // checking item status update...
+        const run = mockedJestTestRun.mock.results[0].value;
+
+        // all child items should be updated regardless before being removed
+        expect(run.failed).toHaveBeenCalledTimes(4);
+        [doc.item, testItem.item, desc.item, test2.item].forEach((item) => {
+          expect(run.failed).toHaveBeenCalledWith(item, expect.anything());
+        });
+
+        expect(run.end).toHaveBeenCalledTimes(1);
+      });
+    });
+    it('when no test suite result found, the doc and its child items should be removed without any status update', () => {
+      const file = '/ws-1/tests/a.test.ts';
+      const runMode = new RunMode({ type: 'watch' });
+      context.ext.settings = { runMode };
+
+      // test suite failed and there is no assertions
+      context.ext.testResultProvider.getTestSuiteResult.mockReturnValue(undefined);
+
+      // doc has 2 children before the test suite event
+      expect(folder.item.children.size).toBe(1);
+      expect(doc.item.children.size).toBe(2);
+
+      // triggers testSuiteChanged event listener
+      contextCreateTestRunSpy.mockClear();
+      mockedJestTestRun.mockClear();
+
+      // mock a non-watch process that is still running
+      const process = {
+        id: 'whatever',
+        request: { type: 'watch-tests' },
+      };
+      context.ext.testResultProvider.events.testSuiteChanged.event.mock.calls[0][0]({
+        type: 'assertions-updated',
+        process,
+        files: [file],
+      });
+
+      // all doc's child items should have been removed but the doc itself would remain
+      expect(folder.item.children.size).toBe(1);
+      expect(doc.item.children.size).toBe(0);
+
+      // checking item status update...
+      const run = mockedJestTestRun.mock.results[0].value;
+
+      // no update should occur
+      expect(run.failed).not.toHaveBeenCalled();
+
+      expect(run.end).toHaveBeenCalledTimes(1);
     });
   });
 });
