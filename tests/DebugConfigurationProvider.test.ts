@@ -1,5 +1,8 @@
+jest.unmock('./mock-platform');
+jest.unmock('./test-helper');
 jest.unmock('../src/DebugConfigurationProvider');
 
+import { restorePlatform, setPlatform } from './mock-platform';
 import { DebugConfigurationProvider } from '../src/DebugConfigurationProvider';
 import {
   getTestCommand,
@@ -9,7 +12,6 @@ import {
   parseCmdLine,
   toAbsoluteRootPath,
 } from '../src/helpers';
-import * as os from 'os';
 import * as fs from 'fs';
 import { makeWorkspaceFolder } from './test-helper';
 
@@ -149,9 +151,14 @@ describe('DebugConfigurationProvider', () => {
       ]);
     });
   });
-  describe('can generate debug config with jestCommandLine and rootPath', () => {
-    const canRunTest = (isWin32: boolean) =>
-      (isWin32 && os.platform() === 'win32') || (!isWin32 && os.platform() !== 'win32');
+  describe('createDebugConfig', () => {
+    const switchToWin32 = (useWin32: boolean) => {
+      if (useWin32) {
+        setPlatform('win32');
+      } else {
+        setPlatform('linux');
+      }
+    };
 
     const config1 = {
       type: 'node',
@@ -189,6 +196,9 @@ describe('DebugConfigurationProvider', () => {
       },
     };
     const workspace = makeWorkspaceFolder('project-root');
+    afterEach(() => {
+      restorePlatform();
+    });
     beforeEach(() => {
       (parseCmdLine as jest.Mocked<any>).mockImplementation(
         jest.requireActual('../src/helpers').parseCmdLine
@@ -205,7 +215,7 @@ describe('DebugConfigurationProvider', () => {
     `('with config $name', ({ config }) => {
       describe('when merge should succeed', () => {
         describe.each`
-          case  | isWin32  | cmdLine                                                       | expected
+          case  | useWin32 | jestCommandLine                                               | expected
           ${1}  | ${false} | ${'jest'}                                                     | ${{ cmd: 'jest', args: [], program: '${workspaceFolder}/jest' }}
           ${2}  | ${false} | ${'./node_modules/.bin/jest'}                                 | ${{ cmd: 'node_modules/.bin/jest', args: [], program: '${workspaceFolder}/node_modules/.bin/jest' }}
           ${3}  | ${false} | ${'./node_modules/.bin/..//jest'}                             | ${{ cmd: 'node_modules/jest', args: [], program: '${workspaceFolder}/node_modules/jest' }}
@@ -220,17 +230,16 @@ describe('DebugConfigurationProvider', () => {
           ${12} | ${false} | ${'"/dir with space/jest" --arg1=1 --arg2 2 "some string"'}   | ${{ cmd: '/dir with space/jest', args: ['--arg1=1', '--arg2', '2', '"some string"'], program: '/dir with space/jest' }}
           ${13} | ${false} | ${"'/dir with space/jest' --arg1=1 --arg2 2 'some string'"}   | ${{ cmd: '/dir with space/jest', args: ['--arg1=1', '--arg2', '2', "'some string'"], program: '/dir with space/jest' }}
           ${14} | ${false} | ${'jest --arg1 "escaped \\"this\\" string" --arg2 2'}         | ${{ cmd: 'jest', args: ['--arg1', '"escaped \\"this\\" string"', '--arg2', '2'], program: '${workspaceFolder}/jest' }}
-          ${15} | ${true}  | ${'.\\node_modules\\.bin\\jest.cmd'}                          | ${{ cmd: 'node_modules\\jest\\bin\\jest.js', args: [], program: '${workspaceFolder}\\node_modules\\jest\\bin\\jest.js' }}
-          ${16} | ${true}  | ${'..\\jest --config="..\\jest-config.json"'}                 | ${{ cmd: '..\\jest', args: ['--config=', '"..\\jest-config.json"'], program: '${workspaceFolder}\\..\\jest' }}
-          ${17} | ${true}  | ${'jest --config "..\\dir with space\\jest-config.json"'}     | ${{ cmd: 'jest', args: ['--config', '"..\\dir with space\\jest-config.json"'], program: '${workspaceFolder}\\jest' }}
-          ${18} | ${true}  | ${'\\absolute\\jest --runInBand'}                             | ${{ cmd: '\\absolute\\jest', args: ['--runInBand'], program: '\\absolute\\jest' }}
-          ${19} | ${true}  | ${'"\\dir with space\\jest" --arg1=1 --arg2 2 "some string"'} | ${{ cmd: '\\dir with space\\jest', args: ['--arg1=1', '--arg2', '2', '"some string"'], program: '\\dir with space\\jest' }}
-          ${20} | ${true}  | ${'c:\\jest --arg1 "escaped \\"this\\" string" --arg2 2'}     | ${{ cmd: 'c:\\jest', args: ['--arg1', '"escaped \\"this\\" string"', '--arg2', '2'], program: 'c:\\jest' }}
-        `('case $case', ({ cmdLine, expected, isWin32 }) => {
-          it('can incorporate jestCommandLine  (for win32 only? $isWin32)', () => {
-            if (!canRunTest(isWin32)) {
-              return;
-            }
+          ${15} | ${false} | ${undefined}                                                  | ${{ cmd: 'jest', args: [], program: '${workspaceFolder}/node_modules/.bin/jest' }}
+          ${16} | ${true}  | ${'.\\node_modules\\.bin\\jest.cmd'}                          | ${{ cmd: 'node_modules\\jest\\bin\\jest.js', args: [], program: '${workspaceFolder}\\node_modules\\jest\\bin\\jest.js' }}
+          ${17} | ${true}  | ${'..\\jest --config="..\\jest-config.json"'}                 | ${{ cmd: '..\\jest', args: ['--config=', '"..\\jest-config.json"'], program: '${workspaceFolder}\\..\\jest' }}
+          ${18} | ${true}  | ${'jest --config "..\\dir with space\\jest-config.json"'}     | ${{ cmd: 'jest', args: ['--config', '"..\\dir with space\\jest-config.json"'], program: '${workspaceFolder}\\jest' }}
+          ${19} | ${true}  | ${'\\absolute\\jest --runInBand'}                             | ${{ cmd: '\\absolute\\jest', args: ['--runInBand'], program: '\\absolute\\jest' }}
+          ${20} | ${true}  | ${'"\\dir with space\\jest" --arg1=1 --arg2 2 "some string"'} | ${{ cmd: '\\dir with space\\jest', args: ['--arg1=1', '--arg2', '2', '"some string"'], program: '\\dir with space\\jest' }}
+          ${21} | ${true}  | ${'c:\\jest --arg1 "escaped \\"this\\" string" --arg2 2'}     | ${{ cmd: 'c:\\jest', args: ['--arg1', '"escaped \\"this\\" string"', '--arg2', '2'], program: 'c:\\jest' }}
+        `('case $case', ({ jestCommandLine, expected, useWin32 }) => {
+          it('can incorporate jestCommandLine  (for win32 only? $useWin32)', () => {
+            switchToWin32(useWin32);
 
             (fs.existsSync as jest.Mocked<any>) = jest.fn().mockReturnValue(true);
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -243,43 +252,86 @@ describe('DebugConfigurationProvider', () => {
               args: newArgs,
               program: newProgram,
               ...restNewConfig
-            } = sut.withCommandLine(workspace, cmdLine);
+            } = sut.createDebugConfig(workspace, { jestCommandLine });
             expect(newArgs).toContain('--runInBand');
             expect(newArgs).toEqual([...expected.args, ...args]);
             expect(newProgram).toEqual(expected.program);
             expect(restNewConfig).toEqual(restConfig);
           });
         });
+        describe('can incorporate nodeEnv', () => {
+          it.each`
+            case | nodeEnv
+            ${1} | ${undefined}
+            ${2} | ${{ NODE_OPTIONS: '--experimental-vm-modules' }}
+            ${3} | ${{ a: 'whatever', b: 3 }}
+          `('case $case', ({ nodeEnv }) => {
+            const sut = new DebugConfigurationProvider();
+            const spy = jest.spyOn(sut, 'provideDebugConfigurations');
+            spy.mockImplementation(() => [config]);
+
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { args, program, windows, ...restConfig } = config;
+            const {
+              args: newArgs,
+              program: newProgram,
+              env,
+              ...restNewConfig
+            } = sut.createDebugConfig(workspace, { nodeEnv });
+            expect(newArgs).toContain('--runInBand');
+            expect(newArgs).toEqual([...args]);
+            expect(newProgram).toEqual(program);
+            expect(restNewConfig).toEqual(restConfig);
+            if (nodeEnv) {
+              expect(env).toEqual(nodeEnv);
+            } else {
+              expect(env).toBeUndefined();
+            }
+          });
+        });
       });
       it.each`
-        cmdLine
-        ${''}
-      `('withCommandLine should throw error for invalid cmdLine: $cmdLine', ({ cmdLine }) => {
+        jestCommandLine
+        ${' '}
+      `(
+        'createDebugConfig should throw error for invalid cmdLine: $cmdLine',
+        ({ jestCommandLine }) => {
+          const sut = new DebugConfigurationProvider();
+          expect(() => sut.createDebugConfig(workspace, { jestCommandLine })).toThrow(
+            'invalid cmdLine'
+          );
+        }
+      );
+      it('if not passing any options, we will get the default config', () => {
         const sut = new DebugConfigurationProvider();
-        expect(() => sut.withCommandLine(workspace, cmdLine)).toThrow('invalid cmdLine');
+        const spy = jest.spyOn(sut, 'provideDebugConfigurations');
+        spy.mockImplementation(() => [config]);
+
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { windows, ...noWindowsConfig } = config;
+        const newConfig = sut.createDebugConfig(workspace);
+        expect(noWindowsConfig).toEqual(newConfig);
       });
       describe('on win32, should throw error if the raw jest binary can not be found', () => {
-        let platformSpy;
-        beforeAll(() => {
-          platformSpy = jest.spyOn(os, 'platform').mockImplementation(() => 'win32');
-        });
-        afterAll(() => {
-          platformSpy.mockRestore();
-        });
         it.each`
           exists
           ${true}
           ${false}
         `('file exists = $exists', ({ exists }) => {
+          setPlatform('win32');
           (fs.existsSync as jest.Mocked<any>) = jest.fn().mockReturnValue(exists);
           const sut = new DebugConfigurationProvider();
           if (!exists) {
             expect(() =>
-              sut.withCommandLine(workspace, 'whatever\\node_modules\\.bin\\jest.cmd')
+              sut.createDebugConfig(workspace, {
+                jestCommandLine: 'whatever\\node_modules\\.bin\\jest.cmd',
+              })
             ).toThrow();
           } else {
             expect(() =>
-              sut.withCommandLine(workspace, 'whatever\\node_modules\\.bin\\jest.cmd')
+              sut.createDebugConfig(workspace, {
+                jestCommandLine: 'whatever\\node_modules\\.bin\\jest.cmd',
+              })
             ).not.toThrow();
           }
         });
@@ -303,7 +355,7 @@ describe('DebugConfigurationProvider', () => {
           program: newProgram,
           runtimeExecutable,
           ...restNewConfig
-        } = sut.withCommandLine(workspace, cmdLine);
+        } = sut.createDebugConfig(workspace, { jestCommandLine: cmdLine });
         expect(newArgs).toContain('--runInBand');
         expect(runtimeExecutable).toEqual(cmd);
         expect(newProgram).toBeUndefined();
@@ -320,43 +372,47 @@ describe('DebugConfigurationProvider', () => {
 
       it('platform specific sections are removed.', () => {
         const sut = new DebugConfigurationProvider();
-        const newConfig = sut.withCommandLine(workspace, 'whatever');
+        const newConfig = sut.createDebugConfig(workspace, { jestCommandLine: 'whatever' });
         expect(newConfig.windows).toBeUndefined();
       });
 
       describe.each`
-        isWin32  | absoluteRootPath              | cmdLine        | expected
-        ${false} | ${undefined}                  | ${'jest'}      | ${{ program: '${workspaceFolder}/jest', cwd: '${workspaceFolder}' }}
-        ${false} | ${'/absolute/root/path'}      | ${'jest'}      | ${{ program: '/absolute/root/path/jest' }}
-        ${false} | ${'/absolute/root/path'}      | ${'./jest'}    | ${{ program: '/absolute/root/path/jest' }}
-        ${false} | ${'/absolute/root/path'}      | ${'../jest'}   | ${{ program: '/absolute/root/jest' }}
-        ${false} | ${'/absolute/root/path'}      | ${'yarn test'} | ${{ runtimeExecutable: 'yarn' }}
-        ${true}  | ${undefined}                  | ${'jest'}      | ${{ program: '${workspaceFolder}\\jest', cwd: '${workspaceFolder}' }}
-        ${true}  | ${'c:\\absolute\\root\\path'} | ${'..\\jest'}  | ${{ program: 'c:\\absolute\\root\\jest' }}
-        ${true}  | ${'\\absolute\\root\\path'}   | ${'yarn test'} | ${{ runtimeExecutable: 'yarn' }}
-      `('with rootPath: $absoluteRootPath', ({ isWin32, absoluteRootPath, cmdLine, expected }) => {
+        case | useWin32 | absoluteRootPath              | jestCommandLine | expected
+        ${1} | ${false} | ${undefined}                  | ${'jest'}       | ${{ program: '${workspaceFolder}/jest', cwd: '${workspaceFolder}' }}
+        ${2} | ${false} | ${'/absolute/root/path'}      | ${'jest'}       | ${{ program: '/absolute/root/path/jest' }}
+        ${3} | ${false} | ${'/absolute/root/path'}      | ${'./jest'}     | ${{ program: '/absolute/root/path/jest' }}
+        ${4} | ${false} | ${'/absolute/root/path'}      | ${'../jest'}    | ${{ program: '/absolute/root/jest' }}
+        ${5} | ${false} | ${'/absolute/root/path'}      | ${'yarn test'}  | ${{ runtimeExecutable: 'yarn' }}
+        ${6} | ${true}  | ${undefined}                  | ${'jest'}       | ${{ program: '${workspaceFolder}\\jest', cwd: '${workspaceFolder}' }}
+        ${7} | ${true}  | ${'c:\\absolute\\root\\path'} | ${'..\\jest'}   | ${{ program: 'c:\\absolute\\root\\jest' }}
+        ${8} | ${true}  | ${'\\absolute\\root\\path'}   | ${'yarn test'}  | ${{ runtimeExecutable: 'yarn' }}
+      `('case $case', ({ useWin32, absoluteRootPath, jestCommandLine, expected }) => {
         it('debugConfig.cwd will be based on absolute rootPath', () => {
-          if (!canRunTest(isWin32)) {
-            return;
-          }
+          switchToWin32(useWin32);
+
           const sut = new DebugConfigurationProvider();
-          const { cwd } = sut.withCommandLine(workspace, cmdLine, absoluteRootPath);
+          const { cwd } = sut.createDebugConfig(workspace, {
+            jestCommandLine,
+            rootPath: absoluteRootPath,
+          });
           expect(cwd).toEqual(expected.cwd ?? absoluteRootPath);
         });
         it('program will be adjust by rootPath', () => {
-          if (!canRunTest(isWin32)) {
-            return;
-          }
+          switchToWin32(useWin32);
           const sut = new DebugConfigurationProvider();
-          const { program } = sut.withCommandLine(workspace, cmdLine, absoluteRootPath);
+          const { program } = sut.createDebugConfig(workspace, {
+            jestCommandLine,
+            rootPath: absoluteRootPath,
+          });
           expect(program).toEqual(expected.program);
         });
         it('runtimeExecutable will NOT be adjusted by rootPath', () => {
-          if (!canRunTest(isWin32)) {
-            return;
-          }
+          switchToWin32(useWin32);
           const sut = new DebugConfigurationProvider();
-          const { runtimeExecutable } = sut.withCommandLine(workspace, cmdLine, absoluteRootPath);
+          const { runtimeExecutable } = sut.createDebugConfig(workspace, {
+            jestCommandLine,
+            rootPath: absoluteRootPath,
+          });
           expect(runtimeExecutable).toEqual(expected.runtimeExecutable);
         });
       });

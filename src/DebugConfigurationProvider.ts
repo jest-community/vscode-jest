@@ -11,11 +11,17 @@ import {
   toAbsoluteRootPath,
 } from './helpers';
 import { platform } from 'os';
+import { PluginResourceSettings } from './Settings';
 
 export const DEBUG_CONFIG_PLATFORMS = ['windows', 'linux', 'osx'];
 const testNamePatternRegex = /\$\{jest.testNamePattern\}/g;
 const testFileRegex = /\$\{jest.testFile\}/g;
 const testFilePatternRegex = /\$\{jest.testFilePattern\}/g;
+
+export type DebugConfigOptions = Partial<
+  Pick<PluginResourceSettings, 'jestCommandLine' | 'rootPath' | 'nodeEnv'>
+>;
+type PartialDebugConfig = Partial<vscode.DebugConfiguration>;
 export class DebugConfigurationProvider implements vscode.DebugConfigurationProvider {
   private fileNameToRun = '';
   private testToRun = '';
@@ -176,7 +182,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
   }
 
   /** return a config if cmd is a package-manager */
-  private usePM(cmd: string, args: string[]): Partial<vscode.DebugConfiguration | undefined> {
+  private usePM(cmd: string, args: string[]): PartialDebugConfig | undefined {
     const commonConfig = {
       program: undefined,
     };
@@ -191,48 +197,57 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
   }
 
   /**
-   * generate a debug config incorporating commandLine and rootPath. Throw exception if error.
-   * @param cmdLine
-   * @param rootPath
-   * @returns a debug config.
+   * Creates a debug configuration for a given workspace.
+   *
+   * @param {vscode.WorkspaceFolder} workspace - The workspace folder for which the debug configuration is created.
+   * @param {DebugConfigOptions} [options] - Optional parameters to override the default debug configuration.
+   * @returns {vscode.DebugConfiguration} The final debug configuration.
+   *
+   * @throws {Error} If the provided jestCommandLine is invalid.
+   *
+   * This function customizes the default debug configuration with the settings from the options parameter,
+   * such as `rootPath`, `jestCommandLine`, and `nodeEnv`.
+   * Please note, the platform-specific settings that were not converted are removed.
    */
-  withCommandLine(
+  createDebugConfig(
     workspace: vscode.WorkspaceFolder,
-    cmdLine: string,
-    rootPath?: string
+    options?: DebugConfigOptions
   ): vscode.DebugConfiguration {
     const config = this.provideDebugConfigurations(workspace)[0];
-    const [cmd, ...cmdArgs] = parseCmdLine(cmdLine);
-    if (!cmd) {
-      throw new Error(`invalid cmdLine: ${cmdLine}`);
-    }
+    let args: string[] = [];
+    let override: PartialDebugConfig = {};
 
-    const absoluteRootPath = rootPath && toAbsoluteRootPath(workspace, rootPath);
-
-    let finalConfig: vscode.DebugConfiguration = { ...config };
-
+    const absoluteRootPath = options?.rootPath && toAbsoluteRootPath(workspace, options.rootPath);
     const cwd = absoluteRootPath ?? config.cwd;
 
-    const pmConfig = this.usePM(cmd, cmdArgs);
-    if (pmConfig) {
-      const args = [...cmdArgs, ...pmConfig.args, ...config.args];
-      finalConfig = {
-        ...finalConfig,
-        ...pmConfig,
-        cwd,
-        args,
-      };
-    } else {
-      // convert the cmd to absolute path
-      let program = path.isAbsolute(cmd)
-        ? cmd
-        : absoluteRootPath
-          ? path.resolve(absoluteRootPath, cmd)
-          : ['${workspaceFolder}', cmd].join(path.sep);
-      program = this.adjustProgram(program);
-      const args = [...cmdArgs, ...config.args];
-      finalConfig = { ...finalConfig, cwd, program, args };
+    // handle jestCommandLine related overrides
+    if (options?.jestCommandLine) {
+      const [cmd, ...cmdArgs] = parseCmdLine(options.jestCommandLine);
+      if (!cmd) {
+        throw new Error(`invalid cmdLine: ${options.jestCommandLine}`);
+      }
+      const pmConfig = this.usePM(cmd, cmdArgs);
+      if (pmConfig) {
+        args = [...cmdArgs, ...pmConfig.args, ...config.args];
+        override = { ...pmConfig, args };
+      } else {
+        let program = path.isAbsolute(cmd)
+          ? cmd
+          : absoluteRootPath
+            ? path.resolve(absoluteRootPath, cmd)
+            : ['${workspaceFolder}', cmd].join(path.sep);
+        program = this.adjustProgram(program);
+        args = [...cmdArgs, ...config.args];
+        override = { program, args };
+      }
     }
+
+    //handle nodeEnv
+    if (options?.nodeEnv) {
+      override = { env: options.nodeEnv, ...override };
+    }
+
+    const finalConfig: vscode.DebugConfiguration = { ...config, cwd, ...override };
 
     // delete platform specific settings since we did not convert them
     DEBUG_CONFIG_PLATFORMS.forEach((p) => delete finalConfig[p]);

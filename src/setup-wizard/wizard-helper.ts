@@ -20,7 +20,7 @@ import {
   isActionableButton,
   WizardContext,
 } from './types';
-import { VirtualFolderSettings, createJestSettingGetter } from '../Settings';
+import { NodeEnv, VirtualFolderSettings, createJestSettingGetter } from '../Settings';
 import { existsSync } from 'fs';
 import { parseCmdLine, removeSurroundingQuote, toAbsoluteRootPath } from '../helpers';
 import { VirtualWorkspaceFolder, isVirtualWorkspaceFolder } from '../virtual-workspace-folder';
@@ -269,6 +269,7 @@ export const getWizardSettings = (workspaceFolder: vscode.WorkspaceFolder): Wiza
   const wsSettings: WizardSettings = {
     jestCommandLine: getSetting<string>('jestCommandLine')?.trim() || undefined,
     rootPath: getSetting<string>('rootPath')?.trim() || undefined,
+    nodeEnv: getSetting<NodeEnv>('nodeEnv') || undefined,
   };
 
   // populate jest settings

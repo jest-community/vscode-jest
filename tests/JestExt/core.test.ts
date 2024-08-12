@@ -90,7 +90,7 @@ describe('JestExt', () => {
   const debugConfigurationProvider = {
     provideDebugConfigurations: jest.fn(),
     prepareTestRun: jest.fn(),
-    withCommandLine: jest.fn(),
+    createDebugConfig: jest.fn(),
     getDebugConfigNames: jest.fn(),
   } as any;
 
@@ -168,11 +168,14 @@ describe('JestExt', () => {
     mockListTestFiles();
   });
 
+  const debugConfiguration = { type: 'default-config' };
+  const debugConfiguration2 = { type: 'with-setting-override' };
+
   describe('debugTests()', () => {
     const fileName = 'fileName';
     const document: any = { fileName };
     let sut: JestExt;
-    let startDebugging, debugConfiguration, debugConfiguration2;
+    let startDebugging;
     const mockShowQuickPick = jest.fn();
     let mockConfigurations = [];
     beforeEach(() => {
@@ -185,10 +188,8 @@ describe('JestExt', () => {
           }
         }
       );
-      debugConfiguration = { type: 'default-config' };
-      debugConfiguration2 = { type: 'with-command-line' };
       debugConfigurationProvider.provideDebugConfigurations.mockReturnValue([debugConfiguration]);
-      debugConfigurationProvider.withCommandLine.mockReturnValue(debugConfiguration2);
+      debugConfigurationProvider.createDebugConfig.mockReturnValue(debugConfiguration2);
       debugConfigurationProvider.getDebugConfigNames.mockImplementation((ws) => {
         const v1 = [`vscode-jest-tests.${ws.name}`, 'vscode-jest-tests'];
         const v2 = [`vscode-jest-tests.v2.${ws.name}`, 'vscode-jest-tests.v2'];
@@ -252,7 +253,7 @@ describe('JestExt', () => {
           const notJestConfig = { name: 'not-for-jest' };
           it.each`
             case | folderConfigs      | workspaceConfigs        | expectedConfig
-            ${1} | ${undefined}       | ${undefined}            | ${defaultConfig}
+            ${1} | ${undefined}       | ${undefined}            | ${debugConfiguration2}
             ${2} | ${[notJestConfig]} | ${[v1Config, v2Config]} | ${v2Config}
             ${3} | ${[v1Config]}      | ${[v2Config]}           | ${v1Config}
             ${4} | ${undefined}       | ${[v2Config]}           | ${v2Config}
@@ -265,7 +266,7 @@ describe('JestExt', () => {
                   if (section !== 'launch') {
                     return;
                   }
-                  if (scope === workspaceFolder.ui) {
+                  if (scope === workspaceFolder) {
                     return folderConfigs;
                   }
                   if (!scope) {
@@ -285,15 +286,24 @@ describe('JestExt', () => {
       });
       describe('generate debug config if nothing found in launch.json', () => {
         it.each`
-          jestCommandLine | debugConfig
-          ${'yarn test'}  | ${() => debugConfiguration2}
-          ${undefined}    | ${() => debugConfiguration}
-        `('with jestCommandLine: $jestCommandLine', ({ jestCommandLine, debugConfig }) => {
-          sut = newJestExt({ settings: { jestCommandLine } });
+          case | settings                                                                                | createDebugConfigOptions
+          ${1} | ${{ jestCommandLine: 'yarn test' }}                                                     | ${undefined}
+          ${2} | ${{}}                                                                                   | ${{ jestCommandLine: 'jest' }}
+          ${3} | ${{ rootPath: 'packages/abc' }}                                                         | ${{ jestCommandLine: 'jest', rootPath: 'packages/abc' }}
+          ${3} | ${{ jestCommandLine: 'npx jest', nodeEnv: { key: 'value' }, rootPath: 'packages/abc' }} | ${undefined}
+        `('with settings case $case', ({ settings, createDebugConfigOptions }) => {
+          sut = newJestExt({ settings });
           const mockConfig: any = { get: jest.fn() };
           vscode.workspace.getConfiguration = jest.fn(() => mockConfig);
           sut.debugTests(document, 'whatever');
-          expect(vscode.debug.startDebugging).toHaveBeenCalledWith(workspaceFolder, debugConfig());
+          expect(sut.debugConfigurationProvider.createDebugConfig).toHaveBeenCalledWith(
+            workspaceFolder,
+            createDebugConfigOptions ?? settings
+          );
+          expect(vscode.debug.startDebugging).toHaveBeenCalledWith(
+            workspaceFolder,
+            debugConfiguration2
+          );
         });
       });
     });
