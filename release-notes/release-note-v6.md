@@ -4,11 +4,9 @@ Release Notes <!-- omit in toc -->
 ---
 
 - [v6.3 (pre-release)](#v63-pre-release)
-  - [Features](#features)
-  - [Bug Fixes](#bug-fixes)
-- [v6.3 (pre-release)](#v63-pre-release-1)
-  - [Features](#features-1)
-  - [Bug Fixes](#bug-fixes-1)
+  - [v6.3.0 (pre-release)](#v630-pre-release)
+    - [Features](#features)
+    - [Bug Fixes](#bug-fixes)
 - [v6.2](#v62)
   - [v6.2.5](#v625)
   - [v6.2.4](#v624)
@@ -32,7 +30,7 @@ Release Notes <!-- omit in toc -->
       - [2.1 "TEST RESULTS" Panel Integration](#21-test-results-panel-integration)
       - [2.2 Configuration and Examples](#22-configuration-and-examples)
       - [2.3 Deprecations and Migration](#23-deprecations-and-migration)
-  - [Bug Fixes](#bug-fixes-2)
+  - [Bug Fixes](#bug-fixes-1)
   - [Technical Debt](#technical-debt)
 - [v6.0 (pre-release)](#v60-pre-release)
   - [Main Features](#main-features-1)
@@ -47,7 +45,9 @@ Release Notes <!-- omit in toc -->
 
 ## v6.3 (pre-release)
 
-### Features
+### v6.3.0 (pre-release)
+
+#### Features
 
 - **Support for Jest v30** (v30.0.0-alpha.6 and up).
   - The extension now automatically detects Jest v30 and switches to the new syntax, specifically `TestPathPatterns`. This behavior can be controlled via a new setting, `jest.useJest30`, which, when enabled, instructs the extension to immediately use the Jest v30 syntax. ([#1153](https://github.com/jest-community/vscode-jest/pull/1153) - @connectdotz)
@@ -59,7 +59,7 @@ Release Notes <!-- omit in toc -->
 
   - **Note**: The original coverage feature in the extension will remain functional for now. However, we plan to deprecate it in the near future. If you have any concerns on this change, please open an issue to let us know.
 
-### Bug Fixes
+#### Bug Fixes
 
 - Correctly incorporate `jest.nodeEnv` into the auto-generated debug configuration. ([#1167](https://github.com/jest-community/vscode-jest/pull/1167) - @connectdotz)
   
@@ -69,35 +69,7 @@ Release Notes <!-- omit in toc -->
 
 **CHANGELOG**
 
-- [v6.3.0](https://github.com/jest-community/vscode-jest/releases/tag/v6.3.0)
-
----
-
-## v6.3 (pre-release)
-
-### Features
-
-- Supports jest v30 (v30.0.0-alpha.6 and up). 
-  - The extension will auto detect jest 30 and switch to the new syntax (namely `TestPathPatterns`). This behavior can also be controlled by a new setting `jest.useJest30`, when set will instruct the extension to use jest30 syntax immediately. ([#1153](https://github.com/jest-community/vscode-jest/pull/1153) - @connectdotz)
-
-- Supports vscode test coverage API and UI. 
-  - The extension will now also provide test coverage information via the native vscode test coverage API. This will enable vscode to run test with coverage via test explorer tree and show test coverage information in the editor and the test explorer coverage panel. ([#1151](https://github.com/jest-community/vscode-jest/pull/1151) - @connectdotz)
-
-    ![test-coverage-explorer](../images/test-coverage-explorer.png)
-
-  - **Note**: The existing coverage feature in the extension will continue to work for now. However, we plan to deprecate the existing coverage in the near future. If you prefer the existing coverage, please open an issue to let us know.  
-
-### Bug Fixes
-
-- Correctly incorporate the `jest.nodeEnv` to auto generated debug config. ([#1167](https://github.com/jest-community/vscode-jest/pull/1167) - @connectdotz)
-  
-- Fixed an issue where the test file failed to run (compile error for example) but the tests within the file failed to reflect the correct status. ([#1165](https://github.com/jest-community/vscode-jest/pull/1165) - @connectdotz)
-
-- Fixed links in setup-wizard docs. ([#1154](https://github.com/jest-community/vscode-jest/pull/1154) - @pierluigigiancola)
-  
-**CHANGELOG**
-
-- [v6.3.0](https://github.com/jest-community/vscode-jest/releases/tag/v6.3.0)
+- [v6.3.0-next](https://github.com/jest-community/vscode-jest/releases/tag/v6.3.0-next)
 
 ---
 
