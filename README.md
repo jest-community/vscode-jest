@@ -26,6 +26,7 @@ You can see the full [features](#features) and learn more details in the [How-To
 Happy testing!
 
 ## Releases 
+- **Next** ([v6.3.0-pre-release](https://github.com/jest-community/vscode-jest/releases/tag/v6.3.0)): [release note](release-notes/release-note-v6.md#v63-pre-release)
 - **Current** ([v6.2.5](https://github.com/jest-community/vscode-jest/releases/tag/v6.2.5)): [release note](release-notes/release-note-v6.md#v625)
 - **Previous** ([v5.2.3](https://github.com/jest-community/vscode-jest/releases/tag/v5.2.3)): [release note](release-notes/release-note-v5.x.md#v523)
 
@@ -174,6 +175,20 @@ The extension will try to generate a debug config, but if you encounter a debug 
 
 ### How to use code coverage?
 
+---
+
+**v6.3.0 and up**
+
+Test coverage can also be run interactively via the TestExplorer tree view, by clicking the "Run with Coverage" button.
+
+<img src="images/test-coverage-explorer.png" alt="test-coverage-explorer" width="800"/>
+
+
+**v6.2.5 and below**
+
+> [!Note]
+> Note: The following describes the original test coverage feature, which remains available as of 2024/08/13. With the introduction of the new, more intuitive integration in v6.3.0, we plan to deprecate this feature soon. If you have any concerns or would like to share your thoughts on this change, please let us know.
+
 Code coverage can be triggered via
 1. change [runMode](#runmode) config via [chooser](#runmode-chooser) or settings.
 2. [Command Palette](https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette), select command like **Jest: Toggle Coverage** to activate or deactivate code coverage (see full list in [commands](#commands). 
@@ -269,6 +284,7 @@ Users can use the following settings to tailor the extension for their environme
 useDashedArgs| Determine if to use dashed arguments for jest processes |undefined|`"jest.useDashedArgs":true`| >= v6.0.0
 |[parserPluginOptions](#parserpluginoptions)|Configure babel parser plugins|null|`"jest.parserPluginOptions": {decorators: 'legacy'}`|
 |[virtualFolders](#virtual-folders)|defines multiple jest runs in a given vscode workspace folder|undefined|`"jest.virtualFolders": "[{"name": "front-end", "rootPath': "packages/front-end"}, {"name": "back-end", "rootPath': "packages/back-end"} ]"`| >= v6.0.0 
+|useJest30|instruct the extension to use jest 30 command line syntax|undefined|`"jest.useJest30": true`| >= v6.3.0
 |**UX**|
 |[outputConfig](#outputconfig) 💼|Controls test output experience across the whole workspace.|undefined|`"jest.outputConfig": "neutral"` or `"jest.outputConfig": {"revealOn": "run", "revealWithFocus": "terminal", "clearOnRun": 'terminal"`| >= v6.1.0
 |[runMode](#runmode)|Controls most test UX, including when tests should be run, output management, etc|undefined|`"jest.runMode": "watch"` or `"jest.runMode": "on-demand"` or `"jest.runMode": {"type": "on-demand", "deferred": true}`| >= v6.1.0

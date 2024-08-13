@@ -3,18 +3,25 @@
 Release Notes <!-- omit in toc --> 
 ---
 
-- [v6.2.5](#v625)
-- [v6.2.4](#v624)
-- [v6.2.3](#v623)
-- [v6.2.2](#v622)
-  - [CHANGELOG](#changelog)
-- [v6.2.1](#v621)
-  - [CHANGELOG](#changelog-1)
-- [v6.2.0](#v620)
-  - [New Features Summary](#new-features-summary)
-  - [Bug Fixes and Technical Debt Reduction](#bug-fixes-and-technical-debt-reduction)
-  - [Breaking Changes](#breaking-changes)
-  - [CHANGELOG](#changelog-2)
+- [v6.3 (pre-release)](#v63-pre-release)
+  - [Features](#features)
+  - [Bug Fixes](#bug-fixes)
+- [v6.3 (pre-release)](#v63-pre-release-1)
+  - [Features](#features-1)
+  - [Bug Fixes](#bug-fixes-1)
+- [v6.2](#v62)
+  - [v6.2.5](#v625)
+  - [v6.2.4](#v624)
+  - [v6.2.3](#v623)
+  - [v6.2.2](#v622)
+    - [CHANGELOG](#changelog)
+  - [v6.2.1](#v621)
+    - [CHANGELOG](#changelog-1)
+  - [v6.2.0](#v620)
+    - [New Features Summary](#new-features-summary)
+    - [Bug Fixes and Technical Debt Reduction](#bug-fixes-and-technical-debt-reduction)
+    - [Breaking Changes](#breaking-changes)
+    - [CHANGELOG](#changelog-2)
 - [v6.1 (pre-release)](#v61-pre-release)
   - [Main Features](#main-features)
     - [1. Enhanced Test Execution Control with "runMode"](#1-enhanced-test-execution-control-with-runmode)
@@ -25,7 +32,7 @@ Release Notes <!-- omit in toc -->
       - [2.1 "TEST RESULTS" Panel Integration](#21-test-results-panel-integration)
       - [2.2 Configuration and Examples](#22-configuration-and-examples)
       - [2.3 Deprecations and Migration](#23-deprecations-and-migration)
-  - [Bug Fixes](#bug-fixes)
+  - [Bug Fixes](#bug-fixes-2)
   - [Technical Debt](#technical-debt)
 - [v6.0 (pre-release)](#v60-pre-release)
   - [Main Features](#main-features-1)
@@ -38,7 +45,64 @@ Release Notes <!-- omit in toc -->
 
 ---
 
-## v6.2.5
+## v6.3 (pre-release)
+
+### Features
+
+- **Support for Jest v30** (v30.0.0-alpha.6 and up).
+  - The extension now automatically detects Jest v30 and switches to the new syntax, specifically `TestPathPatterns`. This behavior can be controlled via a new setting, `jest.useJest30`, which, when enabled, instructs the extension to immediately use the Jest v30 syntax. ([#1153](https://github.com/jest-community/vscode-jest/pull/1153) - @connectdotz)
+
+- **Integration with VS Code's Test Coverage API and UI**.
+  - The extension now provides test coverage via the native VS Code API, enabling interactive coverage runs and displaying results in both the editor and the Test Explorer Coverage panel.  ([#1151](https://github.com/jest-community/vscode-jest/pull/1151) - @connectdotz)
+
+    ![test-coverage-explorer](../images/test-coverage-explorer.png)
+
+  - **Note**: The original coverage feature in the extension will remain functional for now. However, we plan to deprecate it in the near future. If you have any concerns on this change, please open an issue to let us know.
+
+### Bug Fixes
+
+- Correctly incorporate `jest.nodeEnv` into the auto-generated debug configuration. ([#1167](https://github.com/jest-community/vscode-jest/pull/1167) - @connectdotz)
+  
+- Resolved an issue where tests sometimes failed to reflect the correct status when the test suite couldn't run (e.g., due to compile errors). ([#1165](https://github.com/jest-community/vscode-jest/pull/1165) - @connectdotz)
+
+- Fixed broken links in the setup-wizard documentation. ([#1154](https://github.com/jest-community/vscode-jest/pull/1154) - @pierluigigiancola)
+
+**CHANGELOG**
+
+- [v6.3.0](https://github.com/jest-community/vscode-jest/releases/tag/v6.3.0)
+
+---
+
+## v6.3 (pre-release)
+
+### Features
+
+- Supports jest v30 (v30.0.0-alpha.6 and up). 
+  - The extension will auto detect jest 30 and switch to the new syntax (namely `TestPathPatterns`). This behavior can also be controlled by a new setting `jest.useJest30`, when set will instruct the extension to use jest30 syntax immediately. ([#1153](https://github.com/jest-community/vscode-jest/pull/1153) - @connectdotz)
+
+- Supports vscode test coverage API and UI. 
+  - The extension will now also provide test coverage information via the native vscode test coverage API. This will enable vscode to run test with coverage via test explorer tree and show test coverage information in the editor and the test explorer coverage panel. ([#1151](https://github.com/jest-community/vscode-jest/pull/1151) - @connectdotz)
+
+    ![test-coverage-explorer](../images/test-coverage-explorer.png)
+
+  - **Note**: The existing coverage feature in the extension will continue to work for now. However, we plan to deprecate the existing coverage in the near future. If you prefer the existing coverage, please open an issue to let us know.  
+
+### Bug Fixes
+
+- Correctly incorporate the `jest.nodeEnv` to auto generated debug config. ([#1167](https://github.com/jest-community/vscode-jest/pull/1167) - @connectdotz)
+  
+- Fixed an issue where the test file failed to run (compile error for example) but the tests within the file failed to reflect the correct status. ([#1165](https://github.com/jest-community/vscode-jest/pull/1165) - @connectdotz)
+
+- Fixed links in setup-wizard docs. ([#1154](https://github.com/jest-community/vscode-jest/pull/1154) - @pierluigigiancola)
+  
+**CHANGELOG**
+
+- [v6.3.0](https://github.com/jest-community/vscode-jest/releases/tag/v6.3.0)
+
+---
+
+## v6.2
+### v6.2.5
 
 **Bug Fixes**
 
@@ -50,7 +114,7 @@ Release Notes <!-- omit in toc -->
 
 ---
 
-## v6.2.4
+### v6.2.4
 
 **Enhancements**
 
@@ -67,7 +131,7 @@ Release Notes <!-- omit in toc -->
 
 ---
 
-## v6.2.3
+### v6.2.3
 
 This release is a patch release with the following changes:
 
@@ -82,7 +146,7 @@ This release is a patch release with the following changes:
 
 ---
 
-## v6.2.2
+### v6.2.2
 
 This release is a patch release with the following changes:
 
@@ -108,38 +172,38 @@ This release is a patch release with the following changes:
 - Minor docs updates for the migration guides. ([#1116](https://github.com/jest-community/vscode-jest/pull/1116) - @pmcelhaney)
 - Minor update for the output config info in README and release notes. ([#1119](https://github.com/jest-community/vscode-jest/pull/1119) - @connectdotz)
 
-### CHANGELOG
+#### CHANGELOG
 
 - [v6.2.2](https://github.com/jest-community/vscode-jest/releases/tag/v6.2.2)
 
 ---
 
-## v6.2.1
+### v6.2.1
 This release is a patch release with the following bug fix:
 
 - Fixed test run errors due to incorrect sub folder paths from the test Explorer panel. ([#1114](https://github.com/jest-community/vscode-jest/pull/1114) - @connectdotz)
 
-### CHANGELOG
+#### CHANGELOG
 - [v6.2.1](https://github.com/jest-community/vscode-jest/releases/tag/v6.2.1)
 
 ---
  
-## v6.2.0
+### v6.2.0
 This version is a rollup of pre-releases [v6.0](#v60-pre-release) through [v6.1](#v61-pre-release), which implemented a few long requested features, such as better monorepo project support, more intuitive ways to defer and resume testing, and showing accurate test results in TEST RESULT panel.
 
 ![v6.2.0-intro](../images/v6.2.0-intro.png)
 
-### New Features Summary
+#### New Features Summary
 - **Virtual Folders**: New in v6.0.0, [jest.virtualFolders](https://github.com/jest-community/vscode-jest#virtualfolders) now supports monorepos for single-root workspaces and multiple Jest configurations in the same folder — long-awaited capabilities for developers dealing with complex project setups.  [Details](#1-virtual-folders)
 - **Integration with VSCode "TEST RESULTS" Panel**: Introduced in v6.1.0, the [jest.outputConfig](https://github.com/jest-community/vscode-jest#outputconfig) setting enables the display of test results directly in the VSCode "TEST RESULTS" panel and consolidates various output settings.  [Details](#2-support-vscode-test-results-panel-with-jestoutputconfig) (:warning: **Breaking Change**)
 - **Replace "autoRun" with "runMode"**: Debuting in v6.1.0, [jest.runMode](https://github.com/jest-community/vscode-jest#runmode) replaces and expands upon [jest.autoRun](https://github.com/jest-community/vscode-jest#autorun) with options like `'deferred'` mode, ideal for large projects seeking just-in-time test execution. It also consolidates related settings for a cleaner configuration experience. [Details](#1-enhanced-test-execution-control-with-runmode) (:warning: **Breaking Change**)
 - **Support for Spawning Jest with Dashed Arguments**: Available from v6.0.0, the new [jest.useDashedArgs](https://github.com/jest-community/vscode-jest?tab=readme-ov-file#settings) setting  allows the extension to spawn Jest processes with dashed arguments, required by some frameworks such as Angular. [Details](#2-support-spawning-jest-with-dashed-arguments) 
 - **Control Extension Activation within Each Folder:** Introduced in v6.0.0, the [jest.enable](https://github.com/jest-community/vscode-jest?tab=readme-ov-file#settings) setting allows granular control over the Jest extension's activation on a per-folder basis in VS Code workspaces. This enhancement is beneficial for developers working in multi-root workspaces or projects with mixed languages. [Details](#3-control-extension-activation-within-each-folder)
 
-### Bug Fixes and Technical Debt Reduction
+#### Bug Fixes and Technical Debt Reduction
 - Please refer to the pre-release notes for a comprehensive list. 
 
-### Breaking Changes
+#### Breaking Changes
 - The following settings have been consolidated into `runMode` and `outputConfig` and will be removed in the future release: 
   - `"jest.autoRun"`
   - `"jest.showCoverageOnLoad"`
@@ -151,7 +215,7 @@ This version is a rollup of pre-releases [v6.0](#v60-pre-release) through [v6.1]
   - [RunMode Migration Guide](https://github.com/jest-community/vscode-jest#runmode-migration)
   - [OutputConfig Migration Guide](https://github.com/jest-community/vscode-jest#outputconfig-migration)
   
-### CHANGELOG
+#### CHANGELOG
 - [v6.2.0](https://github.com/jest-community/vscode-jest/releases/tag/v6.2.0)
 
 ---
