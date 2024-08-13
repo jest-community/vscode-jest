@@ -605,17 +605,11 @@ export class JestExt {
         'debug',
         'No debug config named "vscode-jest-tests.v2" or "vscode-jest-tests" found in launch.json, will use a default config.'
       );
-      if (this.extContext.settings.jestCommandLine) {
-        debugConfig = this.debugConfigurationProvider.withCommandLine(
-          this.extContext.workspace,
-          this.extContext.settings.jestCommandLine,
-          this.extContext.settings.rootPath
-        );
-      } else {
-        debugConfig = this.debugConfigurationProvider.provideDebugConfigurations(
-          this.extContext.workspace
-        )[0];
-      }
+      debugConfig = this.debugConfigurationProvider.createDebugConfig(this.extContext.workspace, {
+        jestCommandLine: this.extContext.settings.jestCommandLine,
+        rootPath: this.extContext.settings.rootPath,
+        nodeEnv: this.extContext.settings.nodeEnv,
+      });
 
       this.debugConfig = debugConfig;
       this.extContext.output.write('auto config debug config:', 'info');

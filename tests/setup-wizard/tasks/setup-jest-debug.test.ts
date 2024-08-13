@@ -23,7 +23,7 @@ describe('wizard-tasks', () => {
   const mockShowTextDocument = jest.fn();
   const mockOpenTextDocument = jest.fn();
   const debugConfigProvider = {
-    withCommandLine: jest.fn(),
+    createDebugConfig: jest.fn(),
     getDebugConfigNames: jest.fn(),
   };
   let mockTextDocument;
@@ -131,7 +131,7 @@ describe('wizard-tasks', () => {
         expect(mockSetupJestDebug).toHaveBeenCalledTimes(0);
       });
     });
-    describe('generate config with jestCommandLine and rootPath', () => {
+    describe('generate config with setting overrides', () => {
       const configName = `${DEBUG_CONFIG_NAME}.v2`;
       const existingConfig: any = { name: configName };
       const otherConfig: any = { name: 'other-config' };
@@ -144,32 +144,48 @@ describe('wizard-tasks', () => {
         mockGetValidJestCommand.mockResolvedValue({
           validSettings: [{ jestCommandLine: 'jest' }],
         });
-        context.debugConfigProvider.withCommandLine.mockReturnValue(newDebugConfig);
+        context.debugConfigProvider.createDebugConfig.mockReturnValue(newDebugConfig);
         debugConfigProvider.getDebugConfigNames.mockReturnValue({ sorted: ['whatever'] });
 
         mockShowActionMenu(DebugSetupActionId.generate, undefined);
       });
-      it('invoke debugConfigProvider to generate', async () => {
-        expect.hasAssertions();
-        context.debugConfigProvider.withCommandLine.mockReturnValue(newDebugConfig);
+      describe('with settings', () => {
+        it.each`
+          case | settings                                                                                                    | exception
+          ${1} | ${{}}                                                                                                       | ${{ jestCommandLine: 'jest' }}
+          ${2} | ${{ jestCommandLine: 'yarn test' }}                                                                         | ${undefined}
+          ${3} | ${{ rootPath: '/a/b/c' }}                                                                                   | ${{ jestCommandLine: 'jest', rootPath: '/a/b/c' }}
+          ${4} | ${{ nodeEnv: { NODE_ENV: '--experimental-vm-modules' } }}                                                   | ${{ jestCommandLine: 'jest', nodeEnv: { NODE_ENV: '--experimental-vm-modules' } }}
+          ${5} | ${{ jestCommandLine: 'yarn test', rootPath: '/a/b/c', nodeEnv: { NODE_ENV: '--experimental-vm-modules' } }} | ${undefined}
+        `('case $case', async ({ settings, exception }) => {
+          expect.hasAssertions();
+          context.debugConfigProvider.createDebugConfig.mockReturnValue(newDebugConfig);
 
-        mockShowActionMenu(DebugSetupActionId.generate, undefined);
-        await expect(setupJestDebug(context)).resolves.toEqual(undefined);
+          wizardSettings = { ...wizardSettings, ...settings };
 
-        expect(context.debugConfigProvider.withCommandLine).toHaveBeenCalledWith(
-          expect.anything(),
-          'jest',
-          undefined
-        );
+          if (settings.rootPath) {
+            mockGetValidJestCommand.mockResolvedValue({
+              validSettings: [{ jestCommandLine: 'jest', rootPath: settings.rootPath }],
+            });
+          }
 
-        // config should be saved
-        expect(mockSaveConfig).toHaveBeenCalledWith({
-          name: 'launch.configurations',
-          value: expect.arrayContaining([newDebugConfig]),
+          mockShowActionMenu(DebugSetupActionId.generate, undefined);
+          await expect(setupJestDebug(context)).resolves.toEqual(undefined);
+
+          expect(context.debugConfigProvider.createDebugConfig).toHaveBeenCalledWith(
+            expect.anything(),
+            exception ?? settings
+          );
+
+          // config should be saved
+          expect(mockSaveConfig).toHaveBeenCalledWith({
+            name: 'launch.configurations',
+            value: expect.arrayContaining([newDebugConfig]),
+          });
+
+          // config should be displayed
+          expect(vscode.workspace.openTextDocument).toHaveBeenCalled();
         });
-
-        // config should be displayed
-        expect(vscode.workspace.openTextDocument).toHaveBeenCalled();
       });
       describe('can save debugConfig in launch.json', () => {
         it('will rename existing debugConfig in launch.json', async () => {

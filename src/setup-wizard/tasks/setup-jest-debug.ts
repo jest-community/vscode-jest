@@ -110,7 +110,11 @@ export const setupJestDebug: SetupTask = async (context: WizardContext): Promise
       }
     }
 
-    const debugConfig = debugConfigProvider.withCommandLine(workspace, jestCommandLine, rootPath);
+    const debugConfig = debugConfigProvider.createDebugConfig(workspace, {
+      jestCommandLine,
+      rootPath,
+      nodeEnv: settings.nodeEnv,
+    });
     message('generated a debug config with jestCommandLine and rootPath:', 'info');
     message(`${JSON.stringify(debugConfig, undefined, '  ')}`, 'new-line');
 

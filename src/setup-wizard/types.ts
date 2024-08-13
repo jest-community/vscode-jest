@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { DebugConfigurationProvider } from '../DebugConfigurationProvider';
+import { DebugConfigurationProvider, DebugConfigOptions } from '../DebugConfigurationProvider';
 import { JestExtOutput } from '../JestExt/output-terminal';
 import { WorkspaceManager } from '../workspace-manager';
 
@@ -57,9 +57,7 @@ export interface ActionInputBoxOptions<T> extends AllowBackButton, Verbose {
 export type SetupTask = (context: WizardContext) => Promise<WizardStatus>;
 
 // settings
-export interface WizardSettings {
-  jestCommandLine?: string;
-  rootPath?: string;
+export interface WizardSettings extends DebugConfigOptions {
   absoluteRootPath?: string;
   configurations?: vscode.DebugConfiguration[];
 }
