@@ -24,6 +24,9 @@ export class JestFileCoverage extends vscode.FileCoverage {
     return this.iCoverage;
   }
 
+  private isInvalidRange = (range: Range): boolean =>
+    range.start.line === undefined || range.end.line === undefined;
+
   public loadDetails(): vscode.FileCoverageDetail[] {
     if (this.details) {
       return this.details;
@@ -40,9 +43,14 @@ export class JestFileCoverage extends vscode.FileCoverage {
         return statement.location.end.character;
       }
     };
+
     // transform istanbul line number from 1-based to vscode 0-based
     // and replace null end-column with the end of line, if available
-    const transformRange = (range: Range): vscode.Range => {
+    const transformRange = (range: Range): vscode.Range | undefined => {
+      if (this.isInvalidRange(range)) {
+        return;
+      }
+
       const endColumn = range.end.column ?? getEOL(range.end.line) ?? range.start.column;
       return new vscode.Range(
         range.start.line - 1,
@@ -57,6 +65,9 @@ export class JestFileCoverage extends vscode.FileCoverage {
       Object.entries(transformed.statementMap).forEach(([statementId, range]) => {
         const executionCount = transformed.s[statementId];
         const vRange = transformRange(range);
+        if (!vRange) {
+          return;
+        }
         const statementCoverage = new vscode.StatementCoverage(executionCount, vRange);
         details.push(statementCoverage);
         statementByLine[vRange.start.line] = statementCoverage;
@@ -67,6 +78,9 @@ export class JestFileCoverage extends vscode.FileCoverage {
         branch.locations.forEach((location, index) => {
           const branchExecutionCount = transformed.b[branchId][index];
           const vRange = transformRange(location);
+          if (!vRange) {
+            return;
+          }
           const branchCoverage = new vscode.BranchCoverage(
             branchExecutionCount > 0,
             vRange,
@@ -83,6 +97,9 @@ export class JestFileCoverage extends vscode.FileCoverage {
       Object.entries(transformed.fnMap).forEach(([functionId, func]) => {
         const executionCount = transformed.f[functionId];
         const vRange = transformRange(func.loc);
+        if (!vRange) {
+          return;
+        }
         details.push(new vscode.DeclarationCoverage(func.name, executionCount, vRange));
       });
     } catch (e) {

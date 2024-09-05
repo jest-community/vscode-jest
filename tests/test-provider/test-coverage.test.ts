@@ -169,6 +169,32 @@ describe('test-coverage', () => {
         expect(console.error).toHaveBeenCalled();
         console.error = saved;
       });
+      describe('will skip empty ranges', () => {
+        it('for statements', () => {
+          fileCoverageMock = createFileCoverageMock();
+          fileCoverageMock.statementMap['3'] = {
+            start: {},
+            end: {},
+          };
+          jestFileCoverage = new JestFileCoverage(fileCoverageMock);
+          jestFileCoverage.loadDetails();
+          expect(vscode.StatementCoverage).toHaveBeenCalledTimes(2);
+        });
+        it('for branches', () => {
+          fileCoverageMock = createFileCoverageMock();
+          fileCoverageMock.branchMap['1'].locations[1] = { start: {}, end: {} };
+          jestFileCoverage = new JestFileCoverage(fileCoverageMock);
+          jestFileCoverage.loadDetails();
+          expect(vscode.BranchCoverage).toHaveBeenCalledTimes(1);
+        });
+        it('for functions', () => {
+          fileCoverageMock = createFileCoverageMock();
+          fileCoverageMock.fnMap['1'].loc = { start: {}, end: {} };
+          jestFileCoverage = new JestFileCoverage(fileCoverageMock);
+          jestFileCoverage.loadDetails();
+          expect(vscode.DeclarationCoverage).toHaveBeenCalledTimes(0);
+        });
+      });
     });
   });
 
