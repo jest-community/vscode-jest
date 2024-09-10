@@ -16,15 +16,19 @@ module.exports = (env) => {
   // Function to find files matching a pattern within a specific package
   function addMatchingFiles(packageName, filePattern) {
     const files = glob.sync(`node_modules/**/${packageName}/${filePattern}`, { absolute: true });
-    return files;
+    const normalizedFiles = files.map((file) => path.normalize(file));
+    return normalizedFiles;
   }
 
+  // this path should always use forward slashes. On windows, this requires replacing backslashes with forward slashes
+  const dummyModulePath = path.resolve(__dirname, 'dummy-module.js').replace(/\\/g, '/');
+
   const replacements = [
-    { packageName: '@babel/generator', replacement: path.resolve(__dirname, './dummy-module.js') },
-    { packageName: '@babel/core', replacement: path.resolve(__dirname, './dummy-module.js') },
+    { packageName: '@babel/generator', replacement: dummyModulePath },
+    { packageName: '@babel/core', replacement: dummyModulePath },
     {
       packageName: './src/InlineSnapshots.ts',
-      replacement: path.resolve(__dirname, './dummy-module.js'),
+      replacement: dummyModulePath,
     },
   ];
 

@@ -231,43 +231,46 @@ describe('toUpperCaseDriveLetter', () => {
 
 describe('shellQuote', () => {
   it.each`
-    platform    | shell                                     | str                      | expected
-    ${'win32'}  | ${undefined}                              | ${'plain text'}          | ${'"plain text"'}
-    ${'linux'}  | ${undefined}                              | ${'plain text'}          | ${'plain\\ text'}
-    ${'win32'}  | ${'powershell'}                           | ${"with 'single quote'"} | ${"'with ''single quote'''"}
-    ${'win32'}  | ${'cmd.exe'}                              | ${"with 'single quote'"} | ${'"with \'single quote\'"'}
-    ${'linux'}  | ${'/bin/bash'}                            | ${"with 'single quote'"} | ${"with\\ \\'single\\ quote\\'"}
-    ${'darwin'} | ${'/bin/zsh'}                             | ${"with 'single quote'"} | ${"with\\ \\'single\\ quote\\'"}
-    ${'darwin'} | ${{ path: '/bin/zsh', args: ['-l'] }}     | ${"with 'single quote'"} | ${"with\\ \\'single\\ quote\\'"}
-    ${'win32'}  | ${undefined}                              | ${"with 'single quote'"} | ${'"with \'single quote\'"'}
-    ${'linux'}  | ${undefined}                              | ${"with 'single quote'"} | ${"with\\ \\'single\\ quote\\'"}
-    ${'win32'}  | ${'powershell'}                           | ${'with "double quote"'} | ${'\'with ""double quote""\''}
-    ${'win32'}  | ${'cmd.exe'}                              | ${'with "double quote"'} | ${'"with ""double quote"""'}
-    ${'linux'}  | ${'bash'}                                 | ${'with "double quote"'} | ${'with\\ \\"double\\ quote\\"'}
-    ${'win32'}  | ${'powershell'}                           | ${'with $name.txt'}      | ${"'with $name.txt'"}
-    ${'win32'}  | ${'cmd.exe'}                              | ${'with $name.txt'}      | ${'"with $name.txt"'}
-    ${'linux'}  | ${'bash'}                                 | ${'with $name.txt'}      | ${'with\\ \\$name.txt'}
-    ${'win32'}  | ${'powershell'}                           | ${'with \\$name\\.txt'}  | ${"'with \\$name\\.txt'"}
-    ${'win32'}  | ${'cmd.exe'}                              | ${'with \\$name\\.txt'}  | ${'"with \\$name\\.txt"'}
-    ${'linux'}  | ${'bash'}                                 | ${'with \\$name\\.txt'}  | ${'with\\ \\\\\\$name\\\\.txt'}
-    ${'linux'}  | ${{ path: '/bin/sh', args: ['--login'] }} | ${'with \\$name\\.txt'}  | ${'with\\ \\\\\\$name\\\\.txt'}
-    ${'win32'}  | ${'powershell'}                           | ${''}                    | ${"''"}
-    ${'win32'}  | ${undefined}                              | ${''}                    | ${'""'}
-    ${'darwin'} | ${undefined}                              | ${''}                    | ${'""'}
-    ${'win32'}  | ${'powershell'}                           | ${'with \\ and \\\\'}    | ${"'with \\ and \\\\\\\\'"}
-    ${'win32'}  | ${undefined}                              | ${'with \\ and \\\\'}    | ${'"with \\ and \\\\\\\\"'}
-    ${'linux'}  | ${undefined}                              | ${'with \\ and \\\\'}    | ${'with\\ \\\\\\ and\\ \\\\\\\\'}
-    ${'win32'}  | ${'powershell'}                           | ${'something\\'}         | ${"'something\\'"}
-    ${'win32'}  | ${undefined}                              | ${'something\\'}         | ${'something\\'}
-    ${'darwin'} | ${undefined}                              | ${'something\\'}         | ${'something\\\\'}
-    ${'win32'}  | ${'powershell'}                           | ${'with `backtick'}      | ${"'with `backtick'"}
-    ${'win32'}  | ${undefined}                              | ${'with `backtick'}      | ${'"with `backtick"'}
-    ${'darwin'} | ${undefined}                              | ${'with `backtick'}      | ${'with\\ \\`backtick'}
-  `('can quote "$str" for $shell on $platform', ({ platform, shell, str, expected }) => {
-    jest.resetAllMocks();
-    mockPlatform.mockReturnValueOnce(platform);
-    expect(shellQuote(str, shell)).toEqual(expected);
-  });
+    case  | platform    | shell                                     | str                      | expected
+    ${1}  | ${'win32'}  | ${undefined}                              | ${'plain text'}          | ${'"plain text"'}
+    ${2}  | ${'linux'}  | ${undefined}                              | ${'plain text'}          | ${'plain\\ text'}
+    ${3}  | ${'win32'}  | ${'powershell'}                           | ${"with 'single quote'"} | ${"'with ''single quote'''"}
+    ${4}  | ${'win32'}  | ${'cmd.exe'}                              | ${"with 'single quote'"} | ${'"with \'single quote\'"'}
+    ${5}  | ${'linux'}  | ${'/bin/bash'}                            | ${"with 'single quote'"} | ${"with\\ \\'single\\ quote\\'"}
+    ${6}  | ${'darwin'} | ${'/bin/zsh'}                             | ${"with 'single quote'"} | ${"with\\ \\'single\\ quote\\'"}
+    ${7}  | ${'darwin'} | ${{ path: '/bin/zsh', args: ['-l'] }}     | ${"with 'single quote'"} | ${"with\\ \\'single\\ quote\\'"}
+    ${8}  | ${'win32'}  | ${undefined}                              | ${"with 'single quote'"} | ${'"with \'single quote\'"'}
+    ${9}  | ${'linux'}  | ${undefined}                              | ${"with 'single quote'"} | ${"with\\ \\'single\\ quote\\'"}
+    ${10} | ${'win32'}  | ${'powershell'}                           | ${'with "double quote"'} | ${'\'with ""double quote""\''}
+    ${11} | ${'win32'}  | ${'cmd.exe'}                              | ${'with "double quote"'} | ${'"with ""double quote"""'}
+    ${12} | ${'linux'}  | ${'bash'}                                 | ${'with "double quote"'} | ${'with\\ \\"double\\ quote\\"'}
+    ${13} | ${'win32'}  | ${'powershell'}                           | ${'with $name.txt'}      | ${"'with $name.txt'"}
+    ${14} | ${'win32'}  | ${'cmd.exe'}                              | ${'with $name.txt'}      | ${'"with $name.txt"'}
+    ${15} | ${'linux'}  | ${'bash'}                                 | ${'with $name.txt'}      | ${'with\\ \\$name.txt'}
+    ${16} | ${'win32'}  | ${'powershell'}                           | ${'with \\$name\\.txt'}  | ${"'with \\$name\\.txt'"}
+    ${17} | ${'win32'}  | ${'cmd.exe'}                              | ${'with \\$name\\.txt'}  | ${'"with \\$name\\.txt"'}
+    ${18} | ${'linux'}  | ${'bash'}                                 | ${'with \\$name\\.txt'}  | ${'with\\ \\\\\\$name\\\\.txt'}
+    ${19} | ${'linux'}  | ${{ path: '/bin/sh', args: ['--login'] }} | ${'with \\$name\\.txt'}  | ${'with\\ \\\\\\$name\\\\.txt'}
+    ${20} | ${'win32'}  | ${'powershell'}                           | ${''}                    | ${"''"}
+    ${21} | ${'win32'}  | ${undefined}                              | ${''}                    | ${'""'}
+    ${22} | ${'darwin'} | ${undefined}                              | ${''}                    | ${'""'}
+    ${23} | ${'win32'}  | ${'powershell'}                           | ${'with \\ and \\\\'}    | ${"'with \\ and \\\\'\\"}
+    ${24} | ${'win32'}  | ${undefined}                              | ${'with \\ and \\\\'}    | ${'"with \\ and \\\\"'}
+    ${25} | ${'linux'}  | ${undefined}                              | ${'with \\ and \\\\'}    | ${'with\\ \\\\\\ and\\ \\\\\\\\'}
+    ${26} | ${'win32'}  | ${'powershell'}                           | ${'something\\'}         | ${"'something\\'\\"}
+    ${27} | ${'win32'}  | ${undefined}                              | ${'something\\'}         | ${'"something\\"'}
+    ${28} | ${'darwin'} | ${undefined}                              | ${'something\\'}         | ${'something\\\\'}
+    ${29} | ${'win32'}  | ${'powershell'}                           | ${'with `backtick'}      | ${"'with `backtick'"}
+    ${30} | ${'win32'}  | ${undefined}                              | ${'with `backtick'}      | ${'"with `backtick"'}
+    ${31} | ${'darwin'} | ${undefined}                              | ${'with `backtick'}      | ${'with\\ \\`backtick'}
+  `(
+    'case $case: can quote "$str" for $shell on $platform',
+    ({ platform, shell, str, expected }) => {
+      jest.resetAllMocks();
+      mockPlatform.mockReturnValueOnce(platform);
+      expect(shellQuote(str, shell)).toEqual(expected);
+    }
+  );
 });
 it.each`
   name                  | e                                 | matchString
@@ -479,5 +482,20 @@ describe('getValidJestCommand', () => {
     expect(result.validSettings).toEqual([
       { rootPath: ws2.fsPath, jestCommandLine: 'should be ws2' },
     ]);
+  });
+});
+
+describe('escapeQuotes', () => {
+  it.each`
+    case                  | inputString                            | expected
+    ${'no quotes'}        | ${'no quotes'}                         | ${'no quotes'}
+    ${'single quotes'}    | ${"with 'single quotes'"}              | ${"with \\'single quotes\\'"}
+    ${'double quotes'}    | ${'with "double quotes"'}              | ${'with \\"double quotes\\"'}
+    ${'mixed quotes'}     | ${'with "double" and \'single\''}      | ${'with \\"double\\" and \\\'single\\\''}
+    ${'escaped quotes'}   | ${'with \\"escaped\\" quotes'}         | ${'with \\\\"escaped\\\\" quotes'}
+    ${'escaped quotes 2'} | ${"with \\'escaped\\' quotes"}         | ${"with \\\\'escaped\\\\' quotes"}
+    ${'escaped quotes 3'} | ${'with \\\'escaped\\\' and "quotes"'} | ${'with \\\\\'escaped\\\\\' and \\"quotes\\"'}
+  `('$case', ({ inputString, expected }) => {
+    expect(helper.escapeQuotes(inputString)).toEqual(expected);
   });
 });
