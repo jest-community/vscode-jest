@@ -19,6 +19,7 @@ export const DEBUG_CONFIG_PLATFORMS = ['windows', 'linux', 'osx'];
 const testNamePatternRegex = /\$\{jest.testNamePattern\}/g;
 const testFileRegex = /\$\{jest.testFile\}/g;
 const testFilePatternRegex = /\$\{jest.testFilePattern\}/g;
+const replaceTestPathPatternRegex = /--(testPathPattern(s?)|runTestsByPath)/g;
 
 export type DebugConfigOptions = Partial<
   Pick<PluginResourceSettings, 'jestCommandLine' | 'rootPath' | 'nodeEnv'>
@@ -130,8 +131,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
       if (debugInfo.useTestPathPattern) {
         // if the debugInfo indicated this is a testPathPattern (such as running all tests within a folder)
         // , we need to replace the --runTestsByPath argument with the correct --testPathPattern(s) argument
-        if (arg.includes('--runTestsByPath')) {
-          return arg.replace('--runTestsByPath', this.getTestPathPatternOption());
+        if (replaceTestPathPatternRegex.test(arg)) {
+          return arg.replace(replaceTestPathPatternRegex, this.getTestPathPatternOption());
         }
         if (testFileRegex.test(arg)) {
           return arg.replace(testFileRegex, escapeRegExp(debugInfo.testPath));
