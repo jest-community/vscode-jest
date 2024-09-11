@@ -286,15 +286,15 @@ describe('JestTestProvider', () => {
           debugDone = () => resolve();
         });
       it.each`
-        case | debugInfo               | testNamePattern | debugTests                       | hasError
-        ${1} | ${undefined}            | ${undefined}    | ${() => Promise.resolve()}       | ${true}
-        ${2} | ${{ fileName: 'file' }} | ${'a test'}     | ${() => Promise.resolve()}       | ${false}
-        ${3} | ${{ fileName: 'file' }} | ${'a test'}     | ${() => Promise.reject('error')} | ${true}
-        ${4} | ${{ fileName: 'file' }} | ${'a test'}     | ${throwError}                    | ${true}
-        ${5} | ${{ fileName: 'file' }} | ${undefined}    | ${() => Promise.resolve()}       | ${false}
+        case | debugInfo               | testName     | debugTests                       | hasError
+        ${1} | ${undefined}            | ${undefined} | ${() => Promise.resolve()}       | ${true}
+        ${2} | ${{ testPath: 'file' }} | ${'a test'}  | ${() => Promise.resolve()}       | ${false}
+        ${3} | ${{ testPath: 'file' }} | ${'a test'}  | ${() => Promise.reject('error')} | ${true}
+        ${4} | ${{ testPath: 'file' }} | ${'a test'}  | ${throwError}                    | ${true}
+        ${5} | ${{ testPath: 'file' }} | ${undefined} | ${() => Promise.resolve()}       | ${false}
       `(
         'invoke debug test async case $case => error? $hasError',
-        async ({ debugInfo, testNamePattern, debugTests, hasError }) => {
+        async ({ debugInfo, testName, debugTests, hasError }) => {
           expect.hasAssertions();
           extExplorerContextMock.debugTests = jest.fn().mockImplementation(() => {
             if (debugTests) {
@@ -308,9 +308,7 @@ describe('JestTestProvider', () => {
             if (debugInfo) {
               d.getDebugInfo = jest
                 .fn()
-                .mockImplementation(() =>
-                  testNamePattern ? { ...debugInfo, testNamePattern } : debugInfo
-                );
+                .mockImplementation(() => (testName ? { ...debugInfo, testName } : debugInfo));
             } else {
               d.getDebugInfo = undefined;
             }
@@ -330,13 +328,12 @@ describe('JestTestProvider', () => {
             expect(jestRun.errored).toHaveBeenCalledWith(itemDataList[0].item, expect.anything());
             expect(vscode.TestMessage).toHaveBeenCalledTimes(1);
           } else {
-            if (testNamePattern) {
+            if (testName) {
               expect(extExplorerContextMock.debugTests).toHaveBeenCalledWith(
-                'file',
-                testNamePattern
+                expect.objectContaining({ testPath: 'file', testName })
               );
             } else {
-              expect(extExplorerContextMock.debugTests).toHaveBeenCalledWith('file');
+              expect(extExplorerContextMock.debugTests).toHaveBeenCalledWith({ testPath: 'file' });
             }
           }
         }

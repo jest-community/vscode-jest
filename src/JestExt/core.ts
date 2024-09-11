@@ -8,11 +8,11 @@ import {
   SortedTestResults,
   TestResultProviderOptions,
 } from '../TestResults';
-import { escapeRegExp, emptyTestStats, getValidJestCommand } from '../helpers';
+import { emptyTestStats, getValidJestCommand } from '../helpers';
 import { CoverageMapProvider, CoverageCodeLensProvider } from '../Coverage';
 import { updateDiagnostics, updateCurrentDiagnostics, resetDiagnostics } from '../diagnostics';
 import { DebugConfigurationProvider } from '../DebugConfigurationProvider';
-import { TestExplorerRunRequest, TestNamePattern, TestStats } from '../types';
+import { TestExplorerRunRequest, TestStats } from '../types';
 import { CoverageOverlay } from '../Coverage/CoverageOverlay';
 import { resultsWithoutAnsiEscapeSequence } from '../TestResults/TestResult';
 import { CoverageMapData } from 'istanbul-lib-coverage';
@@ -25,6 +25,7 @@ import {
   JestRunEvent,
   JestTestDataAvailableEvent,
 } from './types';
+import { DebugInfo } from '../types';
 import { extensionName, SupportedLanguageIds } from '../appGlobals';
 import { createJestExtContext, getExtensionResourceSettings, prefixWorkspace } from './helper';
 import { PluginResourceSettings } from '../Settings';
@@ -566,10 +567,7 @@ export class JestExt {
   }
 
   //**  commands */
-  public debugTests = async (
-    document: vscode.TextDocument | string,
-    testNamePattern?: TestNamePattern
-  ): Promise<void> => {
+  public debugTests = async (debugInfo: DebugInfo): Promise<void> => {
     const getDebugConfig = (
       folder?: vscode.WorkspaceFolder
     ): vscode.DebugConfiguration | undefined => {
@@ -592,9 +590,9 @@ export class JestExt {
     };
 
     this.debugConfigurationProvider.prepareTestRun(
-      typeof document === 'string' ? document : document.fileName,
-      testNamePattern ? escapeRegExp(testNamePattern) : '.*',
-      this.extContext.workspace
+      debugInfo,
+      this.extContext.workspace,
+      this.extContext.settings.useJest30
     );
 
     let debugConfig =

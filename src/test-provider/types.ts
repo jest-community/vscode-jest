@@ -4,7 +4,7 @@ import { TestResultProvider } from '../TestResults';
 import { WorkspaceRoot, FolderData, TestData, TestDocumentRoot } from './test-item-data';
 import { JestTestProviderContext } from './test-provider-context';
 import { JestTestRun } from './jest-test-run';
-import { TestNamePattern } from '../types';
+import { DebugInfo } from '../types';
 
 export type TestItemDataType = WorkspaceRoot | FolderData | TestDocumentRoot | TestData;
 
@@ -19,6 +19,7 @@ export interface ScheduleTestOptions {
   itemCommand?: ItemCommand;
   profile?: vscode.TestRunProfile;
 }
+
 export interface TestItemData {
   readonly item: vscode.TestItem;
   readonly uri: vscode.Uri;
@@ -26,10 +27,7 @@ export interface TestItemData {
   discoverTest?: (run: JestTestRun) => void;
   scheduleTest: (run: JestTestRun, options?: ScheduleTestOptions) => void;
   runItemCommand: (command: ItemCommand) => void;
-}
-
-export interface Debuggable {
-  getDebugInfo: () => { fileName: string; testNamePattern?: TestNamePattern };
+  getDebugInfo: () => DebugInfo;
 }
 
 export enum TestTagId {

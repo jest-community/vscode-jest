@@ -1147,7 +1147,6 @@ describe('ExtensionManager', () => {
         ${'editor.workspace.toggle-coverage'} | ${'toggleCoverage'}
         ${'editor.workspace.run-all-tests'}   | ${'runAllTests'}
         ${'editor.run-all-tests'}             | ${'runAllTests'}
-        ${'editor.debug-tests'}               | ${'debugTests'}
       `('editor-based commands "$name"', async ({ name, extFunc }) => {
         extensionManager.register();
         const expectedName = `${extensionName}.${name}`;
