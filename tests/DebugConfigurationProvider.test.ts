@@ -11,6 +11,7 @@ import {
   escapeRegExp,
   parseCmdLine,
   toAbsoluteRootPath,
+  escapeQuotes,
 } from '../src/helpers';
 import * as fs from 'fs';
 import { makeWorkspaceFolder } from './test-helper';
@@ -118,6 +119,7 @@ describe('DebugConfigurationProvider', () => {
     `('will only translate known variables: $args', ({ args, expected }) => {
       (toFilePath as unknown as jest.Mock<{}>).mockReturnValueOnce(testPath);
       (escapeRegExp as unknown as jest.Mock<{}>).mockReturnValueOnce(fileNamePattern);
+      (escapeQuotes as unknown as jest.Mock<{}>).mockImplementation((s) => s);
 
       let configuration: any = { name: 'vscode-jest-tests.v2', args };
 
@@ -133,6 +135,7 @@ describe('DebugConfigurationProvider', () => {
     it('will translate multiple variables in a single arg', () => {
       (toFilePath as unknown as jest.Mock<{}>).mockImplementation((s) => s);
       (escapeRegExp as unknown as jest.Mock<{}>).mockImplementation((s) => s);
+      (escapeQuotes as unknown as jest.Mock<{}>).mockImplementation((s) => s);
 
       let configuration: any = {
         name: 'vscode-jest-tests.v2',

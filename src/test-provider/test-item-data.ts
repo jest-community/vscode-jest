@@ -639,7 +639,6 @@ abstract class TestResultData extends TestItemDataBase {
   }
 
   forEachChild(onTestData: (child: TestData) => void): void {
-    console.log(`${this.item.id} has ${this.item.children.size} children`);
     this.item.children.forEach((childItem) => {
       const child = this.context.getData<TestData>(childItem);
       if (child) {

@@ -9,6 +9,7 @@ import {
   escapeRegExp,
   parseCmdLine,
   toAbsoluteRootPath,
+  escapeQuotes,
 } from './helpers';
 import { platform } from 'os';
 import { PluginResourceSettings } from './Settings';
@@ -141,7 +142,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         .replace(testFilePatternRegex, escapeRegExp(debugInfo.testPath))
         .replace(
           testNamePatternRegex,
-          debugInfo.testName ? escapeRegExp(debugInfo.testName) : '.*'
+          debugInfo.testName ? escapeQuotes(escapeRegExp(debugInfo.testName)) : '.*'
         );
     });
     debugConfiguration.args = args;

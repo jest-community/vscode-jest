@@ -238,6 +238,8 @@ export const emptyTestStats = (): TestStats => {
   return { success: 0, fail: 0, unknown: 0 };
 };
 
+export const escapeQuotes = (str: string): string => str.replace(/(['"])/g, '\\$1');
+
 const getShellPath = (shell?: string | LoginShell): string | undefined => {
   if (!shell) {
     return;
@@ -276,19 +278,13 @@ export const shellQuote = (str: string, shell?: string | LoginShell): string => 
   switch (shellType) {
     case 'powershell': {
       const s = str.replace(/(['"])/g, '$1$1');
-      if (s.length > 2 && s.slice(-2) === '\\\\') {
-        return `'${s}\\\\'`;
-      }
-      return `'${s}'`;
+      return s.endsWith('\\') ? `'${s}'\\` : `'${s}'`;
     }
 
     case 'cmd': {
-      let s = str.replace(/"/g, '""');
-      s = s.replace(/([><!^&|])/g, '^$1');
-      if (s.length > 2 && s.slice(-2) === '\\\\') {
-        s = `${s}\\\\`;
-      }
-      return s.indexOf(' ') >= 0 || s.indexOf('"') >= 0 || s.length === 0 ? `"${s}"` : s;
+      // Escape double quotes by doubling them and always quote the string
+      // no need to escape special cmd characters (such as ><!^&|) within the quoted string
+      return `"${str.replace(/"/g, '""')}"`;
     }
 
     default: {
