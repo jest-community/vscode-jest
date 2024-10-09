@@ -7,7 +7,7 @@ import { ProcessSession } from './process-session';
 import { JestProcessInfo } from '../JestProcessManagement';
 import { JestOutputTerminal } from './output-terminal';
 import { TestIdentifier } from '../TestResults';
-import { TestNamePattern } from '../types';
+import { DebugInfo } from '../types';
 
 export enum WatchMode {
   None = 'none',
@@ -61,7 +61,5 @@ export interface JestExtProcessContextRaw extends JestExtContext {
 export type JestExtProcessContext = Readonly<JestExtProcessContextRaw>;
 
 export type DebugTestIdentifier = string | TestIdentifier;
-export type DebugFunction = (
-  document: vscode.TextDocument | string,
-  testNamePattern?: TestNamePattern
-) => Promise<void>;
+
+export type DebugFunction = (debugInfo: DebugInfo) => Promise<void>;

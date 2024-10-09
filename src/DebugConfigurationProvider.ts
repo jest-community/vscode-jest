@@ -13,33 +13,35 @@ import {
 } from './helpers';
 import { platform } from 'os';
 import { PluginResourceSettings } from './Settings';
+import { DebugInfo } from './types';
 
 export const DEBUG_CONFIG_PLATFORMS = ['windows', 'linux', 'osx'];
 const testNamePatternRegex = /\$\{jest.testNamePattern\}/g;
 const testFileRegex = /\$\{jest.testFile\}/g;
 const testFilePatternRegex = /\$\{jest.testFilePattern\}/g;
+const replaceTestPathPatternRegex = /--(testPathPattern(s?)|runTestsByPath)/g;
 
 export type DebugConfigOptions = Partial<
   Pick<PluginResourceSettings, 'jestCommandLine' | 'rootPath' | 'nodeEnv'>
 >;
 type PartialDebugConfig = Partial<vscode.DebugConfiguration>;
 export class DebugConfigurationProvider implements vscode.DebugConfigurationProvider {
-  private fileNameToRun = '';
-  private testToRun = '';
+  private debugInfo: DebugInfo | undefined;
   private fromWorkspaceFolder: vscode.WorkspaceFolder | undefined;
+  private useJest30: boolean | undefined;
 
   /**
    * Prepares injecting the name of the test, which has to be debugged, into the `DebugConfiguration`,
    * This function has to be called before `vscode.debug.startDebugging`.
    */
   public prepareTestRun(
-    fileNameToRun: string,
-    testToRun: string,
-    workspaceFolder: vscode.WorkspaceFolder
+    debugInfo: DebugInfo,
+    workspaceFolder: vscode.WorkspaceFolder,
+    useJest30?: boolean
   ): void {
-    this.fileNameToRun = fileNameToRun;
-    this.testToRun = testToRun;
+    this.debugInfo = { ...debugInfo };
     this.fromWorkspaceFolder = workspaceFolder;
+    this.useJest30 = useJest30;
   }
 
   getDebugConfigNames(workspaceFolder?: vscode.WorkspaceFolder): {
@@ -83,22 +85,29 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
 
     const args = debugConfiguration.args || [];
 
-    if (this.fileNameToRun) {
-      if (this.testToRun) {
+    if (this.debugInfo) {
+      if (this.debugInfo.testName) {
         args.push('--testNamePattern');
-        args.push(this.testToRun);
+        args.push(escapeRegExp(this.debugInfo.testName));
       }
-      args.push('--runTestsByPath');
-      args.push(toFilePath(this.fileNameToRun));
+      if (this.debugInfo.useTestPathPattern) {
+        args.push(this.getTestPathPatternOption());
+        args.push(escapeRegExp(this.debugInfo.testPath));
+      } else {
+        args.push('--runTestsByPath');
+        args.push(toFilePath(this.debugInfo.testPath));
+      }
 
-      this.fileNameToRun = '';
-      this.testToRun = '';
+      this.debugInfo = undefined;
     }
 
     debugConfiguration.args = args;
     return debugConfiguration;
   }
 
+  private getTestPathPatternOption(): string {
+    return this.useJest30 ? '--testPathPatterns' : '--testPathPattern';
+  }
   /**
    * resolve v2 debug config
    * @param debugConfiguration v2 debug config
@@ -106,22 +115,39 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
    */
   resolveDebugConfig2(debugConfiguration: vscode.DebugConfiguration): vscode.DebugConfiguration {
     if (
+      !this.debugInfo ||
       !debugConfiguration.args ||
       !Array.isArray(debugConfiguration.args) ||
       debugConfiguration.args.length <= 0
     ) {
       return debugConfiguration;
     }
+
+    const debugInfo = this.debugInfo;
     const args = debugConfiguration.args.map((arg) => {
       if (typeof arg !== 'string') {
         return arg;
       }
+      if (debugInfo.useTestPathPattern) {
+        // if the debugInfo indicated this is a testPathPattern (such as running all tests within a folder)
+        // , we need to replace the --runTestsByPath argument with the correct --testPathPattern(s) argument
+        if (replaceTestPathPatternRegex.test(arg)) {
+          return arg.replace(replaceTestPathPatternRegex, this.getTestPathPatternOption());
+        }
+        if (testFileRegex.test(arg)) {
+          return arg.replace(testFileRegex, escapeRegExp(debugInfo.testPath));
+        }
+      }
       return arg
-        .replace(testFileRegex, toFilePath(this.fileNameToRun))
-        .replace(testFilePatternRegex, escapeRegExp(this.fileNameToRun))
-        .replace(testNamePatternRegex, escapeQuotes(this.testToRun));
+        .replace(testFileRegex, toFilePath(debugInfo.testPath))
+        .replace(testFilePatternRegex, escapeRegExp(debugInfo.testPath))
+        .replace(
+          testNamePatternRegex,
+          debugInfo.testName ? escapeQuotes(escapeRegExp(debugInfo.testName)) : '.*'
+        );
     });
     debugConfiguration.args = args;
+    this.debugInfo = undefined;
 
     return debugConfiguration;
   }

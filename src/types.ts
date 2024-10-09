@@ -23,3 +23,8 @@ export interface StringPattern {
 }
 
 export type TestNamePattern = StringPattern | string;
+export interface DebugInfo {
+  testPath: string;
+  useTestPathPattern?: boolean;
+  testName?: TestNamePattern;
+}

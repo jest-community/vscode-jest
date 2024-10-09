@@ -17,8 +17,13 @@ import * as fs from 'fs';
 import { makeWorkspaceFolder } from './test-helper';
 
 describe('DebugConfigurationProvider', () => {
-  const fileName = '/a/file';
+  const testPath = '/a/file';
   const testName = 'a test';
+  beforeEach(() => {
+    (toFilePath as unknown as jest.Mock<{}>).mockImplementation((s) => s);
+    (escapeRegExp as unknown as jest.Mock<{}>).mockImplementation((s) => s);
+    (escapeQuotes as unknown as jest.Mock<{}>).mockImplementation((s) => s);
+  });
 
   it('should by default return a DebugConfiguration for Jest', () => {
     const folder: any = { name: 'folder', uri: { fsPath: null } };
@@ -73,18 +78,17 @@ describe('DebugConfigurationProvider', () => {
 
   it.each`
     debugConfigArgs    | expectedArgs
-    ${[]}              | ${['--testNamePattern', testName, '--runTestsByPath', fileName]}
-    ${['--runInBand']} | ${['--runInBand', '--testNamePattern', testName, '--runTestsByPath', fileName]}
+    ${undefined}       | ${['--testNamePattern', testName, '--runTestsByPath', testPath]}
+    ${[]}              | ${['--testNamePattern', testName, '--runTestsByPath', testPath]}
+    ${['--runInBand']} | ${['--runInBand', '--testNamePattern', testName, '--runTestsByPath', testPath]}
   `(
     'should append the specified tests arguments for non-v2 config',
     ({ debugConfigArgs, expectedArgs }) => {
-      (toFilePath as unknown as jest.Mock<{}>).mockImplementation((s) => s);
-
       let configuration: any = { name: 'vscode-jest-tests', args: debugConfigArgs };
 
       const sut = new DebugConfigurationProvider();
       const ws = makeWorkspaceFolder('whatever');
-      sut.prepareTestRun(fileName, testName, ws);
+      sut.prepareTestRun({ testPath, testName }, ws);
 
       configuration = sut.resolveDebugConfiguration(undefined, configuration);
 
@@ -97,8 +101,6 @@ describe('DebugConfigurationProvider', () => {
     }
   );
   it('skip non-jest config', () => {
-    (toFilePath as unknown as jest.Mock<{}>).mockImplementation((s) => s);
-
     const configuration: any = { name: 'non-jest', args: [] };
 
     const sut = new DebugConfigurationProvider();
@@ -111,13 +113,13 @@ describe('DebugConfigurationProvider', () => {
     it.each`
       args                                                                                        | expected
       ${[]}                                                                                       | ${[]}
-      ${['${jest.testFile}']}                                                                     | ${[fileName]}
+      ${['${jest.testFile}']}                                                                     | ${[testPath]}
       ${['${jest.testFilePattern}']}                                                              | ${[fileNamePattern]}
       ${['${jest.testNamePattern}']}                                                              | ${[testName]}
-      ${['--testNamePattern', '${jest.testNamePattern}', '--runTestsByPath', '${jest.testFile}']} | ${['--testNamePattern', testName, '--runTestsByPath', fileName]}
+      ${['--testNamePattern', '${jest.testNamePattern}', '--runTestsByPath', '${jest.testFile}']} | ${['--testNamePattern', testName, '--runTestsByPath', testPath]}
       ${['${jest.testNamePattern}', true]}                                                        | ${[testName, true]}
     `('will only translate known variables: $args', ({ args, expected }) => {
-      (toFilePath as unknown as jest.Mock<{}>).mockReturnValueOnce(fileName);
+      (toFilePath as unknown as jest.Mock<{}>).mockReturnValueOnce(testPath);
       (escapeRegExp as unknown as jest.Mock<{}>).mockReturnValueOnce(fileNamePattern);
       (escapeQuotes as unknown as jest.Mock<{}>).mockImplementation((s) => s);
 
@@ -125,7 +127,7 @@ describe('DebugConfigurationProvider', () => {
 
       const sut = new DebugConfigurationProvider();
       const ws = makeWorkspaceFolder('whatever');
-      sut.prepareTestRun(fileName, testName, ws);
+      sut.prepareTestRun({ testPath, testName }, ws);
 
       configuration = sut.resolveDebugConfiguration(undefined, configuration);
 
@@ -133,10 +135,6 @@ describe('DebugConfigurationProvider', () => {
       expect(configuration.args).toEqual(expected);
     });
     it('will translate multiple variables in a single arg', () => {
-      (toFilePath as unknown as jest.Mock<{}>).mockReturnValueOnce(fileName);
-      (escapeRegExp as unknown as jest.Mock<{}>).mockReturnValueOnce(fileNamePattern);
-      (escapeQuotes as unknown as jest.Mock<{}>).mockImplementation((s) => s);
-
       let configuration: any = {
         name: 'vscode-jest-tests.v2',
         args: ['--testNamePattern "${jest.testNamePattern}" --runTestsByPath "${jest.testFile}"'],
@@ -144,13 +142,13 @@ describe('DebugConfigurationProvider', () => {
 
       const sut = new DebugConfigurationProvider();
       const ws = makeWorkspaceFolder('whatever');
-      sut.prepareTestRun(fileName, testName, ws);
+      sut.prepareTestRun({ testPath, testName }, ws);
 
       configuration = sut.resolveDebugConfiguration(undefined, configuration);
 
       expect(configuration).toBeDefined();
       expect(configuration.args).toEqual([
-        `--testNamePattern "${testName}" --runTestsByPath "${fileName}"`,
+        `--testNamePattern "${testName}" --runTestsByPath "${testPath}"`,
       ]);
     });
   });
@@ -418,6 +416,71 @@ describe('DebugConfigurationProvider', () => {
           });
           expect(runtimeExecutable).toEqual(expected.runtimeExecutable);
         });
+      });
+    });
+  });
+  describe('debug with useTestPathPattern = true', () => {
+    let debugInfo;
+    const testPath = '/a/__tests__';
+    const testName = 'a test';
+    const createDebugConfig = (type: 'v1' | 'v2' | 'v2-custom') => {
+      switch (type) {
+        case 'v1':
+          return { name: 'vscode-jest-tests', args: [] };
+        case 'v2':
+          return {
+            name: 'vscode-jest-tests.v2',
+            args: [
+              '--runInBand',
+              '--watchAll=false',
+              '--testNamePattern',
+              '${jest.testNamePattern}',
+              '--runTestsByPath',
+              '${jest.testFile}',
+            ],
+          };
+        case 'v2-custom':
+          return {
+            name: 'vscode-jest-tests.v2',
+            args: [
+              '--runInBand',
+              '--watchAll=false',
+              '--testNamePattern',
+              '${jest.testNamePattern}',
+              '--testPathPattern',
+              '${jest.testFile}',
+            ],
+          };
+      }
+    };
+    beforeEach(() => {
+      debugInfo = { testPath, testName, useTestPathPattern: true };
+    });
+
+    describe('should update debug config args with testPathPattern(s) accordingly', () => {
+      it.each`
+        configType     | useJest30
+        ${'v1'}        | ${true}
+        ${'v1'}        | ${false}
+        ${'v1'}        | ${undefined}
+        ${'v2'}        | ${true}
+        ${'v2'}        | ${false}
+        ${'v2'}        | ${undefined}
+        ${'v2-custom'} | ${true}
+        ${'v2-custom'} | ${false}
+        ${'v2-custom'} | ${undefined}
+      `('for $configType, useJest30=$useJest30', ({ configType, useJest30 }) => {
+        let debugConfig: any = createDebugConfig(configType);
+
+        const sut = new DebugConfigurationProvider();
+        const ws = makeWorkspaceFolder('whatever');
+        sut.prepareTestRun(debugInfo, ws, useJest30);
+
+        debugConfig = sut.resolveDebugConfiguration(undefined, debugConfig);
+
+        const testPathPatternOption = useJest30 ? '--testPathPatterns' : '--testPathPattern';
+        expect(debugConfig.args).toEqual(expect.arrayContaining([testPathPatternOption, testPath]));
+        expect(debugConfig.args).not.toContain('--runTestsByPath');
       });
     });
   });

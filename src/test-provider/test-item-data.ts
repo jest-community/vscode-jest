@@ -8,7 +8,7 @@ import { ItBlock, TestAssertionStatus } from 'jest-editor-support';
 import { ContainerNode, DataNode, NodeType, ROOT_NODE_NAME } from '../TestResults/match-node';
 import { Logging } from '../logging';
 import { TestSuitChangeEvent } from '../TestResults/test-result-events';
-import { Debuggable, ItemCommand, ScheduleTestOptions, TestItemData } from './types';
+import { ItemCommand, ScheduleTestOptions, TestItemData } from './types';
 import { JestTestProviderContext } from './test-provider-context';
 import { JestTestRun } from './jest-test-run';
 import { JestProcessInfo, ProcessStatus } from '../JestProcessManagement';
@@ -17,7 +17,7 @@ import { tiContextManager } from './test-item-context-manager';
 import { runModeDescription } from '../JestExt/run-mode';
 import { isVirtualWorkspaceFolder } from '../virtual-workspace-folder';
 import { outputManager } from '../output-manager';
-import { TestNamePattern } from '../types';
+import { DebugInfo, TestNamePattern } from '../types';
 
 interface JestRunnable {
   getJestRunRequest: (options?: ScheduleTestOptions) => JestExtRequestType;
@@ -109,6 +109,10 @@ abstract class TestItemDataBase implements TestItemData, JestRunnable, WithUri {
   viewSnapshot(): Promise<void> {
     return Promise.reject(`viewSnapshot is not supported for ${this.item.id}`);
   }
+
+  getDebugInfo(): DebugInfo {
+    return { testPath: this.uri.fsPath, useTestPathPattern: true };
+  }
   abstract getJestRunRequest(options?: ScheduleTestOptions): JestExtRequestType;
 }
 
@@ -141,9 +145,7 @@ export class WorkspaceRoot extends TestItemDataBase {
       isVirtualWorkspaceFolder(workspaceFolder)
         ? workspaceFolder.effectiveUri
         : workspaceFolder.uri,
-      this,
-      undefined,
-      ['run']
+      this
     );
     const desc = runModeDescription(this.context.ext.settings.runMode.config);
     item.description = `(${desc.deferred?.label ?? desc.type.label})`;
@@ -496,7 +498,7 @@ export class FolderData extends TestItemDataBase {
   }
   private createTestItem(name: string, parent: vscode.TestItem) {
     const uri = FolderData.makeUri(parent, name);
-    const item = this.context.createTestItem(uri.fsPath, name, uri, this, parent, ['run']);
+    const item = this.context.createTestItem(uri.fsPath, name, uri, this, parent);
 
     item.canResolveChildren = false;
     return item;
@@ -723,18 +725,17 @@ export class TestDocumentRoot extends TestResultData {
     };
   }
 
-  getDebugInfo(): ReturnType<Debuggable['getDebugInfo']> {
-    return { fileName: this.uri.fsPath };
-  }
-
   public onTestMatched(): void {
     this.forEachChild((child) => child.onTestMatched());
   }
   public gatherSnapshotItems(snapshotItems: SnapshotItemCollection): void {
     this.forEachChild((child) => child.gatherSnapshotItems(snapshotItems));
   }
+  getDebugInfo(): DebugInfo {
+    return { testPath: this.uri.fsPath };
+  }
 }
-export class TestData extends TestResultData implements Debuggable {
+export class TestData extends TestResultData {
   constructor(
     readonly context: JestTestProviderContext,
     fileUri: vscode.Uri,
@@ -777,8 +778,8 @@ export class TestData extends TestResultData implements Debuggable {
     };
   }
 
-  getDebugInfo(): ReturnType<Debuggable['getDebugInfo']> {
-    return { fileName: this.uri.fsPath, testNamePattern: this.getTestNamePattern() };
+  getDebugInfo(): DebugInfo {
+    return { testPath: this.uri.fsPath, testName: this.getTestNamePattern() };
   }
   private updateItemRange(): void {
     if (this.node.attrs.range) {

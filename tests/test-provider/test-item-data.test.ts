@@ -1264,33 +1264,46 @@ describe('test-item-data', () => {
         expect(itemData.item.tags.find((t) => t.id === 'run')).toBeTruthy();
       });
     });
-    it('only TestData and TestDocument supports debug tags', () => {
-      [doc, testItem].forEach((itemData) =>
+    it('all test items support debug tags', () => {
+      [wsRoot, folder, doc, testItem].forEach((itemData) =>
         expect(itemData.item.tags.find((t) => t.id === 'debug')).toBeTruthy()
-      );
-      [wsRoot, folder].forEach((itemData) =>
-        expect(itemData.item.tags.find((t) => t.id === 'debug')).toBeUndefined()
       );
     });
   });
   describe('getDebugInfo', () => {
-    let doc, test;
+    let doc, test, parentItem;
     beforeEach(() => {
       const uri: any = { fsPath: 'whatever' };
-      const parentItem: any = controllerMock.createTestItem('ws-1', 'ws-1', uri);
+      parentItem = controllerMock.createTestItem('ws-1', 'ws-1', uri);
       doc = new TestDocumentRoot(context, uri, parentItem);
       const node: any = { fullName: 'a test', attrs: {}, data: {} };
       test = new TestData(context, uri, node, doc.item);
     });
     it('TestData returns file and test info', () => {
       const debugInfo = test.getDebugInfo();
-      expect(debugInfo.fileName).toEqual(test.item.uri.fsPath);
-      expect(debugInfo.testNamePattern).toEqual({ value: 'a test', exactMatch: true });
+      expect(debugInfo.testPath).toEqual(test.item.uri.fsPath);
+      expect(debugInfo.testName).toEqual({ value: 'a test', exactMatch: true });
+      expect(debugInfo.useTestPathPattern).toBeFalsy();
     });
     it('TestDocumentRoot returns only file info', () => {
       const debugInfo = doc.getDebugInfo();
-      expect(debugInfo.fileName).toEqual(doc.item.uri.fsPath);
+      expect(debugInfo.testPath).toEqual(doc.item.uri.fsPath);
       expect(debugInfo.testNamePattern).toBeUndefined();
+      expect(debugInfo.useTestPathPattern).toBeFalsy();
+    });
+    it('FolderData returns folder path info', () => {
+      const folder = new FolderData(context, 'folder', parentItem);
+      const debugInfo = folder.getDebugInfo();
+      expect(debugInfo.testPath).toEqual(folder.item.uri.fsPath);
+      expect(debugInfo.testName).toBeUndefined();
+      expect(debugInfo.useTestPathPattern).toBeTruthy();
+    });
+    it('workspaceRoot returns workspace path info', () => {
+      const root = new WorkspaceRoot(context);
+      const debugInfo = root.getDebugInfo();
+      expect(debugInfo.testPath).toEqual(root.item.uri.fsPath);
+      expect(debugInfo.testName).toBeUndefined();
+      expect(debugInfo.useTestPathPattern).toBeTruthy();
     });
   });
   describe('WorkspaceRoot', () => {

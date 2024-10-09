@@ -172,8 +172,8 @@ describe('JestExt', () => {
   const debugConfiguration2 = { type: 'with-setting-override' };
 
   describe('debugTests()', () => {
-    const fileName = 'fileName';
-    const document: any = { fileName };
+    const testPath = 'fileName';
+    const document: any = { fileName: testPath };
     let sut: JestExt;
     let startDebugging;
     const mockShowQuickPick = jest.fn();
@@ -218,13 +218,14 @@ describe('JestExt', () => {
           ${['a', 'vscode-jest-tests', 'b']}    | ${false}         | ${false}  | ${false}
         `('$configNames', async ({ configNames, useDefaultConfig, debugMode, v2 }) => {
           expect.hasAssertions();
-          const testNamePattern = 'testNamePattern';
+          const testName = 'testName';
           mockConfigurations = configNames ? configNames.map((name) => ({ name })) : undefined;
 
           // mockProjectWorkspace.debug = debugMode;
           sut = newJestExt({ settings: { debugMode } });
 
-          await sut.debugTests(document, testNamePattern);
+          const debugInfo = { testPath: document.fileName, testName };
+          await sut.debugTests(debugInfo);
 
           expect(startDebugging).toHaveBeenCalledTimes(1);
           if (useDefaultConfig) {
@@ -241,9 +242,9 @@ describe('JestExt', () => {
           }
 
           expect(sut.debugConfigurationProvider.prepareTestRun).toHaveBeenCalledWith(
-            fileName,
-            testNamePattern,
-            workspaceFolder
+            debugInfo,
+            workspaceFolder,
+            undefined
           );
         });
         describe('can fallback to workspace config if no folder config found', () => {
@@ -276,7 +277,7 @@ describe('JestExt', () => {
               };
             });
             sut = newJestExt({ settings: { jestCommandLine: undefined } });
-            sut.debugTests(document, 'testNamePattern');
+            sut.debugTests({ testPath: document.fileName, testName: 'testName' });
             expect(vscode.debug.startDebugging).toHaveBeenCalledWith(
               workspaceFolder,
               expectedConfig
@@ -295,7 +296,7 @@ describe('JestExt', () => {
           sut = newJestExt({ settings });
           const mockConfig: any = { get: jest.fn() };
           vscode.workspace.getConfiguration = jest.fn(() => mockConfig);
-          sut.debugTests(document, 'whatever');
+          sut.debugTests({ testPath: document.fileName, testName: 'whatever' });
           expect(sut.debugConfigurationProvider.createDebugConfig).toHaveBeenCalledWith(
             workspaceFolder,
             createDebugConfigOptions ?? settings
@@ -309,8 +310,8 @@ describe('JestExt', () => {
     });
     describe('should run the supplied test', () => {
       it.each([[document], ['fileName']])('support document parameter: %s', async (doc) => {
-        const testNamePattern = 'testNamePattern';
-        await sut.debugTests(doc, testNamePattern);
+        const debugInfo = { testPath: doc.fileName, testName: 'testName' };
+        await sut.debugTests(debugInfo);
         expect(vscode.debug.startDebugging).toHaveBeenCalledWith(
           workspaceFolder,
           debugConfiguration2
@@ -319,23 +320,12 @@ describe('JestExt', () => {
         expect(configuration).toBeDefined();
         expect(configuration.type).toBe(debugConfiguration2.type);
         expect(sut.debugConfigurationProvider.prepareTestRun).toHaveBeenCalledWith(
-          fileName,
-          testNamePattern,
-          workspaceFolder
+          debugInfo,
+          workspaceFolder,
+          undefined
         );
-        expect(mockHelpers.escapeRegExp).toHaveBeenCalledWith(testNamePattern);
+        expect(mockHelpers.escapeRegExp).not.toHaveBeenCalled();
       });
-    });
-    it('if pass zero testNamePattern, all tests will be run', async () => {
-      await sut.debugTests(document);
-      expect(mockShowQuickPick).not.toHaveBeenCalled();
-      expect(mockHelpers.testIdString).not.toHaveBeenCalled();
-      expect(sut.debugConfigurationProvider.prepareTestRun).toHaveBeenCalledWith(
-        document.fileName,
-        '.*',
-        workspaceFolder
-      );
-      expect(vscode.debug.startDebugging).toHaveBeenCalled();
     });
   });
 

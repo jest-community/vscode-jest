@@ -1,16 +1,13 @@
 import * as vscode from 'vscode';
 import { JestTestProviderContext } from './test-provider-context';
 import { WorkspaceRoot } from './test-item-data';
-import { Debuggable, ItemCommand, JestExtExplorerContext, TestItemData, TestTagId } from './types';
+import { ItemCommand, JestExtExplorerContext, TestItemData, TestTagId } from './types';
 import { extensionId, extensionName } from '../appGlobals';
 import { Logging } from '../logging';
 import { toErrorString } from '../helpers';
 import { tiContextManager } from './test-item-context-manager';
 import { JestTestRun } from './jest-test-run';
 import { JestTestCoverageProvider } from './test-coverage';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const isDebuggable = (arg: any): arg is Debuggable => arg && typeof arg.getDebugInfo === 'function';
 
 export class JestTestProvider {
   private readonly controller: vscode.TestController;
@@ -132,20 +129,13 @@ export class JestTestProvider {
    */
   debugTest = async (tData: TestItemData, run: JestTestRun): Promise<void> => {
     let error;
-    if (isDebuggable(tData)) {
-      try {
-        const debugInfo = tData.getDebugInfo();
-        if (debugInfo.testNamePattern) {
-          await this.context.ext.debugTests(debugInfo.fileName, debugInfo.testNamePattern);
-        } else {
-          await this.context.ext.debugTests(debugInfo.fileName);
-        }
-        return;
-      } catch (e) {
-        error = `item ${tData.item.id} failed to debug: ${JSON.stringify(e)}`;
-      }
+    try {
+      const debugInfo = tData.getDebugInfo();
+      await this.context.ext.debugTests(debugInfo);
+      return;
+    } catch (e) {
+      error = `item ${tData.item.id} failed to debug: ${JSON.stringify(e)}`;
     }
-    error = error ?? `item ${tData.item.id} is not debuggable`;
     run.errored(tData.item, new vscode.TestMessage(error));
     run.write(error, 'error');
     return Promise.resolve();
