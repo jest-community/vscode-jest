@@ -4,9 +4,13 @@ Release Notes <!-- omit in toc -->
 ---
 
 - [v6.3 (pre-release)](#v63-pre-release)
-  - [v6.3.0 (pre-release)](#v630-pre-release)
+  - [v6.3.1 (pre-release)](#v631-pre-release)
     - [Features](#features)
     - [Bug Fixes](#bug-fixes)
+    - [Dependency Updates](#dependency-updates)
+  - [v6.3.0 (pre-release)](#v630-pre-release)
+    - [Features](#features-1)
+    - [Bug Fixes](#bug-fixes-1)
 - [v6.2](#v62)
   - [v6.2.5](#v625)
   - [v6.2.4](#v624)
@@ -30,7 +34,7 @@ Release Notes <!-- omit in toc -->
       - [2.1 "TEST RESULTS" Panel Integration](#21-test-results-panel-integration)
       - [2.2 Configuration and Examples](#22-configuration-and-examples)
       - [2.3 Deprecations and Migration](#23-deprecations-and-migration)
-  - [Bug Fixes](#bug-fixes-1)
+  - [Bug Fixes](#bug-fixes-2)
   - [Technical Debt](#technical-debt)
 - [v6.0 (pre-release)](#v60-pre-release)
   - [Main Features](#main-features-1)
@@ -44,6 +48,28 @@ Release Notes <!-- omit in toc -->
 ---
 
 ## v6.3 (pre-release)
+
+### v6.3.1 (pre-release)
+
+#### Features
+
+- **Make all test items debuggable** by @connectdotz in [#1181](https://github.com/jest-community/vscode-jest/pull/1181).  
+  Prior to v6.3.1, only test files and test blocks were debuggable. Now, users can debug from any test item, including the test roots and directories.
+
+#### Bug Fixes
+
+- **Fix documentation link for v6.3.0-next** by @connectdotz in [#1169](https://github.com/jest-community/vscode-jest/pull/1169).
+- **Fix empty coverage range issue** by @connectdotz in [#1177](https://github.com/jest-community/vscode-jest/pull/1177).
+- **Fix Windows `testNamePattern` not found issue** by @connectdotz in [#1179](https://github.com/jest-community/vscode-jest/pull/1179).
+
+#### Dependency Updates
+
+- **Bump webpack from 5.91.0 to 5.94.0** by @dependabot in [#1173](https://github.com/jest-community/vscode-jest/pull/1173).
+- **Bump micromatch from 4.0.7 to 4.0.8** by @dependabot in [#1176](https://github.com/jest-community/vscode-jest/pull/1176).
+
+**CHANGELOG**
+
+- [v6.3.1-next](https://github.com/jest-community/vscode-jest/releases/tag/v6.3.1-next)
 
 ### v6.3.0 (pre-release)
 
