@@ -3,14 +3,18 @@
 Release Notes <!-- omit in toc --> 
 ---
 
+- [v6.4.0](#v640)
+  - [Features](#features)
+  - [Bug Fixes](#bug-fixes)
+  - [Dependency Updates](#dependency-updates)
 - [v6.3 (pre-release)](#v63-pre-release)
   - [v6.3.1 (pre-release)](#v631-pre-release)
-    - [Features](#features)
-    - [Bug Fixes](#bug-fixes)
-    - [Dependency Updates](#dependency-updates)
-  - [v6.3.0 (pre-release)](#v630-pre-release)
     - [Features](#features-1)
     - [Bug Fixes](#bug-fixes-1)
+    - [Dependency Updates](#dependency-updates-1)
+  - [v6.3.0 (pre-release)](#v630-pre-release)
+    - [Features](#features-2)
+    - [Bug Fixes](#bug-fixes-2)
 - [v6.2](#v62)
   - [v6.2.5](#v625)
   - [v6.2.4](#v624)
@@ -34,7 +38,7 @@ Release Notes <!-- omit in toc -->
       - [2.1 "TEST RESULTS" Panel Integration](#21-test-results-panel-integration)
       - [2.2 Configuration and Examples](#22-configuration-and-examples)
       - [2.3 Deprecations and Migration](#23-deprecations-and-migration)
-  - [Bug Fixes](#bug-fixes-2)
+  - [Bug Fixes](#bug-fixes-3)
   - [Technical Debt](#technical-debt)
 - [v6.0 (pre-release)](#v60-pre-release)
   - [Main Features](#main-features-1)
@@ -44,6 +48,51 @@ Release Notes <!-- omit in toc -->
     - [4. Auto clear output upon test run](#4-auto-clear-output-upon-test-run)
   - [Fixes](#fixes)
   - [CHANGELOG](#changelog-3)
+
+---
+## v6.4.0
+
+This is a cumulative release that incorporates updates and fixes introduced in the v6.3.0 and v6.3.1 pre-releases. This release brings enhanced debugging capabilities, new features for Jest v30 compatibility, and improved coverage integration with VS Code, along with several bug fixes and dependency updates.
+
+### Features
+
+- **Enhanced Debugging for All Test Items**
+  - Expanded debugging support across all test items, allowing users to initiate debugging from any test root, directory, or individual test item. This improvement brings flexibility in debugging workflows directly from the Test Explorer. ([#1181](https://github.com/jest-community/vscode-jest/pull/1181) - @connectdotz)
+
+- **Support for Jest v30 Syntax**
+  - The extension now includes built-in support for Jest v30 (v30.0.0-alpha.6 and above). It automatically detects and adapts to the new `TestPathPatterns` syntax, configurable via a new `jest.useJest30` setting. ([#1153](https://github.com/jest-community/vscode-jest/pull/1153) - @connectdotz)
+
+- **VS Code Test Coverage API and UI Integration**
+  - Introduced integration with VS Code’s native Test Coverage API, enabling interactive coverage tracking and display within the editor and the Test Explorer Coverage panel. This new approach improves accessibility and interactivity for test coverage. The original coverage feature remains available for backward compatibility. ([#1151](https://github.com/jest-community/vscode-jest/pull/1151) - @connectdotz)
+
+### Bug Fixes
+
+- **Resolved Documentation Link Issue for v6.3.0-next**
+  - Corrected broken documentation links that affected navigation and guidance for v6.3.0-next users. ([#1169](https://github.com/jest-community/vscode-jest/pull/1169) - @connectdotz)
+
+- **Fixed Coverage Range Calculation Issue**
+  - Addressed an issue where coverage ranges could display as empty, ensuring consistent and accurate coverage reporting across files. ([#1177](https://github.com/jest-community/vscode-jest/pull/1177) - @connectdotz)
+
+- **Improved Windows `testNamePattern` Resolution**
+  - Resolved an issue where the `testNamePattern` setting was not recognized on Windows, enabling consistent behavior across platforms. ([#1179](https://github.com/jest-community/vscode-jest/pull/1179) - @connectdotz)
+
+- **Improved Test Status Reporting on Suite Failures**
+  - Fixed a bug where test statuses sometimes failed to update correctly when the test suite could not run due to issues like compile errors. ([#1165](https://github.com/jest-community/vscode-jest/pull/1165) - @connectdotz)
+
+- **Incorporated `jest.nodeEnv` into Debug Configurations**
+  - Ensured that `jest.nodeEnv` is included in auto-generated debug configurations for better environment compatibility. ([#1167](https://github.com/jest-community/vscode-jest/pull/1167) - @connectdotz)
+
+- **Documentation Fixes**
+  - Corrected setup-wizard documentation links to ensure a smoother onboarding experience. ([#1154](https://github.com/jest-community/vscode-jest/pull/1154) - @pierluigigiancola)
+
+### Dependency Updates
+
+- **Webpack**: Bumped from 5.91.0 to 5.94.0, improving build performance and compatibility. ([#1173](https://github.com/jest-community/vscode-jest/pull/1173) - @dependabot)
+- **Micromatch**: Updated from 4.0.7 to 4.0.8 to address minor matching issues. ([#1176](https://github.com/jest-community/vscode-jest/pull/1176) - @dependabot)
+
+**CHANGELOG**
+
+- [v6.4.0](https://github.com/jest-community/vscode-jest/releases/tag/v6.4.0)
 
 ---
 
