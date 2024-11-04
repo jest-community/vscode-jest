@@ -40,7 +40,7 @@ The tool provides 3 main setup tasks:
 
 <img src="images/setup-tool/main-menu.png" alt="setup-tool/main-menu.png" width="800"/>
 
-1. [Setup Jest Command](#setup-jest-command): used by the extension to kick off a jest test run on behave of users. 
+1. [Setup Jest Command](#setup-jest-command): used by the extension to kick off a jest test run on behalf of users. 
 2. [Setup Jest Debug Config](#setup-jest-debug-config): to enable debugging individual jest tests via the debug codeLens.
 3. [Setup Monorepo Project](#setup-monorepo-project): to assist the monorepo projects adapting to the vscode environment.
    
