@@ -1,17 +1,42 @@
 import {
   TestReconciler,
   JestTotalResults,
-  TestAssertionStatus,
   TestFileAssertionStatus,
+  IParseResults,
+  parse,
+  TestAssertionStatus,
+  ParsedRange,
   ItBlock,
+  SnapshotParserOptions,
+  TestReconciliationState,
 } from 'jest-editor-support';
-import { TestReconciliationState } from './TestReconciliationState';
-import { TestResult } from './TestResult';
-import { parseTest } from '../TestParser';
+import { TestResult, TestResultStatusInfo, TestStatus } from './TestResult';
+import * as match from './match-by-context';
+import { JestSessionEvents } from '../JestExt';
+import { TestStats } from '../types';
+import { emptyTestStats } from '../helpers';
+import { createTestResultEvents, TestResultEvents } from './test-result-events';
+import { ContainerNode, ROOT_NODE_NAME } from './match-node';
+import { JestProcessInfo } from '../JestProcessManagement';
+import { ExtSnapshotBlock, SnapshotProvider, SnapshotSuite } from './snapshot-provider';
 
-interface TestResultsMap {
-  [filePath: string]: TestResult[];
+type TestBlocks = IParseResults & { sourceContainer: ContainerNode<ItBlock> };
+interface TestSuiteParseResultRaw {
+  testBlocks: TestBlocks | 'failed';
 }
+interface TestSuiteResultRaw {
+  status: TestReconciliationState;
+  message: string;
+  assertionContainer?: ContainerNode<TestAssertionStatus>;
+  results?: TestResult[];
+  sorted?: SortedTestResults;
+  // if we are certain the record is for a test file, set this flag to true
+  // otherwise isTestFile is determined by the testFileList
+  isTestFile?: boolean;
+}
+
+export type TestSuiteResult = Readonly<TestSuiteResultRaw>;
+type TestSuiteUpdatable = Readonly<TestSuiteResultRaw & TestSuiteParseResultRaw>;
 
 export interface SortedTestResults {
   fail: TestResult[];
@@ -20,195 +45,434 @@ export interface SortedTestResults {
   unknown: TestResult[];
 }
 
-interface SortedTestResultsMap {
-  [filePath: string]: SortedTestResults;
-}
+const sortByStatus = (a: TestResult, b: TestResult): number => {
+  if (a.status === b.status) {
+    return 0;
+  }
+  return TestResultStatusInfo[a.status].precedence - TestResultStatusInfo[b.status].precedence;
+};
 
-type IsMatched = (test: ItBlock, assertion: TestAssertionStatus) => boolean;
-type OnMatchError = (test: ItBlock, matched: TestAssertionStatus[]) => string | undefined;
+export class TestSuiteRecord implements TestSuiteUpdatable {
+  private _status: TestReconciliationState;
+  private _message: string;
+  private _results?: TestResult[];
+  private _sorted?: SortedTestResults;
+  private _isTestFile?: boolean;
 
-export class TestResultProvider {
-  verbose: boolean;
-  private reconciler: TestReconciler;
-  private resultsByFilePath: TestResultsMap;
-  private sortedResultsByFilePath: SortedTestResultsMap;
+  private _testBlocks?: TestBlocks | 'failed';
+  private _assertionContainer?: ContainerNode<TestAssertionStatus>;
 
-  constructor(verbose = false) {
-    this.reconciler = new TestReconciler();
-    this.resetCache();
-    this.verbose = verbose;
+  constructor(
+    public testFile: string,
+    private reconciler: TestReconciler,
+    private parser: Parser
+  ) {
+    this._status = TestStatus.Unknown;
+    this._message = '';
+  }
+  public get status(): TestReconciliationState {
+    return this._status;
+  }
+  public get message(): string {
+    return this._message;
+  }
+  public get results(): TestResult[] | undefined {
+    return this._results;
+  }
+  public get sorted(): SortedTestResults | undefined {
+    return this._sorted;
+  }
+  public get isTestFile(): boolean | undefined {
+    return this._isTestFile;
   }
 
-  resetCache() {
-    this.resultsByFilePath = {};
-    this.sortedResultsByFilePath = {};
-  }
-
-  getResults(filePath: string): TestResult[] {
-    const toMatchResult = (test: ItBlock, assertion?: TestAssertionStatus, err?: string) => ({
-      // Note the shift from one-based to zero-based line number and columns
-      name: test.name,
-      start: {
-        column: test.start.column - 1,
-        line: test.start.line - 1,
-      },
-      end: {
-        column: test.end.column - 1,
-        line: test.end.line - 1,
-      },
-
-      status: assertion ? assertion.status : TestReconciliationState.Unknown,
-      shortMessage: assertion ? assertion.shortMessage : err,
-      terseMessage: assertion ? assertion.terseMessage : undefined,
-      lineNumberOfError:
-        assertion &&
-        assertion.line &&
-        assertion.line >= test.start.line &&
-        assertion.line <= test.end.line
-          ? assertion.line - 1
-          : test.end.line - 1,
-    });
-
-    const matchTests = (
-      _itBlocks: ItBlock[],
-      _assertions: TestAssertionStatus[],
-      _isMatched: IsMatched[],
-      _onMatchError?: OnMatchError,
-      trackRemaining?: boolean
-    ): [TestResult[], ItBlock[], TestAssertionStatus[]] => {
-      const results: TestResult[] = [];
-      const remainingAssertions = Array.from(_assertions);
-      const remainingTests: ItBlock[] = [];
-      const _trackRemaining = trackRemaining === undefined ? true : trackRemaining;
-
-      _itBlocks.forEach((test) => {
-        const matched = remainingAssertions.filter((a) => _isMatched.every((m) => m(test, a)));
-        if (matched.length === 1) {
-          const aIndex = remainingAssertions.indexOf(matched[0]);
-          if (aIndex < 0) {
-            throw new Error(`can't find assertion in the list`);
-          }
-          results.push(toMatchResult(test, matched[0]));
-          if (_trackRemaining) {
-            remainingAssertions.splice(aIndex, 1);
-          }
-          return;
+  /**
+   * parse test file and create sourceContainer, if needed.
+   * @returns TestBlocks | 'failed'
+   */
+  public get testBlocks(): TestBlocks | 'failed' {
+    if (!this._testBlocks) {
+      try {
+        const pResult = this.parser.parseTestFile(this.testFile);
+        if (![pResult.describeBlocks, pResult.itBlocks].find((blocks) => blocks.length > 0)) {
+          // nothing in this file yet, skip. Otherwise we might accidentally publish a source file, for example
+          return 'failed';
         }
+        const sourceContainer = match.buildSourceContainer(pResult.root);
+        this._testBlocks = { ...pResult, sourceContainer };
 
-        let err: string;
-        if (_onMatchError) {
-          err = _onMatchError(test, matched);
+        const snapshotBlocks = this.parser.parseSnapshot(this.testFile).blocks;
+        if (snapshotBlocks.length > 0) {
+          this.updateSnapshotAttr(sourceContainer, snapshotBlocks);
         }
-        // if there is an error string, create a test result with it
-        if (err) {
-          results.push(toMatchResult(test, undefined, err));
-          return;
+      } catch (e) {
+        // normal to fail, for example when source file has syntax error
+        if (this.parser.options?.verbose) {
+          console.log(`parseTestBlocks failed for ${this.testFile}`, e);
         }
-
-        if (_trackRemaining) {
-          remainingTests.push(test);
-        }
-      });
-      return [results, remainingTests, remainingAssertions];
-    };
-
-    if (this.resultsByFilePath[filePath]) {
-      return this.resultsByFilePath[filePath];
+        this._testBlocks = 'failed';
+      }
     }
-    const matchPos = (t: ItBlock, a: TestAssertionStatus): boolean =>
-      (a.line !== undefined && a.line >= t.start.line && a.line <= t.end.line) ||
-      (a.location && a.location.line >= t.start.line && a.location.line <= t.end.line);
 
-    const matchName = (t: ItBlock, a: TestAssertionStatus): boolean => t.name === a.title;
-    const templateLiteralPattern = /\${.*?}/; // template literal pattern
-    const matchTemplateLiteral = (t: ItBlock, a: TestAssertionStatus): boolean => {
-      if (!t.name.match(templateLiteralPattern)) {
+    return this._testBlocks;
+  }
+
+  public get assertionContainer(): ContainerNode<TestAssertionStatus> | undefined {
+    if (!this._assertionContainer) {
+      const assertions = this.reconciler.assertionsForTestFile(this.testFile);
+      if (assertions && assertions.length > 0) {
+        this._assertionContainer = match.buildAssertionContainer(assertions);
+      }
+    }
+    return this._assertionContainer;
+  }
+
+  private updateSnapshotAttr(
+    container: ContainerNode<ItBlock>,
+    snapshots: ExtSnapshotBlock[]
+  ): void {
+    const isWithin = (snapshot: ExtSnapshotBlock, range?: ParsedRange): boolean => {
+      if (!snapshot.node.loc) {
+        console.warn('snapshot will be ignored because it has no loc:', snapshot.node);
         return false;
       }
-      const parts = t.name.split(templateLiteralPattern);
-      const r = parts.every((p) => a.title.includes(p));
-      return r;
-    };
-    const onMatchError: OnMatchError = (t: ItBlock, match: TestAssertionStatus[]) => {
-      let err: string;
-      if (match.length <= 0 && t.name.match(templateLiteralPattern)) {
-        err = 'no test result found, could be caused by template literals?';
-      }
-      if (match.length > 1) {
-        err =
-          'found multiple potential matches, could be caused by duplicate test names or template literals?';
-      }
-      if (err && this.verbose) {
-        // tslint:disable-next-line: no-console
-        console.log(`'${t.name}' failed to find test result: ${err}`);
-      }
-      return err;
+      const zeroBasedLine = snapshot.node.loc.start.line - 1;
+      return !!range && range.start.line <= zeroBasedLine && range.end.line >= zeroBasedLine;
     };
 
-    let { itBlocks } = parseTest(filePath);
-    let assertions = this.reconciler.assertionsForTestFile(filePath) || [];
-    const totalResult: TestResult[] = [];
-
-    if (assertions.length > 0 && itBlocks.length > 0) {
-      const algorithms: Array<[IsMatched[], OnMatchError]> = [
-        [[matchName, matchPos], undefined],
-        [[matchTemplateLiteral, matchPos], undefined],
-        [[matchTemplateLiteral], undefined],
-        [[matchName], onMatchError],
-      ];
-      for (const [matchers, onError] of algorithms) {
-        let result: TestResult[];
-        [result, itBlocks, assertions] = matchTests(itBlocks, assertions, matchers, onError);
-        totalResult.push(...result);
-        if (itBlocks.length <= 0 || assertions.length <= 0) {
-          break;
-        }
-      }
+    if (
+      container.name !== ROOT_NODE_NAME &&
+      container.attrs.range &&
+      !snapshots.find((s) => isWithin(s, container.attrs.range))
+    ) {
+      return;
     }
-
-    // convert remaining itBlocks to unmatched result
-    itBlocks.forEach((t) => totalResult.push(toMatchResult(t)));
-
-    this.resultsByFilePath[filePath] = totalResult;
-    return totalResult;
+    container.childData.forEach((block) => {
+      const snapshot = snapshots.find((s) => isWithin(s, block.attrs.range));
+      if (snapshot) {
+        block.attrs.snapshot = snapshot.isInline ? 'inline' : 'external';
+      }
+    });
+    container.childContainers.forEach((childContainer) =>
+      this.updateSnapshotAttr(childContainer, snapshots)
+    );
   }
 
-  getSortedResults(filePath: string) {
-    if (this.sortedResultsByFilePath[filePath]) {
-      return this.sortedResultsByFilePath[filePath];
+  public update(change: Partial<TestSuiteUpdatable>): void {
+    this._status = change.status ?? this.status;
+    this._message = change.message ?? this.message;
+
+    this._isTestFile = 'isTestFile' in change ? change.isTestFile : this._isTestFile;
+    this._results = 'results' in change ? change.results : this._results;
+    this._sorted = 'sorted' in change ? change.sorted : this._sorted;
+    this._assertionContainer =
+      'assertionContainer' in change ? change.assertionContainer : this._assertionContainer;
+  }
+}
+export type TestResultProviderOptions = SnapshotParserOptions;
+
+class Parser {
+  constructor(
+    private snapshotProvider: SnapshotProvider,
+    public options?: TestResultProviderOptions
+  ) {}
+  public parseSnapshot(testPath: string): SnapshotSuite {
+    const res = this.snapshotProvider.parse(testPath, this.options);
+    return res;
+  }
+
+  public parseTestFile(testPath: string): IParseResults {
+    const res = parse(testPath, undefined, this.options?.parserOptions);
+    return res;
+  }
+}
+export class TestResultProvider {
+  private _options: TestResultProviderOptions;
+  events: TestResultEvents;
+  private reconciler: TestReconciler;
+  private testSuites: Map<string, TestSuiteRecord>;
+  private testFiles?: string[];
+  private snapshotProvider: SnapshotProvider;
+  private parser: Parser;
+
+  constructor(
+    extEvents: JestSessionEvents,
+    options: TestResultProviderOptions = { verbose: false }
+  ) {
+    this.reconciler = new TestReconciler();
+    this._options = options;
+    this.events = createTestResultEvents();
+    this.testSuites = new Map();
+    this.snapshotProvider = new SnapshotProvider();
+    this.parser = new Parser(this.snapshotProvider, this._options);
+    extEvents.onTestSessionStarted.event(this.onSessionStart.bind(this));
+  }
+
+  dispose(): void {
+    this.events.testListUpdated.dispose();
+    this.events.testSuiteChanged.dispose();
+  }
+
+  set options(options: TestResultProviderOptions) {
+    this._options = options;
+    this.parser.options = this._options;
+    this.testSuites.clear();
+  }
+
+  private addTestSuiteRecord(testFile: string): TestSuiteRecord {
+    const record = new TestSuiteRecord(testFile, this.reconciler, this.parser);
+    this.testSuites.set(testFile, record);
+    return record;
+  }
+  private onSessionStart(): void {
+    this.testSuites.clear();
+    this.reconciler = new TestReconciler();
+  }
+
+  private groupByRange(results: TestResult[]): TestResult[] {
+    // build a range based map
+    const byRange: Map<string, TestResult[]> = new Map();
+    results.forEach((r) => {
+      // Q: is there a better/efficient way to index the range?
+      const key = `${r.start.line}-${r.start.column}-${r.end.line}-${r.end.column}`;
+      const list = byRange.get(key);
+      if (!list) {
+        byRange.set(key, [r]);
+      } else {
+        list.push(r);
+      }
+    });
+    // sort the test by status precedence
+    byRange.forEach((list) => list.sort(sortByStatus));
+
+    //merge multiResults under the primary (highest precedence)
+    const consolidated: TestResult[] = [];
+    byRange.forEach((list) => {
+      if (list.length > 1) {
+        list[0].multiResults = list.slice(1);
+      }
+      consolidated.push(list[0]);
+    });
+    return consolidated;
+  }
+
+  updateTestFileList(testFiles?: string[]): void {
+    this.testFiles = testFiles;
+
+    // clear the cache in case we have cached some non-test files prior
+    this.testSuites.clear();
+
+    this.events.testListUpdated.fire(testFiles);
+  }
+  getTestList(): string[] {
+    if (this.testFiles && this.testFiles.length > 0) {
+      return this.testFiles;
+    }
+    return Array.from(this.testSuites.keys()).filter((f) => this.isTestFile(f));
+  }
+
+  isTestFile(fileName: string): boolean {
+    if (this.testFiles?.includes(fileName) || this.testSuites.get(fileName)?.isTestFile) {
+      return true;
     }
 
-    const result: SortedTestResults = {
+    //if we already have testFiles, then we can be certain that the file is not a test file
+    if (this.testFiles) {
+      return false;
+    }
+
+    const _record = this.testSuites.get(fileName) ?? this.addTestSuiteRecord(fileName);
+    if (_record.isTestFile === false) {
+      return false;
+    }
+
+    // check if the file is a test file by parsing the content
+    const isTestFile = _record.testBlocks !== 'failed';
+    _record.update({ isTestFile });
+    return isTestFile;
+  }
+
+  public getTestSuiteResult(filePath: string): TestSuiteResult | undefined {
+    return this.testSuites.get(filePath);
+  }
+
+  /**
+   * match assertions with source file, if successful, update cache, results and related.
+   * Will also fire testSuiteChanged event
+   *
+   * if the file is not a test or can not be parsed, the results will be undefined.
+   * any other errors will result the source blocks to be returned as unmatched block.
+   **/
+  private updateMatchedResults(filePath: string, record: TestSuiteRecord): void {
+    let error: string | undefined;
+    let status = record.status;
+    // make sure we do not fire changeEvent since that will be proceeded with match or unmatched event anyway
+    const testBlocks = record.testBlocks;
+    if (testBlocks === 'failed') {
+      record.update({ status: 'KnownFail', message: 'test file parse error', results: [] });
+      return;
+    }
+
+    const { itBlocks } = testBlocks;
+    if (record.assertionContainer) {
+      try {
+        const results = this.groupByRange(
+          match.matchTestAssertions(
+            filePath,
+            testBlocks.sourceContainer,
+            record.assertionContainer,
+            this._options.verbose
+          )
+        );
+        record.update({ results });
+
+        this.events.testSuiteChanged.fire({
+          type: 'result-matched',
+          file: filePath,
+        });
+        return;
+      } catch (e) {
+        console.warn(`failed to match test results for ${filePath}:`, e);
+        error = `encountered internal match error: ${e}`;
+        status = 'KnownFail';
+      }
+    } else {
+      // there might be many reasons for this, for example the test is not yet run, so leave it as unknown
+      error = 'no assertion generated for file';
+    }
+
+    // no need to do groupByRange as the source block will not have blocks under the same location
+    record.update({
+      status,
+      message: error,
+      results: itBlocks.map((t) => match.toMatchResult(t, 'no assertion found', 'match-failed')),
+    });
+
+    // file match failed event so the listeners can display the source blocks instead
+    this.events.testSuiteChanged.fire({
+      type: 'result-match-failed',
+      file: filePath,
+      sourceContainer: testBlocks.sourceContainer,
+    });
+  }
+
+  /**
+   * returns matched test results for the given file
+   * @param filePath
+   * @returns valid test result list or an empty array if the source file is not a test or can not be parsed.
+   */
+  getResults(filePath: string, record?: TestSuiteRecord): TestResult[] | undefined {
+    if (!this.isTestFile(filePath)) {
+      return;
+    }
+
+    const _record = record ?? this.testSuites.get(filePath) ?? this.addTestSuiteRecord(filePath);
+    if (_record.results) {
+      return _record.results;
+    }
+
+    this.updateMatchedResults(filePath, _record);
+    return _record.results;
+  }
+
+  /**
+   * returns sorted test results for the given file
+   * @param filePath
+   * @returns valid sorted test result or undefined if the file is not a test.
+   */
+
+  getSortedResults(filePath: string): SortedTestResults | undefined {
+    if (!this.isTestFile(filePath)) {
+      return;
+    }
+
+    const record = this.testSuites.get(filePath) ?? this.addTestSuiteRecord(filePath);
+    if (record.sorted) {
+      return record.sorted;
+    }
+
+    const sorted: SortedTestResults = {
       fail: [],
       skip: [],
       success: [],
       unknown: [],
     };
 
-    const testResults = this.getResults(filePath);
+    const testResults = this.getResults(filePath, record);
+    if (!testResults) {
+      return;
+    }
     for (const test of testResults) {
-      if (test.status === TestReconciliationState.KnownFail) {
-        result.fail.push(test);
-      } else if (test.status === TestReconciliationState.KnownSkip) {
-        result.skip.push(test);
-      } else if (test.status === TestReconciliationState.KnownSuccess) {
-        result.success.push(test);
+      if (test.status === TestStatus.KnownFail) {
+        sorted.fail.push(test);
+      } else if (test.status === TestStatus.KnownSkip) {
+        sorted.skip.push(test);
+      } else if (test.status === TestStatus.KnownSuccess) {
+        sorted.success.push(test);
       } else {
-        result.unknown.push(test);
+        sorted.unknown.push(test);
       }
     }
-
-    this.sortedResultsByFilePath[filePath] = result;
-    return result;
+    record.update({ sorted });
+    return sorted;
   }
 
-  updateTestResults(data: JestTotalResults): TestFileAssertionStatus[] {
-    this.resetCache();
-    return this.reconciler.updateFileWithJestStatus(data);
+  updateTestResults(data: JestTotalResults, process: JestProcessInfo): TestFileAssertionStatus[] {
+    const results = this.reconciler.updateFileWithJestStatus(data);
+    results?.forEach((r) => {
+      const record = this.testSuites.get(r.file) ?? this.addTestSuiteRecord(r.file);
+      record.update({
+        status: r.status,
+        message: r.message,
+        isTestFile: true,
+        assertionContainer: undefined,
+        results: undefined,
+        sorted: undefined,
+      });
+    });
+    this.events.testSuiteChanged.fire({
+      type: 'assertions-updated',
+      files: results.map((r) => r.file),
+      process,
+    });
+    return results;
   }
 
-  removeCachedResults(filePath: string) {
-    this.resultsByFilePath[filePath] = null;
-    this.sortedResultsByFilePath[filePath] = null;
+  removeCachedResults(filePath: string): void {
+    this.testSuites.delete(filePath);
+  }
+  invalidateTestResults(filePath: string): void {
+    this.removeCachedResults(filePath);
+    this.reconciler.removeTestFile(filePath);
+  }
+
+  // test stats
+  getTestSuiteStats(): TestStats {
+    const stats = emptyTestStats();
+    this.testSuites.forEach((suite) => {
+      if (suite.status === 'KnownSuccess') {
+        stats.success += 1;
+      } else if (suite.status === 'KnownFail') {
+        stats.fail += 1;
+      } else {
+        stats.unknown += 1;
+      }
+    });
+
+    if (this.testFiles) {
+      if (this.testFiles.length > stats.fail + stats.success + stats.unknown) {
+        return {
+          ...stats,
+          unknown: this.testFiles.length - stats.fail - stats.success,
+        };
+      }
+    }
+    return stats;
+  }
+
+  // snapshot support
+
+  public previewSnapshot(testPath: string, testFullName: string): Promise<void> {
+    return this.snapshotProvider.previewSnapshot(testPath, testFullName);
   }
 }

@@ -1,19 +1,19 @@
 
 ### Environment
 
-1. `node -v`: [fill]
-1. `npm -v`: [fill]
-1. `npm ls jest` or `npm ls react-scripts` (if you haven’t ejected): [fill]
-1. your vscode-jest settings if customized:
-    - jest.pathToJest? [fill]
-    - jest.pathToConfig? [fill]
+1. `vscode-jest version`: [fill]
+2. `node -v`: [fill]
+3. `npm -v` or `yarn --version`: [fill]
+4. `npm ls jest` or `npm ls react-scripts` (if you haven’t ejected): [fill]
+5. your vscode-jest settings if customized:
+    - jest.jestCommandLine? [fill]
+    - jest.autoRun? [fill]
     - anything else that you think might be relevant? [fill]
-
-1. Operating system: [fill]
+6. Operating system: [fill]
 
 ### Prerequisite
-- are you able to run jest test from command line? [fill]
-- how do you run your tests from command line? (for example: `npm run test` or `node_modules/.bin/jest`) [fill]
+- are you able to run jest test from the command line? [fill]
+- how do you run your tests from the command line? (for example: `npm run test` or `node_modules/.bin/jest`) [fill]
 
 ### Steps to Reproduce
 

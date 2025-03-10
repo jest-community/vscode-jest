@@ -12,11 +12,16 @@ module.exports = {
     'plugin:@typescript-eslint/eslint-recommended',
     'plugin:@typescript-eslint/recommended',
     'plugin:jest/recommended',
-    'prettier/@typescript-eslint',
+    'prettier',
     'plugin:prettier/recommended',
   ],
   rules: {
     'prettier/prettier': 'error',
+    // too many tests to fix, disable for now
+    '@typescript-eslint/ban-types': 'off',
+    // customize argument ignore pattern
+    'no-unused-vars': 'off',
+    '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
   },
   overrides: [
     {

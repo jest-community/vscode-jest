@@ -5,13 +5,53 @@ Bug-fixes within the same version aren't needed
 
 ## Master
 
+-->
+
+### 4.0.2
+* fix debug problem for windows users (#707) - @connectdotz
+* change *Run Related Tests* default keybinding to Ctrl-Alt/Option-T to avoid overriding default shortcuts. (#704) - @Agalin
+
+### 4.0.1
+* fix test files not found in testFile list on windows after v4 migration - @connectdotz (#696)
+* do not report error if no test file found - @connectdotz (#696)
+### 4.0.0
+
+* fix internal debug issue with webpack 5.x - @connectdotz (#690)
+* roll up the previous alpha releases...
+#### 4.0.0-alpha.5
+* added setup extension wizard - @connectdotz (#655)
+* update doc to give warning on potential incorrect coverage in watch mode - @connectdotz(#655)
+* Introducing a new interactive mode, in addition to the current "watch" mode, to run jest tests. Use the new `jest.autoRun` settings to control when and what tests should be run automatically, or not. - @connectdotz (#674) 
+* refactor jest process management to adopt queue-based model with promise-based process execution.  - @connectdotz (#674) 
+* enhance statusBar to display autoRun and workspace stats  - @connectdotz (#674)
+* added new commands, context menu, keybinding to better support interactive mode.  - @connectdotz (#674)
+* added ability to update snapshot without restarting jest.  - @connectdotz (#674)
+* added ability to get jest metadata such as all test files.  - @connectdotz (#674)
+* change editor decorators to reflect when tests are changed but tests have not been run (which might be common in the new interactive mode)  - @connectdotz (#674)
+* addressed a few dependency security vulnerability.
+#### 4.0.0-alpha.4
+* update doc to give warning on potential incorrect coverage in watch mode - @connectdotz
+* fix unknown location bug such as for jest.todo tests (#657) - @connectdotz
+* fix no debug codeLens if autoEnable is false (#658) - @connectdotz
+* turn typescript strict mode on, upgrade tooling and clean up the conflict - @connectdotz
+#### 4.0.0-alpha.3
+* fully support parameterized tests in matching, diagnosis and debugging - @connectdotz
+* optimization: remove stop/start the internal jest tests process during debug - @connectdotz
+* add a new setting for "jest.jestCommandLine" that supersede "jest.pathToJest" and "jest.pathToConfig" - @connectdotz
+#### 4.0.0-alpha.2
+* use assertion's fullName in TestResult instead of the source test name - @connectdotz
+* consolidated and simplified coverage formatter parsing logic; added overlay color customization; change coverage formatter/colors will take effect without restarting vscode; updated coverage help in README. - @connectdotz
+#### 4.0.0-alpha.1
+* change path of jest executable in order to support running jest in yarn workspaces - @glentakahashi
+
+#### 4.0.0-alpha.0
 * improve create-react-app detection logic - stephtr
 * improve the detection of cases in which Jest needs to be restarted with `--watchAll` - [@lordofthelake](https://github.com/lordofthelake)  
 * upgrade all dependencies to the latest, except istanbul-lib-xxx, which requires more code change and will be handled in a separate coverage PR. - @connectdotz
 * code base clean up: migrate from tslint to eslint and adopted the latest recommended coding style, adopt semi-colon, added more ci check... - @connectdotz
 * resolve coverage map merge issue, upgrade istanbul dependencies to the latest and move to async coverageMap update. @connectdotz
--->
-
+* introducing a new matching algorithm to use context relationship in matching test blocks and assertions - @connectdotz
+  
 ### 3.2.0
 * prevent auto starting watch-mode jest process when the parent process is stopped, which can lead to orphan process during deactivation among others. - @connectdotz
 * adding workspace folder in error message for multii-root projects. - @connectdotz

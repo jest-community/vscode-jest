@@ -1,10 +1,10 @@
-import { TestReconciliationState } from './TestReconciliationState';
+import { TestReconciliationStateType } from './TestReconciliationState';
 import { JestFileResults, JestTotalResults } from 'jest-editor-support';
 import { FileCoverage } from 'istanbul-lib-coverage';
 import * as path from 'path';
-import { cleanAnsi } from '../helpers';
+import { cleanAnsi, toLowerCaseDriveLetter } from '../helpers';
 
-interface Position {
+export interface Location {
   /** Zero-based column number */
   column: number;
 
@@ -12,28 +12,42 @@ interface Position {
   line: number;
 }
 
-export interface TestResult {
-  name: string;
-  start: Position;
-  end: Position;
+export interface LocationRange {
+  start: Location;
+  end: Location;
+}
 
-  status: TestReconciliationState;
+export interface TestIdentifier {
+  title: string;
+  ancestorTitles: string[];
+}
+
+export type MatchResultReason =
+  | 'match-by-context'
+  | 'match-by-name'
+  | 'duplicate-names'
+  | 'no-matched-assertion';
+
+export interface TestResult extends LocationRange {
+  name: string;
+
+  identifier: TestIdentifier;
+
+  status: TestReconciliationStateType;
   shortMessage?: string;
   terseMessage?: string;
 
   /** Zero-based line number */
   lineNumberOfError?: number;
+
+  // multiple results for the given range, common for parameterized (.each) tests
+  multiResults?: TestResult[];
+  // record match or unmatch reason for this test result
+  reason?: MatchResultReason;
 }
 
-export const withLowerCaseWindowsDriveLetter = (filePath: string): string | undefined => {
-  const match = filePath.match(/^([A-Z]:\\)(.*)$/);
-  if (match) {
-    return `${match[1].toLowerCase()}${match[2]}`;
-  }
-};
-
 function testResultWithLowerCaseWindowsDriveLetter(testResult: JestFileResults): JestFileResults {
-  const newFilePath = withLowerCaseWindowsDriveLetter(testResult.name);
+  const newFilePath = toLowerCaseDriveLetter(testResult.name);
   if (newFilePath) {
     return {
       ...testResult,
@@ -55,7 +69,7 @@ export const testResultsWithLowerCaseWindowsDriveLetters = (
 };
 
 function fileCoverageWithLowerCaseWindowsDriveLetter(fileCoverage: FileCoverage) {
-  const newFilePath = withLowerCaseWindowsDriveLetter(fileCoverage.path);
+  const newFilePath = toLowerCaseDriveLetter(fileCoverage.path);
   if (newFilePath) {
     return {
       ...fileCoverage,
@@ -66,12 +80,15 @@ function fileCoverageWithLowerCaseWindowsDriveLetter(fileCoverage: FileCoverage)
   return fileCoverage;
 }
 
-export const coverageMapWithLowerCaseWindowsDriveLetters = (data: JestTotalResults) => {
+// TODO should fix jest-editor-support type declaration, the coverageMap should not be "any"
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const coverageMapWithLowerCaseWindowsDriveLetters = (data: JestTotalResults): any => {
   if (!data.coverageMap) {
     return;
   }
 
-  const result = {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const result: any = {};
   const filePaths = Object.keys(data.coverageMap);
   for (const filePath of filePaths) {
     const newFileCoverage = fileCoverageWithLowerCaseWindowsDriveLetter(data.coverageMap[filePath]);
@@ -88,7 +105,9 @@ export const coverageMapWithLowerCaseWindowsDriveLetters = (data: JestTotalResul
  *
  * @param data Parsed JSON results
  */
-export const resultsWithLowerCaseWindowsDriveLetters = (data: JestTotalResults) => {
+export const resultsWithLowerCaseWindowsDriveLetters = (
+  data: JestTotalResults
+): JestTotalResults => {
   if (path.sep === '\\') {
     return {
       ...data,
@@ -103,7 +122,7 @@ export const resultsWithLowerCaseWindowsDriveLetters = (data: JestTotalResults) 
 /**
  * Removes ANSI escape sequence characters from test results in order to get clean messages
  */
-export const resultsWithoutAnsiEscapeSequence = (data: JestTotalResults) => {
+export const resultsWithoutAnsiEscapeSequence = (data: JestTotalResults): JestTotalResults => {
   if (!data || !data.testResults) {
     return data;
   }
@@ -119,4 +138,21 @@ export const resultsWithoutAnsiEscapeSequence = (data: JestTotalResults) => {
       })),
     })),
   };
+};
+
+// export type StatusInfo<T> = {[key in TestReconciliationState]: T};
+export interface StatusInfo {
+  precedence: number;
+  desc: string;
+}
+
+export const TestResultStatusInfo: { [key in TestReconciliationStateType]: StatusInfo } = {
+  KnownFail: { precedence: 1, desc: 'Failed' },
+  Unknown: {
+    precedence: 2,
+    desc: 'Test has not run yet, due to Jest only running tests related to changes.',
+  },
+  KnownSkip: { precedence: 3, desc: 'Skipped' },
+  KnownSuccess: { precedence: 4, desc: 'Passed' },
+  KnownTodo: { precedence: 5, desc: 'Todo' },
 };

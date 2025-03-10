@@ -9,10 +9,24 @@
     "node_modules/jest-editor-support/src": false
   },
   "typescript.tsdk": "./node_modules/typescript/lib",
+  // jest
+  
   // eslint
   "tslint.enable": false,
   "eslint.enable": true,
   "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": true
+    "source.fixAll.eslint": "explicit"
   },
+  "cSpell.words": [
+    "unmock"
+  ],
+  "markdown.validate.ignoredLinks": [
+    "#runmode-chooser",
+    "#runmode-tradeoff",
+    "#quick-fix-chooser",
+    "#virtual-folders",
+    "#outputconfig-conflict",
+    "#runmode-migration",
+    "#auto-recovery-login-shell"
+  ]
 }

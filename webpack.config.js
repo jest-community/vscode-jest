@@ -44,6 +44,10 @@ module.exports = (env, argv) => {
           exclude: /node_modules/,
           use: [{ loader: 'ts-loader' }],
         },
+        {
+          test: /\.svg$/,
+          use: [{ loader: 'raw-loader' }],
+        },
       ],
     },
   };

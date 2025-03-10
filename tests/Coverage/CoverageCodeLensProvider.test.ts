@@ -53,8 +53,9 @@ describe('CoverageCodeLensProvider', () => {
     mockJestExt = {
       coverageMapProvider: { getFileCoverage: jest.fn() },
       coverageOverlay: { enabled: true },
+      name: 'venv1',
     };
-    const mockGetExt = jest.fn().mockReturnValue(mockJestExt);
+    const mockGetExt = jest.fn().mockReturnValue([mockJestExt]);
     provider = new CoverageCodeLensProvider(mockGetExt);
   });
   describe('provideCodeLenses', () => {
@@ -78,7 +79,7 @@ describe('CoverageCodeLensProvider', () => {
       mockJestExt.coverageMapProvider.getFileCoverage = () => coverage;
       const result = provider.provideCodeLenses(doc);
       expect(result).toHaveLength(1);
-      expect(result[0].command.title).toEqual('branches: 10%, lines: 46.15%');
+      expect(result[0].command.title).toContain('branches: 10%, lines: 46.15%');
     });
     test('do nothing when coverage is disabled', () => {
       mockJestExt.coverageMapProvider.getFileCoverage = () => coverage;
@@ -97,7 +98,34 @@ describe('CoverageCodeLensProvider', () => {
       expect(provider.onDidChangeCodeLenses).toEqual(event);
 
       provider.coverageChanged();
-      expect(fireMock).toBeCalled();
+      expect(fireMock).toHaveBeenCalled();
+    });
+    describe('venv', () => {
+      test('can provide separate summaries for each qualified venv', () => {
+        const mockJestExt2: any = {
+          coverageMapProvider: { getFileCoverage: jest.fn() },
+          coverageOverlay: { enabled: true },
+          name: 'venv2',
+        };
+        const coverage2 = {
+          toSummary: () => ({
+            toJSON: () => ({
+              branches: { pct: 90 },
+              lines: { pct: 97.85 },
+            }),
+          }),
+        };
+        const mockGetExt = jest.fn().mockReturnValue([mockJestExt, mockJestExt2]);
+        provider = new CoverageCodeLensProvider(mockGetExt);
+        mockJestExt.coverageMapProvider.getFileCoverage = () => coverage;
+        mockJestExt2.coverageMapProvider.getFileCoverage = () => coverage2;
+        const result = provider.provideCodeLenses(doc);
+        expect(result).toHaveLength(2);
+        expect(result[0].command.title).toContain('branches: 10%, lines: 46.15%');
+        expect(result[0].command.title).toContain('venv1');
+        expect(result[1].command.title).toContain('branches: 90%, lines: 97.85%');
+        expect(result[1].command.title).toContain('venv2');
+      });
     });
   });
 });

@@ -1,13 +1,14 @@
 const languages = {
   createDiagnosticCollection: jest.fn(),
   registerCodeLensProvider: jest.fn(),
-}
+};
 
-const StatusBarAlignment = { Left: 1, Right: 2 }
+const StatusBarAlignment = { Left: 1, Right: 2 };
 
 const window = {
   createStatusBarItem: jest.fn(() => ({
     show: jest.fn(),
+    hide: jest.fn(),
     tooltip: jest.fn(),
   })),
   showErrorMessage: jest.fn(),
@@ -15,9 +16,15 @@ const window = {
   createTextEditorDecorationType: jest.fn(),
   createOutputChannel: jest.fn(),
   showWorkspaceFolderPick: jest.fn(),
+  showQuickPick: jest.fn(),
   onDidChangeActiveTextEditor: jest.fn(),
   showInformationMessage: jest.fn(),
-}
+  createWebviewPanel: jest.fn(),
+};
+
+const extensions = {
+  getExtension: jest.fn(),
+};
 
 const workspace = {
   getConfiguration: jest.fn(),
@@ -27,34 +34,87 @@ const workspace = {
   onDidChangeConfiguration: jest.fn(),
   onDidChangeTextDocument: jest.fn(),
   onDidChangeWorkspaceFolders: jest.fn(),
-}
+  onDidCreateFiles: jest.fn(),
+  onDidDeleteFiles: jest.fn(),
+  onDidRenameFiles: jest.fn(),
+  onDidSaveTextDocument: jest.fn(),
+  onWillSaveTextDocument: jest.fn(),
+};
 
 const OverviewRulerLane = {
   Left: null,
-}
+};
 
 const Uri = {
   file: (f) => f,
   parse: jest.fn(),
-}
-const Range = jest.fn()
-const Diagnostic = jest.fn()
-const DiagnosticSeverity = { Error: 0, Warning: 1, Information: 2, Hint: 3 }
+  joinPath: jest.fn(),
+};
+const Range = jest.fn();
+const Location = jest.fn();
+const Position = jest.fn();
+const Diagnostic = jest.fn();
+const ThemeIcon = jest.fn();
+const DiagnosticSeverity = { Error: 0, Warning: 1, Information: 2, Hint: 3 };
+const ConfigurationTarget = { Global: 1, Workspace: 2, WorkspaceFolder: 3 };
 
 const debug = {
   onDidTerminateDebugSession: jest.fn(),
   startDebugging: jest.fn(),
   registerDebugConfigurationProvider: jest.fn(),
-}
+};
 
 const commands = {
   executeCommand: jest.fn(),
   registerCommand: jest.fn(),
-}
+  registerTextEditorCommand: jest.fn(),
+};
 
-const CodeLens = function CodeLens() {}
+const CodeLens = function CodeLens() {};
 
-export {
+const QuickInputButtons = {
+  Back: {},
+};
+
+const tests = {
+  createTestController: jest.fn(),
+};
+
+const TestRunProfileKind = {
+  Run: 1,
+  Debug: 2,
+  Coverage: 3,
+};
+const ViewColumn = {
+  One: 1,
+  Tow: 2,
+};
+
+const TestMessage = jest.fn();
+const TestRunRequest = jest.fn();
+const ThemeColor = jest.fn();
+
+const EventEmitter = jest.fn().mockImplementation(() => {
+  return {
+    fire: jest.fn(),
+  };
+});
+
+const QuickPickItemKind = {
+  Separator: -1,
+  Default: 0,
+};
+
+// for coverage
+const FileCoverage = jest.fn();
+const StatementCoverage = jest.fn();
+const BranchCoverage = jest.fn();
+const DeclarationCoverage = jest.fn();
+const TestCoverageCount = jest.fn();
+
+export = {
+  extensions,
+  ThemeColor,
   CodeLens,
   languages,
   StatusBarAlignment,
@@ -63,8 +123,25 @@ export {
   OverviewRulerLane,
   Uri,
   Range,
+  Location,
+  Position,
   Diagnostic,
+  ThemeIcon,
   DiagnosticSeverity,
+  ConfigurationTarget,
   debug,
   commands,
-}
+  QuickInputButtons,
+  tests,
+  TestRunProfileKind,
+  EventEmitter,
+  TestMessage,
+  TestRunRequest,
+  ViewColumn,
+  QuickPickItemKind,
+  FileCoverage,
+  StatementCoverage,
+  BranchCoverage,
+  DeclarationCoverage,
+  TestCoverageCount,
+};

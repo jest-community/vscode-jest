@@ -7,12 +7,12 @@ import {
 } from 'istanbul-lib-coverage';
 
 export class CoverageMapProvider {
-  private mapStore: MapStore;
+  private mapStore!: MapStore;
 
   /**
    * Transformed coverage map
    */
-  private _map: CoverageMap;
+  private _map!: CoverageMap;
 
   constructor() {
     this.reset();
@@ -42,7 +42,7 @@ export class CoverageMapProvider {
     this._map.data[filePath] = map.fileCoverageFor(filePath);
   }
   public getFileCoverage(filePath: string): FileCoverage {
-    return this._map.data[filePath];
+    return this._map.data[filePath] as FileCoverage;
   }
   public onVisibilityChanged(visible: boolean): void {
     if (!visible) {

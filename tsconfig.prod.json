@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "sourceMap": false, // Disable source maps for production
+    "declaration": false, // Disable declaration files generation
+    "removeComments": true, // Optional: Remove comments in the production build
+    "stripInternal": true
+  }
+}

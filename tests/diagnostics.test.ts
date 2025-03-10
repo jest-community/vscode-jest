@@ -1,4 +1,5 @@
 jest.unmock('../src/diagnostics');
+jest.unmock('./test-helper');
 import {
   updateDiagnostics,
   updateCurrentDiagnostics,
@@ -8,11 +9,13 @@ import {
 import * as vscode from 'vscode';
 import {
   TestFileAssertionStatus,
-  TestReconcilationState,
+  TestReconciliationState,
   TestAssertionStatus,
 } from 'jest-editor-support';
-import { TestResult, TestReconciliationState } from '../src/TestResults';
+import { TestResult, TestStatus } from '../src/TestResults';
+import * as helper from './test-helper';
 
+import { testIdString } from '../src/helpers';
 class MockDiagnosticCollection implements vscode.DiagnosticCollection {
   name = 'test';
   set = jest.fn();
@@ -22,6 +25,7 @@ class MockDiagnosticCollection implements vscode.DiagnosticCollection {
   get = jest.fn();
   has = jest.fn();
   dispose = jest.fn();
+  [Symbol.iterator] = jest.fn(); // Add this line
 }
 
 vscode.window.visibleTextEditors = [];
@@ -32,7 +36,7 @@ describe('test diagnostics', () => {
     it('will clear given diagnostics', () => {
       const mockDiagnostics = new MockDiagnosticCollection();
       resetDiagnostics(mockDiagnostics);
-      expect(mockDiagnostics.clear).toBeCalled();
+      expect(mockDiagnostics.clear).toHaveBeenCalled();
     });
   });
 
@@ -46,20 +50,19 @@ describe('test diagnostics', () => {
     const consoleWarn = console.warn;
     let lineNumber = 17;
 
-    function createAssertion(title: string, status: TestReconcilationState): TestAssertionStatus {
-      return {
-        title,
-        status,
-        message: `${title} ${status}`,
-        line: lineNumber++,
-      };
-    }
     function createTestResult(
       file: string,
       assertions: TestAssertionStatus[],
-      status: TestReconcilationState = 'KnownFail'
+      status: TestReconciliationState = TestStatus.KnownFail
     ): TestFileAssertionStatus {
-      return { file, message: `${file}:${status}`, status, assertions };
+      return { file, message: `${file}:${status}`, status, assertions } as TestFileAssertionStatus;
+    }
+
+    function createAssertion(title: string, status: TestReconciliationState): TestAssertionStatus {
+      return helper.makeAssertion(title, status, undefined, undefined, {
+        message: `${title} ${status}`,
+        line: lineNumber++,
+      });
     }
 
     function validateDiagnostic(args: any[], message: string, severity: vscode.DiagnosticSeverity) {
@@ -75,8 +78,8 @@ describe('test diagnostics', () => {
       const mockDiagnostics = new MockDiagnosticCollection();
 
       updateDiagnostics([], mockDiagnostics);
-      expect(mockDiagnostics.clear).not.toBeCalled();
-      expect(mockDiagnostics.set).not.toBeCalled();
+      expect(mockDiagnostics.clear).not.toHaveBeenCalled();
+      expect(mockDiagnostics.set).not.toHaveBeenCalled();
     });
 
     it('ensures non-negative line number in diagnostic message', () => {
@@ -84,12 +87,10 @@ describe('test diagnostics', () => {
 
       console.warn = jest.fn();
       const testResult = createTestResult('mocked-test-file.js', [
-        {
-          title: 'should be valid',
-          status: 'KnownFail',
+        helper.makeAssertion('should be valid', TestStatus.KnownFail, [], undefined, {
           message: 'failing reason',
           line: -100,
-        },
+        }),
       ]);
       updateDiagnostics([testResult], mockDiagnostics);
       expect(vscode.Range).toHaveBeenCalledWith(0, 0, 0, Number.MAX_SAFE_INTEGER);
@@ -99,9 +100,7 @@ describe('test diagnostics', () => {
       const mockDiagnostics = new MockDiagnosticCollection();
 
       const testResult = createTestResult('mocked-test-file.js', [
-        {
-          title: 'should be valid',
-          status: 'KnownFail',
+        helper.makeAssertion('should be valid', TestStatus.KnownFail, undefined, undefined, {
           message: `expect(received).toBe(expected) // Object.is equality
 
         Expected: 2
@@ -114,7 +113,7 @@ describe('test diagnostics', () => {
         Received: 1`,
           terseMessage: `Expected: 2, Received: 1`,
           line: 123,
-        },
+        }),
       ]);
       updateDiagnostics([testResult], mockDiagnostics);
       expect(vscode.Diagnostic).toHaveBeenCalledTimes(1);
@@ -238,6 +237,19 @@ describe('test diagnostics', () => {
         validateRange(rangeCalls[0], 0, 0);
       });
     });
+    it('message should contain full test name', () => {
+      const message = 'something is wrong';
+      const mockDiagnostics = new MockDiagnosticCollection();
+      const assertion = helper.makeAssertion('a', 'KnownFail', ['d-1'], [7, 0], { message });
+      (testIdString as jest.Mock<any>).mockReturnValueOnce(assertion.fullName);
+
+      const tests = [createTestResult('f', [assertion])];
+      updateDiagnostics(tests, mockDiagnostics);
+
+      const [, msg] = (vscode.Diagnostic as jest.Mock<any>).mock.calls[0];
+      expect(msg).toContain('d-1 a');
+      expect(msg).toContain(message);
+    });
   });
 
   describe('updateCurrentDiagnostics', () => {
@@ -270,11 +282,15 @@ describe('test diagnostics', () => {
       const msg = 'a short error message';
       const testBlock: TestResult = {
         name: 'a',
+        identifier: {
+          title: 'a',
+          ancestorTitles: [],
+        },
         start: { line: 2, column: 3 },
         end: { line: 4, column: 5 },
         lineNumberOfError: 3,
         shortMessage: msg,
-        status: TestReconciliationState.KnownFail,
+        status: TestStatus.KnownFail,
       };
 
       updateCurrentDiagnostics([testBlock], mockDiagnostics, mockEditor as any);
@@ -283,5 +299,40 @@ describe('test diagnostics', () => {
       expect(vscode.Diagnostic).toHaveBeenCalledTimes(1);
       expect(vscode.Diagnostic).toHaveBeenCalledWith(range, msg, vscode.DiagnosticSeverity.Error);
     });
+    it('message should contain full test name', () => {
+      const shortMessage = 'something is wrong';
+      const mockDiagnostics = new MockDiagnosticCollection();
+      const testResult = helper.makeTestResult('test-1', 'KnownFail', ['d-1'], [1, 0, 10, 0], {
+        shortMessage,
+      });
+      (testIdString as jest.Mock<any>).mockReturnValueOnce(testResult.name);
+
+      updateCurrentDiagnostics([testResult], mockDiagnostics, mockEditor as any);
+
+      const [, msg] = (vscode.Diagnostic as jest.Mock<any>).mock.calls[0];
+      expect(msg).toContain('d-1 test-1');
+      expect(msg).toContain(shortMessage);
+    });
+    it('creates diagnostics for all failed parameterized tests', () => {
+      const mockDiagnostics = new MockDiagnosticCollection();
+      const testResult1 = helper.makeTestResult('test-1', 'KnownFail', ['d-1'], [1, 0, 10, 0], {
+        shortMessage: 'fail-1',
+      });
+      const testResult2 = helper.makeTestResult('test-2', 'KnownFail', ['d-1'], [1, 0, 10, 0], {
+        shortMessage: 'fail-2',
+      });
+      const testResult3 = helper.makeTestResult('test-3', 'KnownSuccess', ['d-1'], [1, 0, 10, 0]);
+      testResult1.multiResults = [testResult2, testResult3];
+
+      mockLineAt.mockReturnValue({ range });
+
+      updateCurrentDiagnostics([testResult1], mockDiagnostics, mockEditor as any);
+
+      expect(vscode.Diagnostic).toHaveBeenCalledTimes(2);
+      const [[, msg1], [, msg2]] = (vscode.Diagnostic as jest.Mock<any>).mock.calls;
+      expect(msg1).toEqual('fail-1');
+      expect(msg2).toEqual('fail-2');
+    });
   });
+  describe('parameterized tests', () => {});
 });

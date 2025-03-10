@@ -1,6 +1,6 @@
 jest.unmock('../../src/TestResults/TestResult');
 jest.unmock('../../src/helpers');
-jest.mock('path', () => ({ sep: require.requireActual('path').sep }));
+jest.mock('path', () => ({ sep: jest.requireActual('path').sep }));
 
 import * as TestResult from '../../src/TestResults/TestResult';
 import * as path from 'path';
@@ -10,7 +10,6 @@ const {
   coverageMapWithLowerCaseWindowsDriveLetters,
   testResultsWithLowerCaseWindowsDriveLetters,
   resultsWithoutAnsiEscapeSequence,
-  withLowerCaseWindowsDriveLetter,
 } = TestResult;
 
 describe('TestResult', () => {
@@ -47,10 +46,26 @@ describe('TestResult', () => {
   });
 
   describe('resultsWithoutAnsiEscapeSequence', () => {
-    it('should not break when there is no data or testResults', () => {
+    it('should not break when there is no data or testResults or failureMessages', () => {
       expect(resultsWithoutAnsiEscapeSequence(undefined)).toEqual(undefined);
       const noTestResults: any = {};
       expect(resultsWithoutAnsiEscapeSequence(noTestResults)).toEqual({});
+      const noFailureMessage: any = {
+        testResults: [
+          {
+            message: 'no failure messages',
+            assertionResults: [
+              {
+                failureMessages: null,
+              },
+            ],
+          },
+        ],
+      };
+      expect(
+        resultsWithoutAnsiEscapeSequence(noFailureMessage).testResults[0].assertionResults[0]
+          .failureMessages
+      ).toEqual([]);
     });
     it('should remove ANSI characters from the test results when provided', () => {
       const data: any = {
@@ -135,18 +150,6 @@ describe('TestResult', () => {
           property: {},
         },
       });
-    });
-  });
-
-  describe('withLowerCaseDriveLetter', () => {
-    it('should return a new file path when provided a path with an upper case drive letter', () => {
-      const filePath = 'C:\\path\\file.ext';
-      expect(withLowerCaseWindowsDriveLetter(filePath)).toBe('c:\\path\\file.ext');
-    });
-
-    it('should indicate no change is required otherwise', () => {
-      const filePath = 'c:\\path\\file.ext';
-      expect(withLowerCaseWindowsDriveLetter(filePath)).toBeUndefined();
     });
   });
 });

@@ -4,12 +4,17 @@
  */
 import * as vscode from 'vscode';
 import { existsSync } from 'fs';
-// import { DiagnosticCollection, Uri, Diagnostic, Range, DiagnosticSeverity } from 'vscode'
 import { TestFileAssertionStatus } from 'jest-editor-support';
-import { TestReconciliationState, TestResult } from './TestResults';
+import { TestStatus, TestResult } from './TestResults';
+import { testIdString } from './helpers';
 
-function createDiagnosticWithRange(message: string, range: vscode.Range): vscode.Diagnostic {
-  const diag = new vscode.Diagnostic(range, message, vscode.DiagnosticSeverity.Error);
+function createDiagnosticWithRange(
+  message: string,
+  range: vscode.Range,
+  testName?: string
+): vscode.Diagnostic {
+  const msg = testName ? `${testName}\n-----\n${message}` : message;
+  const diag = new vscode.Diagnostic(range, msg, vscode.DiagnosticSeverity.Error);
   diag.source = 'Jest';
   return diag;
 }
@@ -17,35 +22,46 @@ function createDiagnosticWithRange(message: string, range: vscode.Range): vscode
 function createDiagnostic(
   message: string,
   lineNumber: number,
+  name?: string,
   startCol = 0,
   endCol = Number.MAX_SAFE_INTEGER
 ): vscode.Diagnostic {
   const line = lineNumber > 0 ? lineNumber - 1 : 0;
-  return createDiagnosticWithRange(message, new vscode.Range(line, startCol, line, endCol));
+  return createDiagnosticWithRange(message, new vscode.Range(line, startCol, line, endCol), name);
 }
 
 // update diagnostics for the active editor
 // it will utilize the parsed test result to mark actual text position.
 export function updateCurrentDiagnostics(
-  testResult: TestResult[],
-  diagnostics: vscode.DiagnosticCollection,
+  testResults: TestResult[],
+  collection: vscode.DiagnosticCollection,
   editor: vscode.TextEditor
-) {
+): void {
   const uri = editor.document.uri;
 
-  if (!testResult.length) {
-    diagnostics.delete(uri);
+  if (!testResults.length) {
+    collection.delete(uri);
     return;
   }
+  const allDiagnostics = testResults.reduce((list, tr) => {
+    const allResults = tr.multiResults ? [tr, ...tr.multiResults] : [tr];
+    const diagnostics = allResults
+      .filter((r) => r.status === TestStatus.KnownFail)
+      .map((r) => {
+        const line = r.lineNumberOfError || r.end.line;
+        const textLine = editor.document.lineAt(line);
+        const name = testIdString('display', r.identifier);
+        return createDiagnosticWithRange(
+          r.shortMessage || r.terseMessage || 'unknown error',
+          textLine.range,
+          name
+        );
+      });
+    list.push(...diagnostics);
+    return list;
+  }, [] as vscode.Diagnostic[]);
 
-  diagnostics.set(
-    uri,
-    testResult.map((r) => {
-      const line = r.lineNumberOfError || r.end.line;
-      const textLine = editor.document.lineAt(line);
-      return createDiagnosticWithRange(r.shortMessage, textLine.range);
-    })
-  );
+  collection.set(uri, allDiagnostics);
 }
 
 // update all diagnosis with jest test results
@@ -56,52 +72,60 @@ export function updateCurrentDiagnostics(
 
 export function updateDiagnostics(
   testResults: TestFileAssertionStatus[],
-  diagnostics: vscode.DiagnosticCollection
-) {
-  function addTestFileError(result: TestFileAssertionStatus, uri: vscode.Uri) {
-    const diag = createDiagnostic(result.message || 'test file error', 0, 0, 0);
-    diagnostics.set(uri, [diag]);
+  collection: vscode.DiagnosticCollection
+): void {
+  function addTestFileError(result: TestFileAssertionStatus, uri: vscode.Uri): void {
+    const diag = createDiagnostic(result.message || 'test file error', 0, undefined, 0, 0);
+    collection.set(uri, [diag]);
   }
 
-  function addTestsError(result: TestFileAssertionStatus, uri: vscode.Uri) {
-    const asserts = result.assertions.filter((a) => a.status === TestReconciliationState.KnownFail);
-    diagnostics.set(
+  function addTestsError(result: TestFileAssertionStatus, uri: vscode.Uri): void {
+    if (!result.assertions) {
+      return;
+    }
+    const asserts = result.assertions.filter((a) => a.status === TestStatus.KnownFail);
+    collection.set(
       uri,
-      asserts.map((assertion) =>
-        createDiagnostic(assertion.shortMessage || assertion.message, assertion.line)
-      )
+      asserts.map((assertion) => {
+        const name = testIdString('display', assertion);
+        return createDiagnostic(
+          assertion.shortMessage || assertion.message,
+          assertion.line ?? -1,
+          name
+        );
+      })
     );
   }
 
   testResults.forEach((result) => {
     const uri = vscode.Uri.file(result.file);
     switch (result.status) {
-      case TestReconciliationState.KnownFail:
-        if (result.assertions.length <= 0) {
+      case TestStatus.KnownFail:
+        if (result.assertions && result.assertions.length <= 0) {
           addTestFileError(result, uri);
         } else {
           addTestsError(result, uri);
         }
         break;
       default:
-        diagnostics.delete(uri);
+        collection.delete(uri);
         break;
     }
   });
 
   // Remove diagnostics for files no longer in existence
-  const toBeDeleted = [];
-  diagnostics.forEach((uri) => {
+  const toBeDeleted: vscode.Uri[] = [];
+  collection.forEach((uri) => {
     if (!existsSync(uri.fsPath)) {
       toBeDeleted.push(uri);
     }
   });
   toBeDeleted.forEach((uri) => {
-    diagnostics.delete(uri);
+    collection.delete(uri);
   });
 }
 
-export function resetDiagnostics(diagnostics: vscode.DiagnosticCollection) {
+export function resetDiagnostics(diagnostics: vscode.DiagnosticCollection): void {
   diagnostics.clear();
 }
 export function failedSuiteCount(diagnostics: vscode.DiagnosticCollection): number {

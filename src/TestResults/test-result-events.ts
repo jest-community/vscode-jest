@@ -1,0 +1,27 @@
+import { ItBlock } from 'jest-editor-support';
+import * as vscode from 'vscode';
+import { JestProcessInfo } from '../JestProcessManagement';
+import { ContainerNode } from './match-node';
+
+export type TestSuiteChangeReason = 'assertions-updated' | 'result-matched';
+export type TestSuitChangeEvent =
+  | {
+      type: 'assertions-updated';
+      process: JestProcessInfo;
+      files: string[];
+    }
+  | {
+      type: 'result-matched';
+      file: string;
+    }
+  | {
+      type: 'result-match-failed';
+      file: string;
+      sourceContainer: ContainerNode<ItBlock>;
+    };
+
+export const createTestResultEvents = () => ({
+  testListUpdated: new vscode.EventEmitter<string[] | undefined>(),
+  testSuiteChanged: new vscode.EventEmitter<TestSuitChangeEvent>(),
+});
+export type TestResultEvents = ReturnType<typeof createTestResultEvents>;

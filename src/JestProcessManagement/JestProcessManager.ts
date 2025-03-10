@@ -1,130 +1,159 @@
-import { ProjectWorkspace } from 'jest-editor-support';
 import { JestProcess } from './JestProcess';
-import { WatchMode } from '../Jest';
+import {
+  TaskArrayFunctions,
+  JestProcessRequest,
+  QueueType,
+  Task,
+  JestProcessInfo,
+  UserDataType,
+  ProcessStatus,
+} from './types';
+import { Logging } from '../logging';
+import { createTaskQueue, TaskQueue } from './task-queue';
+import { isDupe, requestString } from './helper';
+import { JestExtProcessContext } from '../JestExt';
 
-export type ExitCallback = (
-  exitedJestProcess: JestProcess,
-  jestProcessInWatchMode?: JestProcess
-) => void;
+export class JestProcessManager implements TaskArrayFunctions<JestProcess> {
+  private extContext: JestExtProcessContext;
+  private queues: Map<QueueType, TaskQueue<JestProcess>>;
+  private logging: Logging;
 
-export class JestProcessManager {
-  private projectWorkspace: ProjectWorkspace;
-  private jestProcesses: JestProcess[] = [];
-  private runAllTestsFirstInWatchMode: boolean;
-
-  constructor({
-    projectWorkspace,
-    runAllTestsFirstInWatchMode = true,
-  }: {
-    projectWorkspace: ProjectWorkspace;
-    runAllTestsFirstInWatchMode?: boolean;
-  }) {
-    this.projectWorkspace = projectWorkspace;
-    this.runAllTestsFirstInWatchMode = runAllTestsFirstInWatchMode;
+  constructor(extContext: JestExtProcessContext) {
+    this.extContext = extContext;
+    this.logging = extContext.loggingFactory.create('JestProcessManager');
+    this.queues = new Map([
+      ['blocking', createTaskQueue('blocking-queue', 1)],
+      ['blocking-2', createTaskQueue('blocking-queue-2', 1)],
+      ['non-blocking', createTaskQueue('non-blocking-queue', 3)],
+    ]);
   }
 
-  public startJestProcess({
-    exitCallback = () => {
-      /* do nothing */
-    },
-    watchMode = WatchMode.None,
-    keepAlive = false,
-  }: {
-    exitCallback?: ExitCallback;
-    watchMode?: WatchMode;
-    keepAlive?: boolean;
-  } = {}): JestProcess {
-    if (watchMode !== WatchMode.None && this.runAllTestsFirstInWatchMode) {
-      return this.runAllTestsFirst((exitedJestProcess) => {
-        // cancel the rest execution if stop() has been requested.
-        if (exitedJestProcess.stopRequested()) {
-          return;
-        }
-        this.removeJestProcessReference(exitedJestProcess);
-        const jestProcessInWatchMode = this.run({
-          watchMode: WatchMode.Watch,
-          keepAlive,
-          exitCallback,
-        });
-        exitCallback(exitedJestProcess, jestProcessInWatchMode);
+  private getQueue(type: QueueType): TaskQueue<JestProcess> {
+    return this.queues.get(type)!;
+  }
+
+  private foundDup(request: JestProcessRequest): boolean {
+    if (!request.schedule.dedupe) {
+      return false;
+    }
+    const queue = this.getQueue(request.schedule.queue);
+    const dupTasks = queue.filter((p) => isDupe(p, request));
+    if (dupTasks.length > 0) {
+      this.logging(
+        'debug',
+        `found ${dupTasks.length} duplicate processes, will not schedule request:`,
+        request
+      );
+      return true;
+    }
+    return false;
+  }
+  /**
+   * schedule a jest process and handle duplication process if dedupe is requested.
+   * @param request
+   * @returns a jest process id if successfully scheduled, otherwise undefined
+   */
+  public scheduleJestProcess(
+    request: JestProcessRequest,
+    userData?: UserDataType
+  ): JestProcessInfo | undefined {
+    if (this.foundDup(request)) {
+      this.logging(
+        'debug',
+        `duplicate request found, process is not scheduled: ${requestString(request)}`
+      );
+      return;
+    }
+
+    const queue = this.getQueue(request.schedule.queue);
+    const process = new JestProcess(this.extContext, request, userData);
+    queue.add(process);
+    this.run(queue);
+    return process;
+  }
+
+  // run the first process in the queue
+  private async run(queue: TaskQueue<JestProcess>): Promise<void> {
+    const task = queue.getRunnableTask();
+    if (!task) {
+      return;
+    }
+    const process = task.data;
+    try {
+      // process could be cancelled before it starts, so check before starting
+      if (process.status === ProcessStatus.Pending) {
+        const promise = process.start();
+        this.extContext.onRunEvent.fire({ type: 'process-start', process });
+        await promise;
+      }
+    } catch (e) {
+      this.logging('error', `${queue.name}: process failed to start:`, process, e);
+      this.extContext.onRunEvent.fire({
+        type: 'exit',
+        process,
+        error: `Process failed to start: ${e}`,
       });
+    } finally {
+      queue.remove(task);
+    }
+    return this.run(queue);
+  }
+
+  /** stop and remove all process matching the queue type, if no queue type specified, stop all queues */
+  public async stopAll(queueType?: QueueType): Promise<void> {
+    let promises: Promise<void>[];
+    if (!queueType) {
+      promises = Array.from(this.queues.keys()).map((q) => this.stopAll(q));
     } else {
-      return this.run({
-        watchMode,
-        keepAlive,
-        exitCallback,
-      });
+      const queue = this.getQueue(queueType);
+      promises = queue.map((t) => t.data.stop());
+      queue.reset();
     }
+    await Promise.allSettled(promises);
+    return;
   }
 
-  public stopAll() {
-    const processesToRemove = [...this.jestProcesses];
-    this.jestProcesses = [];
-    return Promise.all(processesToRemove.map((jestProcess) => jestProcess.stop()));
-  }
-
-  public stopJestProcess(jestProcess: JestProcess) {
-    this.removeJestProcessReference(jestProcess);
-    return jestProcess.stop();
-  }
-
-  public get numberOfProcesses() {
-    return this.jestProcesses.length;
-  }
-  private removeJestProcessReference(jestProcess: JestProcess) {
-    const index = this.jestProcesses.indexOf(jestProcess);
-    if (index !== -1) {
-      this.jestProcesses.splice(index, 1);
+  public numberOfProcesses(queueType?: QueueType): number {
+    if (queueType) {
+      return this.getQueue(queueType).size();
     }
+    return Array.from(this.queues.values()).reduce((pCount, q) => {
+      pCount += q.size();
+      return pCount;
+    }, 0);
   }
 
-  private runJest({
-    watchMode,
-    keepAlive,
-    exitCallback,
-  }: {
-    watchMode: WatchMode;
-    keepAlive: boolean;
-    exitCallback: ExitCallback;
-  }) {
-    const jestProcess = new JestProcess({
-      projectWorkspace: this.projectWorkspace,
-      watchMode,
-      keepAlive,
-    });
-
-    this.jestProcesses.unshift(jestProcess);
-
-    jestProcess.onExit(exitCallback);
-    return jestProcess;
+  // task array functions
+  private getQueues(queueType?: QueueType): TaskQueue<JestProcess>[] {
+    return queueType ? [this.getQueue(queueType)] : Array.from(this.queues.values());
   }
-
-  private run({
-    watchMode,
-    keepAlive,
-    exitCallback,
-  }: {
-    watchMode: WatchMode;
-    keepAlive: boolean;
-    exitCallback: ExitCallback;
-  }) {
-    return this.runJest({
-      watchMode,
-      keepAlive,
-      exitCallback: (exitedJestProcess: JestProcess) => {
-        exitCallback(exitedJestProcess);
-        if (!exitedJestProcess.keepAlive) {
-          this.removeJestProcessReference(exitedJestProcess);
-        }
-      },
-    });
+  public map<M>(f: (task: Task<JestProcess>) => M, queueType?: QueueType): M[] {
+    const queues = this.getQueues(queueType);
+    return queues.reduce((list, q) => {
+      list.push(...q.map(f));
+      return list;
+    }, [] as M[]);
   }
-
-  private runAllTestsFirst(onExit: ExitCallback) {
-    return this.runJest({
-      watchMode: WatchMode.None,
-      keepAlive: false,
-      exitCallback: onExit,
-    });
+  public filter(
+    f: (task: Task<JestProcess>) => boolean,
+    queueType?: QueueType
+  ): Task<JestProcess>[] {
+    const queues = this.getQueues(queueType);
+    return queues.reduce((list, q) => {
+      list.push(...q.filter(f));
+      return list;
+    }, [] as Task<JestProcess>[]);
+  }
+  public find(
+    f: (task: Task<JestProcess>) => boolean,
+    queueType?: QueueType
+  ): Task<JestProcess> | undefined {
+    const queues = this.getQueues(queueType);
+    for (const q of queues) {
+      const t = q.find(f);
+      if (t) {
+        return t;
+      }
+    }
   }
 }

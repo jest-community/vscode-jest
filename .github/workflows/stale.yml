@@ -1,0 +1,35 @@
+name: Mark stale issues and auto close if inactive
+
+on:
+#   schedule:
+#   - cron: "30 1 * * *"
+  
+# debugging
+  workflow_dispatch:  
+
+jobs:
+  stale:
+
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+    - uses: actions/stale@v3
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+        
+        stale-issue-label: 'stale'
+        stale-issue-message: 'This issue is marked stale because it has not seen any activity in 365 days. Please let us know if this is still an important issue for you, otherwise it will be automatically closed in 10 days to help us focus on more active issues. Thanks.'
+        close-issue-message: 'This issue was closed because it has been stalled for over 365 days without any activity.'
+        days-before-issue-stale: 365
+        days-before-issue-close: 10
+        
+        operations-per-run: 500
+        
+        # debugging
+        debug-only: true
+        enable-statistics: true
+        
+        
+        

@@ -1,525 +1,540 @@
 jest.unmock('../../src/JestProcessManagement/JestProcessManager');
+jest.unmock('../../src/JestProcessManagement/task-queue');
+jest.unmock('../../src/JestProcessManagement/helper');
+jest.unmock('../test-helper');
 
-import { ProjectWorkspace } from 'jest-editor-support';
 import { JestProcessManager } from '../../src/JestProcessManagement/JestProcessManager';
 import { JestProcess } from '../../src/JestProcessManagement/JestProcess';
-import { EventEmitter } from 'events';
-import { WatchMode } from '../../src/Jest';
+import { mockJestProcessContext, mockProcessRequest } from '../test-helper';
+import * as taskQueue from '../../src/JestProcessManagement/task-queue';
+import { ProcessStatus, ScheduleStrategy } from '../../src/JestProcessManagement/types';
 
+interface ProcessState {
+  inQ?: boolean;
+  started?: boolean;
+  qSize?: number;
+}
+const getState = (pm: JestProcessManager, process: JestProcess): ProcessState => {
+  const state: ProcessState = {};
+  const task = pm.find((t) => t.data === process);
+
+  state['inQ'] = (task && task.data === process) || false;
+  if (task) {
+    state['started'] = task.status === 'running';
+  }
+  state['qSize'] = pm.numberOfProcesses(process.request.schedule.queue);
+  return state;
+};
+
+let SEQ = 1;
 describe('JestProcessManager', () => {
-  let jestProcessManager;
-  let projectWorkspaceMock;
-  let exitHandler;
-  let eventEmitter;
+  let extContext;
 
-  const jestProcessMock = (JestProcess as any) as jest.Mock<any>;
+  const jestProcessMock = JestProcess as any as jest.Mock<any>;
+
+  const mockJestProcess = (request?: any): any => {
+    let resolve;
+    let reject;
+    const promise = new Promise((_resolve, _reject) => {
+      resolve = _resolve;
+      reject = _reject;
+    });
+    const mockProcess = {
+      id: `${request.type}-${SEQ++}`,
+      request,
+      start: jest.fn().mockReturnValueOnce(promise),
+      stop: jest.fn().mockImplementation(() => resolve('requested to stop')),
+      status: 'pending',
+      resolve,
+      reject,
+    };
+    jestProcessMock.mockReturnValueOnce(mockProcess);
+    return mockProcess;
+  };
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    projectWorkspaceMock = new ProjectWorkspace(null, null, null, null);
-    jestProcessManager = new JestProcessManager({ projectWorkspace: projectWorkspaceMock });
-    exitHandler = jest.fn();
-    eventEmitter = new EventEmitter();
+    jest.resetAllMocks();
+    extContext = mockJestProcessContext();
+  });
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   describe('when creating', () => {
     it('accepts Project Workspace as the argument', () => {
       // tslint:disable-next-line no-shadowed-variable
-      const jestProcessManager = new JestProcessManager({ projectWorkspace: projectWorkspaceMock });
+      const jestProcessManager = new JestProcessManager(extContext);
       expect(jestProcessManager).not.toBe(null);
     });
 
-    it('accepts runAllTestsFirstInWatchMode argument (true if not provided)', () => {
-      // tslint:disable-next-line no-shadowed-variable
-      const jestProcessManager = new JestProcessManager({
-        projectWorkspace: projectWorkspaceMock,
-        runAllTestsFirstInWatchMode: false,
-      });
+    it('created 2 blocking queues and 1 non-blocking queue', () => {
+      const mockCreateTaskQueue = jest.spyOn(taskQueue, 'createTaskQueue');
+      const jestProcessManager = new JestProcessManager(extContext);
       expect(jestProcessManager).not.toBe(null);
+      expect(mockCreateTaskQueue).toHaveBeenCalledTimes(3);
+      const maxWorkers = mockCreateTaskQueue.mock.calls.map((c) => c[1]);
+      // blocking queue has 1 worker
+      expect(maxWorkers.filter((n) => n === 1)).toHaveLength(2);
+      // non-blocking queue has more than 1 worker
+      expect(maxWorkers.filter((n) => n > 1)).toHaveLength(1);
     });
   });
-
-  describe('when starting jest process', () => {
-    it('creates JestProcess', () => {
-      jestProcessManager.startJestProcess();
-
-      expect(jestProcessMock).toHaveBeenCalledTimes(1);
-    });
-
-    it('returns an instance of JestProcess', () => {
-      const jestProcess = jestProcessManager.startJestProcess();
-
-      expect(jestProcess).toBe(jestProcessMock.mock.instances[0]);
-    });
-
-    it('passes the project workspace to the JestProcess instance', () => {
-      jestProcessManager.startJestProcess();
-
-      expect(jestProcessMock.mock.calls[0][0]).toHaveProperty(
-        'projectWorkspace',
-        projectWorkspaceMock
-      );
-    });
-
-    it('calls the onExit handler when JestProcess exits', () => {
-      const mockImplementation = {
-        keepAlive: false,
-        onExit: (callback) => {
-          eventEmitter.on('debuggerProcessExit', callback);
-        },
-      };
-      jestProcessMock.mockImplementation(() => mockImplementation);
-
-      jestProcessManager.startJestProcess({ exitCallback: exitHandler });
-
-      eventEmitter.emit('debuggerProcessExit', mockImplementation);
-
-      expect(exitHandler).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  describe('when starting jest process in non-watch mode', () => {
-    it('passes the watchMode flag set to false', () => {
-      jestProcessManager.startJestProcess();
-
-      expect(jestProcessMock.mock.calls[0][0]).toHaveProperty('watchMode', WatchMode.None);
-    });
-  });
-
-  describe('when starting jest process in keep-alive mode', () => {
-    it('passes the keepAlive flag set to true', () => {
-      jestProcessManager.startJestProcess({ keepAlive: true });
-
-      expect(jestProcessMock.mock.calls[0][0]).toHaveProperty('keepAlive', true);
-    });
-  });
-
-  describe('when starting jest process in non keep-alive mode', () => {
-    it('passes the keepAlive flag set to false', () => {
-      jestProcessManager.startJestProcess({ keepAlive: false });
-
-      expect(jestProcessMock.mock.calls[0][0]).toHaveProperty('keepAlive', false);
-    });
-
-    it('passes the keepAlive flag set to false when no flag is specified', () => {
-      jestProcessManager.startJestProcess();
-
-      expect(jestProcessMock.mock.calls[0][0]).toHaveProperty('keepAlive', false);
-    });
-  });
-
-  describe('when starting jest process in watch mode', () => {
-    it('will run all tests without watch mode then restart with --watch', () => {
-      jestProcessManager.startJestProcess({ watchMode: WatchMode.Watch });
-
-      eventEmitter.emit('debuggerProcessExit', { stopRequested: () => false });
-
-      expect(jestProcessMock.mock.calls).toEqual([
-        [
-          {
-            keepAlive: false,
-            projectWorkspace: projectWorkspaceMock,
-            watchMode: WatchMode.None,
-          },
-        ],
-        [
-          {
-            keepAlive: false,
-            projectWorkspace: projectWorkspaceMock,
-            watchMode: WatchMode.Watch,
-          },
-        ],
-      ]);
-    });
-
-    it('starts the process for non-watch mode with keep-alive flag set to false', () => {
-      jestProcessManager.startJestProcess({
-        keepAlive: true,
-        watchMode: WatchMode.Watch,
-      });
-
-      // we need this to trigger the watch-mode process that only starts
-      // after the non-watch-mode process exits
-      eventEmitter.emit('debuggerProcessExit', { stopRequested: () => false });
-
-      expect(jestProcessMock.mock.calls[0][0]).toHaveProperty('keepAlive', false);
-      expect(jestProcessMock.mock.calls[1][0]).toHaveProperty('keepAlive', true);
-    });
-
-    it('starts both jest processes with the same project workspace', () => {
-      jestProcessManager.startJestProcess({ watchMode: WatchMode.Watch });
-
-      eventEmitter.emit('debuggerProcessExit', { stopRequested: () => false });
-
-      expect(jestProcessMock.mock.calls[0][0]).toHaveProperty(
-        'projectWorkspace',
-        projectWorkspaceMock
-      );
-      expect(jestProcessMock.mock.calls[1][0]).toHaveProperty(
-        'projectWorkspace',
-        projectWorkspaceMock
-      );
-    });
-
-    it('binds the provided exit handler to the both jest processes', () => {
-      const eventEmitterForWatchMode = new EventEmitter();
-      const onExitMock = jest
-        .fn()
-        .mockImplementationOnce((callback) => {
-          eventEmitter.on('debuggerProcessExit', callback);
-        })
-        .mockImplementationOnce((callback) => {
-          eventEmitterForWatchMode.on('debuggerProcessExit', callback);
-        });
-
-      jestProcessMock.mockImplementation(() => ({
-        onExit: onExitMock,
-      }));
-
-      jestProcessManager.startJestProcess({
-        exitCallback: exitHandler,
-        watchMode: WatchMode.Watch,
-      });
-
-      eventEmitter.emit('debuggerProcessExit', { stopRequested: () => false, watchMode: false });
-      eventEmitterForWatchMode.emit('debuggerProcessExit', {
-        stopRequested: () => false,
-        watchMode: true,
-      });
-
-      expect(exitHandler).toHaveBeenCalledTimes(2);
-      expect(exitHandler.mock.calls[0][0].watchMode).toBe(false);
-      expect(exitHandler.mock.calls[1][0].watchMode).toBe(true);
-    });
-
-    it('the exit handler for the non-watch mode passes the jest process representing the watch mode as the second argument', () => {
-      const eventEmitterForWatchMode = new EventEmitter();
-      const onExitMock = jest
-        .fn()
-        .mockImplementationOnce((callback) => {
-          eventEmitter.on('debuggerProcessExit', callback);
-        })
-        .mockImplementationOnce((callback) => {
-          eventEmitterForWatchMode.on('debuggerProcessExit', callback);
-        });
-
-      const mockImplementation = {
-        onExit: onExitMock,
-        restart: jest.fn(),
-        stopRequested: () => false,
-      };
-
-      jestProcessMock.mockImplementation(() => mockImplementation);
-
-      jestProcessManager.startJestProcess({
-        exitCallback: exitHandler,
-        watchMode: WatchMode.Watch,
-      });
-
-      eventEmitter.emit('debuggerProcessExit', mockImplementation);
-      eventEmitterForWatchMode.emit('debuggerProcessExit', mockImplementation);
-
-      expect(exitHandler.mock.calls[0].length).toBe(2);
-      expect(exitHandler.mock.calls[0][1]).toBe(mockImplementation);
-    });
-  });
-
-  describe('when stopping jest process', () => {
-    it('stops the most recent running jest process', () => {
-      const stopMock = jest.fn();
-      jestProcessMock.mockImplementation(() => ({
-        onExit: jest.fn(),
-        stop: stopMock,
-      }));
-      const jestProcess = jestProcessManager.startJestProcess();
-
-      jestProcessManager.stopJestProcess(jestProcess);
-
-      expect(stopMock).toHaveBeenCalledTimes(1);
-      expect(jestProcessManager.numberOfProcesses).toBe(0);
-    });
-    it('stopJestProcess can stop the process even if it is not in the process list', () => {
-      const stopMock = jest.fn();
-      jestProcessMock.mockImplementation(() => ({
-        onExit: jest.fn(),
-        stop: stopMock,
-      }));
-      const jestProcess = jestProcessManager.startJestProcess();
-      const cloned = { ...jestProcess };
-
-      expect(jestProcessManager.numberOfProcesses).toBe(1);
-      jestProcessManager.stopJestProcess(cloned);
-
-      expect(stopMock).toHaveBeenCalledTimes(1);
-      expect(jestProcessManager.numberOfProcesses).toBe(1);
-    });
-
-    // jest mocking does not let us test it properly because
-    // jestProcessMock.instances does not work as expected
-    it('can stop all process at once', () => {
-      const mockImplementation = {
-        onExit: jest.fn(),
-        stop: jest.fn(),
-      };
-
-      jestProcessMock.mockImplementation(() => mockImplementation);
-
-      jestProcessManager.startJestProcess();
-      jestProcessManager.startJestProcess();
-
-      const stopAll = jestProcessManager.stopAll();
-
-      expect(stopAll).toBeInstanceOf(Promise);
-      return stopAll.then(() => {
-        expect(jestProcessMock).toHaveBeenCalledTimes(2);
-        expect(mockImplementation.stop).toHaveBeenCalledTimes(2);
-        expect(jestProcessManager.numberOfProcesses).toBe(0);
-      });
-    });
-    describe('2-staged process: runAllTest => runWatchMode', () => {
-      let startOptions = {};
+  describe('start a jest process', () => {
+    describe('start the jest process by scheduling a request', () => {
+      let mockProcess;
+      let pm;
+      let request;
       beforeEach(() => {
-        jestProcessMock.mockImplementation(() => {
-          let isStopped = false;
-          const stop = () => (isStopped = true);
-          const stopRequested = () => isStopped;
-          const onExit = (callback) => {
-            eventEmitter.on('debuggerProcessExit', callback);
-          };
-          return { onExit, stop, stopRequested };
-        });
-        startOptions = {
-          exitCallback: exitHandler,
-          watchMode: WatchMode.Watch,
+        request = mockProcessRequest('all-tests', { schedule: { queue: 'blocking' } });
+        mockProcess = mockJestProcess(request);
+        pm = new JestProcessManager(extContext);
+      });
+
+      it('can run process after scheduling', () => {
+        expect.hasAssertions();
+
+        const process = pm.scheduleJestProcess(request);
+
+        expect(process.id).toEqual(expect.stringContaining(request.type));
+        expect(jestProcessMock).toHaveBeenCalledTimes(1);
+        expect(mockProcess.start).toHaveBeenCalledTimes(1);
+
+        expect(extContext.onRunEvent.fire).toHaveBeenCalledWith(
+          expect.objectContaining({ type: 'process-start' })
+        );
+        expect(getState(pm, mockProcess)).toEqual({ inQ: true, started: true, qSize: 1 });
+      });
+      it('the queue will be cleared when the process exit upon completion', async () => {
+        expect.hasAssertions();
+
+        pm.scheduleJestProcess(request);
+        expect(jestProcessMock).toHaveBeenCalledTimes(1);
+        expect(getState(pm, mockProcess)).toEqual({ inQ: true, started: true, qSize: 1 });
+
+        await mockProcess.resolve();
+        expect(getState(pm, mockProcess)).toEqual({ inQ: false, qSize: 0 });
+      });
+      it('the queue will be cleared when the process exit upon error', async () => {
+        expect.hasAssertions();
+        pm.scheduleJestProcess(request);
+        expect(jestProcessMock).toHaveBeenCalledTimes(1);
+
+        expect(getState(pm, mockProcess)).toEqual({ inQ: true, started: true, qSize: 1 });
+        await mockProcess.reject();
+        expect(getState(pm, mockProcess)).toEqual({ inQ: false, qSize: 0 });
+      });
+    });
+    describe('can run jest process sequentially', () => {
+      const schedule: ScheduleStrategy = { queue: 'blocking' };
+      const requests = [
+        mockProcessRequest('all-tests', { schedule }),
+        mockProcessRequest('watch-tests', { schedule }),
+        mockProcessRequest('watch-all-tests', { schedule }),
+      ];
+      it('works for scheduling all requests up front', async () => {
+        expect.hasAssertions();
+
+        const processes: any[] = requests.map((r) => mockJestProcess(r));
+        const pm = new JestProcessManager(extContext);
+
+        // submit all 3 request
+        const results = requests.map((r) => pm.scheduleJestProcess(r));
+        expect(results.every((r) => r)).toBeTruthy();
+        expect(jestProcessMock).toHaveBeenCalledTimes(3);
+
+        expect(getState(pm, processes[0])).toEqual({ inQ: true, started: true, qSize: 3 });
+        expect(getState(pm, processes[1])).toEqual({ inQ: true, started: false, qSize: 3 });
+        expect(getState(pm, processes[2])).toEqual({ inQ: true, started: false, qSize: 3 });
+
+        // when process-1 completes, process 2 should then start
+        await processes[0].resolve();
+        expect(getState(pm, processes[0])).toEqual({ inQ: false, qSize: 2 });
+        expect(getState(pm, processes[1])).toEqual({ inQ: true, started: true, qSize: 2 });
+        expect(getState(pm, processes[2])).toEqual({ inQ: true, started: false, qSize: 2 });
+
+        // when process-2 rejects, process 3 should then start
+        await processes[1].reject('forced to quit');
+        expect(getState(pm, processes[1])).toEqual({ inQ: false, qSize: 1 });
+        expect(getState(pm, processes[2])).toEqual({ inQ: true, started: true, qSize: 1 });
+
+        // when process-3 completes, the queue should be empty
+        await processes[2].resolve();
+        expect(getState(pm, processes[2])).toEqual({ inQ: false, qSize: 0 });
+      });
+      it('works for scheduling incrementally', async () => {
+        expect.hasAssertions();
+
+        const processes: any[] = requests.map((r) => mockJestProcess(r));
+        const pm = new JestProcessManager(extContext);
+
+        // submit first request
+        let scheduled = pm.scheduleJestProcess(requests[0]);
+        expect(scheduled.id).toContain(requests[0].type);
+        expect(getState(pm, processes[0])).toEqual({ inQ: true, started: true, qSize: 1 });
+
+        // schedule 2nd request while first one is still running
+        scheduled = pm.scheduleJestProcess(requests[1]);
+        expect(scheduled.id).toContain(requests[1].type);
+        expect(getState(pm, processes[0])).toEqual({ inQ: true, started: true, qSize: 2 });
+        expect(getState(pm, processes[1])).toEqual({ inQ: true, started: false, qSize: 2 });
+
+        // when first process complete, 2nd one should automatically starts
+        await processes[0].resolve();
+        expect(getState(pm, processes[0])).toEqual({ inQ: false, qSize: 1 });
+        expect(getState(pm, processes[1])).toEqual({ inQ: true, started: true, qSize: 1 });
+
+        // schedule the 3rd request
+        scheduled = pm.scheduleJestProcess(requests[2]);
+        expect(scheduled.id).toContain(requests[2].type);
+        expect(getState(pm, processes[1])).toEqual({ inQ: true, started: true, qSize: 2 });
+
+        //   getState(pm, processes[1], { 'in-queue': true, started: true, 'queue-length': 1 })
+        // ).toBe('pass');
+        expect(getState(pm, processes[2])).toEqual({ inQ: true, started: false, qSize: 2 });
+      });
+    });
+    describe('can run jest process in parallel', () => {
+      const schedule: ScheduleStrategy = { queue: 'non-blocking' };
+      const requests = [
+        mockProcessRequest('by-file', { testFileName: 'file-1', schedule }),
+        mockProcessRequest('not-test', { args: ['--listFiles'], schedule }),
+        mockProcessRequest('by-file', { testFileName: 'file-2', schedule }),
+        mockProcessRequest('not-test', { args: ['--listFiles'], schedule }),
+      ];
+      it('works for scheduling all requests up front', async () => {
+        expect.hasAssertions();
+
+        const processes: any[] = requests.map((r) => mockJestProcess(r));
+        const pm = new JestProcessManager(extContext);
+
+        const results = requests.map((r) => pm.scheduleJestProcess(r));
+        expect(results.every((r) => r)).toBeTruthy();
+        expect(jestProcessMock).toHaveBeenCalledTimes(requests.length);
+
+        // maxWorker is 3, so we should at most have 3 processes running at any given time
+        expect(getState(pm, processes[0])).toEqual({ inQ: true, started: true, qSize: 4 });
+        expect(getState(pm, processes[1])).toEqual({ inQ: true, started: true, qSize: 4 });
+        expect(getState(pm, processes[2])).toEqual({ inQ: true, started: true, qSize: 4 });
+        expect(getState(pm, processes[3])).toEqual({ inQ: true, started: false, qSize: 4 });
+
+        // when process[1] reject, process 3 can run now
+        await processes[1].reject('whatever');
+        expect(getState(pm, processes[0])).toEqual({ inQ: true, started: true, qSize: 3 });
+        expect(getState(pm, processes[1])).toEqual({ inQ: false, qSize: 3 });
+        expect(getState(pm, processes[2])).toEqual({ inQ: true, started: true, qSize: 3 });
+        expect(getState(pm, processes[3])).toEqual({ inQ: true, started: true, qSize: 3 });
+
+        // when process[0] and process[3] resolve, only process[2] remained
+        await processes[0].resolve();
+        await processes[3].resolve();
+        expect(getState(pm, processes[0])).toEqual({ inQ: false, qSize: 1 });
+        expect(getState(pm, processes[1])).toEqual({ inQ: false, qSize: 1 });
+        expect(getState(pm, processes[2])).toEqual({ inQ: true, started: true, qSize: 1 });
+        expect(getState(pm, processes[3])).toEqual({ inQ: false, qSize: 1 });
+      });
+      it('works for scheduling incrementally', async () => {
+        expect.hasAssertions();
+
+        const processes: any[] = requests.map((r) => mockJestProcess(r));
+        const pm = new JestProcessManager(extContext);
+
+        // submit first request
+        let scheduled = pm.scheduleJestProcess(requests[0]);
+        expect(scheduled.id).toContain(requests[0].type);
+        expect(getState(pm, processes[0])).toEqual({ inQ: true, started: true, qSize: 1 });
+
+        // schedule 2nd request while first one is still running
+        scheduled = pm.scheduleJestProcess(requests[1]);
+        expect(scheduled.id).toContain(requests[1].type);
+        expect(getState(pm, processes[0])).toEqual({ inQ: true, started: true, qSize: 2 });
+        expect(getState(pm, processes[1])).toEqual({ inQ: true, started: true, qSize: 2 });
+
+        // schedule 3rd and 4th requests
+        scheduled = pm.scheduleJestProcess(requests[2]);
+        expect(scheduled.id).toContain(requests[2].type);
+        scheduled = pm.scheduleJestProcess(requests[3]);
+        expect(scheduled.id).toContain(requests[3].type);
+        expect(getState(pm, processes[0])).toEqual({ inQ: true, started: true, qSize: 4 });
+        expect(getState(pm, processes[1])).toEqual({ inQ: true, started: true, qSize: 4 });
+        expect(getState(pm, processes[2])).toEqual({ inQ: true, started: true, qSize: 4 });
+        expect(getState(pm, processes[3])).toEqual({ inQ: true, started: false, qSize: 4 });
+
+        // when any running one complete, the last process get to run
+        await processes[1].resolve();
+        expect(getState(pm, processes[0])).toEqual({ inQ: true, started: true, qSize: 3 });
+        expect(getState(pm, processes[1])).toEqual({ inQ: false, qSize: 3 });
+        expect(getState(pm, processes[2])).toEqual({ inQ: true, started: true, qSize: 3 });
+        expect(getState(pm, processes[3])).toEqual({ inQ: true, started: true, qSize: 3 });
+      });
+    });
+    describe('dedupe', () => {
+      it('will not schedule if process is already running', () => {
+        expect.hasAssertions();
+        const schedule: ScheduleStrategy = {
+          queue: 'blocking',
+          dedupe: { filterByStatus: ['running'] },
         };
+        const request = mockProcessRequest('watch-tests', { schedule });
+        const process = mockJestProcess(request);
+
+        const pm = new JestProcessManager(extContext);
+
+        // schedule the first process
+        let scheduled = pm.scheduleJestProcess(request);
+        // the process is running
+        expect(scheduled).toEqual(process);
+        expect(getState(pm, process)).toEqual({ inQ: true, started: true, qSize: 1 });
+
+        // schedule the 2nd process which should failed because the process is already running
+        const process2 = mockJestProcess(request);
+        scheduled = pm.scheduleJestProcess(request);
+        expect(scheduled).toBeUndefined();
+        expect(getState(pm, process2)).toEqual({ inQ: false, qSize: 1 });
       });
-      it('normally the watch-mode process will auto-start when first process exit', () => {
-        const p = jestProcessManager.startJestProcess(startOptions);
-        expect(jestProcessMock).toHaveBeenCalledTimes(1);
+      it('will not schedule if there is pending process', () => {
+        expect.hasAssertions();
+        const schedule: ScheduleStrategy = {
+          queue: 'blocking',
+          dedupe: { filterByStatus: ['pending'] },
+        };
+        const request = mockProcessRequest('watch-tests', { schedule });
+        const process = mockJestProcess(request);
 
-        eventEmitter.emit('debuggerProcessExit', p);
+        const pm = new JestProcessManager(extContext);
 
-        expect(jestProcessMock).toHaveBeenCalledTimes(2);
+        // schedule the first process
+        let scheduled = pm.scheduleJestProcess(request);
+        // the process is running
+        expect(getState(pm, process)).toEqual({ inQ: true, started: true, qSize: 1 });
+
+        // schedule the 2nd process which should succeed because there is no pending process
+        const process2 = mockJestProcess(request);
+        scheduled = pm.scheduleJestProcess(request);
+        expect(scheduled.id).toContain(request.type);
+        expect(getState(pm, process2)).toEqual({ inQ: true, started: false, qSize: 2 });
+
+        // but the 3rd one would fail because the 2nd process is pending and thus can not add any more
+        const process3 = mockJestProcess(request);
+        scheduled = pm.scheduleJestProcess(request);
+        expect(scheduled).toBeUndefined();
+        expect(getState(pm, process)).toEqual({ inQ: true, started: true, qSize: 2 });
+        expect(getState(pm, process2)).toEqual({ inQ: true, started: false, qSize: 2 });
+        expect(getState(pm, process3)).toEqual({ inQ: false, qSize: 2 });
       });
-      it('stopAll will prevent auto start the watch mode process', async () => {
-        const p = jestProcessManager.startJestProcess(startOptions);
-        expect(jestProcessMock).toHaveBeenCalledTimes(1);
-        expect(jestProcessManager.numberOfProcesses).toBe(1);
-
-        await jestProcessManager.stopAll();
-        expect(jestProcessManager.numberOfProcesses).toBe(0);
-
-        eventEmitter.emit('debuggerProcessExit', p);
-        expect(jestProcessManager.numberOfProcesses).toBe(0);
-        expect(jestProcessMock).toHaveBeenCalledTimes(1);
-      });
-      it('stopJestProcess will prevent auto start the watch mode process', async () => {
-        const p = jestProcessManager.startJestProcess(startOptions);
-        expect(jestProcessMock).toHaveBeenCalledTimes(1);
-        expect(jestProcessManager.numberOfProcesses).toBe(1);
-
-        await jestProcessManager.stopJestProcess(p);
-        expect(jestProcessManager.numberOfProcesses).toBe(0);
-
-        eventEmitter.emit('debuggerProcessExit', p);
-        expect(jestProcessManager.numberOfProcesses).toBe(0);
-        expect(jestProcessMock).toHaveBeenCalledTimes(1);
-      });
-    });
-
-    it('does not stop any jest process if none is running', () => {
-      const mockImplementation = {
-        onExit: jest.fn(),
-        stop: jest.fn(),
-      };
-
-      jestProcessMock.mockImplementation(() => mockImplementation);
-
-      const stopAll = jestProcessManager.stopAll();
-
-      expect(stopAll).toBeInstanceOf(Promise);
-      return stopAll.then(() => {
-        expect(jestProcessMock).toHaveBeenCalledTimes(0);
-        expect(mockImplementation.stop).not.toHaveBeenCalled();
-        expect(jestProcessManager.numberOfProcesses).toBe(0);
-      });
-    });
-  });
-
-  describe('jest process exits with keepAlive === true', () => {
-    it('removes the reference to the jest process that has been stopped', () => {
-      const jestProcess = jestProcessManager.startJestProcess({ keepAlive: true });
-
-      jestProcessManager.stopJestProcess(jestProcess);
-
-      expect(jestProcessManager.numberOfProcesses).toBe(0);
-    });
-
-    it('removes the reference to the jest process that has been stopped and the following onExit event does not do anything', () => {
-      jestProcessMock.mockImplementation(() => ({
-        keepAlive: true,
-        onExit: (callback) => {
-          eventEmitter.on('debuggerProcessExit', callback);
-        },
-        stop: jest.fn(),
-      }));
-
-      const jestProcess = jestProcessManager.startJestProcess({ keepAlive: true });
-      jestProcessManager.stopJestProcess(jestProcess);
-
-      eventEmitter.emit('debuggerProcessExit', jestProcess);
-
-      expect(jestProcessManager.numberOfProcesses).toBe(0);
-      expect(jestProcess.stop).toHaveBeenCalledTimes(1);
-    });
-
-    it('keeps the reference to the jest process that exited on its own but then restarted', () => {
-      jestProcessMock.mockImplementation(() => ({
-        keepAlive: true,
-        onExit: (callback) => {
-          eventEmitter.on('debuggerProcessExit', callback);
-        },
-      }));
-
-      const jestProcess = jestProcessManager.startJestProcess({ keepAlive: true });
-
-      eventEmitter.emit('debuggerProcessExit', jestProcess);
-
-      expect(jestProcessManager.numberOfProcesses).toBe(1);
-    });
-
-    it('removes the reference to the jest process that exited on its own that preceeds the jest process for watch mode', () => {
-      jestProcessMock.mockImplementation(() => ({
-        onExit: (callback) => {
-          eventEmitter.on('debuggerProcessExit', callback);
-        },
-        stopRequested: () => false,
-      }));
-
-      const jestProcess = jestProcessManager.startJestProcess({
-        keepAlive: true,
-        watchMode: WatchMode.Watch,
-      });
-
-      eventEmitter.emit('debuggerProcessExit', jestProcess);
-
-      expect(jestProcessManager.numberOfProcesses).toBe(1);
-    });
-
-    it('keeps the reference to the jest process in watch-mode that exited on its own', () => {
-      const eventEmitterForWatchMode = new EventEmitter();
-      const onExitMock = jest
-        .fn()
-        .mockImplementationOnce((callback) => {
-          eventEmitter.on('debuggerProcessExit', callback);
-        })
-        .mockImplementationOnce((callback) => {
-          eventEmitterForWatchMode.on('debuggerProcessExit', callback);
+      it('will not schedule if there is pending process with the same content', () => {
+        expect.hasAssertions();
+        const schedule: ScheduleStrategy = {
+          queue: 'blocking',
+          dedupe: { filterByStatus: ['pending'], filterByContent: true },
+        };
+        const request1 = mockProcessRequest('by-file', {
+          testFileName: '/file/1',
+          schedule,
+        });
+        const request2 = mockProcessRequest('by-file', {
+          testFileName: '/file/2',
+          schedule,
         });
 
-      const mockImplementation = {
-        keepAlive: true,
-        onExit: onExitMock,
-        restart: jest.fn(),
-      };
-      jestProcessMock.mockImplementation(() => mockImplementation);
+        const pm = new JestProcessManager(extContext);
 
-      const jestProcess = jestProcessManager.startJestProcess({
-        watch: true,
-        keepAlive: true,
-        exitCallback: (_, jestProcessInWatchMode) => {
-          if (jestProcessInWatchMode) {
-            // this one will exit the watch-mode process
-            eventEmitterForWatchMode.emit('debuggerProcessExit', jestProcessInWatchMode);
-          }
-        },
+        // schedule the first process: no problem
+        const process1 = mockJestProcess(request1);
+        let scheduled = pm.scheduleJestProcess(request1);
+        expect(scheduled.id).toContain(request1.type);
+        expect(getState(pm, process1)).toEqual({ inQ: true, started: true, qSize: 1 });
+
+        // schedule the 2nd process with request1, fine because process1 is running, not pending
+        const process2 = mockJestProcess(request1);
+        scheduled = pm.scheduleJestProcess(request1);
+        expect(scheduled.id).toContain(request1.type);
+        expect(getState(pm, process2)).toEqual({ inQ: true, started: false, qSize: 2 });
+
+        // schedule the 3rd one with different request2, should be fine, no dup
+        const process3 = mockJestProcess(request2);
+        scheduled = pm.scheduleJestProcess(request2);
+        expect(scheduled.id).toContain(request2.type);
+        expect(getState(pm, process3)).toEqual({ inQ: true, started: false, qSize: 3 });
+
+        // schedule the 4th one with request1, should be rejected as there is already one request pending
+        const process4 = mockJestProcess(request1);
+        scheduled = pm.scheduleJestProcess(request1);
+        expect(scheduled).toBeUndefined();
+        expect(getState(pm, process4)).toEqual({ inQ: false, qSize: 3 });
       });
+    });
+    describe('handling cancelled process in queues', () => {
+      it('if a scheduled process is cancelled, it will be removed from the queue upon executing', async () => {
+        expect.hasAssertions();
 
-      // this one will exit the run-all-tests process
-      eventEmitter.emit('debuggerProcessExit', jestProcess);
+        const process1 = mockJestProcess(
+          mockProcessRequest('all-tests', { schedule: { queue: 'blocking-2' } })
+        );
+        const process2 = mockJestProcess(
+          mockProcessRequest('by-file', { schedule: { queue: 'blocking-2' } })
+        );
 
-      // there should be one process left - the watch mode process is kept-alive
-      expect(jestProcessManager.numberOfProcesses).toBe(1);
+        const pm = new JestProcessManager(extContext);
+        pm.scheduleJestProcess(process1.request);
+        pm.scheduleJestProcess(process2.request);
+        expect(pm.numberOfProcesses()).toEqual(2);
+
+        // only the first process should be running
+        expect(process1.start).toHaveBeenCalled();
+        expect(process2.start).not.toHaveBeenCalled();
+        expect(extContext.onRunEvent.fire).toHaveBeenCalledTimes(1);
+
+        extContext.onRunEvent.fire.mockClear();
+
+        // cancel the 2nd process sitting in the queue
+        process2.status = ProcessStatus.Cancelled;
+
+        // finish the first process
+        await process1.resolve();
+
+        // the queue will be zero but process2 was never run
+        expect(pm.numberOfProcesses()).toEqual(0);
+        expect(process2.start).not.toHaveBeenCalled();
+
+        // no runEvent should be fired either
+        expect(extContext.onRunEvent.fire).not.toHaveBeenCalled();
+      });
     });
   });
 
-  describe('jest process exits with keepAlive === false', () => {
-    it('removes the reference to the jest process that exited on its own', () => {
-      jestProcessMock.mockImplementation(() => ({
-        keepAlive: false,
-        onExit: (callback) => {
-          eventEmitter.on('debuggerProcessExit', callback);
-        },
-        restart: jest.fn(),
-      }));
-
-      const jestProcess = jestProcessManager.startJestProcess();
-
-      eventEmitter.emit('debuggerProcessExit', jestProcess);
-
-      expect(jestProcessManager.numberOfProcesses).toBe(0);
+  describe('stop processes', () => {
+    const blockingSchedule: ScheduleStrategy = { queue: 'blocking' };
+    const blocking2Schedule: ScheduleStrategy = { queue: 'blocking-2' };
+    const nonBlockingSchedule: ScheduleStrategy = { queue: 'non-blocking' };
+    const blockingRequests = [
+      mockProcessRequest('all-tests', { schedule: blockingSchedule }),
+      mockProcessRequest('watch-tests', { schedule: blockingSchedule }),
+    ];
+    const blockingRequests2 = [mockProcessRequest('by-file', { schedule: blocking2Schedule })];
+    const nonBlockingRequests = [mockProcessRequest('not-test', { schedule: nonBlockingSchedule })];
+    let pm;
+    let blockingP;
+    let blockingP2;
+    let nonBlockingP;
+    beforeEach(() => {
+      pm = new JestProcessManager(extContext);
+      blockingP = blockingRequests.map((r) => mockJestProcess(r));
+      blockingP2 = blockingRequests2.map((r) => mockJestProcess(r));
+      nonBlockingP = nonBlockingRequests.map((r) => mockJestProcess(r));
+      blockingRequests.forEach((r) => pm.scheduleJestProcess(r));
+      blockingRequests2.forEach((r) => pm.scheduleJestProcess(r));
+      nonBlockingRequests.forEach((r) => pm.scheduleJestProcess(r));
     });
+    it.each([['blocking'], ['blocking-2'], ['non-blocking'], [undefined]])(
+      'can stop all processes from queue: %s',
+      async (queueType) => {
+        // before stopping
+        expect(getState(pm, blockingP[0])).toEqual({ inQ: true, started: true, qSize: 2 });
+        expect(getState(pm, blockingP[1])).toEqual({ inQ: true, started: false, qSize: 2 });
+        expect(getState(pm, blockingP2[0])).toEqual({ inQ: true, started: true, qSize: 1 });
+        expect(getState(pm, nonBlockingP[0])).toEqual({ inQ: true, started: true, qSize: 1 });
 
-    it('removes the reference to the jest process in watch-mode that exited on its own', () => {
-      const eventEmitterForWatchMode = new EventEmitter();
-      const onExitMock = jest
-        .fn()
-        .mockImplementationOnce((callback) => {
-          eventEmitter.on('debuggerProcessExit', callback);
-        })
-        .mockImplementationOnce((callback) => {
-          eventEmitterForWatchMode.on('debuggerProcessExit', callback);
+        await pm.stopAll(queueType);
+
+        //after stopping
+        if (queueType === 'blocking') {
+          expect(getState(pm, blockingP[0])).toEqual({ inQ: false, qSize: 0 });
+          expect(getState(pm, blockingP[1])).toEqual({ inQ: false, qSize: 0 });
+          expect(getState(pm, blockingP2[0])).toEqual({ inQ: true, qSize: 1, started: true });
+          expect(getState(pm, nonBlockingP[0])).toEqual({ inQ: true, started: true, qSize: 1 });
+        } else if (queueType === 'blocking-2') {
+          expect(getState(pm, blockingP[0])).toEqual({ inQ: true, started: true, qSize: 2 });
+          expect(getState(pm, blockingP[1])).toEqual({ inQ: true, started: false, qSize: 2 });
+          expect(getState(pm, blockingP2[0])).toEqual({ inQ: false, qSize: 0 });
+          expect(getState(pm, nonBlockingP[0])).toEqual({ inQ: true, started: true, qSize: 1 });
+        } else if (queueType === 'non-blocking') {
+          expect(getState(pm, blockingP[0])).toEqual({ inQ: true, started: true, qSize: 2 });
+          expect(getState(pm, blockingP[1])).toEqual({ inQ: true, started: false, qSize: 2 });
+          expect(getState(pm, blockingP2[0])).toEqual({ inQ: true, qSize: 1, started: true });
+          expect(getState(pm, nonBlockingP[0])).toEqual({ inQ: false, qSize: 0 });
+        } else {
+          expect(getState(pm, blockingP[0])).toEqual({ inQ: false, qSize: 0 });
+          expect(getState(pm, blockingP[1])).toEqual({ inQ: false, qSize: 0 });
+          expect(getState(pm, blockingP2[0])).toEqual({ inQ: false, qSize: 0 });
+          expect(getState(pm, nonBlockingP[0])).toEqual({ inQ: false, qSize: 0 });
+        }
+      }
+    );
+  });
+  describe('supports TaskArrayFunctions', () => {
+    const blockingSchedule: ScheduleStrategy = { queue: 'blocking' };
+    const nonBlockingSchedule: ScheduleStrategy = { queue: 'non-blocking' };
+    const blockingRequests = [
+      mockProcessRequest('all-tests', { schedule: blockingSchedule }),
+      mockProcessRequest('watch-tests', { schedule: blockingSchedule }),
+      mockProcessRequest('all-tests', { schedule: blockingSchedule }),
+    ];
+    const nonBlockingRequests = [mockProcessRequest('not-test', { schedule: nonBlockingSchedule })];
+    let pm;
+    let blockingP;
+    let nonBlockingP;
+    beforeEach(() => {
+      pm = new JestProcessManager(extContext);
+      blockingP = blockingRequests.map((r) => {
+        const p = mockJestProcess(r);
+        pm.scheduleJestProcess(r);
+        return p;
+      });
+      nonBlockingP = nonBlockingRequests.map((r) => {
+        const p = mockJestProcess(r);
+        pm.scheduleJestProcess(r);
+        return p;
+      });
+    });
+    it('can map tasks', async () => {
+      let processes = pm.map((t) => t.data, 'blocking');
+      expect(processes).toHaveLength(3);
+      expect(processes).toEqual(blockingP);
+      processes = pm.map((t) => t.data);
+      expect(processes).toHaveLength(4);
+    });
+    it('can filter tasks', async () => {
+      let processes = pm.filter((t) => t.status === 'running', 'non-blocking');
+      expect(processes).toHaveLength(1);
+      expect(processes[0].data).toEqual(nonBlockingP[0]);
+      processes = pm.filter((t) => t.status === 'running');
+      expect(processes).toHaveLength(2);
+    });
+    it('can find task', async () => {
+      let found = pm.find((t) => t.data.request.type === 'not-test', 'blocking');
+      expect(found).toBeUndefined();
+
+      found = pm.find((t) => t.data.request.type === 'not-test', 'non-blocking');
+      expect(found.data).toEqual(nonBlockingP[0]);
+
+      found = pm.find((t) => t.data.request.type === 'not-test');
+      expect(found.data).toEqual(nonBlockingP[0]);
+    });
+  });
+  describe('numberOfProcesses', () => {
+    it('will add up processes in all queues', () => {
+      const blockingSchedule: ScheduleStrategy = { queue: 'blocking' };
+      const blocking2Schedule: ScheduleStrategy = { queue: 'blocking-2' };
+      const nonBlockingSchedule: ScheduleStrategy = { queue: 'non-blocking' };
+      const blockingRequests = [
+        mockProcessRequest('all-tests', { schedule: blockingSchedule }),
+        mockProcessRequest('watch-tests', { schedule: blockingSchedule }),
+      ];
+      const blockingRequests2 = [mockProcessRequest('by-file', { schedule: blocking2Schedule })];
+      const nonBlockingRequests = [
+        mockProcessRequest('not-test', { schedule: nonBlockingSchedule }),
+      ];
+
+      const pm = new JestProcessManager(extContext);
+      // mock jest process and then schedule them
+      [blockingRequests, blockingRequests2, nonBlockingRequests].forEach((requests) => {
+        requests.forEach((r) => {
+          mockJestProcess(r);
+          pm.scheduleJestProcess(r);
         });
-
-      const mockImplementation = {
-        keepAlive: false,
-        onExit: onExitMock,
-        restart: jest.fn(),
-      };
-      jestProcessMock.mockImplementation(() => mockImplementation);
-
-      const jestProcess = jestProcessManager.startJestProcess({
-        watch: true,
-        exitCallback: (_, jestProcessInWatchMode) => {
-          if (jestProcessInWatchMode) {
-            eventEmitterForWatchMode.emit('debuggerProcessExit', jestProcessInWatchMode);
-          }
-        },
       });
 
-      eventEmitter.emit('debuggerProcessExit', jestProcess);
-
-      expect(jestProcessManager.numberOfProcesses).toBe(0);
-    });
-  });
-
-  describe('when runAllTestsFirstInWatchMode is false', () => {
-    it('does not run all tests first', () => {
-      jestProcessManager = new JestProcessManager({
-        projectWorkspace: projectWorkspaceMock,
-        runAllTestsFirstInWatchMode: false,
-      });
-
-      jestProcessMock.mockImplementation(() => ({
-        onExit: (callback) => {
-          eventEmitter.on('debuggerProcessExit', callback);
-        },
-      }));
-
-      const watchMode = WatchMode.Watch;
-      const jestProcess = jestProcessManager.startJestProcess({ watchMode });
-
-      eventEmitter.emit('debuggerProcessExit', jestProcess);
-
-      expect(jestProcessMock).toHaveBeenCalledTimes(1);
-
-      expect(jestProcessMock.mock.calls[0]).toEqual([
-        {
-          keepAlive: false,
-          projectWorkspace: projectWorkspaceMock,
-          watchMode,
-        },
-      ]);
+      expect(pm.numberOfProcesses()).toEqual(4);
     });
   });
 });

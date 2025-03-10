@@ -1,8 +1,13 @@
 _jest-editor/
 .vscode/symbols.json
-/coverage/
+/coverage*/
 node_modules/
 out/
+generated-icons/
 
 **/.DS_Store
 *.vsix
+*.zip
+coverage_comparison_report.html
+yarn-error.log
+

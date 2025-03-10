@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import { ProjectWorkspace, JestTotalResults } from 'jest-editor-support';
 
-import * as decorations from './decorations';
+import { TestStatus } from './decorations/test-status';
+import inlineErrorStyle from './decorations/inline-error';
 import { PluginResourceSettings } from './Settings';
 import { statusBar, Status, StatusBar, Mode } from './StatusBar';
 import {
@@ -50,16 +51,12 @@ export class JestExt {
 
   private jestWorkspace: ProjectWorkspace;
   private pluginSettings: PluginResourceSettings;
+  private decorations: TestStatus;
   private workspaceFolder: vscode.WorkspaceFolder;
   private instanceSettings: InstanceSettings;
 
   // The ability to show fails in the problems section
   private failDiagnostics: vscode.DiagnosticCollection;
-
-  private passingItStyle: vscode.TextEditorDecorationType;
-  private failingItStyle: vscode.TextEditorDecorationType;
-  private skipItStyle: vscode.TextEditorDecorationType;
-  private unknownItStyle: vscode.TextEditorDecorationType;
 
   private parsingTestFile = false;
 
@@ -113,7 +110,7 @@ export class JestExt {
     this.handleJestEditorSupportEvent = this.handleJestEditorSupportEvent.bind(this);
 
     // The theme stuff
-    this.setupDecorators();
+    this.decorations = new TestStatus(context);
     // The bottom bar thing
     this.setupStatusBar();
     // reset the jest diagnostics
@@ -204,7 +201,7 @@ export class JestExt {
     this.pluginSettings = updatedSettings;
 
     this.jestWorkspace.rootPath = updatedSettings.rootPath;
-    this.jestWorkspace.pathToJest = pathToJest(updatedSettings);
+    this.jestWorkspace.jestCommandLine = pathToJest(updatedSettings);
     this.jestWorkspace.pathToConfig = pathToConfig(updatedSettings);
 
     // debug
@@ -223,26 +220,26 @@ export class JestExt {
   }
 
   updateDecorators(testResults: SortedTestResults, editor: vscode.TextEditor): void {
-    // Dots
+    // Status indicators (gutter icons)
     const styleMap = [
       {
         data: testResults.success,
-        decorationType: this.passingItStyle,
+        decorationType: this.decorations.passing,
         state: TestReconciliationState.KnownSuccess,
       },
       {
         data: testResults.fail,
-        decorationType: this.failingItStyle,
+        decorationType: this.decorations.failing,
         state: TestReconciliationState.KnownFail,
       },
       {
         data: testResults.skip,
-        decorationType: this.skipItStyle,
+        decorationType: this.decorations.skip,
         state: TestReconciliationState.KnownSkip,
       },
       {
         data: testResults.unknown,
-        decorationType: this.unknownItStyle,
+        decorationType: this.decorations.unknown,
         state: TestReconciliationState.Unknown,
       },
     ];
@@ -427,7 +424,7 @@ export class JestExt {
 
     // We have to make a new style for each unique message, this is
     // why we have to remove off of them beforehand
-    const style = decorations.failingAssertionStyle(errorMessage);
+    const style = inlineErrorStyle(errorMessage);
     this.failingAssertionDecorators[fileName].push(style);
 
     return { style, decorator };
@@ -500,13 +497,6 @@ export class JestExt {
       modes.push('watch');
     }
     this.status.update(status, details, modes);
-  }
-
-  private setupDecorators(): void {
-    this.passingItStyle = decorations.passingItName();
-    this.failingItStyle = decorations.failingItName();
-    this.skipItStyle = decorations.skipItName();
-    this.unknownItStyle = decorations.notRanItName();
   }
 
   private shouldIgnoreOutput(text: string): boolean {
