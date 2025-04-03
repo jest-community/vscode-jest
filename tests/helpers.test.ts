@@ -390,6 +390,8 @@ describe('platform-specific tests', () => {
       ${true}  | ${'\\absolute\\jest --runInBand'}                             | ${{ cmd: '\\absolute\\jest', args: ['--runInBand'], program: '\\absolute\\jest' }}
       ${true}  | ${'"\\dir with space\\jest" --arg1=1 --arg2 2 "some string"'} | ${{ cmd: '\\dir with space\\jest', args: ['--arg1=1', '--arg2', '2', '"some string"'], program: '\\dir with space\\jest' }}
       ${true}  | ${'c:\\jest --arg1 "escaped \\"this\\" string" --arg2 2'}     | ${{ cmd: 'c:\\jest', args: ['--arg1', '"escaped \\"this\\" string"', '--arg2', '2'], program: 'c:\\jest' }}
+      ${true}  | ${'"c:\\jest" --arg1 "escaped \\"this\\" string" --arg2 2'}   | ${{ cmd: 'c:\\jest', args: ['--arg1', '"escaped \\"this\\" string"', '--arg2', '2'], program: 'c:\\jest' }}
+      ${true}  | ${`'c:\\jest' --arg1 "escaped \\"this\\" string" --arg2 2`}   | ${{ cmd: 'c:\\jest', args: ['--arg1', '"escaped \\"this\\" string"', '--arg2', '2'], program: 'c:\\jest' }}
     `('$cmdLine', ({ cmdLine, expected, isWin32 }) => {
       if (!canRunTest(isWin32)) {
         return;
