@@ -868,11 +868,51 @@ describe('test-item-data', () => {
           expect(process.userData.run).toBe(jestRun);
           expect(process.userData.testItem.id).toBe(doc.item.id);
 
-          expect(jestRun.end).toHaveBeenCalledTimes(2);
-          expect(jestRun.updateRequest).toHaveBeenCalledTimes(2);
+          expect(jestRun.end).toHaveBeenCalledTimes(1);
+          expect(jestRun.updateRequest).toHaveBeenCalledTimes(1);
+          expect(jestRun.addProcess).toHaveBeenCalledTimes(1);
           expect(vscode.TestRunRequest).toHaveBeenLastCalledWith([doc.item]);
         });
-        it('if failed to get parent block, will attempt to run the test anyway', () => {
+        it('only execute the test if all of its parents are also resolved', () => {
+          // hierarchy: doc - resolvedDesc1 - unresolvedDesc - resolvedDesc2 - testNode
+          const { doc } = createAllTestItems();
+          const resolvedDesc1: any = {
+            fullName: 'a resolved describe 1',
+            attrs: { nonLiteralName: false },
+            childContainers: [],
+            childData: [],
+          };
+          const resolvedDesc2: any = {
+            fullName: 'a resolved describe 2',
+            attrs: { nonLiteralName: false },
+            childContainers: [],
+            childData: [],
+          };
+          const unresolvedDesc: any = {
+            fullName: 'a $describe',
+            attrs: { nonLiteralName: true },
+            childContainers: [],
+            childData: [],
+          };
+          const testNode: any = { fullName: 'a test', attrs: { isGroup: 'yes' }, data: {} };
+          const resolved1 = new TestData(context, doc.uri, resolvedDesc1, doc.item);
+          const unresolved = new TestData(context, doc.uri, unresolvedDesc, resolved1.item);
+          const resolved2 = new TestData(context, doc.uri, resolvedDesc2, unresolved.item);
+          const testItem = new TestData(context, doc.uri, testNode, resolved2.item);
+
+          const jestRun = createTestRun();
+
+          testItem.scheduleTest(jestRun);
+
+          expect(process.userData.run).toBe(jestRun);
+          expect(process.userData.testItem.id).toBe(resolved1.item.id);
+
+          expect(jestRun.end).toHaveBeenCalledTimes(1);
+          expect(jestRun.updateRequest).toHaveBeenCalledTimes(1);
+          expect(jestRun.addProcess).toHaveBeenCalledTimes(1);
+          expect(vscode.TestRunRequest).toHaveBeenLastCalledWith([resolved1.item]);
+        });
+        it('if failed to get a resolved parent block, will not attempt to run the test', () => {
           const { doc } = createAllTestItems();
 
           const testNode: any = { fullName: 'a $test', attrs: { nonLiteralName: true }, data: {} };
@@ -883,8 +923,36 @@ describe('test-item-data', () => {
           context.getData = jest.fn().mockReturnValueOnce(undefined);
 
           testItem.scheduleTest(jestRun);
-          expect(process.userData.run).toBe(jestRun);
-          expect(process.userData.testItem.id).toBe(testItem.item.id);
+
+          expect(jestRun.addProcess).not.toHaveBeenCalled();
+          expect(jestRun.errored).toHaveBeenCalled();
+          expect(jestRun.write).toHaveBeenCalledWith(
+            expect.stringContaining('no resolved node found'),
+            'error'
+          );
+          expect(jestRun.end).toHaveBeenCalledTimes(1);
+        });
+        it('can capture unexpected error and end the run cleanly', () => {
+          const { doc } = createAllTestItems();
+
+          const testNode: any = { fullName: 'a $test', attrs: { nonLiteralName: true }, data: {} };
+          const testItem = new TestData(context, doc.uri, testNode, doc.item);
+          const jestRun = createTestRun();
+
+          // simulate no parent block
+          context.getData = jest.fn().mockImplementationOnce(() => {
+            throw { msg: 'dummy error' };
+          });
+
+          testItem.scheduleTest(jestRun);
+
+          expect(jestRun.addProcess).not.toHaveBeenCalled();
+          expect(jestRun.errored).toHaveBeenCalled();
+          expect(jestRun.write).toHaveBeenCalledWith(
+            expect.stringContaining('dummy error'),
+            'error'
+          );
+          expect(jestRun.end).toHaveBeenCalledTimes(1);
         });
       });
       describe('can update snapshot', () => {
