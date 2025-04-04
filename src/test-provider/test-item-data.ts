@@ -59,32 +59,68 @@ abstract class TestItemDataBase implements TestItemData, JestRunnable, WithUri {
     return true;
   }
 
-  scheduleTest(run: JestTestRun, options?: ScheduleTestOptions): void {
-    if (!this.isTestNameResolved()) {
-      const parent = this.item.parent && this.context.getData(this.item.parent);
-      if (parent) {
-        run.end({ reason: 'unresolved parameterized test' });
-        run.updateRequest(new vscode.TestRunRequest([parent.item]));
-        return parent.scheduleTest(run, options);
+  getParentNode(): TestItemDataBase | undefined {
+    return this.item.parent ? this.context.getData<TestItemDataBase>(this.item.parent) : undefined;
+  }
+  /**
+   * Performs a deep lookup to find a node where the whole node branch contains only
+   * the resolved names. It will do a deep lookup instead of shallow lookup.
+   *
+   * @returns {TestItemDataBase | undefined} The resolved node if found, otherwise undefined.
+   */
+  findResolvedNode(): TestItemDataBase {
+    if (this.isTestNameResolved()) {
+      // Check if all parent nodes are resolved
+      let parentNode = this.getParentNode();
+      while (parentNode) {
+        if (!parentNode.isTestNameResolved()) {
+          return parentNode.findResolvedNode(); // A parent node is unresolved, go up and search again
+        }
+        parentNode = parentNode.getParentNode();
       }
-      this.context.output.write(`running an unresolved parameterized test might fail`, 'warn');
+
+      return this; // All parent nodes are resolved
+    }
+    // Move to the parent node if the current node is unresolved
+    const p = this.getParentNode();
+    if (p) {
+      return p.findResolvedNode();
     }
 
-    const jestRequest = this.getJestRunRequest(options);
+    throw new Error(
+      `no resolved node found for ${this.item.id}: this should not have happened. Please file an issue`
+    );
+  }
 
-    this.deepItemState(this.item, run.enqueued);
+  scheduleTest(run: JestTestRun, options?: ScheduleTestOptions): void {
+    try {
+      const resolvedNode = this.findResolvedNode();
+      if (resolvedNode !== this) {
+        // the current node has an unresolved name therefore we need to schedule the test at the resolved parent node
+        run.end({ reason: 'unresolved parameterized test' });
+        run.updateRequest(new vscode.TestRunRequest([resolvedNode.item]));
+        return resolvedNode.scheduleTest(run, options);
+      }
 
-    const process = this.context.ext.session.scheduleProcess(jestRequest, {
-      run,
-      testItem: this.item,
-    });
-    if (!process) {
-      const msg = `failed to schedule test for ${this.item.id}`;
+      // the current node and its parent chain is resolved, we can safely schedule the test
+      const jestRequest = this.getJestRunRequest(options);
+
+      this.deepItemState(this.item, run.enqueued);
+
+      const process = this.context.ext.session.scheduleProcess(jestRequest, {
+        run,
+        testItem: this.item,
+      });
+      if (process) {
+        run.addProcess(process);
+      } else {
+        throw new Error(`failed to schedule test for ${this.item.id}`);
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : `failed to schedule test: ${JSON.stringify(e)}`;
       run.errored(this.item, new vscode.TestMessage(msg));
       run.write(msg, 'error');
       run.end({ reason: 'failed to schedule test' });
-    } else {
-      run.addProcess(process);
     }
   }
 
