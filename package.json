@@ -523,7 +523,8 @@
           "when": "testId in jest.workspaceRoot"
         },
         {
-          "command": "io.orta.jest.test-item.update-snapshot"
+          "command": "io.orta.jest.test-item.update-snapshot",
+          "when" : "controllerId =~ /^orta.vscode-jest/"
         }
       ],
       "testing/item/gutter": [
