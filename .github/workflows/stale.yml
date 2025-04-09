@@ -1,35 +1,78 @@
-name: Mark stale issues and auto close if inactive
+name: Manage Stale, Legacy, and Close Issues
 
 on:
-#   schedule:
-#   - cron: "30 1 * * *"
-  
-# debugging
-  workflow_dispatch:  
+ # Uncomment the schedule below to run automatically, or trigger manually with workflow_dispatch.
+ # schedule:
+ #   - cron: '0 4 * * *'   # 04:00 UTC
+ #   - cron: '30 5 * * *'  # 05:30 UTC
+                              
+  workflow_dispatch:
 
 jobs:
-  stale:
-
+  # ----------------------------------------------------------------------------
+  # Job: stale-issues
+  # Summary:
+  #   Marks open issues as "stale" if they have had no activity for 1 year (365 days),
+  #   and then closes issues that remain stale for 30 days,
+  #   unless they carry exempt labels such as "pinned", "security", or "keep-alive".
+  # ----------------------------------------------------------------------------
+  stale-issues:
     runs-on: ubuntu-latest
     permissions:
       issues: write
-
     steps:
-    - uses: actions/stale@v3
-      with:
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
-        
-        stale-issue-label: 'stale'
-        stale-issue-message: 'This issue is marked stale because it has not seen any activity in 365 days. Please let us know if this is still an important issue for you, otherwise it will be automatically closed in 10 days to help us focus on more active issues. Thanks.'
-        close-issue-message: 'This issue was closed because it has been stalled for over 365 days without any activity.'
-        days-before-issue-stale: 365
-        days-before-issue-close: 10
-        
-        operations-per-run: 500
-        
-        # debugging
-        debug-only: true
-        enable-statistics: true
-        
-        
-        
+      - name: Manage stale issues 
+        uses: actions/stale@v9
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          days-before-issue-stale: 365
+          days-before-pr-stale: -1
+          days-before-issue-close: 30
+          days-before-pr-close: -1
+          stale-issue-label: 'stale'
+          close-issue-label: 'auto-closed'
+          stale-issue-message: >
+            This issue has been inactive for over a year and has been marked as stale.
+            It will be automatically closed in 30 days if no further activity occurs.
+            Since significant changes have occurred in the codebase, please open a new issue
+            with updated details if the problem still persists.
+          close-issue-message: >
+            This issue is being automatically closed due to prolonged inactivity.
+            If you believe this issue is still relevant, please open a new issue with updated details.
+          exempt-issue-labels: 'pinned,security,keep-alive'
+          debug-only: false
+          enable-statistics: true
+          remove-stale-when-updated: true
+          operations-per-run: 500
+
+  # ----------------------------------------------------------------------------
+  # Job: mark-legacy-issue
+  # Summary:
+  #   Marks open issues as "legacy" (using ignore-updates so that only the creation date is considered)
+  #   if they were created over 2 years (730 days) ago and lack exempt labels like "pinned" or "security".
+  # ----------------------------------------------------------------------------
+  mark-legacy-issue:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Mark legacy issues using stale action 
+        uses: actions/stale@v9
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          ignore-updates: true
+          days-before-issue-stale: 730
+          days-before-pr-stale: -1 
+          days-before-issue-close: -1
+          days-before-pr-close: -1
+          stale-issue-label: 'legacy'
+          stale-issue-message: >
+            This issue was created over 2 years ago and is considered legacy.
+            Given the extensive changes to the codebase since then, we recommend opening a new issue
+            with updated details if this problem still affects you.
+          exempt-issue-labels: 'pinned,security'
+          debug-only: false
+          enable-statistics: true
+          remove-stale-when-updated: false
+          operations-per-run: 500
+
