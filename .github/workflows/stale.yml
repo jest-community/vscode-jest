@@ -3,9 +3,9 @@ name: Manage Stale, Legacy, and Close Issues
 on:
  # Uncomment the schedule below to run automatically, or trigger manually with workflow_dispatch.
   # schedule:
-  #  - cron: '0 1 * * *'   # 01:00 UTC
-  #  - cron: '30 2 * * *'  # 02:30 UTC
   #  - cron: '0 4 * * *'   # 04:00 UTC
+  #  - cron: '30 5 * * *'  # 05:30 UTC
+  
   push:
     branches:
       - test-stale-action
@@ -49,7 +49,7 @@ jobs:
           debug-only: true
           enable-statistics: true
           remove-stale-when-updated: true
-          operations-per-run: 100
+          operations-per-run: 500
 
   # ----------------------------------------------------------------------------
   # Job: mark-legacy-issue
@@ -80,5 +80,5 @@ jobs:
           debug-only: true
           enable-statistics: true
           remove-stale-when-updated: false
-          operations-per-run: 100
+          operations-per-run: 500
 
