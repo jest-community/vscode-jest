@@ -3,7 +3,9 @@ name: Manage Stale, Legacy, and Close Issues
 on:
  # Uncomment the schedule below to run automatically, or trigger manually with workflow_dispatch.
   # schedule:
-  #   - cron: '30 1 * * *'
+  #  - cron: '0 1 * * *'   # 01:00 UTC
+  #  - cron: '30 2 * * *'  # 02:30 UTC
+  #  - cron: '0 4 * * *'   # 04:00 UTC
   push:
     branches:
       - test-stale-action
@@ -14,25 +16,24 @@ on:
 
 jobs:
   # ----------------------------------------------------------------------------
-  # Job: mark-stale-issues
+  # Job: stale-issues
   # Summary:
-  #   Marks open issues (excluding pull requests) as "stale" if they have had no
-  #   activity for 1 year (365 days), unless they carry exempt labels including
-  #   "pinned", "security", or "keep-alive". A message is posted that informs the
-  #   user the issue will be automatically closed in 30 days if no further activity occurs.
+  #   Marks open issues as "stale" if they have had no activity for 1 year (365 days),
+  #   and then closes issues that remain stale for 30 days,
+  #   unless they carry exempt labels such as "pinned", "security", or "keep-alive".
   # ----------------------------------------------------------------------------
-  mark-stale-issues:
+  stale-issues:
     runs-on: ubuntu-latest
     permissions:
       issues: write
     steps:
-      - name: Mark stale issues (dry run)
+      - name: Manage stale issues (dry run)
         uses: actions/stale@v9
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           days-before-issue-stale: 365
           days-before-pr-stale: -1
-          days-before-issue-close: -1
+          days-before-issue-close: 30
           days-before-pr-close: -1
           stale-issue-label: 'stale'
           stale-issue-message: >
@@ -40,25 +41,27 @@ jobs:
             It will be automatically closed in 30 days if no further activity occurs.
             Since significant changes have occurred in the codebase, please open a new issue
             with updated details if the problem still persists.
+          close-issue-message: >
+            This issue is being automatically closed due to prolonged inactivity.
+            If you believe this issue is still relevant, please open a new issue with updated details.
           exempt-issue-labels: 'pinned,security,keep-alive'
           debug-only: true
           enable-statistics: true
+          remove-stale-when-updated: true
+          operations-per-run: 100
 
   # ----------------------------------------------------------------------------
   # Job: mark-legacy-issue
   # Summary:
-  #   Uses the stale action (with ignore-updates: true so that the decision is based
-  #   solely on the creation date) to mark open issues as "legacy" if they were
-  #   created over 2 years (730 days) ago, provided they do not carry exempt labels such as "pinned",
-  #   "security". A message is posted recommending that users open a new issue if the
-  #   problem persists.
+  #   Marks open issues as "legacy" (using ignore-updates so that only the creation date is considered)
+  #   if they were created over 2 years (730 days) ago and lack exempt labels like "pinned" or "security".
   # ----------------------------------------------------------------------------
   mark-legacy-issue:
     runs-on: ubuntu-latest
     permissions:
       issues: write
     steps:
-      - name: Mark legacy issues/pr using stale action (dry run)
+      - name: Mark legacy issues using stale action (dry run)
         uses: actions/stale@v9
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
@@ -75,31 +78,6 @@ jobs:
           exempt-issue-labels: 'pinned,security'
           debug-only: true
           enable-statistics: true
+          remove-stale-when-updated: false
+          operations-per-run: 100
 
-  # ----------------------------------------------------------------------------
-  # Job: close-stale-issues
-  # Summary:
-  #   Closes open issues that have been marked with the "stale" label for 30 days,
-  #   provided they do not have exempt labels ("pinned", "security", or "keep-alive").
-  #   A closing message is posted to inform users about the automatic closure. Note that
-  #   pull requests are not processed by this job.
-  # ----------------------------------------------------------------------------
-  close-stale-issues:
-    needs: mark-stale-issues
-    runs-on: ubuntu-latest
-    permissions:
-      issues: write
-    steps:
-      - name: Close stale issues (dry run)
-        uses: actions/stale@v9
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          days-before-close: 30
-          days-before-pr-close: -1
-          stale-issue-label: 'stale'
-          close-issue-message: >
-            This issue is being automatically closed due to prolonged inactivity.
-            If you believe this issue is still relevant, please open a new issue with updated details.
-          exempt-issue-labels: 'pinned,security,keep-alive'
-          debug-only: true
-          enable-statistics: true
