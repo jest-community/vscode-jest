@@ -6,12 +6,12 @@ on:
   #   - cron: '0 4 * * *'   # 04:00 UTC
 
   # Uncomment below and enable debug-only when testing changes via PR
-  push:
-    branches:
-      - manage-stale-issues
-  pull_request:
-    branches:
-      - manage-stale-issues
+  # push:
+  #   branches:
+  #     - manage-stale-issues
+  # pull_request:
+  #   branches:
+  #     - manage-stale-issues
       
   workflow_dispatch:
 
