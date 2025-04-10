@@ -1,11 +1,18 @@
 name: Manage Stale, Legacy, and Close Issues
 
 on:
- # Uncomment the schedule below to run automatically, or trigger manually with workflow_dispatch.
- # schedule:
- #   - cron: '0 4 * * *'   # 04:00 UTC
- #   - cron: '30 5 * * *'  # 05:30 UTC
-                              
+  # Uncomment the schedule below to run automatically, or trigger manually with workflow_dispatch.
+  # schedule:
+  #   - cron: '0 4 * * *'   # 04:00 UTC
+
+  # Uncomment below and enable debug-only when testing changes via PR
+  # push:
+  #   branches:
+  #     - manage-stale-issues
+  # pull_request:
+  #   branches:
+  #     - manage-stale-issues
+      
   workflow_dispatch:
 
 jobs:
@@ -43,36 +50,6 @@ jobs:
           debug-only: false
           enable-statistics: true
           remove-stale-when-updated: true
-          operations-per-run: 500
+          operations-per-run: 1000
 
-  # ----------------------------------------------------------------------------
-  # Job: mark-legacy-issue
-  # Summary:
-  #   Marks open issues as "legacy" (using ignore-updates so that only the creation date is considered)
-  #   if they were created over 2 years (730 days) ago and lack exempt labels like "pinned" or "security".
-  # ----------------------------------------------------------------------------
-  mark-legacy-issue:
-    runs-on: ubuntu-latest
-    permissions:
-      issues: write
-    steps:
-      - name: Mark legacy issues using stale action 
-        uses: actions/stale@v9
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          ignore-updates: true
-          days-before-issue-stale: 730
-          days-before-pr-stale: -1 
-          days-before-issue-close: -1
-          days-before-pr-close: -1
-          stale-issue-label: 'legacy'
-          stale-issue-message: >
-            This issue was created over 2 years ago and is considered legacy.
-            Given the extensive changes to the codebase since then, we recommend opening a new issue
-            with updated details if this problem still affects you.
-          exempt-issue-labels: 'pinned,security'
-          debug-only: false
-          enable-statistics: true
-          remove-stale-when-updated: false
-          operations-per-run: 500
-
+ 
