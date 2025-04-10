@@ -1,17 +1,17 @@
 name: Manage Stale, Legacy, and Close Issues
 
 on:
- # Uncomment the schedule below to run automatically, or trigger manually with workflow_dispatch.
- # schedule:
- #   - cron: '0 4 * * *'   # 04:00 UTC
+  # Uncomment the schedule below to run automatically, or trigger manually with workflow_dispatch.
+  # schedule:
+  #   - cron: '0 4 * * *'   # 04:00 UTC
 
- # Uncomment below and enable debug-only when testing changes via PR
-  # push:
-  #   branches:
-  #     - manage-stale-issues
-  # pull_request:
-  #   branches:
-  #     - manage-stale-issues
+  # Uncomment below and enable debug-only when testing changes via PR
+  push:
+    branches:
+      - manage-stale-issues
+  pull_request:
+    branches:
+      - manage-stale-issues
       
   workflow_dispatch:
 
