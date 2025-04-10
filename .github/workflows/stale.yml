@@ -4,15 +4,14 @@ on:
  # Uncomment the schedule below to run automatically, or trigger manually with workflow_dispatch.
  # schedule:
  #   - cron: '0 4 * * *'   # 04:00 UTC
- #   - cron: '30 5 * * *'  # 05:30 UTC
 
  # Uncomment below and enable debug-only when testing changes via PR
-  push:
-    branches:
-      - manage-stale-issues
-  pull_request:
-    branches:
-      - manage-stale-issues
+  # push:
+  #   branches:
+  #     - manage-stale-issues
+  # pull_request:
+  #   branches:
+  #     - manage-stale-issues
       
   workflow_dispatch:
 
@@ -48,7 +47,7 @@ jobs:
             This issue is being automatically closed due to prolonged inactivity.
             If you believe this issue is still relevant, please open a new issue with updated details.
           exempt-issue-labels: 'pinned,security,keep-alive'
-          debug-only: true
+          debug-only: false
           enable-statistics: true
           remove-stale-when-updated: true
           operations-per-run: 1000
