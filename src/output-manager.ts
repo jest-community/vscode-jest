@@ -91,7 +91,9 @@ export class OutputManager {
         config.revealWithFocus = 'test-results';
         break;
       default:
-        console.warn(`Unrecognized "testing.openTesting" setting: ${this.openTesting}`);
+        console.warn(
+          `Unrecognized "testing.openTesting" setting: ${JSON.stringify(this.openTesting)}`
+        );
     }
 
     if (autoRevealOutput === 'off') {

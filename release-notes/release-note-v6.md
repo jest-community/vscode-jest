@@ -3,6 +3,7 @@
 Release Notes <!-- omit in toc --> 
 ---
 
+- [v6.4.1 (pre-release)](#v641-pre-release)
 - [v6.4.0](#v640)
   - [Features](#features)
   - [Bug Fixes](#bug-fixes)
@@ -50,6 +51,17 @@ Release Notes <!-- omit in toc -->
   - [CHANGELOG](#changelog-3)
 
 ---
+
+## v6.4.1 (pre-release)
+
+This pre-release mainly fixes bugs, address dependency upgrade and internal issue management. Details see CHANGELOG below.
+
+**CHANGELOG**
+
+- [v6.4.1-next](https://github.com/jest-community/vscode-jest/releases/tag/v6.4.1-next)
+
+---
+
 ## v6.4.0
 
 This is a cumulative release that incorporates updates and fixes introduced in the v6.3.0 and v6.3.1 pre-releases. This release brings enhanced debugging capabilities, new features for Jest v30 compatibility, and improved coverage integration with VS Code, along with several bug fixes and dependency updates.
