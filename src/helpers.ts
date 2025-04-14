@@ -126,21 +126,37 @@ export const getDefaultJestCommand = (rootPath = ''): string | undefined => {
 
 /**
  * Escapes special characters in a string to be used as a regular expression pattern.
- * @param str - The string to escape.
- * @returns The escaped string.
+ * If the provided value is already a regex (indicated by `isRegExp`), it is returned unmodified.
  *
- * Note: the conversion algorithm is taken from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
+ * [2025.04.14] Additionally, the function can replace actual newline characters with the literal sequence `\n`.
+ * This behavior is enabled by default (via `replaceNewLine = true`) to ensure that
+ * the regex pattern can be safely passed as a single command line argument—for example,
+ * for options like "--testPathPattern" or "testNamePattern". Even for regex usage, modifying
+ * newlines in this way can help prevent issues with multi-line arguments that might otherwise
+ * break in shell contexts.
+ *
+ * @param {string | StringPattern} str - The string or object to escape. When an object is provided,
+ *   it must have a `value` property containing the string, and can optionally include:
+ *   - `isRegExp`: if true, the function assumes the string is already a valid regex and returns it as-is.
+ *   - `exactMatch`: if true, the resulting escaped string is anchored with '^' at the start and '$' at the end.
+ * @param {boolean} [replaceNewLine=true] - Whether to replace newline characters with the literal
+ *   sequence "\n". This is beneficial when the result is used as a command line argument, even though
+ *   it alters the actual newline characters that might be expected in some regex patterns.
+ *
+ * @returns {string} The escaped string, suitable for use as a regex pattern and for passing as a shell argument.
+ *
+ * @see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions
  */
-export function escapeRegExp(str: string | StringPattern): string {
+export function escapeRegExp(str: string | StringPattern, replaceNewLine = true): string {
   const sp: StringPattern = typeof str === 'string' ? { value: str } : str;
+  let value: string;
   if (sp.isRegExp) {
-    return sp.value;
+    value = sp.value;
+  } else {
+    const escaped = sp.value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+    value = sp.exactMatch ? escaped + '$' : escaped;
   }
-  const escaped = sp.value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
-  if (sp.exactMatch) {
-    return escaped + '$';
-  }
-  return escaped;
+  return replaceNewLine ? value.replace(/\r\n|\r|\n/g, '\\n') : value;
 }
 
 /**
