@@ -798,10 +798,7 @@ export class TestData extends TestResultData {
   }
 
   private getTestNamePattern(): TestNamePattern {
-    if (isDataNode(this.node)) {
-      return { value: this.node.fullName, exactMatch: true };
-    }
-    return { value: this.node.fullName, exactMatch: false };
+    return { value: this.node.fullName, exactMatch: isDataNode(this.node) || false };
   }
 
   getJestRunRequest(options?: ScheduleTestOptions): JestExtRequestType {

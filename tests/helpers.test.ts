@@ -148,17 +148,25 @@ describe('ModuleHelpers', () => {
 
 describe('escapeRegExp', () => {
   it.each`
-    str                                        | expected
-    ${'no special char'}                       | ${'no special char'}
-    ${'with (a)'}                              | ${'with \\(a\\)'}
-    ${'with {} and $sign'}                     | ${'with \\{\\} and \\$sign'}
-    ${'with []'}                               | ${'with \\[\\]'}
-    ${{ value: 'with []', exactMatch: true }}  | ${'with \\[\\]$'}
-    ${{ value: 'with []', exactMatch: false }} | ${'with \\[\\]'}
-    ${{ value: 'with []', isRegExp: true }}    | ${'with []'}
-    ${{ value: 'with []', isRegExp: false }}   | ${'with \\[\\]'}
+    case  | str                                            | expected
+    ${1}  | ${'no special char'}                           | ${'no special char'}
+    ${2}  | ${'with (a)'}                                  | ${'with \\(a\\)'}
+    ${3}  | ${'with {} and $sign'}                         | ${'with \\{\\} and \\$sign'}
+    ${4}  | ${'with []'}                                   | ${'with \\[\\]'}
+    ${5}  | ${{ value: 'with []', exactMatch: true }}      | ${'with \\[\\]$'}
+    ${6}  | ${{ value: 'with []', exactMatch: false }}     | ${'with \\[\\]'}
+    ${7}  | ${{ value: 'with []', isRegExp: true }}        | ${'with []'}
+    ${8}  | ${{ value: 'with []', isRegExp: false }}       | ${'with \\[\\]'}
+    ${9}  | ${'with\nnewline'}                             | ${'with\\nnewline'}
+    ${10} | ${'with\r\nnewline'}                           | ${'with\\nnewline'}
+    ${11} | ${{ value: 'with\nnewline', isRegExp: false }} | ${'with\\nnewline'}
+    ${12} | ${{ value: 'with\nnewline', isRegExp: true }}  | ${'with\\nnewline'}
   `('escapeRegExp: $str', ({ str, expected }) => {
     expect(escapeRegExp(str)).toEqual(expected);
+  });
+  it('can skip newline handling', () => {
+    expect(escapeRegExp('with\nnewline', true)).toEqual('with\\nnewline');
+    expect(escapeRegExp('with\nnewline', false)).toEqual('with\nnewline');
   });
 });
 describe('testIdString', () => {
