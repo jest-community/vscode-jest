@@ -11,16 +11,33 @@ const mockWorkspace = {
 
 import { getSettingDetail } from '../src/Settings';
 
+interface TestingSettings {
+  openTesting?: [string | undefined, boolean?];
+  automaticallyOpenTestResults?: [string | undefined, boolean?];
+}
 const mockSettings = (outputConfig?: any, openTesting?: string) => {
+  return mockTestingSettings(outputConfig, {
+    openTesting: [openTesting],
+  });
+};
+const mockTestingSettings = (outputConfig?: any, testingSettings?: TestingSettings) => {
+  const isExplicitlySet = (values?: [string | undefined, boolean?]): boolean => {
+    return values?.[1] !== undefined ? !!values?.[1] : values?.[0] !== undefined;
+  };
   (getSettingDetail as jest.Mocked<any>).mockImplementation((_name: string, key: string) => {
-    console.log('getSettingDetail key', key);
     if (key === 'outputConfig') {
       return { value: outputConfig, isExplicitlySet: outputConfig !== undefined };
     }
     if (key === 'openTesting') {
       return {
-        value: openTesting ?? 'openOnTestStart',
-        isExplicitlySet: openTesting !== undefined,
+        value: testingSettings?.openTesting?.[0],
+        isExplicitlySet: isExplicitlySet(testingSettings?.openTesting),
+      };
+    }
+    if (key === 'automaticallyOpenTestResults') {
+      return {
+        value: testingSettings?.automaticallyOpenTestResults?.[0] ?? 'openOnTestStart',
+        isExplicitlySet: isExplicitlySet(testingSettings?.automaticallyOpenTestResults),
       };
     }
     return undefined;
@@ -106,6 +123,24 @@ describe('OutputManager', () => {
           const { outputConfig: config } = om.outputConfigs();
           expect(config.value).toEqual(expected);
         });
+      });
+    });
+    describe('migrate testing.openTesting to testing.automaticallyOpenTestResults', () => {
+      it.each`
+        case | openTesting            | automaticallyOpenTestResults   | expected
+        ${1} | ${[undefined]}         | ${[undefined]}                 | ${['openOnTestStart', false]}
+        ${2} | ${[undefined]}         | ${['openOnTestStart', false]}  | ${['openOnTestStart', false]}
+        ${3} | ${['neverOpen', true]} | ${['openOnTestStart', false]}  | ${['neverOpen', true]}
+        ${4} | ${['neverOpen', true]} | ${['openOnTestStart', true]}   | ${['openOnTestStart', true]}
+        ${5} | ${['neverOpen', true]} | ${['openOnTestFailure', true]} | ${['openOnTestFailure', true]}
+        ${6} | ${['neverOpen', true]} | ${[undefined]}                 | ${['neverOpen', true]}
+      `('case $case', ({ openTesting, automaticallyOpenTestResults, expected }) => {
+        mockTestingSettings(undefined, { openTesting, automaticallyOpenTestResults });
+
+        const om = new OutputManager();
+        const { openTesting: config } = om.outputConfigs();
+        expect(config.value).toEqual(expected[0]);
+        expect(config.isExplicitlySet).toEqual(expected[1]);
       });
     });
   });
@@ -337,7 +372,7 @@ describe('OutputManager', () => {
       const om = new OutputManager();
       await om.disableAutoFocus();
       expect(mockConfig.update).toHaveBeenCalledWith(
-        'openTesting',
+        'automaticallyOpenTestResults',
         'neverOpen',
         vscode.ConfigurationTarget.Workspace
       );
@@ -561,7 +596,7 @@ describe('OutputManager', () => {
           expect(showWarningMessageSpy).toHaveBeenCalled();
           expect(showQuickPickSpy).toHaveBeenCalled();
           expect(mockConfig.update).toHaveBeenCalledWith(
-            'openTesting',
+            'automaticallyOpenTestResults',
             'neverOpen',
             vscode.ConfigurationTarget.Workspace
           );

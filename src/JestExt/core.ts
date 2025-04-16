@@ -152,7 +152,7 @@ export class JestExt {
       'Critical Settings:\r\n' +
         `jest.runMode: ${JSON.stringify(pluginSettings.runMode.config, undefined, 4)}\r\n` +
         `jest.outputConfig: ${JSON.stringify(outputConfig.value, undefined, 4)}\r\n` +
-        `testing.openTesting: ${JSON.stringify(openTesting.value, undefined, 4)}\r\n`,
+        `testing.automaticallyOpenTestResults: ${JSON.stringify(openTesting.value, undefined, 4)}\r\n`,
       'info'
     );
     return pluginSettings;
