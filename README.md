@@ -489,7 +489,7 @@ In general it should work out of the box, but if you encounter any issues, here 
 
 #### runMode
 
-The `runMode` controls test UX, determining when tests should run, and housing the common run-time toggles like coverage. 
+The `runMode` controls test UX, determining when tests should run, and housing the common run-time toggles like coverage.
 
 **Type Definitions**
 ```ts
