@@ -34,7 +34,7 @@ export class OutputManager {
   }
 
   private initConfigs(): void {
-    // test.openTesting has been replaced with testing.automaticallyOpenTestResults on Nov 2024
+    // Note: test.openTesting has been replaced with testing.automaticallyOpenTestResults on Nov 2024
     const automaticallyOpenTestResults = getSettingDetail<string>(
       'testing',
       'automaticallyOpenTestResults'
