@@ -194,6 +194,7 @@ export class TestResultProvider {
   private testFiles?: string[];
   private snapshotProvider: SnapshotProvider;
   private parser: Parser;
+  private testFileListDirty: boolean = false;
 
   constructor(
     extEvents: JestSessionEvents,
@@ -258,11 +259,20 @@ export class TestResultProvider {
 
   updateTestFileList(testFiles?: string[]): void {
     this.testFiles = testFiles;
+    this.testFileListDirty = false;
 
     // clear the cache in case we have cached some non-test files prior
     this.testSuites.clear();
 
     this.events.testListUpdated.fire(testFiles);
+  }
+  
+  markTestFileListDirty(): void {
+    this.testFileListDirty = true;
+  }
+  
+  isTestFileListDirty(): boolean {
+    return this.testFileListDirty;
   }
   getTestList(): string[] {
     if (this.testFiles && this.testFiles.length > 0) {

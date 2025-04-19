@@ -323,7 +323,8 @@ export class JestExt {
 
       this.events.onTestSessionStarted.fire({ ...this.extContext, session: this.processSession });
 
-      await this.updateTestFileList();
+      // Force update test file list during session initialization
+      await this.updateTestFileList(true);
 
       // update visible editors that belong to this folder
       this.updateVisibleTextEditors();
@@ -568,6 +569,11 @@ export class JestExt {
 
   //**  commands */
   public debugTests = async (debugInfo: DebugInfo): Promise<void> => {
+    // Check if test file list needs updating before debug, and update if necessary
+    if (this.testResultProvider.isTestFileListDirty()) {
+      await this.updateTestFileList();
+    }
+    
     const getDebugConfig = (
       folder?: vscode.WorkspaceFolder
     ): vscode.DebugConfiguration | undefined => {
@@ -618,6 +624,11 @@ export class JestExt {
   public async runAllTests(editor?: vscode.TextEditor): Promise<void> {
     this.enableOutputOnRun();
     await this.exitDeferMode();
+
+    // Check if test file list needs updating, and update if necessary
+    if (this.testResultProvider.isTestFileListDirty()) {
+      await this.updateTestFileList();
+    }
 
     if (!editor) {
       if (this.processSession.scheduleProcess({ type: 'all-tests', nonBlocking: true })) {
@@ -703,6 +714,7 @@ export class JestExt {
   private refreshDocumentChange(document?: vscode.TextDocument): void {
     this.updateVisibleTextEditors(document);
 
+    // Update status bar with latest stats
     this.updateStatusBar({
       stats: this.toSBStats(this.testResultProvider.getTestSuiteStats()),
     });
@@ -741,7 +753,12 @@ export class JestExt {
     this.refreshDocumentChange(document);
   }
 
-  private async updateTestFileList(): Promise<void> {
+  private async updateTestFileList(force: boolean = false): Promise<void> {
+    // Skip update if not forced and test file list isn't dirty
+    if (!force && !this.testResultProvider.isTestFileListDirty()) {
+      return;
+    }
+    
     return new Promise((resolve, reject) => {
       this.processSession.scheduleProcess({
         type: 'list-test-files',
@@ -765,13 +782,13 @@ export class JestExt {
   }
 
   onDidCreateFiles(_event: vscode.FileCreateEvent): void {
-    this.updateTestFileList();
+    this.testResultProvider.markTestFileListDirty();
   }
   onDidRenameFiles(_event: vscode.FileRenameEvent): void {
-    this.updateTestFileList();
+    this.testResultProvider.markTestFileListDirty();
   }
   onDidDeleteFiles(_event: vscode.FileDeleteEvent): void {
-    this.updateTestFileList();
+    this.testResultProvider.markTestFileListDirty();
   }
 
   toggleCoverage(): Promise<void> {
