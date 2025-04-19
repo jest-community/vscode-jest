@@ -3,6 +3,7 @@
 Release Notes <!-- omit in toc --> 
 ---
 
+- [v6.4.2 (pre-release)](#v642-pre-release)
 - [v6.4.1 (pre-release)](#v641-pre-release)
 - [v6.4.0](#v640)
   - [Features](#features)
@@ -49,6 +50,16 @@ Release Notes <!-- omit in toc -->
     - [4. Auto clear output upon test run](#4-auto-clear-output-upon-test-run)
   - [Fixes](#fixes)
   - [CHANGELOG](#changelog-3)
+
+---
+
+## v6.4.2 (pre-release)
+
+This pre-release mainly fixes bugs and upgrade to reflect vscode testing framework changes. Details see CHANGELOG below.
+
+**CHANGELOG**
+
+- [v6.4.2-next](https://github.com/jest-community/vscode-jest/releases/tag/v6.4.2-next)
 
 ---
 
