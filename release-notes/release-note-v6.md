@@ -55,7 +55,7 @@ Release Notes <!-- omit in toc -->
 
 ## v6.4.2 (pre-release)
 
-This pre-release mainly fixes bugs, address dependency upgrade and internal issue management. Details see CHANGELOG below.
+This pre-release mainly fixes bugs and upgrade to reflect vscode testing framework changes. Details see CHANGELOG below.
 
 **CHANGELOG**
 
