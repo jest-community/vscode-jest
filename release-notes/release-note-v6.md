@@ -3,20 +3,23 @@
 Release Notes <!-- omit in toc --> 
 ---
 
+- [v6.4.3](#v643)
+  - [Bug Fixes](#bug-fixes)
+  - [Other Changes](#other-changes)
 - [v6.4.2 (pre-release)](#v642-pre-release)
 - [v6.4.1 (pre-release)](#v641-pre-release)
 - [v6.4.0](#v640)
   - [Features](#features)
-  - [Bug Fixes](#bug-fixes)
+  - [Bug Fixes](#bug-fixes-1)
   - [Dependency Updates](#dependency-updates)
 - [v6.3 (pre-release)](#v63-pre-release)
   - [v6.3.1 (pre-release)](#v631-pre-release)
     - [Features](#features-1)
-    - [Bug Fixes](#bug-fixes-1)
+    - [Bug Fixes](#bug-fixes-2)
     - [Dependency Updates](#dependency-updates-1)
   - [v6.3.0 (pre-release)](#v630-pre-release)
     - [Features](#features-2)
-    - [Bug Fixes](#bug-fixes-2)
+    - [Bug Fixes](#bug-fixes-3)
 - [v6.2](#v62)
   - [v6.2.5](#v625)
   - [v6.2.4](#v624)
@@ -40,7 +43,7 @@ Release Notes <!-- omit in toc -->
       - [2.1 "TEST RESULTS" Panel Integration](#21-test-results-panel-integration)
       - [2.2 Configuration and Examples](#22-configuration-and-examples)
       - [2.3 Deprecations and Migration](#23-deprecations-and-migration)
-  - [Bug Fixes](#bug-fixes-3)
+  - [Bug Fixes](#bug-fixes-4)
   - [Technical Debt](#technical-debt)
 - [v6.0 (pre-release)](#v60-pre-release)
   - [Main Features](#main-features-1)
@@ -52,6 +55,35 @@ Release Notes <!-- omit in toc -->
   - [CHANGELOG](#changelog-3)
 
 ---
+
+## v6.4.3
+
+This release is a roll-up of the v6.4.1 and v6.4.2 pre-releases, consolidating several bug fixes.
+
+### Bug Fixes
+
+* **Debugger Stability**: Resolved an issue where quoted command-line arguments could crash the debugger session, especially on Windows. [#1224](https://github.com/jest-community/vscode-jest/pull/1224)
+
+* **Snapshot Update Accuracy**: Fixed a problem where the snapshot context menu appeared in the Test Explorer regardless of controller ownership. [#1227](https://github.com/jest-community/vscode-jest/pull/1227)
+
+* **Multi-line Test Names**: Multi-line test names can now be correctly handled. [#1234](https://github.com/jest-community/vscode-jest/pull/1234)
+
+* **Deep Test Name Pattern Lookup**: Fixed a bug where test hierarchies containing multiple dynamic titles could cause unexpected on-demand test run errors. [#1225](https://github.com/jest-community/vscode-jest/pull/1225)
+
+### Other Changes
+
+* **Settings Migration**: Migrated the `"testing.openTesting"` setting to `"testing.automaticallyOpenTestResults"` to stay in sync with the vscode testing framework changes. [#1235](https://github.com/jest-community/vscode-jest/pull/1235)
+
+* **Dependency Updates**: Upgraded `cross-spawn` from 7.0.3 to 7.0.6 and `@babel/helpers` from 7.24.6 to 7.27.0 to incorporate the latest improvements and fixes. [#1197](https://github.com/jest-community/vscode-jest/pull/1197), [#1226](https://github.com/jest-community/vscode-jest/pull/1226)
+
+* **CI Enhancements**: Updated the stale issue management scripts to improve issue lifecycle handling. [#1228](https://github.com/jest-community/vscode-jest/pull/1228), [#1229](https://github.com/jest-community/vscode-jest/pull/1229)
+
+**CHANGELOG**
+
+* [v6.4.3](https://github.com/jest-community/vscode-jest/releases/tag/v6.4.3)
+
+---
+
 
 ## v6.4.2 (pre-release)
 
