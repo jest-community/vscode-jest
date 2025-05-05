@@ -570,6 +570,15 @@ describe('TestResultProvider', () => {
         sut.updateTestFileList(['test-file']);
         itBlocks = [];
       };
+      
+      it('should mark test file list as not dirty after update', () => {
+        const sut = new TestResultProvider(eventsMock);
+        expect(sut.isTestFileListDirty()).toBeFalsy();
+        sut.markTestFileListDirty();
+        expect(sut.isTestFileListDirty()).toBeTruthy();
+        sut.updateTestFileList(['test-file']);
+        expect(sut.isTestFileListDirty()).toBeFalsy();
+      });
       it.each`
         desc                         | setup              | itBlockOverride | expectedResults | statsChange
         ${'parse failed'}            | ${forceParseError} | ${undefined}    | ${[]}           | ${'fail'}
