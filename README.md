@@ -282,7 +282,7 @@ Users can use the following settings to tailor the extension for their environme
 |[shell](#shell)|shell (path or LoginShell) for executing jest|null|`"jest.shell": "/bin/bash"` or `"jest.shell": "powershell"` or `"jest.shell": {"path": "/bin/bash"; args: ["--login"]}`  |
 useDashedArgs| Determine if to use dashed arguments for jest processes |undefined|`"jest.useDashedArgs":true`| >= v6.0.0
 |[parserPluginOptions](#parserpluginoptions)|Configure babel parser plugins|null|`"jest.parserPluginOptions": {decorators: 'legacy'}`|
-|[virtualFolders](#virtual-folders)|defines multiple jest runs in a given vscode workspace folder|undefined|`"jest.virtualFolders": "[{"name": "front-end", "rootPath': "packages/front-end"}, {"name": "back-end", "rootPath': "packages/back-end"} ]"`| >= v6.0.0 
+|[virtualFolders](#virtual-folders)|defines multiple jest runs in a given vscode workspace folder|undefined|`"jest.virtualFolders": [{"name": "front-end", "rootPath": "packages/front-end"}, {"name": "back-end", "rootPath": "packages/back-end"} ]`| >= v6.0.0 
 |useJest30|instruct the extension to use jest 30 command line syntax|undefined|`"jest.useJest30": true`| >= v6.3.0
 |**UX**|
 |[outputConfig](#outputconfig) 💼|Controls test output experience across the whole workspace.|undefined|`"jest.outputConfig": "neutral"` or `"jest.outputConfig": {"revealOn": "run", "revealWithFocus": "terminal", "clearOnRun": 'terminal"`| >= v6.1.0
