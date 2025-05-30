@@ -62,6 +62,7 @@ Content
       - [coverageColors](#coveragecolors)
       - [outputConfig](#outputconfig)
       - [runMode](#runmode)
+      - [trimSymlinks](#trimSymlinks)
       - [autoRun](#autorun)
       - [testExplorer](#testexplorer)
       - [shell](#shell)
@@ -288,6 +289,7 @@ useDashedArgs| Determine if to use dashed arguments for jest processes |undefine
 |**UX**|
 |[outputConfig](#outputconfig) 💼|Controls test output experience across the whole workspace.|undefined|`"jest.outputConfig": "neutral"` or `"jest.outputConfig": {"revealOn": "run", "revealWithFocus": "terminal", "clearOnRun": 'terminal"`| >= v6.1.0
 |[runMode](#runmode)|Controls most test UX, including when tests should be run, output management, etc|undefined|`"jest.runMode": "watch"` or `"jest.runMode": "on-demand"` or `"jest.runMode": {"type": "on-demand", "deferred": true}`| >= v6.1.0
+|[trimSymlinks](#trimSymlinks)|Trims relative path walking-up a symbolic link in Test Explorer.|`false`|`"jest.trimSymlinks": true`| `T.B.D` - Fill near release
 |:x: autoClearTerminal|Clear the terminal output at the start of any new test run.|false|`"jest.autoClearTerminal": true`| v6.0.0 (replaced by outputConfig)
 |:x: [testExplorer](#testexplorer) |Configure jest test explorer|null|`{"showInlineError": "true"}`| < 6.1.0 (replaced by runMode)
 |:x: [autoRun](#autorun)|Controls when and what tests should be run|undefined|`"jest.autoRun": "off"` or `"jest.autoRun": "watch"` or `"jest.autoRun": {"watch": false, "onSave":"test-only"}`| < v6.1.0 (replaced by runMode)
@@ -584,6 +586,16 @@ While the concepts of performance and automation are generally clear, "completen
 > **Migration Guide**
 > 
 > Starting from v6.1.0, if no runMode is defined in settings.json, the extension will automatically generate one using legacy settings (`autoRun`, `showCoverageOnLoad`). To migrate, simply use the `"Jest: Save Current RunMode"` command from the command palette to update the setting, then remove the deprecated settings.
+
+---
+
+#### trimSymlinks
+When enabled, this setting resolves symbolic links in the workspace path to avoid showing unnecessary parent folders in the Test Explorer.<br>
+Useful if your workspace or any of its ancestor directories is a symlink—without it, test files may appear under awkward relative paths (e.g. starting with ../) 
+due to symlink resolution behavior.
+
+Default: `false`
+
 
 ---
 
