@@ -111,6 +111,7 @@ export const getExtensionResourceSettings = (
     enable: getSetting<boolean>('enable'),
     useDashedArgs: getSetting<boolean>('useDashedArgs') ?? false,
     useJest30: getSetting<boolean>('useJest30'),
+    trimSymlinks: getSetting<boolean>('trimSymlinks'),
   };
 };
 

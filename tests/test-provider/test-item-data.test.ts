@@ -17,15 +17,51 @@ import { tiContextManager } from '../../src/test-provider/test-item-context-mana
 import { toAbsoluteRootPath } from '../../src/helpers';
 import { outputManager } from '../../src/output-manager';
 
+const symlinks = new Map<string, SymlinkConfig>();
+const setupSymlink = (config: SymlinkConfig) => {
+  symlinks.set(config.src, config);
+};
+const unsetSymlink = (src: string) => {
+  symlinks.delete(src)
+};
+const resolveSymlink = (p:string) => {
+  for (const [_, item] of symlinks) {
+    p = p.replace(item.src, item.dst);
+  }
+  return p;
+};
+
+jest.mock('fs', () => {
+  return {
+    readFileSync: jest.requireActual('fs').readFileSync,
+    statSync: jest.requireActual('fs').statSync,
+    realpathSync: (p:string) => {
+      const result = resolveSymlink(p);
+      return result;
+    },
+  };
+});
+
 jest.mock('path', () => {
   let sep = '/';
-  return {
-    relative: (p1, p2) => {
-      const p = p2.split(p1)[1];
-      if (p[0] === sep) {
-        return p.slice(1);
+  const maybeGetRelativeSymlink = (p1: string, p2: string) : string | undefined => {
+    for (const [_, item] of symlinks) {
+      if (p1.startsWith(item.src)) {
+        return p2.replace(item.dst, item.link);
       }
-      return p;
+    }
+  };
+  return {
+    relative: (p1: string, p2: string) => {
+      let res = maybeGetRelativeSymlink(p1, p2);
+      if (res) {
+        return res;
+      }
+      res = p2.split(p1)[1];
+      if (res[0] === sep) {
+        return res.slice(1);
+      }
+      return res;
     },
     basename: (p) => p.split(sep).slice(-1),
     sep,
@@ -48,7 +84,13 @@ import {
   buildSourceContainer,
 } from '../../src/TestResults/match-by-context';
 import * as path from 'path';
-import { mockController, mockExtExplorerContext, mockJestProcess } from './test-helper';
+import {
+  mockController,
+  mockExtExplorerContext,
+  mockJestProcess,
+  MockedPath,
+  SymlinkConfig,
+} from './test-helper';
 import * as errors from '../../src/errors';
 import { ItemCommand } from '../../src/test-provider/types';
 import { RunMode } from '../../src/JestExt/run-mode';
@@ -56,7 +98,7 @@ import { VirtualWorkspaceFolder } from '../../src/virtual-workspace-folder';
 import { ProcessStatus } from '../../src/JestProcessManagement';
 
 const mockPathSep = (newSep: string) => {
-  (path as jest.Mocked<any>).setSep(newSep);
+  (path as MockedPath).setSep(newSep);
   (path as jest.Mocked<any>).sep = newSep;
 };
 
@@ -190,7 +232,7 @@ describe('test-item-data', () => {
     vscode.Uri.joinPath = jest
       .fn()
       .mockImplementation((uri, p) => ({ fsPath: `${uri.fsPath}/${p}` }));
-    vscode.Uri.file = jest.fn().mockImplementation((f) => ({ fsPath: f }));
+    vscode.Uri.file = jest.fn().mockImplementation((f) => ({ fsPath: f, path: f }));
     (tiContextManager.setItemContext as jest.Mocked<any>).mockClear();
 
     (vscode.Location as jest.Mocked<any>).mockReturnValue({});
@@ -240,6 +282,103 @@ describe('test-item-data', () => {
 
         //verify state after the discovery
         expect(wsRoot.item.canResolveChildren).toBe(false);
+      });
+      describe('when workspace is a symlink', () => {
+        const linkConfig = {
+          src: '/ws-link',
+          dst: '/ws-1',
+          link: '../ws-1',
+        };
+        beforeAll(() => {
+          setupSymlink(linkConfig);
+        });
+        afterAll(() => {
+          unsetSymlink(linkConfig.src);
+        });
+
+        beforeEach(() => {
+          // Symlink mock activation
+          context.ext.workspace.name = 'ws-link';
+          context.ext.workspace.uri.fsPath = '/ws-link';
+
+          const testFiles = [
+            '/ws-1/src/a.test.ts',
+            '/ws-1/src/b.test.ts',
+            '/ws-1/src/app/app.test.ts',
+          ];
+          context.ext.testResultProvider.getTestList.mockReturnValue(testFiles);
+        })
+        it('create test document tree with uplevels', () => {
+          const wsRoot = new WorkspaceRoot(context);
+          const jestRun = createTestRun();
+          wsRoot.discoverTest(jestRun);
+
+          // verify tree structure
+          // Walk up from linked workspace until the original workspace is found
+          expect(wsRoot.item.children.size).toEqual(1);
+          const childUplevel = getChildItem(wsRoot.item, '..');
+          expect(childUplevel).not.toBeUndefined();
+          expect(childUplevel.label).toEqual('..');
+          expect(context.getData(childUplevel) instanceof FolderData).toBeTruthy();
+          const actualWsUplevel = getChildItem(childUplevel, 'ws-1');
+          expect(context.getData(actualWsUplevel) instanceof FolderData).toBeTruthy();
+          const srcUplevel = getChildItem(actualWsUplevel, 'src');
+          expect(context.getData(srcUplevel) instanceof FolderData).toBeTruthy();
+
+          // Test the rest of the tree
+          const appItem = getChildItem(srcUplevel, 'app');
+          const aItem = getChildItem(srcUplevel, 'a.test.ts');
+          const bItem = getChildItem(srcUplevel, 'b.test.ts');
+
+          expect(context.getData(appItem) instanceof FolderData).toBeTruthy();
+          expect(appItem.children.size).toEqual(1);
+          const appFileItem = getChildItem(appItem, 'app.test.ts');
+          expect(context.getData(appFileItem) instanceof TestDocumentRoot).toBeTruthy();
+          expect(appFileItem.children.size).toEqual(0);
+
+          [aItem, bItem].forEach((fItem) => {
+            expect(context.getData(fItem) instanceof TestDocumentRoot).toBeTruthy();
+            expect(fItem.children.size).toEqual(0);
+          });
+
+          //verify state after the discovery
+          expect(wsRoot.item.canResolveChildren).toBe(false);
+        });
+        describe('when trimSymlinks is true', () => {
+          beforeEach(() => {
+            context.ext.settings.trimSymlinks = true;
+          });
+          it('create test document tree without uplevels', () => {
+            const wsRoot = new WorkspaceRoot(context);
+            const jestRun = createTestRun();
+            wsRoot.discoverTest(jestRun);
+
+            // verify tree structure
+            expect(wsRoot.item.children.size).toEqual(1);
+            const directChildSrc = getChildItem(wsRoot.item, 'src');
+            expect(directChildSrc).not.toBeUndefined();
+            expect(directChildSrc.label).toEqual('src');
+            expect(context.getData(directChildSrc) instanceof FolderData).toBeTruthy();
+
+            // Test the rest of the tree
+            const appItem = getChildItem(directChildSrc, 'app');
+            const aItem = getChildItem(directChildSrc, 'a.test.ts');
+            const bItem = getChildItem(directChildSrc, 'b.test.ts');
+
+            expect(context.getData(appItem) instanceof FolderData).toBeTruthy();
+            expect(appItem.children.size).toEqual(1);
+            const appFileItem = getChildItem(appItem, 'app.test.ts');
+            expect(context.getData(appFileItem) instanceof TestDocumentRoot).toBeTruthy();
+            expect(appFileItem.children.size).toEqual(0);
+
+            [aItem, bItem].forEach((fItem) => {
+              expect(context.getData(fItem) instanceof TestDocumentRoot).toBeTruthy();
+              expect(fItem.children.size).toEqual(0);
+            });
+            //verify state after the discovery
+            expect(wsRoot.item.canResolveChildren).toBe(false);
+          });
+        });
       });
       describe('when no testFiles yet', () => {
         it('if no testFiles yet, will still turn off canResolveChildren and close the run', () => {

@@ -179,6 +179,7 @@ describe('getExtensionResourceSettings()', () => {
       nodeEnv: undefined,
       useDashedArgs: false,
       useJest30: null,
+      trimSymlinks: false,
     });
     expect(createJestSettingGetter).toHaveBeenCalledWith(folder);
   });
