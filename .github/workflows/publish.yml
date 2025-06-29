@@ -37,9 +37,6 @@ jobs:
         with:
           node-version: 20
 
-      - name: Set up GitHub CLI
-        uses: actions/setup-gh@v2
-
       - name: Validate release tag and asset
         run: |
           if ! gh release view ${{ github.event.inputs.tag }} > /dev/null 2>&1; then
