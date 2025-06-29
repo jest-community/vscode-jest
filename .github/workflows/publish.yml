@@ -20,9 +20,6 @@ on:
         required: false
         default: 'true'
         type: boolean
-        
-  push:
-    branches: [test-actions]
 
 jobs:
   publish:
@@ -37,8 +34,10 @@ jobs:
         with:
           node-version: 20
 
-      - name: Validate release tag and asset
+      - name: Validate release tag and download .vsix
         run: |
+          echo "🔎 Validating release tag '${{ github.event.inputs.tag }}'"
+
           if ! gh release view ${{ github.event.inputs.tag }} > /dev/null 2>&1; then
             echo "❌ Release tag '${{ github.event.inputs.tag }}' not found."
             exit 1
@@ -48,21 +47,26 @@ jobs:
             --pattern "*.vsix" \
             --dir ./
 
-          if ! ls *.vsix 1> /dev/null 2>&1; then
+          if ! ls ./*.vsix 1> /dev/null 2>&1; then
             echo "❌ No .vsix file found in release '${{ github.event.inputs.tag }}'."
             exit 1
           fi
+
+          echo "✅ .vsix file downloaded:"
+          ls -lh *.vsix
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install vsce and ovsx
-        run: yarn global add vsce ovsx
+      - name: Install @vscode/vsce and ovsx (latest)
+        run: yarn global add @vscode/vsce ovsx
 
       - name: Publish to VSCode Marketplace
         run: |
           echo "▶️ vsce publish --packagePath *.vsix"
           if [ "${{ github.event.inputs.dry_run }}" = "false" ]; then
             vsce publish --packagePath *.vsix
+          else
+            echo "🟡 dry run enabled: skipping publish to VSCode Marketplace"
           fi
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
@@ -72,6 +76,8 @@ jobs:
           echo "▶️ ovsx publish *.vsix"
           if [ "${{ github.event.inputs.dry_run }}" = "false" ]; then
             ovsx publish *.vsix
+          else
+            echo "🟡 dry run enabled: skipping publish to Open VSX"
           fi
         env:
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
