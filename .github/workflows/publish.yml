@@ -1,0 +1,77 @@
+name: Publish VSIX to VSCode & Open VSX (Manual)
+
+# This workflow:
+# - Is manually triggered from GitHub Actions tab
+# - Downloads the .vsix from the specified release tag
+# - Publishes it to:
+#     • Visual Studio Marketplace (via vsce)
+#     • Open VSX Registry (via ovsx)
+# - Supports dry run mode (no actual publish unless dry_run == false)
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'GitHub release tag to publish (e.g., v1.2.3)'
+        required: true
+        type: string
+      dry_run:
+        description: 'Dry run (do not publish)?'
+        required: false
+        default: 'true'
+        type: boolean
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install GitHub CLI
+        uses: cli/gh-action@v2
+
+      - name: Validate release tag and asset
+        run: |
+          if ! gh release view ${{ github.event.inputs.tag }} > /dev/null 2>&1; then
+            echo "❌ Release tag '${{ github.event.inputs.tag }}' not found."
+            exit 1
+          fi
+
+          gh release download ${{ github.event.inputs.tag }} \
+            --pattern "*.vsix" \
+            --dir ./
+
+          if ! ls *.vsix 1> /dev/null 2>&1; then
+            echo "❌ No .vsix file found in release '${{ github.event.inputs.tag }}'."
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install vsce and ovsx
+        run: yarn global add vsce ovsx
+
+      - name: Publish to VSCode Marketplace
+        run: |
+          echo "▶️ vsce publish --packagePath *.vsix"
+          if [ "${{ github.event.inputs.dry_run }}" = "false" ]; then
+            vsce publish --packagePath *.vsix
+          fi
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+
+      - name: Publish to Open VSX
+        run: |
+          echo "▶️ ovsx publish *.vsix"
+          if [ "${{ github.event.inputs.dry_run }}" = "false" ]; then
+            ovsx publish *.vsix
+          fi
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
