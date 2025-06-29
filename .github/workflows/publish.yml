@@ -37,8 +37,8 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install GitHub CLI
-        uses: cli/gh-action@v2
+      - name: Set up GitHub CLI
+        uses: actions/setup-gh@v2
 
       - name: Validate release tag and asset
         run: |
