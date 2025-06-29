@@ -14,7 +14,7 @@ const POSSIBLE_ENV_ERROR_REGEX =
   /^(((?!(jest|react-scripts)).)*)(command not found|no such file or directory)/im;
 
 const TEST_PATH_PATTERNS_V30_ERROR_REGEX =
-  /Option "testPathPattern" was replaced by "testPathPatterns"\./i;
+  /Option "testPathPattern" was replaced by "--testPathPatterns"\./i;
 const TEST_PATH_PATTERNS_NOT_V30_ERROR_REGEX =
   /Unrecognized option "testPathPatterns". Did you mean "testPathPattern"\?/i;
 export class AbstractProcessListener {

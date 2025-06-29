@@ -580,11 +580,11 @@ describe('jest process listeners', () => {
     describe('jest 30 support', () => {
       describe('can restart process if detected jest 30 related error', () => {
         it.each`
-          case | output                                                                            | useJest30Before | useJest30After | willRestart
-          ${1} | ${'Error in JestTestPatterns'}                                                    | ${null}         | ${null}        | ${false}
-          ${2} | ${'Error in JestTestPatterns'}                                                    | ${true}         | ${true}        | ${false}
-          ${3} | ${'Process Failed\nOption "testPathPattern" was replaced by "testPathPatterns".'} | ${null}         | ${true}        | ${true}
-          ${4} | ${'Process Failed\nOption "testPathPattern" was replaced by "testPathPatterns".'} | ${false}        | ${true}        | ${true}
+          case | output                                                                              | useJest30Before | useJest30After | willRestart
+          ${1} | ${'Error in JestTestPatterns'}                                                      | ${null}         | ${null}        | ${false}
+          ${2} | ${'Error in JestTestPatterns'}                                                      | ${true}         | ${true}        | ${false}
+          ${3} | ${'Process Failed\nOption "testPathPattern" was replaced by "--testPathPatterns".'} | ${null}         | ${true}        | ${true}
+          ${4} | ${'Process Failed\nOption "testPathPattern" was replaced by "--testPathPatterns".'} | ${false}        | ${true}        | ${true}
         `('case $case', ({ output, useJest30Before, useJest30After, willRestart }) => {
           expect.hasAssertions();
           mockSession.context.settings.useJest30 = useJest30Before;
