@@ -3,6 +3,8 @@
 Release Notes <!-- omit in toc --> 
 ---
 
+- [v6.4.4](#v644)
+  - [Fixes](#fixes)
 - [v6.4.3](#v643)
   - [Bug Fixes](#bug-fixes)
   - [Other Changes](#other-changes)
@@ -51,10 +53,22 @@ Release Notes <!-- omit in toc -->
     - [2. Support spawning jest with dashed arguments](#2-support-spawning-jest-with-dashed-arguments)
     - [3. Control extension activation within each folder](#3-control-extension-activation-within-each-folder)
     - [4. Auto clear output upon test run](#4-auto-clear-output-upon-test-run)
-  - [Fixes](#fixes)
+  - [Fixes](#fixes-1)
   - [CHANGELOG](#changelog-3)
 
 ---
+
+## v6.4.4
+
+This release is a minor bug fix to auto switch jest30 settings. 
+
+### Fixes
+- Fixed jest 30 error detection so the system can auto switch to jest30 settings when the error is detected. ([#1254](https://github.com/jest-community/vscode-jest/pull/1254) by @connectdotz).
+- fix syntax in README.md. ([#1243](https://github.com/jest-community/vscode-jest/pull/1243) by @qqii)
+  
+**CHANGELOG**
+
+* [v6.4.4](https://github.com/jest-community/vscode-jest/releases/tag/v6.4.4)
 
 ## v6.4.3
 
