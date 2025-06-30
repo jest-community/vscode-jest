@@ -112,12 +112,20 @@ describe('JestExt', () => {
     const coverageCodeLensProvider: any = override?.coverageCodeLensProvider ?? {
       coverageChanged: jest.fn(),
     };
-    return new JestExt(
+
+    // Make a JestExt instance
+    const jestExtInstance = new JestExt(
       context,
       workspaceFolder,
       debugConfigurationProvider,
       coverageCodeLensProvider
     );
+
+    // Mock the new methods on testResultProvider
+    jestExtInstance.testResultProvider.markTestFileListDirty = jest.fn();
+    jestExtInstance.testResultProvider.isTestFileListDirty = jest.fn().mockReturnValue(false);
+
+    return jestExtInstance;
   };
   const mockEditor = (fileName: string, languageId = 'typescript'): any => {
     return {
@@ -178,6 +186,22 @@ describe('JestExt', () => {
     let startDebugging;
     const mockShowQuickPick = jest.fn();
     let mockConfigurations = [];
+    
+    it('should update test file list if marked as dirty before debugging', async () => {
+      const sut = newJestExt();
+      // Mock that test file list is dirty
+      (sut.testResultProvider.isTestFileListDirty as jest.Mock).mockReturnValueOnce(true);
+      
+      // Set up updateTestFileList to resolve immediately when called
+      const updateTestFileListSpy = jest.spyOn(sut as any, 'updateTestFileList').mockResolvedValueOnce(undefined);
+      
+      await sut.debugTests({ testPath: document.fileName, testName: 'testName' });
+      
+      // Verify updateTestFileList was called before debugging
+      expect(updateTestFileListSpy).toHaveBeenCalled();
+      expect(sut.debugConfigurationProvider.prepareTestRun).toHaveBeenCalled();
+    });
+    
     beforeEach(() => {
       startDebugging = vscode.debug.startDebugging as unknown as jest.Mock<{}>;
       (startDebugging as unknown as jest.Mock<{}>).mockImplementation(
@@ -752,6 +776,19 @@ describe('JestExt', () => {
         expect(mockTestProvider.dispose).toHaveBeenCalledTimes(1);
         expect(JestTestProvider).toHaveBeenCalledTimes(2);
       });
+      
+      it('forces update of test file list on session start', async () => {
+        const sut = createJestExt();
+        
+        // Set up spy to check how updateTestFileList is called
+        const updateTestFileListSpy = jest.spyOn(sut as any, 'updateTestFileList');
+        
+        await sut.startSession();
+        
+        // Verify updateTestFileList was called with force=true
+        expect(updateTestFileListSpy).toHaveBeenCalledWith(true);
+      });
+      
       describe('will update test file list', () => {
         it.each`
           fileNames     | error                      | expectedTestFiles
@@ -861,6 +898,21 @@ describe('JestExt', () => {
     });
   });
   describe('runAllTests', () => {
+    it('should update test file list if marked as dirty before running tests', async () => {
+      const sut = newJestExt();
+      // Mock that test file list is dirty
+      (sut.testResultProvider.isTestFileListDirty as jest.Mock).mockReturnValueOnce(true);
+      
+      // Set up updateTestFileList to resolve immediately when called
+      const updateTestFileListSpy = jest.spyOn(sut as any, 'updateTestFileList').mockResolvedValueOnce(undefined);
+      
+      await sut.runAllTests();
+      
+      // Verify updateTestFileList was called before scheduling process
+      expect(updateTestFileListSpy).toHaveBeenCalled();
+      expect(mockProcessSession.scheduleProcess).toHaveBeenCalled();
+    });
+    
     describe.each`
       scheduleProcess
       ${{}}
@@ -934,29 +986,25 @@ describe('JestExt', () => {
       }
     );
   });
-  describe('refresh test file list upon file system change', () => {
-    const getProcessType = () => {
-      const { type } = mockProcessSession.scheduleProcess.mock.calls[0][0];
-      return type;
-    };
+  describe('mark test file list as dirty upon file system change', () => {
     let jestExt: any;
     beforeEach(() => {
       jestExt = newJestExt();
     });
     it('when new file is created', () => {
       jestExt.onDidCreateFiles({});
-      expect(mockProcessSession.scheduleProcess).toHaveBeenCalledTimes(1);
-      expect(getProcessType()).toEqual('list-test-files');
+      expect(jestExt.testResultProvider.markTestFileListDirty).toHaveBeenCalled();
+      expect(mockProcessSession.scheduleProcess).not.toHaveBeenCalled();
     });
     it('when file is renamed', () => {
       jestExt.onDidRenameFiles({});
-      expect(mockProcessSession.scheduleProcess).toHaveBeenCalledTimes(1);
-      expect(getProcessType()).toEqual('list-test-files');
+      expect(jestExt.testResultProvider.markTestFileListDirty).toHaveBeenCalled();
+      expect(mockProcessSession.scheduleProcess).not.toHaveBeenCalled();
     });
     it('when file is deleted', () => {
       jestExt.onDidDeleteFiles({});
-      expect(mockProcessSession.scheduleProcess).toHaveBeenCalledTimes(1);
-      expect(getProcessType()).toEqual('list-test-files');
+      expect(jestExt.testResultProvider.markTestFileListDirty).toHaveBeenCalled();
+      expect(mockProcessSession.scheduleProcess).not.toHaveBeenCalled();
     });
   });
   describe('triggerUpdateSettings', () => {
