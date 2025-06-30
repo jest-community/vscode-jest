@@ -78,6 +78,7 @@ export interface PluginResourceSettings {
   parserPluginOptions?: JESParserPluginOptions;
   useDashedArgs?: boolean;
   useJest30?: boolean;
+  trimSymlinks?: boolean;
 }
 
 export interface DeprecatedPluginResourceSettings {

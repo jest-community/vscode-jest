@@ -106,3 +106,19 @@ export const mockJestProcess = (id: string, extra?: any): any => {
     ...(extra ?? {}),
   };
 };
+
+export interface SymlinkMock {
+  pushSymlink: (config: SymlinkConfig) => void;
+  delink: (src: string) => void;
+}
+
+export type SymlinkConfig = {
+  src: string;
+  dst: string;
+  link: string;
+};
+
+export type MockedPath = typeof import('path') & SymlinkMock & {
+  setSep: (sep: string) => void;
+  sep: string;
+};

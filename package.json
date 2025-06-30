@@ -372,6 +372,12 @@
           "type": "boolean",
           "default": null,
           "scope": "resource"
+        },
+        "jest.trimSymlinks": {
+          "markdownDescription": "Enable to show test relative to workspace in case of symlinked workspace (or any directory above it). Use if your tests look like in [this image](https://private-user-images.githubusercontent.com/84509513/438940965-b7532345-0332-4265-a108-cac1703de39f.png?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3NDU5NTQ4MzcsIm5iZiI6MTc0NTk1NDUzNywicGF0aCI6Ii84NDUwOTUxMy80Mzg5NDA5NjUtYjc1MzIzNDUtMDMzMi00MjY1LWExMDgtY2FjMTcwM2RlMzlmLnBuZz9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNTA0MjklMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjUwNDI5VDE5MjIxN1omWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPTcwZjEzMWIzZmFkOTBiODllMTU3NjYzMzBhOWIwMGI3MWMwMjI4YzBiYjhlZTA2NzYzOTM4N2NmNGMzMDkxNjUmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0In0.bWHlErbUnTuXEP2_LPGUbJu509UdNl22Ee73q2f1FXU)",
+          "type": "boolean",
+          "default": false,
+          "scope": "resource"
         }
       }
     },

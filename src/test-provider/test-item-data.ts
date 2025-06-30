@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { realpathSync } from 'fs';
 import { extensionId } from '../appGlobals';
 import { JestRunEvent, RunEventBase } from '../JestExt';
 import { TestSuiteResult } from '../TestResults';
@@ -175,15 +176,24 @@ export class WorkspaceRoot extends TestItemDataBase {
   }
   createTestItem(): vscode.TestItem {
     const workspaceFolder = this.context.ext.workspace;
+    const settings = this.context.ext.settings;
+    let uri = isVirtualWorkspaceFolder(workspaceFolder)
+      ? workspaceFolder.effectiveUri
+      : workspaceFolder.uri;
+    if (settings.trimSymlinks) {
+      // In case the workspace root (or one of its ancestors) is a symlink, the relative path is going to resolve
+      // up-levels (../) until the first common ancestor with the link, resulting in many nodes we can hide from the user.
+      // In order to hide them, we get the workspaceRoot's "realpath" and use it instead.
+      uri = vscode.Uri.file(realpathSync(uri!.fsPath));
+    }
+
     const item = this.context.createTestItem(
       `${extensionId}:${workspaceFolder.name}`,
       workspaceFolder.name,
-      isVirtualWorkspaceFolder(workspaceFolder)
-        ? workspaceFolder.effectiveUri
-        : workspaceFolder.uri,
+      uri,
       this
     );
-    const desc = runModeDescription(this.context.ext.settings.runMode.config);
+    const desc = runModeDescription(settings.runMode.config);
     item.description = `(${desc.deferred?.label ?? desc.type.label})`;
 
     item.canResolveChildren = true;
