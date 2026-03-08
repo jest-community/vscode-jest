@@ -286,7 +286,7 @@ useDashedArgs| Determine if to use dashed arguments for jest processes |undefine
 |useJest30|instruct the extension to use jest 30 command line syntax|undefined|`"jest.useJest30": true`| >= v6.3.0
 |**UX**|
 |[outputConfig](#outputconfig) 💼|Controls test output experience across the whole workspace.|undefined|`"jest.outputConfig": "neutral"` or `"jest.outputConfig": {"revealOn": "run", "revealWithFocus": "terminal", "clearOnRun": 'terminal"`| >= v6.1.0
-|[runMode](#runmode)|Controls most test UX, including when tests should be run, output management, etc|undefined|`"jest.runMode": "watch"` or `"jest.runMode": "on-demand"` or `"jest.runMode": {"type": "on-demand", "deferred": true}`| >= v6.1.0
+|[runMode](#runmode)|Controls most test UX, including when tests should be run, output management, etc|"watch"|`"jest.runMode": "watch"` or `"jest.runMode": "on-demand"` or `"jest.runMode": {"type": "on-demand", "deferred": true}`| >= v6.1.0
 |:x: autoClearTerminal|Clear the terminal output at the start of any new test run.|false|`"jest.autoClearTerminal": true`| v6.0.0 (replaced by outputConfig)
 |:x: [testExplorer](#testexplorer) |Configure jest test explorer|null|`{"showInlineError": "true"}`| < 6.1.0 (replaced by runMode)
 |:x: [autoRun](#autorun)|Controls when and what tests should be run|undefined|`"jest.autoRun": "off"` or `"jest.autoRun": "watch"` or `"jest.autoRun": {"watch": false, "onSave":"test-only"}`| < v6.1.0 (replaced by runMode)
