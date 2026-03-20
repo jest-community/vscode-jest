@@ -210,7 +210,8 @@
           "default": null,
           "items": {
             "type": "object"
-          }
+          },
+          "scope": "resource"
         },
         "jest.outputConfig": {
           "scope": "window",
