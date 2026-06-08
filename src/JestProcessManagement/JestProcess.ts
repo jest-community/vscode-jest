@@ -123,7 +123,13 @@ export class JestProcess implements JestProcessInfo {
     return `"${toFilePath(removeSurroundingQuote(fileName))}"`;
   }
   private quoteFilePattern(aString: string): string {
-    return `"${removeSurroundingQuote(aString)}"`;
+    const pattern = removeSurroundingQuote(aString);
+    const shell = this.extContext.settings.shell.toSetting();
+    const shellPath = typeof shell === 'string' ? shell : shell?.path;
+    if (/powershell|pwsh/i.test(shellPath ?? '')) {
+      return shellQuote(pattern, shell);
+    }
+    return `"${pattern}"`;
   }
 
   private getRequestCoverage(): boolean | undefined {

@@ -197,6 +197,19 @@ describe('JestProcess', () => {
         }
       );
     });
+    it('quotes test path patterns for PowerShell without shell re-escaping', () => {
+      mockPlatform.mockReturnValue('win32');
+      extContext.settings.shell.toSetting.mockReturnValue('pwsh');
+      const request = mockRequest('by-file-pattern', {
+        testFileNamePattern: 'C:\\repo\\src\\example.test.ts',
+      });
+
+      jestProcess = new JestProcess(extContext, request);
+      jestProcess.start();
+
+      const [, options] = RunnerClassMock.mock.calls[0];
+      expect(options.args.args).toContain("'C:\\\\repo\\\\src\\\\example\\.test\\.ts'");
+    });
     describe('supports jest v30 options', () => {
       it.each`
         case | type                      | extraProperty                                             | useJest30 | expectedOption
